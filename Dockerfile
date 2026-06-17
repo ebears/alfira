@@ -14,7 +14,7 @@ WORKDIR /app
 FROM build AS dev
 RUN apk add --no-cache git
 WORKDIR /usr/local/nodelink
-ARG NODELINK_VERSION=v3
+ARG NODELINK_VERSION=v3.7.0
 RUN git clone --depth 1 --branch ${NODELINK_VERSION} https://github.com/PerformanC/NodeLink.git . && \
     bun install && \
     bun run build
@@ -23,7 +23,7 @@ WORKDIR /app
 COPY package.json bun.lock ./
 COPY packages ./packages
 
-RUN bun install
+RUN bun install --frozen-lockfile
 RUN bun run --filter @alfira-bot/server build && \
     bun run --filter @alfira-bot/web build
 
@@ -43,7 +43,7 @@ FROM build AS builder
 COPY package.json bun.lock ./
 COPY packages ./packages
 
-RUN bun install
+RUN bun install --frozen-lockfile
 # NOTE: NODE_ENV is not set here because bun build produces broken bundles
 # with NODE_ENV=production due to how React 19's JSX runtime is bundled.
 # NODE_ENV=production is set in the runtime stage instead.
@@ -72,7 +72,7 @@ COPY --from=builder --chown=nodejs:nodejs /app/bun.lock ./bun.lock
 COPY --from=builder --chown=nodejs:nodejs /app/packages ./packages
 
 # Let Bun install workspace dependencies in the runtime image
-RUN bun install --production
+RUN bun install --frozen-lockfile --production
 
 # server and web are workspace:* deps - copy their built output
 COPY --from=builder --chown=nodejs:nodejs /app/packages/server/dist ./packages/server/dist
