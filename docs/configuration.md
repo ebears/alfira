@@ -22,8 +22,10 @@ cp .env.example .env
 | `DISCORD_CLIENT_SECRET` | Discord application client secret | `abc123def456...` |
 | `DISCORD_BOT_TOKEN` | Discord bot token | `MTAwMC4xMjM0NTY3ODkw...` |
 | `GUILD_ID` | Discord server ID where the bot operates | `987654321098765432` |
-| `ADMIN_ROLE_IDS` | Discord role ID(s) for admin users (comma-separated) | `123456789012345678` |
+| `ADMIN_ROLE_IDS` | **Required for admin features.** Discord role ID(s) that grant admin permissions (comma-separated). Users with this role can add songs, manage playlists, and use quick-add. | `123456789012345678` or `123...,456...` |
 | `JWT_SECRET` | Secret key for signing JWT tokens | `your-secure-random-string` |
+
+> **⚠️ Critical:** `ADMIN_ROLE_IDS` is **required** for the "Add Song" button and other admin features to appear in the web UI. Without it, no one can add songs to the library. Also ensure **Server Members Intent** is enabled in the Discord Developer Portal (Bot → Privileged Gateway Intents).
 
 ### Database
 

@@ -18,6 +18,7 @@ import { handleSongs } from './routes/songs';
 import { handleTags } from './routes/tags';
 import { $client, db } from './shared/db';
 import { destroyAllPlayers, startDiscord } from './startDiscord';
+import { unregisterStaleCommands } from './utils/unregisterCommands';
 
 // ---------------------------------------------------------------------------
 // Validate required environment variables.
@@ -344,6 +345,13 @@ async function main(): Promise<void> {
   } catch (error) {
     logger.error(error, 'Could not connect to the database');
     process.exit(1);
+  }
+
+  // 2.5. Unregister stale Discord slash commands (from pre-web-UI versions).
+  try {
+    await unregisterStaleCommands();
+  } catch (error) {
+    logger.error(error, 'Failed to unregister stale commands (non-fatal)');
   }
 
   // 3. Start NodeLink in-process.
