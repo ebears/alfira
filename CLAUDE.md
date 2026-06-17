@@ -101,7 +101,6 @@ The bot streams audio from NodeLink (a Lavalink v4-compatible server). The `node
 
 ## Documentation
 
-- [Installation Guide](docs/installation.md) — Setup, Docker commands, development workflow
-- [Configuration Reference](docs/configuration.md) — Environment variables
+- [Installation Guide](docs/installation.md) — Setup, environment variables, Docker commands, development workflow
 - [Tech Stack](docs/tech-stack.md) — Detailed architecture
 - [Troubleshooting](docs/troubleshooting.md) — Common issues and solutions

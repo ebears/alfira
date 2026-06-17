@@ -22,7 +22,7 @@
 
 ## Features
 
-**Alfira** is a self-hosted Discord music bot with a web UI for library management and playback control, designed for a single server.
+**Alfira** is a self-hosted Discord music bot with a web UI for library management and playback control. It's like a personal Spotify for Discord servers: users build and share a combined library. A single bot instance is scoped to one Discord server (not a few or hundreds).
 
 ### Music Library
 
@@ -112,7 +112,7 @@ nano .env  # or micro, zed, code, vim, etc.
 docker compose up -d
 ```
 
-For public deployment with a reverse proxy and HTTPS, see the **[Full Installation Guide](docs/installation.md)**.
+See the **[Full Installation Guide](docs/installation.md)** for full details.
 
 ---
 
@@ -120,8 +120,7 @@ For public deployment with a reverse proxy and HTTPS, see the **[Full Installati
 
 | Document | Description |
 |----------|-------------|
-| **[Installation Guide](docs/installation.md)** | Development and production setup, Discord configuration, reverse proxy setup |
-| **[Configuration Reference](docs/configuration.md)** | Complete environment variables reference |
+| **[Installation Guide](docs/installation.md)** | Setup, environment variables, Docker commands, development workflow |
 | **[Tech Stack](docs/tech-stack.md)** | Technology stack and project structure |
 | **[Biome Setup](docs/biome-setup.md)** | Editor setup for Biome linting and formatting |
 | **[Troubleshooting](docs/troubleshooting.md)** | Common issues and solutions |
