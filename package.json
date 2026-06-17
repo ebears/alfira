@@ -11,6 +11,7 @@
     "db:migrate": "bun run --filter @alfira-bot/server db:migrate",
     "db:generate": "bun run --filter @alfira-bot/server db:generate",
     "db:studio": "bun run --filter @alfira-bot/server db:studio",
+    "discord:unregister-commands": "bun run packages/server/src/utils/unregisterCommands.ts",
     "lint": "biome lint .",
     "lint:fix": "biome lint --write .",
     "format": "biome format --write .",

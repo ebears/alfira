@@ -82,7 +82,36 @@ No local Node.js installation needed — Docker handles everything.
 
 1. Enable **Developer Mode** in Discord: Settings → Advanced → Developer Mode.
 2. Right-click your server icon and select **"Copy Server ID"** — this is your `GUILD_ID`.
-3. Right-click the admin role and select **"Copy Role ID"** — this is your `ADMIN_ROLE_IDS`.
+3. Right-click the **admin role** (the role that should have permission to add songs/manage the bot) and select **"Copy Role ID"** — this is your `ADMIN_ROLE_IDS`.
+   - For multiple admin roles, use comma-separated IDs: `123456789012345678,987654321098765432`
+   - **Important:** Only users with this role will see the "Add Song" button and other admin features in the web UI. Non-admin users can only play existing songs from the library.
+
+### 6. Enable Server Members Intent (Required for Admin Detection)
+
+The bot needs to fetch guild member roles to determine admin status. This requires the **Server Members Intent**:
+
+1. Go to the [Discord Developer Portal](https://discord.com/developers/applications) → your application.
+2. Navigate to **Bot** in the left sidebar.
+3. Under **Privileged Gateway Intents**, enable **Server Members Intent** (in addition to Message Content Intent).
+4. Click **"Save Changes"**.
+
+> **Without this intent**, the bot cannot verify admin roles — all users will be treated as non-admin, and the "Add Song" button will not appear for anyone.
+
+---
+
+### Stale Slash Commands Cleanup (Automatic)
+
+If you previously used an older version of Alfira with slash commands (`/play`, `/skip`, etc.), Discord may still have them registered. They were removed in April 2026 in favor of web-UI-only control.
+
+**This is now handled automatically on server startup.** The bot will unregister any stale guild/global commands when it starts. No manual step needed.
+
+If you need to run it manually (e.g., without restarting the container):
+
+```bash
+bun run discord:unregister-commands
+```
+
+After cleanup, commands disappear from Discord's menu immediately (guild) or within 1 hour (global).
 
 ---
 

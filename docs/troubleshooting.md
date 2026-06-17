@@ -37,6 +37,36 @@ Common issues and solutions for Alfira.
 2. Check that `WEB_UI_ORIGIN` matches your actual domain.
 3. Ensure you're using `https://` in production.
 
+### "Add Song" button not visible / Admin features missing
+
+**Symptoms:** Logged in but no "Add Song" button, can't use quick-add, can't manage playlists.
+
+**Solutions:**
+1. **Check `ADMIN_ROLE_IDS` in `.env`** — must be set to your actual Discord role ID (not the placeholder).
+2. **Enable Server Members Intent** — Go to Discord Developer Portal → Bot → Privileged Gateway Intents → enable **Server Members Intent** → Save Changes.
+3. **Verify role ID** — Enable Developer Mode in Discord (Settings → Advanced), right-click the admin role → "Copy Role ID".
+4. **Re-login** — Admin status is cached in the JWT token. Log out and log back in after fixing the above.
+5. **Check logs** — Run `docker compose logs alfira | grep -i admin` to verify the bot detects your admin status.
+
+### "undefined command does not have 'run' callback" / Slash commands not working
+
+**Symptoms:** Trying `/play`, `/skip`, `/leave`, etc. in Discord gives "The application did not respond" or similar errors.
+
+**Cause:** Alfira **removed Discord slash commands in April 2026** — all playback control is now done exclusively through the **web UI**. However, Discord may still have the old commands cached/registered.
+
+**Solutions:**
+1. **Use the web UI instead** — Play/pause/skip/seek via the Now Playing bar, Play buttons on songs/playlists, or queue management (Up Next, Quick Add, Override).
+2. **Restart the container** — Stale commands are now automatically unregistered on **every server startup**:
+   ```bash
+   docker compose restart alfira
+   ```
+3. **Manual unregister (if needed)** — Run this to clean up without a full restart:
+   ```bash
+   bun run discord:unregister-commands
+   ```
+   (Requires `.env` with `DISCORD_BOT_TOKEN`, `DISCORD_CLIENT_ID`, `GUILD_ID`)
+4. **Wait for Discord cache** — After unregistering, commands disappear from Discord's menu immediately for guild commands (global commands can take up to 1 hour).
+
 ## Database Issues
 
 ### Connection errors
