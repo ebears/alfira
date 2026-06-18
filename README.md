@@ -90,7 +90,7 @@ See the **[Full Installation Guide](docs/installation.md)** for full details.
 
 | Document | Description |
 |----------|-------------|
-| **[Installation Guide](docs/installation.md)** | Setup, environment variables, Docker commands, development workflow |
+| **[Installation Guide](docs/installation.md)** | Setup, environment variables, Docker commands |
 | **[Tech Stack](docs/tech-stack.md)** | Technology stack and project structure |
 | **[Biome Setup](docs/biome-setup.md)** | Editor setup for Biome linting and formatting |
 | **[Troubleshooting](docs/troubleshooting.md)** | Common issues and solutions |
