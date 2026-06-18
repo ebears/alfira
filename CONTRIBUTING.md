@@ -6,6 +6,16 @@ For setup instructions, see the **[Installation Guide](docs/installation.md)**.
 
 ---
 
+## Development Workflow
+
+The main dev command is `bun run dev`, which builds the shared and bot packages locally (for editor LSP support) and then starts all services with Docker.
+
+| What Changed | Action |
+|--------------|--------|
+| Any of the above | `bun run dev` — builds changed packages and restarts Docker |
+| `packages/web/src/**` | Run `bun run web:build` locally to rebuild the UI, then `docker compose restart alfira` |
+| `packages/api/src/**` | `docker compose restart alfira` |
+
 ## Database Migrations
 
 Migrations run automatically on startup via the `migrate` service.
@@ -47,4 +57,4 @@ CI runs `bun run lint` in the typecheck workflow — your code must pass before 
 - Check the [Troubleshooting Guide](docs/troubleshooting.md)
 - Open an issue on GitHub
 
-Thanks for contributing! 🎵
+Thanks for contributing! 😊
