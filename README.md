@@ -47,12 +47,12 @@
     <img src=".github/screenshots/login.png" width="900" alt="Login">
     <img src=".github/screenshots/settings-page.png" width="900" alt="Settings page">
     <br>
-    <img src=".github/screenshots/theme-example-1.png" width="400" alt="Theme example 1">
-    <img src=".github/screenshots/theme-example-2.png" width="400" alt="Theme example 2">
-    <img src=".github/screenshots/theme-example-3.png" width="400" alt="Theme example 3">
-    <img src=".github/screenshots/theme-example-4.png" width="400" alt="Theme example 4">
-    <img src=".github/screenshots/theme-example-5.png" width="400" alt="Theme example 5">
-    <img src=".github/screenshots/theme-example-6.png" width="400" alt="Theme example 6">
+    <img src=".github/screenshots/theme-example-1.png" width="450" alt="Theme example 1">
+    <img src=".github/screenshots/theme-example-2.png" width="450" alt="Theme example 2">
+    <img src=".github/screenshots/theme-example-3.png" width="450" alt="Theme example 3">
+    <img src=".github/screenshots/theme-example-4.png" width="450" alt="Theme example 4">
+    <img src=".github/screenshots/theme-example-5.png" width="450" alt="Theme example 5">
+    <img src=".github/screenshots/theme-example-6.png" width="450" alt="Theme example 6">
   </p>
 </details>
 
