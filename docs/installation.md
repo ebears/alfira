@@ -36,7 +36,7 @@ No local Node.js installation needed — Docker handles everything.
 
 ## Setup
 
-Alfira uses pre-built Docker images from GitHub Container Registry (GHCR), making deployment simple.
+Alfira uses pre-built Docker images from the GitHub Container Registry.
 
 ```bash
 # 1. Copy docker-compose.prod.yml and .env.example from this repo to the folder you want the bot to live.
@@ -48,10 +48,6 @@ cp docker-compose.prod.yml docker-compose.yml
 cp .env.example .env
 
 # 3. Configure the .env  with your values
-#    - Discord credentials (from Developer Portal)
-#    - Your Guild ID and Admin Role ID
-#    - A secure JWT_SECRET (generate with: openssl rand -hex 32)
-#    - Your domain for WEB_UI_ORIGIN and DISCORD_REDIRECT_URI
 nano .env  # or micro, zed, code, vim, etc.
 
 # 4. Start the stack - web UI at http://localhost:8180
@@ -60,43 +56,47 @@ docker compose up -d
 
 ### Environment Variables
 
-All configuration is handled through a single `.env` file in the project root:
+#### Required (API)
 
-| Variable | Required | Description |
-|----------|----------|-------------|
-| `DISCORD_CLIENT_ID` | ✅ | Discord application client ID |
-| `DISCORD_CLIENT_SECRET` | ✅ | Discord application client secret |
-| `DISCORD_BOT_TOKEN` | ✅ | Discord bot token |
-| `GUILD_ID` | ✅ | Your Discord server ID |
-| `ADMIN_ROLE_IDS` | ✅ | Admin role ID(s), comma-separated |
-| `JWT_SECRET` | ✅ | Secret for signing JWT tokens |
-| `WEB_UI_ORIGIN` | ⚪ | Public URL of the web UI |
-| `DISCORD_REDIRECT_URI` | ⚪ | OAuth2 callback URL |
-| `VOICE_IDLE_TIMEOUT_MINUTES` | ⚪ | Minutes before bot leaves voice channel when idle |
+| Variable | Description | Example |
+|----------|-------------|---------|
+| `DISCORD_CLIENT_ID` | Discord application client ID | `123456789012345678` |
+| `DISCORD_CLIENT_SECRET` | Discord application client secret | `abc123...` |
+| `DISCORD_BOT_TOKEN` | Discord bot token | `MTAwMC4...` |
+| `GUILD_ID` | Discord server ID | `987654321098765432` |
+| `JWT_SECRET` | Secret for signing JWT tokens | `your-secure-random-string` |
+| `ADMIN_ROLE_IDS` | Discord role ID(s) for admin permissions (comma-separated) | `123456789012345678` |
 
 > **Security:** Use a strong, random `JWT_SECRET`. Generate one with: `openssl rand -hex 32`
 
-### Reverse Proxy (Optional)
+#### Required (Bot)
 
-For production with a custom domain, use a reverse proxy like **Caddy** or **Nginx** for HTTPS.
+| Variable | Description | Example |
+|----------|-------------|---------|
+| `DISCORD_BOT_TOKEN` | Discord bot token (same as API) | `MTAwMC4...` |
+| `DISCORD_CLIENT_ID` | Discord application client ID (same as API) | `123456789012345678` |
 
-#### Caddy (Recommended)
+#### Optional
 
-Create a `Caddyfile`:
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `DATABASE_URL` | SQLite database path | `/data/alfira.db` |
+| `WEB_UI_ORIGIN` | Public URL of the web UI | `http://localhost:3001` |
+| `DISCORD_REDIRECT_URI` | OAuth2 redirect URI | `http://localhost:3001/auth/callback` |
+| `VOICE_IDLE_TIMEOUT_MINUTES` | Minutes before bot leaves voice channel when idle | `5` |
 
-```Caddy
-your-domain.com {
-    reverse_proxy /* <host-ip>:3001
-}
-```
+> **Note:** `DATABASE_URL` is set automatically. You typically don't need to set it manually.
 
-Then run the stack:
+### Reverse Proxy
 
-```bash
-docker compose -f docker-compose.prod.yml up -d
-```
+For use with a reverse proxy, change WEB_UI_ORIGIN and DISCORD_REDIRECT_URI so they're pointing to your custom domain:
 
-For internal-only access, you can remove the port mappings from `docker-compose.prod.yml` so only your reverse proxy exposes ports.
+| Variable | Local | Reverse Proxy |
+|----------|-------------|---------|
+| `WEB_UI_ORIGIN` | `http://localhost:3001` | `https://your-domain.com` |
+| `DISCORD_REDIRECT_URI` | `http://localhost:3001/auth/callback` | `https://your-domain.com/auth/callback` |
+
+> **Important:** Ensure your redirect URL in the Discord Developer Portal also uses the custom domain.
 
 ### Discord Application Setup
 
@@ -123,9 +123,8 @@ For internal-only access, you can remove the port mappings from `docker-compose.
 1. Navigate to **OAuth2** → **General**.
 2. Copy the **Client secret** — this is your `DISCORD_CLIENT_SECRET`.
 3. Add your redirect URL:
-   - Local development: `http://localhost:3001/auth/callback`
-   - Docker development: `http://localhost:3001/auth/callback`
-   - Production: `https://your-domain.com/auth/callback`
+   - Local: `http://localhost:3001/auth/callback`
+   - Reverse Proxy: `https://your-domain.com/auth/callback`
 4. Click **"Save Changes"**.
 
 #### 4. Invite the Bot to Your Server
@@ -160,92 +159,6 @@ The bot needs to fetch guild member roles to determine admin status. This requir
 4. Click **"Save Changes"**.
 
 > **Without this intent**, the bot cannot verify admin roles — all users will be treated as non-admin, and the "Add Song" button will not appear for anyone.
-
----
-
-## Configuration
-
-Alfira uses environment variables for configuration. Copy the example file and fill in your values:
-
-```bash
-cp .env.example .env
-```
-
-### Environment Variables Reference
-
-#### Required (API)
-
-| Variable | Description | Example |
-|----------|-------------|---------|
-| `DISCORD_CLIENT_ID` | Discord application client ID | `123456789012345678` |
-| `DISCORD_CLIENT_SECRET` | Discord application client secret | `abc123...` |
-| `DISCORD_BOT_TOKEN` | Discord bot token | `MTAwMC4...` |
-| `GUILD_ID` | Discord server ID | `987654321098765432` |
-| `JWT_SECRET` | Secret for signing JWT tokens | `your-secure-random-string` |
-| `ADMIN_ROLE_IDS` | Discord role ID(s) for admin permissions (comma-separated) | `123456789012345678` |
-
-#### Required (Bot)
-
-| Variable | Description | Example |
-|----------|-------------|---------|
-| `DISCORD_BOT_TOKEN` | Discord bot token (same as API) | `MTAwMC4...` |
-| `DISCORD_CLIENT_ID` | Discord application client ID (same as API) | `123456789012345678` |
-
-#### Optional
-
-| Variable | Description | Default |
-|----------|-------------|---------|
-| `DATABASE_URL` | SQLite database path | `/data/alfira.db` |
-| `WEB_UI_ORIGIN` | Public URL of the web UI | (required in production) |
-| `DISCORD_REDIRECT_URI` | OAuth2 redirect URI | `http://localhost:3001/auth/callback` |
-| `VOICE_IDLE_TIMEOUT_MINUTES` | Minutes before bot leaves voice channel when idle | `5` |
-
-> **Note:** `DATABASE_URL` is set automatically by Docker Compose in development. You typically don't need to set it manually.
-
-### Generating Secrets
-
-#### JWT_SECRET
-
-Generate a secure random string:
-
-```bash
-openssl rand -hex 32
-```
-
----
-
-## Development Setup
-
-### Quick Start
-
-```bash
-# 1. Clone the repository
-git clone https://github.com/ebears/alfira.git
-cd alfira
-
-# 2. Configure environment variables
-cp .env.example .env
-# Edit .env with your values
-
-# 3. Build and start all services
-docker compose up --build
-```
-
-This starts:
-
-| Service | URL | Description |
-|---------|-----|-------------|
-| `alfira` | `localhost:3001` | Bun API + Discord bot + Static Web UI + NodeLink audio (includes SQLite) |
-
-### Development Workflow
-
-The main dev command is `bun run dev`, which builds the shared and bot packages locally (for editor LSP support) and then starts all services with Docker.
-
-| What Changed | Action |
-|--------------|--------|
-| Any of the above | `bun run dev` — builds changed packages and restarts Docker |
-| `packages/web/src/**` | Run `bun run web:build` locally to rebuild the UI, then `docker compose restart alfira` |
-| `packages/api/src/**` | `docker compose restart alfira` |
 
 ---
 
