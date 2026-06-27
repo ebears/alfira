@@ -1,0 +1,31 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lint-and-typecheck:
+    name: Lint & Typecheck
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          cache: true
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+      - name: Lint (Biome)
+        run: bun run lint
+      - name: Build server
+        run: bun run --filter @alfira-bot/server build
+      - name: Typecheck server
+        run: bunx tsc --noEmit -p packages/server/tsconfig.json
+      - name: Typecheck web
+        run: bunx tsc --noEmit -p packages/web/tsconfig.json

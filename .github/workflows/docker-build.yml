@@ -57,5 +57,6 @@ jobs:
           platforms: linux/amd64,linux/arm64
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
-          cache-from: type=ghcr,scope=${{ github.repository_owner }}/alfira:buildcache
-          cache-to: type=inline
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          pull: true
