@@ -39,7 +39,7 @@ export async function canonicalizeTags(rawTags: string[]): Promise<string[]> {
       .limit(1);
 
     if (existing.length > 0) {
-      canonicalNames.push(existing[0]!.canonicalName);
+      canonicalNames.push(existing[0]?.canonicalName ?? '');
     } else {
       missingTags.push(originalSpelling);
     }

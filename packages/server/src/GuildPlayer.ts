@@ -337,7 +337,7 @@ export class GuildPlayer {
   private peekNextTrack(): QueuedSong | null {
     // Priority queue peek
     if (this.priorityQueue.length > 0) {
-      return this.priorityQueue[0]!;
+      return this.priorityQueue[0] ?? null;
     }
 
     // Song loop: always replay current song (checked before isAtEnd to handle

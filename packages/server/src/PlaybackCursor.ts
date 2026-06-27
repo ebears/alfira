@@ -168,7 +168,10 @@ export class PlaybackCursor<T> {
     for (let i = this.readIndex + 1; i < this.buffer.length; i++) {
       const idx = this.playbackOrder?.[i] ?? i;
       // idx is always valid since i < this.buffer.length and playbackOrder contains valid indices
-      result.push(this.buffer[idx]!);
+      const item = this.buffer[idx];
+      if (item !== undefined) {
+        result.push(item);
+      }
     }
     return result;
   }

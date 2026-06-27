@@ -71,13 +71,13 @@ function generateAccessToken(payload: {
   avatar: string | null;
   isAdmin: boolean;
 }): string {
-  return jwt.sign(payload, JWT_SECRET!, {
+  return jwt.sign(payload, JWT_SECRET, {
     expiresIn: ACCESS_TOKEN_EXPIRES_IN,
   } as jwt.SignOptions);
 }
 
 function generateRefreshToken(discordId: string): string {
-  return jwt.sign({ discordId, type: 'refresh' }, JWT_SECRET!, {
+  return jwt.sign({ discordId, type: 'refresh' }, JWT_SECRET, {
     expiresIn: REFRESH_TOKEN_EXPIRES_IN,
   } as jwt.SignOptions);
 }
@@ -132,8 +132,8 @@ function authRateLimit(ip: string): boolean {
 async function fetchGuildMemberRoles(discordId: string): Promise<string[] | null | 'not-in-guild'> {
   try {
     const memberRes = await fetch(
-      `https://discord.com/api/guilds/${GUILD_ID!}/members/${discordId}`,
-      { headers: { Authorization: `Bot ${DISCORD_BOT_TOKEN!}` } }
+      `https://discord.com/api/guilds/${GUILD_ID}/members/${discordId}`,
+      { headers: { Authorization: `Bot ${DISCORD_BOT_TOKEN}` } }
     );
     if (memberRes.status === 404) {
       return 'not-in-guild';
@@ -158,7 +158,7 @@ async function fetchUserAdminStatus(
 ): Promise<{ isAdmin: boolean; username: string; avatar: string | null } | null> {
   try {
     const userRes = await fetch(`https://discord.com/api/users/${discordId}`, {
-      headers: { Authorization: `Bot ${DISCORD_BOT_TOKEN!}` },
+      headers: { Authorization: `Bot ${DISCORD_BOT_TOKEN}` },
     });
     if (!userRes.ok) {
       throw new Error(`Discord API error: ${userRes.status}`);
@@ -193,11 +193,11 @@ async function exchangeAuthorizationCode(code: string): Promise<string | null> {
       method: 'POST',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
       body: new URLSearchParams({
-        client_id: DISCORD_CLIENT_ID!,
-        client_secret: DISCORD_CLIENT_SECRET!,
+        client_id: DISCORD_CLIENT_ID,
+        client_secret: DISCORD_CLIENT_SECRET,
         grant_type: 'authorization_code',
         code,
-        redirect_uri: DISCORD_REDIRECT_URI!,
+        redirect_uri: DISCORD_REDIRECT_URI,
       }),
     });
     if (!tokenRes.ok) {
@@ -303,8 +303,8 @@ function handleLogin(request: Request): Response {
     );
   }
   const params = new URLSearchParams({
-    client_id: DISCORD_CLIENT_ID!,
-    redirect_uri: DISCORD_REDIRECT_URI!,
+    client_id: DISCORD_CLIENT_ID,
+    redirect_uri: DISCORD_REDIRECT_URI,
     response_type: 'code',
     scope: 'identify',
   });
@@ -372,7 +372,7 @@ async function handleRefresh(ctx: RouteContext): Promise<Response> {
   // 1. Verify the refresh token signature and expiration.
   let decoded: { discordId: string; type: string };
   try {
-    decoded = jwt.verify(refreshToken, JWT_SECRET!) as { discordId: string; type: string };
+    decoded = jwt.verify(refreshToken, JWT_SECRET) as { discordId: string; type: string };
     if (decoded.type !== 'refresh') {
       return json({ error: 'Invalid token type.' }, 401);
     }
