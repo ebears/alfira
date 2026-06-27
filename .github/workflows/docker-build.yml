@@ -48,7 +48,7 @@ jobs:
             type=ref,event=pr
             type=sha,prefix=
 
-      - name: Build and push (multi-arch)
+      - name: Build and push
         uses: docker/build-push-action@v7.2.0
         with:
           context: .
