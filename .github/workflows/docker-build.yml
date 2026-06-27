@@ -1,7 +1,9 @@
 name: Build Docker images
+
 on:
   push:
-    branches: main
+    branches:
+      - main
     paths-ignore:
       - "docs/**"
       - "README.md"
@@ -14,6 +16,11 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+      attestations: write
+      id-token: write
     steps:
       - name: Checkout repository
         uses: actions/checkout@v6.0.3
@@ -29,12 +36,26 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Build (and push on main)
+      - name: Extract metadata for Docker
+        id: meta
+        uses: docker/metadata-action@v6.0.0
+        with:
+          images: ghcr.io/${{ github.repository_owner }}/alfira
+          tags: |
+            type=raw,value=latest,enable={{is_default_branch}}
+            type=sha,prefix=,enable={{is_default_branch}}
+            type=ref,event=branch
+            type=ref,event=pr
+            type=sha,prefix=
+
+      - name: Build and push (multi-arch)
         uses: docker/build-push-action@v7.2.0
         with:
           context: .
           file: ./Dockerfile
           push: ${{ github.ref == 'refs/heads/main' }}
-          tags: |
-            ghcr.io/${{ github.repository_owner }}/alfira:latest
-            ghcr.io/${{ github.repository_owner }}/alfira:${{ github.sha }}
+          platforms: linux/amd64,linux/arm64
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=ghcr,scope=${{ github.repository_owner }}/alfira:buildcache
+          cache-to: type=ghcr,scope=${{ github.repository_owner }}/alfira:buildcache,mode=max
