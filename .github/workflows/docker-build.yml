@@ -58,4 +58,5 @@ jobs:
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=ghcr,scope=${{ github.repository_owner }}/alfira:buildcache
-          cache-to: type=inline
+          cache-to: type=ghcr,scope=${{ github.repository_owner }}/alfira:buildcache,mode=max
+          pull: true
