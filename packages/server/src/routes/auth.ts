@@ -29,6 +29,14 @@ if (
   throw new Error('Missing required environment variables for auth');
 }
 
+// Type narrowing: after validation, these are guaranteed to be strings
+const DISCORD_CLIENT_ID_: string = DISCORD_CLIENT_ID;
+const DISCORD_CLIENT_SECRET_: string = DISCORD_CLIENT_SECRET;
+const DISCORD_REDIRECT_URI_: string = DISCORD_REDIRECT_URI;
+const DISCORD_BOT_TOKEN_: string = DISCORD_BOT_TOKEN;
+const GUILD_ID_: string = GUILD_ID;
+const JWT_SECRET_: string = JWT_SECRET;
+
 const ADMIN_ROLE_ID_SET = new Set(
   (ADMIN_ROLE_IDS ?? '')
     .split(',')
@@ -71,13 +79,13 @@ function generateAccessToken(payload: {
   avatar: string | null;
   isAdmin: boolean;
 }): string {
-  return jwt.sign(payload, JWT_SECRET, {
+  return jwt.sign(payload, JWT_SECRET_, {
     expiresIn: ACCESS_TOKEN_EXPIRES_IN,
   } as jwt.SignOptions);
 }
 
 function generateRefreshToken(discordId: string): string {
-  return jwt.sign({ discordId, type: 'refresh' }, JWT_SECRET, {
+  return jwt.sign({ discordId, type: 'refresh' }, JWT_SECRET_, {
     expiresIn: REFRESH_TOKEN_EXPIRES_IN,
   } as jwt.SignOptions);
 }
@@ -132,8 +140,8 @@ function authRateLimit(ip: string): boolean {
 async function fetchGuildMemberRoles(discordId: string): Promise<string[] | null | 'not-in-guild'> {
   try {
     const memberRes = await fetch(
-      `https://discord.com/api/guilds/${GUILD_ID}/members/${discordId}`,
-      { headers: { Authorization: `Bot ${DISCORD_BOT_TOKEN}` } }
+      `https://discord.com/api/guilds/${GUILD_ID_}/members/${discordId}`,
+      { headers: { Authorization: `Bot ${DISCORD_BOT_TOKEN_}` } }
     );
     if (memberRes.status === 404) {
       return 'not-in-guild';
@@ -158,7 +166,7 @@ async function fetchUserAdminStatus(
 ): Promise<{ isAdmin: boolean; username: string; avatar: string | null } | null> {
   try {
     const userRes = await fetch(`https://discord.com/api/users/${discordId}`, {
-      headers: { Authorization: `Bot ${DISCORD_BOT_TOKEN}` },
+      headers: { Authorization: `Bot ${DISCORD_BOT_TOKEN_}` },
     });
     if (!userRes.ok) {
       throw new Error(`Discord API error: ${userRes.status}`);
@@ -193,11 +201,11 @@ async function exchangeAuthorizationCode(code: string): Promise<string | null> {
       method: 'POST',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
       body: new URLSearchParams({
-        client_id: DISCORD_CLIENT_ID,
-        client_secret: DISCORD_CLIENT_SECRET,
+        client_id: DISCORD_CLIENT_ID_,
+        client_secret: DISCORD_CLIENT_SECRET_,
         grant_type: 'authorization_code',
         code,
-        redirect_uri: DISCORD_REDIRECT_URI,
+        redirect_uri: DISCORD_REDIRECT_URI_,
       }),
     });
     if (!tokenRes.ok) {
@@ -303,8 +311,8 @@ function handleLogin(request: Request): Response {
     );
   }
   const params = new URLSearchParams({
-    client_id: DISCORD_CLIENT_ID,
-    redirect_uri: DISCORD_REDIRECT_URI,
+    client_id: DISCORD_CLIENT_ID_,
+    redirect_uri: DISCORD_REDIRECT_URI_,
     response_type: 'code',
     scope: 'identify',
   });
@@ -372,7 +380,7 @@ async function handleRefresh(ctx: RouteContext): Promise<Response> {
   // 1. Verify the refresh token signature and expiration.
   let decoded: { discordId: string; type: string };
   try {
-    decoded = jwt.verify(refreshToken, JWT_SECRET) as { discordId: string; type: string };
+    decoded = jwt.verify(refreshToken, JWT_SECRET_) as { discordId: string; type: string };
     if (decoded.type !== 'refresh') {
       return json({ error: 'Invalid token type.' }, 401);
     }
