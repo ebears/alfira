@@ -59,7 +59,7 @@ async function handleGetSongs(ctx: RouteContext, request: Request): Promise<Resp
       : sql`(lower(title) LIKE lower(${`%${search}%`}) OR lower(nickname) LIKE lower(${`%${search}%`}) OR lower(artist) LIKE lower(${`%${search}%`}) OR lower(album) LIKE lower(${`%${search}%`}))`
     : undefined;
 
-  const [songs, [{ count }]] = await Promise.all([
+  const [songs, countResult] = await Promise.all([
     db
       .select()
       .from(songTable)
@@ -69,7 +69,7 @@ async function handleGetSongs(ctx: RouteContext, request: Request): Promise<Resp
       .limit(limit),
     db.select({ count: sql<number>`count(*)` }).from(songTable).where(where),
   ]);
-  const total = parseInt(String(count), 10);
+  const total = parseInt(String(countResult[0]?.count ?? 0), 10);
 
   // Resolve Discord display names for unique addedBy IDs
   const uniqueIds = [...new Set(songs.map((s) => s.addedBy))];
@@ -171,6 +171,10 @@ async function handlePostSong(ctx: RouteContext, request: Request): Promise<Resp
       nickname: nicknameResult.value,
     })
     .returning();
+
+  if (!song) {
+    return json({ error: 'Failed to create song.' }, 500);
+  }
 
   const formatted = formatSong(song);
   emitSongAdded(formatted);
@@ -383,6 +387,10 @@ async function handlePatchSong(ctx: RouteContext, request: Request, id: string):
     .set(data)
     .where(eq(songTable.id, id))
     .returning();
+
+  if (!updatedSong) {
+    return json({ error: 'Failed to update song.' }, 500);
+  }
 
   emitSongUpdated(formatSong(updatedSong));
 

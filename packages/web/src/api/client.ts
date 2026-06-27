@@ -95,6 +95,18 @@ export async function trySilentRefresh(): Promise<boolean> {
   return ok;
 }
 
+// Custom error class to carry API error details
+export class ApiError extends Error {
+  constructor(
+    message: string,
+    public readonly status: number,
+    public readonly code?: string
+  ) {
+    super(message);
+    this.name = 'ApiError';
+  }
+}
+
 async function wrappedFetch(
   url: string,
   options: RequestInit = {},
@@ -110,12 +122,12 @@ async function wrappedFetch(
     // Don't retry if this is already a refresh request
     if (url === '/auth/refresh') {
       redirectToLogin();
-      throw new Error('Unauthorized');
+      throw new ApiError('Unauthorized', 401);
     }
 
     // Prevent infinite refresh loops — only retry once per call chain
     if (retryCount >= 1) {
-      throw new Error('Unauthorized');
+      throw new ApiError('Unauthorized', 401);
     }
 
     // If already refreshing, queue this request
@@ -140,12 +152,26 @@ async function wrappedFetch(
       processQueue(new Error('Token refresh failed'));
       isRefreshing = false;
       redirectToLogin();
-      throw new Error('Unauthorized');
+      throw new ApiError('Unauthorized', 401);
     }
   }
 
   if (!response.ok) {
-    throw new Error(`API error: ${response.status}`);
+    // Try to parse error body for code
+    let errorMessage = `API error: ${response.status}`;
+    let errorCode: string | undefined;
+    try {
+      const errorBody = await response.json();
+      if (errorBody?.error) {
+        errorMessage = errorBody.error;
+      }
+      if (errorBody?.code) {
+        errorCode = errorBody.code;
+      }
+    } catch {
+      // Ignore JSON parse errors
+    }
+    throw new ApiError(errorMessage, response.status, errorCode);
   }
 
   // 204 No Content has no body to parse

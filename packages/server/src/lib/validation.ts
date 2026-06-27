@@ -1,3 +1,4 @@
+import { logger } from '../shared/logger';
 import {
   getMetadata,
   getPlaylistMetadataWithVideos,
@@ -75,8 +76,23 @@ async function wrapBotCall<T>(
 ): Promise<{ ok: true; value: T } | { ok: false; response: Response }> {
   try {
     return { ok: true, value: await fn() };
-  } catch {
-    return { ok: false, response: json({ error: errorMsg }, 422) };
+  } catch (error) {
+    logger.error({ err: error as Error }, 'NodeLink call failed');
+
+    // If it's a fetch error with response status, propagate the actual status
+    if (error instanceof Error && error.message.startsWith('NodeLink REST')) {
+      const match = error.message.match(/NodeLink REST (\d+):/);
+      if (match?.[1]) {
+        const status = parseInt(match[1], 10);
+        return { ok: false, response: json({ error: error.message }, status) };
+      }
+      // If regex didn't match but it's a NodeLink REST error, use 502
+      return { ok: false, response: json({ error: error.message }, 502) };
+    }
+
+    // Return more specific error with the actual error message
+    const message = error instanceof Error ? error.message : errorMsg;
+    return { ok: false, response: json({ error: message }, 422) };
   }
 }
 

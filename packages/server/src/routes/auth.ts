@@ -16,7 +16,18 @@ const {
   GUILD_ID,
   JWT_SECRET,
   ADMIN_ROLE_IDS,
-} = process.env as Record<string, string>;
+} = process.env;
+
+if (
+  !DISCORD_CLIENT_ID ||
+  !DISCORD_CLIENT_SECRET ||
+  !DISCORD_REDIRECT_URI ||
+  !DISCORD_BOT_TOKEN ||
+  !GUILD_ID ||
+  !JWT_SECRET
+) {
+  throw new Error('Missing required environment variables for auth');
+}
 
 const ADMIN_ROLE_ID_SET = new Set(
   (ADMIN_ROLE_IDS ?? '')
@@ -45,7 +56,9 @@ const REFRESH_TOKEN_MAX_AGE = (() => {
     return 30 * 24 * 60 * 60 * 1000;
   }
   const multipliers: Record<string, number> = { d: 86400000, h: 3600000, m: 60000, s: 1000 };
-  return parseInt(match[1], 10) * (multipliers[match[2]] ?? 86400000);
+  const unit = match[2] ?? 'd';
+  const num = match[1] ? parseInt(match[1], 10) : 30;
+  return num * (multipliers[unit] ?? 86400000);
 })();
 
 function hashToken(token: string): string {
@@ -58,15 +71,15 @@ function generateAccessToken(payload: {
   avatar: string | null;
   isAdmin: boolean;
 }): string {
-  return jwt.sign(payload, JWT_SECRET as string, {
+  return jwt.sign(payload, JWT_SECRET!, {
     expiresIn: ACCESS_TOKEN_EXPIRES_IN,
-  });
+  } as jwt.SignOptions);
 }
 
 function generateRefreshToken(discordId: string): string {
-  return jwt.sign({ discordId, type: 'refresh' }, JWT_SECRET as string, {
-    expiresIn: REFRESH_TOKEN_EXPIRES_IN as jwt.SignOptions['expiresIn'],
-  });
+  return jwt.sign({ discordId, type: 'refresh' }, JWT_SECRET!, {
+    expiresIn: REFRESH_TOKEN_EXPIRES_IN,
+  } as jwt.SignOptions);
 }
 
 function buildCookieHeader(
@@ -119,8 +132,8 @@ function authRateLimit(ip: string): boolean {
 async function fetchGuildMemberRoles(discordId: string): Promise<string[] | null | 'not-in-guild'> {
   try {
     const memberRes = await fetch(
-      `https://discord.com/api/guilds/${GUILD_ID}/members/${discordId}`,
-      { headers: { Authorization: `Bot ${DISCORD_BOT_TOKEN}` } }
+      `https://discord.com/api/guilds/${GUILD_ID!}/members/${discordId}`,
+      { headers: { Authorization: `Bot ${DISCORD_BOT_TOKEN!}` } }
     );
     if (memberRes.status === 404) {
       return 'not-in-guild';
@@ -145,7 +158,7 @@ async function fetchUserAdminStatus(
 ): Promise<{ isAdmin: boolean; username: string; avatar: string | null } | null> {
   try {
     const userRes = await fetch(`https://discord.com/api/users/${discordId}`, {
-      headers: { Authorization: `Bot ${DISCORD_BOT_TOKEN}` },
+      headers: { Authorization: `Bot ${DISCORD_BOT_TOKEN!}` },
     });
     if (!userRes.ok) {
       throw new Error(`Discord API error: ${userRes.status}`);
@@ -180,11 +193,11 @@ async function exchangeAuthorizationCode(code: string): Promise<string | null> {
       method: 'POST',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
       body: new URLSearchParams({
-        client_id: DISCORD_CLIENT_ID,
-        client_secret: DISCORD_CLIENT_SECRET,
+        client_id: DISCORD_CLIENT_ID!,
+        client_secret: DISCORD_CLIENT_SECRET!,
         grant_type: 'authorization_code',
         code,
-        redirect_uri: DISCORD_REDIRECT_URI,
+        redirect_uri: DISCORD_REDIRECT_URI!,
       }),
     });
     if (!tokenRes.ok) {
@@ -290,8 +303,8 @@ function handleLogin(request: Request): Response {
     );
   }
   const params = new URLSearchParams({
-    client_id: DISCORD_CLIENT_ID,
-    redirect_uri: DISCORD_REDIRECT_URI,
+    client_id: DISCORD_CLIENT_ID!,
+    redirect_uri: DISCORD_REDIRECT_URI!,
     response_type: 'code',
     scope: 'identify',
   });
@@ -359,7 +372,7 @@ async function handleRefresh(ctx: RouteContext): Promise<Response> {
   // 1. Verify the refresh token signature and expiration.
   let decoded: { discordId: string; type: string };
   try {
-    decoded = jwt.verify(refreshToken, JWT_SECRET) as { discordId: string; type: string };
+    decoded = jwt.verify(refreshToken, JWT_SECRET!) as { discordId: string; type: string };
     if (decoded.type !== 'refresh') {
       return json({ error: 'Invalid token type.' }, 401);
     }

@@ -84,7 +84,7 @@ export async function handleEqualizerPatch(ctx: RouteContext, request: Request):
   }
   for (let i = 0; i < 15; i++) {
     const v = bands[i];
-    if (!Number.isInteger(v) || v < 0 || v > 100) {
+    if (v === undefined || !Number.isInteger(v) || v < 0 || v > 100) {
       return json({ error: `band[${i}] must be integer 0-100` }, 400);
     }
   }

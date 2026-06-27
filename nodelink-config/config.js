@@ -6,7 +6,47 @@ export default {
     useBunServer: true,
   },
   cluster: {
-    enabled: false,
+    enabled: true,
+    workers: 1,
+    minWorkers: 1,
+    runtime: {
+      workerMaxOldSpaceMb: 0,
+      workerExposeGc: false,
+      workerExecArgv: [],
+      sourceWorkerMaxOldSpaceMb: 0,
+      sourceWorkerExposeGc: false,
+      sourceWorkerExecArgv: [],
+    },
+    specializedSourceWorker: {
+      enabled: true,
+      count: 1,
+      microWorkers: 2,
+      tasksPerWorker: 32,
+      silentLogs: true,
+    },
+    commandTimeout: 6000,
+    fastCommandTimeout: 4000,
+    maxRetries: 2,
+    hibernation: {
+      enabled: true,
+      timeoutMs: 1200000,
+    },
+    scaling: {
+      maxPlayersPerWorker: 20,
+      targetUtilization: 0.7,
+      scaleUpThreshold: 0.75,
+      scaleDownThreshold: 0.3,
+      checkIntervalMs: 5000,
+      idleWorkerTimeoutMs: 60000,
+      queueLengthScaleUpFactor: 5,
+      lagPenaltyLimit: 60,
+      cpuPenaltyLimit: 0.85,
+    },
+    endpoint: {
+      patchEnabled: true,
+      allowExternalPatch: false,
+      code: 'CAPYBARA',
+    },
   },
   logging: {
     level: 'info',
@@ -26,6 +66,17 @@ export default {
       lyrics: false,
       youtube: false,
       'youtube-cipher': false,
+      sabr: false,
+      potoken: false,
+    },
+  },
+  connection: {
+    logAllChecks: false,
+    interval: 300000,
+    timeout: 10000,
+    thresholds: {
+      bad: 1,
+      average: 5,
     },
   },
   maxSearchResults: 10,
@@ -40,29 +91,41 @@ export default {
   enableLoadStreamEndpoint: false,
   resolveExternalLinks: false,
   fetchChannelInfo: false,
-  audio: {
-    quality: 'high',
-    encryption: 'aead_aes256_gcm_rtpsize',
-    resamplingQuality: 'best',
-    loudnessNormalizer: false,
-    lookaheadMs: 5,
-    gateThresholdLUFS: -60,
+  filters: {
+    enabled: {
+      tremolo: true,
+      vibrato: true,
+      lowpass: true,
+      highpass: true,
+      rotation: true,
+      karaoke: true,
+      distortion: true,
+      channelMix: true,
+      equalizer: true,
+      chorus: true,
+      compressor: true,
+      echo: true,
+      phaser: true,
+      timescale: true,
+    },
   },
+  defaultSearchSource: ['youtube'],
+  unifiedSearchSources: ['youtube'],
   sources: {
     youtube: {
       enabled: true,
-      allowItag: [], // additional itags for audio streams, e.g., [140, 141]
-      targetItag: null, // force a specific itag for audio streams, overriding the quality option
+      allowItag: [],
+      targetItag: null,
       getOAuthToken: false,
       hl: 'en',
       gl: 'US',
       clients: {
-        search: ['Android'], // Clients used for searching tracks
-        playback: ['AndroidVR', 'TV', 'TVCast', 'WebEmbedded', 'WebParentTools', 'Web', 'IOS'], // Clients used for playback/streaming
-        resolve: ['AndroidVR', 'TV', 'TVCast', 'WebEmbedded', 'WebParentTools', 'IOS', 'Web'], // Clients used for resolving detailed track information (channel, external links, etc.)
+        search: ['Android'],
+        playback: ['AndroidVR', 'TV', 'TVCast', 'WebEmbedded', 'WebParentTools', 'Web', 'IOS'],
+        resolve: ['AndroidVR', 'TV', 'TVCast', 'WebEmbedded', 'WebParentTools', 'IOS', 'Web'],
         settings: {
           TV: {
-            refreshToken: [''], // You can use a string "token" or an array ["token1", "token2"] for rotation/fallback
+            refreshToken: [''],
           },
         },
       },
@@ -167,9 +230,6 @@ export default {
     twitch: {
       enabled: false,
     },
-    audius: {
-      enabled: false,
-    },
     tidal: {
       enabled: false,
     },
@@ -207,6 +267,116 @@ export default {
       enabled: false,
     },
   },
-  defaultSearchSource: ['youtube'],
-  unifiedSearchSources: ['youtube'],
+  lyrics: {
+    fallbackSource: 'genius',
+    youtube: {
+      enabled: true,
+    },
+    genius: {
+      enabled: true,
+    },
+    musixmatch: {
+      enabled: true,
+    },
+    deezer: {
+      enabled: true,
+    },
+    lrclib: {
+      enabled: true,
+    },
+    letrasmus: {
+      enabled: true,
+    },
+    bilibili: {
+      enabled: true,
+    },
+    yandexmusic: {
+      enabled: true,
+    },
+    monochrome: {
+      enabled: true,
+    },
+  },
+  meanings: {
+    letrasmus: {
+      enabled: true,
+    },
+    wikipedia: {
+      enabled: true,
+    },
+  },
+  audio: {
+    quality: 'high',
+    encryption: 'aead_aes256_gcm_rtpsize',
+    resamplingQuality: 'best',
+    loudnessNormalizer: false,
+    lookaheadMs: 5,
+    gateThresholdLUFS: -60,
+  },
+  voiceReceive: {
+    enabled: false,
+    format: 'opus',
+  },
+  routePlanner: {
+    strategy: 'RotateOnBan',
+    bannedIpCooldown: 600000,
+    ipBlocks: [],
+  },
+  rateLimit: {
+    enabled: true,
+    global: {
+      maxRequests: 1000,
+      timeWindowMs: 60000,
+    },
+    perIp: {
+      maxRequests: 100,
+      timeWindowMs: 10000,
+    },
+    perUserId: {
+      maxRequests: 50,
+      timeWindowMs: 5000,
+    },
+    perGuildId: {
+      maxRequests: 20,
+      timeWindowMs: 5000,
+    },
+    ignorePaths: [],
+    ignore: {
+      userIds: [],
+      guildIds: [],
+      ips: [],
+    },
+  },
+  dosProtection: {
+    enabled: true,
+    thresholds: {
+      burstRequests: 50,
+      timeWindowMs: 10000,
+    },
+    mitigation: {
+      delayMs: 500,
+      blockDurationMs: 300000,
+    },
+    ignore: {
+      userIds: [],
+      guildIds: [],
+      ips: [],
+    },
+  },
+  metrics: {
+    enabled: true,
+    authorization: {
+      type: 'Bearer',
+      username: 'admin',
+      password: '',
+    },
+  },
+  mix: {
+    enabled: true,
+    defaultVolume: 0.8,
+    maxLayersMix: 5,
+    autoCleanup: true,
+  },
+  plugins: [],
+  pluginConfig: {},
 };

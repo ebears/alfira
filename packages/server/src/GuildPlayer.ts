@@ -337,7 +337,7 @@ export class GuildPlayer {
   private peekNextTrack(): QueuedSong | null {
     // Priority queue peek
     if (this.priorityQueue.length > 0) {
-      return this.priorityQueue[0];
+      return this.priorityQueue[0]!;
     }
 
     // Song loop: always replay current song (checked before isAtEnd to handle
@@ -349,12 +349,12 @@ export class GuildPlayer {
     // At end of main queue
     if (this.queue.isAtEnd) {
       if (this.loopMode === 'queue' && !this.queue.isEmpty) {
-        return this.queue.current() ?? null;
+        return this.queue.current() as QueuedSong | null;
       }
       return null;
     }
 
-    return this.queue.current() ?? null;
+    return this.queue.current() as QueuedSong | null;
   }
 
   private async playNext(): Promise<void> {

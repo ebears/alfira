@@ -12,7 +12,7 @@ export interface PlaylistMetadata {
   videos: { id: string; title: string; duration: number; thumbnailUrl: string }[];
 }
 
-const NODELINK_URL = 'http://localhost:2333';
+const NODELINK_URL = 'http://127.0.0.1:2333';
 const NODELINK_AUTH = 'nodelink-internal';
 
 import { logger } from '../shared/logger';

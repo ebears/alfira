@@ -296,16 +296,16 @@ function startNodeLink(): Promise<void> {
     });
 
     nodelinkProcess.stdout?.on('data', (data: Buffer) => {
-      console.log('[NodeLink]', data.toString().trimEnd());
+      logger.debug({ component: 'NodeLink' }, data.toString().trimEnd());
     });
 
     nodelinkProcess.stderr?.on('data', (data: Buffer) => {
-      console.error('[NodeLink]', data.toString().trimEnd());
+      logger.warn({ component: 'NodeLink' }, data.toString().trimEnd());
     });
 
     const checkReady = async () => {
       try {
-        const res = await fetch('http://localhost:2333/v4/info', {
+        const res = await fetch('http://127.0.0.1:2333/v4/info', {
           headers: { Authorization: 'nodelink-internal' },
         });
         if (res.ok) {

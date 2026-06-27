@@ -12,7 +12,7 @@ const { tag: tagTable, song: songTable } = tables;
 export async function ensureTagsMigrated(): Promise<void> {
   const [tagCount] = await db.select({ count: sql<number>`count(*)` }).from(tagTable).limit(1);
 
-  if (tagCount.count > 0) {
+  if (!tagCount || tagCount.count > 0) {
     return; // Tags already exist, nothing to do
   }
 
@@ -22,7 +22,7 @@ export async function ensureTagsMigrated(): Promise<void> {
     .where(sql`${songTable.tags} IS NOT NULL AND ${songTable.tags} != '[]'`)
     .limit(1);
 
-  if (songCount.count === 0) {
+  if (!songCount || songCount.count === 0) {
     return; // No songs have tags, nothing to do
   }
 
