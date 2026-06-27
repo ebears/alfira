@@ -49,7 +49,7 @@ export class PlaybackCursor<T> {
       return undefined;
     }
 
-    const idx = this.playbackOrder ? this.playbackOrder[this.readIndex] : this.readIndex;
+    const idx = this.playbackOrder?.[this.readIndex] ?? this.readIndex;
     return this.buffer[idx];
   }
 
@@ -166,8 +166,12 @@ export class PlaybackCursor<T> {
   toRemaining(): T[] {
     const result: T[] = [];
     for (let i = this.readIndex + 1; i < this.buffer.length; i++) {
-      const idx = this.playbackOrder ? this.playbackOrder[i] : i;
-      result.push(this.buffer[idx]);
+      const idx = this.playbackOrder?.[i] ?? i;
+      // idx is always valid since i < this.buffer.length and playbackOrder contains valid indices
+      const item = this.buffer[idx];
+      if (item !== undefined) {
+        result.push(item);
+      }
     }
     return result;
   }

@@ -9,7 +9,7 @@ import { json } from './json';
 export async function requireUserInVoice(discordId: string): Promise<true | Response> {
   const client = getClient();
   if (!client) {
-    return json({ error: 'Discord bot is not ready yet.' }, 503);
+    return json({ error: 'Discord bot is not ready yet.', code: 'BOT_NOT_READY' }, 503);
   }
 
   try {
@@ -17,18 +17,24 @@ export async function requireUserInVoice(discordId: string): Promise<true | Resp
     const member = await guild.members.resolve(discordId);
 
     if (!member) {
-      return json({ error: 'Could not find member in guild.' }, 503);
+      return json({ error: 'Could not find member in guild.', code: 'MEMBER_NOT_FOUND' }, 404);
     }
 
     const voiceState = await member.voice('rest');
     if (!voiceState?.channelId) {
-      return json({ error: 'You must be in a voice channel to control playback.' }, 403);
+      return json(
+        { error: 'You must be in a voice channel to control playback.', code: 'NOT_IN_VOICE' },
+        409
+      );
     }
 
     return true;
   } catch (error) {
     logger.error({ err: error as Error }, 'Failed to verify voice channel membership');
-    return json({ error: 'Could not verify voice channel membership.' }, 503);
+    return json(
+      { error: 'Could not verify voice channel membership.', code: 'VOICE_CHECK_FAILED' },
+      503
+    );
   }
 }
 
@@ -53,12 +59,18 @@ export async function resolveOrAutoJoinPlayer(
 
   const discordClient = getClient();
   if (!discordClient) {
-    return { ok: false, response: json({ error: 'Discord bot is not ready yet.' }, 503) };
+    return {
+      ok: false,
+      response: json({ error: 'Discord bot is not ready yet.', code: 'BOT_NOT_READY' }, 503),
+    };
   }
 
   const hoshimi = getHoshimi();
   if (!hoshimi) {
-    return { ok: false, response: json({ error: 'Audio node is not ready yet.' }, 503) };
+    return {
+      ok: false,
+      response: json({ error: 'Audio node is not ready yet.', code: 'NODELINK_NOT_READY' }, 503),
+    };
   }
 
   try {
@@ -68,7 +80,7 @@ export async function resolveOrAutoJoinPlayer(
     if (!member) {
       return {
         ok: false,
-        response: json({ error: 'Could not find member in guild.' }, 404),
+        response: json({ error: 'Could not find member in guild.', code: 'MEMBER_NOT_FOUND' }, 404),
       };
     }
 
@@ -81,6 +93,7 @@ export async function resolveOrAutoJoinPlayer(
         response: json(
           {
             error: 'You are not in a voice channel. Join a voice channel in Discord first.',
+            code: 'NOT_IN_VOICE',
           },
           409
         ),
@@ -103,6 +116,7 @@ export async function resolveOrAutoJoinPlayer(
       response: json(
         {
           error: 'Could not connect to your voice channel. Try using /join in Discord first.',
+          code: 'VOICE_CONNECTION_FAILED',
         },
         503
       ),

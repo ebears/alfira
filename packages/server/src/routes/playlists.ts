@@ -10,11 +10,11 @@ import { $client, db, tables } from '../shared/db';
 const { playlist: playlistTable, playlistSong: playlistSongTable } = tables;
 
 async function getPlaylistSongCount(playlistId: string): Promise<number> {
-  const [{ value }] = await db
+  const result = await db
     .select({ value: count() })
     .from(playlistSongTable)
     .where(eq(playlistSongTable.playlistId, playlistId));
-  return value;
+  return result[0]?.value ?? 0;
 }
 
 type PlaylistRow = {
@@ -87,10 +87,11 @@ async function handleGetPlaylists(ctx: RouteContext, request: Request): Promise<
   );
   const skip = (page - 1) * limit;
 
-  const [playlists, [{ count: total }]] = await Promise.all([
+  const [playlists, totalResult] = await Promise.all([
     db.select().from(playlistTable).orderBy(playlistTable.createdAt).limit(limit).offset(skip),
     db.select({ count: count() }).from(playlistTable),
   ]);
+  const totalCount = totalResult[0]?.count ?? 0;
 
   // Fetch song counts for each playlist
   const playlistsWithCounts = await Promise.all(
@@ -118,8 +119,8 @@ async function handleGetPlaylists(ctx: RouteContext, request: Request): Promise<
     pagination: {
       page,
       limit,
-      total,
-      totalPages: Math.ceil(total / limit),
+      total: totalCount,
+      totalPages: Math.ceil(totalCount / limit),
     },
   });
 }
@@ -150,6 +151,10 @@ async function handlePostPlaylist(ctx: RouteContext, request: Request): Promise<
       createdBy: ctx.user.discordId ?? '',
     })
     .returning();
+
+  if (!playlist) {
+    return json({ error: 'Failed to create playlist.' }, 500);
+  }
 
   emitPlaylistUpdated(formatPlaylist(playlist, 0));
   return json(playlist, 201);
@@ -221,7 +226,7 @@ async function handleGetPlaylist(
       ? and(eq(playlistSongTable.playlistId, id), inArray(playlistSongTable.songId, songIds))
       : eq(playlistSongTable.playlistId, id);
 
-  const [playlistSongs, [{ count: total }]] = await Promise.all([
+  const [playlistSongs, totalResult] = await Promise.all([
     db
       .select()
       .from(playlistSongTable)
@@ -231,6 +236,7 @@ async function handleGetPlaylist(
       .offset(skip),
     db.select({ count: count() }).from(playlistSongTable).where(countCondition),
   ]);
+  const total = totalResult[0]?.count ?? 0;
 
   // Fetch the actual song data for each playlist entry
   const playlistSongIds = playlistSongs.map((ps) => ps.songId);
@@ -310,6 +316,10 @@ async function handlePatchVisibility(
     .where(eq(playlistTable.id, id))
     .returning();
 
+  if (!updatedPlaylist) {
+    return json({ error: 'Failed to update playlist.' }, 500);
+  }
+
   const value = await getPlaylistSongCount(updatedPlaylist.id);
 
   emitPlaylistUpdated(formatPlaylist(updatedPlaylist, value));
@@ -354,6 +364,10 @@ async function handlePatchPlaylist(
     .set({ name: trimmedName })
     .where(eq(playlistTable.id, id))
     .returning();
+
+  if (!updatedPlaylist) {
+    return json({ error: 'Failed to update playlist.' }, 500);
+  }
 
   const value = await getPlaylistSongCount(updatedPlaylist.id);
 
@@ -557,28 +571,39 @@ export async function handlePlaylists(ctx: RouteContext, request: Request): Prom
   // /api/playlists/:id/songs/:songId DELETE
   const songsMatch = path.match(/^\/([^/]+)\/songs\/([^/]+)$/);
   if (songsMatch && request.method === 'DELETE') {
-    return await handleRemoveSong(ctx, request, songsMatch[1], songsMatch[2]);
+    const [, playlistId, songId] = songsMatch;
+    if (playlistId && songId) {
+      return await handleRemoveSong(ctx, request, playlistId, songId);
+    }
   }
 
   // /api/playlists/:id/songs POST
   const addSongMatch = path.match(/^\/([^/]+)\/songs$/);
   if (addSongMatch && request.method === 'POST') {
-    return await handleAddSong(ctx, request, addSongMatch[1]);
+    const [, playlistId] = addSongMatch;
+    if (playlistId) {
+      return await handleAddSong(ctx, request, playlistId);
+    }
   }
 
   // /api/playlists/:id/visibility PATCH
   const visibilityMatch = path.match(/^\/([^/]+)\/visibility$/);
   if (visibilityMatch && request.method === 'PATCH') {
-    return await handlePatchVisibility(ctx, request, visibilityMatch[1]);
+    const [, playlistId] = visibilityMatch;
+    if (playlistId) {
+      return await handlePatchVisibility(ctx, request, playlistId);
+    }
   }
 
   // /api/playlists/:id GET, PATCH, DELETE
   const idMatch = path.match(/^\/([^/]+)$/);
   if (idMatch) {
     const id = idMatch[1];
-    if (request.method === 'GET') return await handleGetPlaylist(ctx, request, id);
-    if (request.method === 'PATCH') return await handlePatchPlaylist(ctx, request, id);
-    if (request.method === 'DELETE') return await handleDeletePlaylist(ctx, request, id);
+    if (id) {
+      if (request.method === 'GET') return await handleGetPlaylist(ctx, request, id);
+      if (request.method === 'PATCH') return await handlePatchPlaylist(ctx, request, id);
+      if (request.method === 'DELETE') return await handleDeletePlaylist(ctx, request, id);
+    }
   }
 
   return json({ error: 'Not Found' }, 404);

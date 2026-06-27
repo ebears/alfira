@@ -15,7 +15,7 @@ export {
   type PlaylistMetadata,
 } from './utils/nodelink';
 
-const NODELINK_URL = 'http://localhost:2333';
+const NODELINK_URL = 'http://127.0.0.1:2333';
 const NODELINK_AUTH = 'nodelink-internal';
 
 // ---------------------------------------------------------------------------
