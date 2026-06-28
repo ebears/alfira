@@ -211,7 +211,7 @@ const SongRow = memo(function SongRow({
     <div className="flex items-center gap-2 md:gap-3 px-4 md:px-5 py-3 hover:bg-elevated active:bg-elevated/80 transition-colors duration-100">
       <div className="overflow-hidden w-10 h-10 md:w-8 md:h-8 rounded border border-border shrink-0">
         <img
-          src={song.thumbnailUrl}
+          src={song.artwork ?? song.thumbnailUrl}
           alt={song.nickname || song.title}
           className="w-full h-full object-cover scale-[1.33]"
           loading="lazy"

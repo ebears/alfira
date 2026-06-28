@@ -368,7 +368,7 @@ const QueueSongItem = memo(function QueueSongItem({
       </span>
       <div className="overflow-hidden w-8 h-8 rounded border border-border shrink-0">
         <img
-          src={song.thumbnailUrl}
+          src={song.artwork ?? song.thumbnailUrl}
           alt={song.nickname || song.title}
           className="w-full h-full object-cover scale-[1.33]"
           loading="lazy"
@@ -508,7 +508,7 @@ const NowPlayingCard = memo(function NowPlayingCard({
       <div className="flex gap-3 p-3">
         <div className="relative shrink-0 overflow-hidden rounded-xl">
           <img
-            src={song.thumbnailUrl}
+            src={song.artwork ?? song.thumbnailUrl}
             alt={song.nickname || song.title}
             className="w-20 h-20 rounded-xl border border-border object-cover scale-[1.33]"
             decoding="async"
