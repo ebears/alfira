@@ -384,7 +384,7 @@ const AlbumArt = memo(function AlbumArt({ currentSong, isPlaying, isPaused }: Al
       )}
       {currentSong ? (
         <img
-          src={currentSong.thumbnailUrl}
+          src={currentSong.artwork ?? currentSong.thumbnailUrl}
           alt={currentSong.title}
           className="w-full h-full object-cover scale-[1.33]"
           decoding="async"

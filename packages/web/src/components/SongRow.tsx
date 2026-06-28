@@ -115,7 +115,7 @@ export const SongRow = memo(
         >
           <div className="overflow-hidden w-14 h-14 md:w-12 md:h-12 rounded border border-border shrink-0">
             <img
-              src={song.thumbnailUrl}
+              src={song.artwork ?? song.thumbnailUrl}
               alt={song.nickname || song.title}
               className="w-full h-full object-cover scale-[1.33]"
               loading="lazy"

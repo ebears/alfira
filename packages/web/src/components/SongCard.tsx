@@ -67,7 +67,7 @@ const SongCardInner = ({
         className="relative aspect-square bg-elevated overflow-hidden rounded-xl clay-flat m-3 mb-0"
       >
         <img
-          src={song.thumbnailUrl}
+          src={song.artwork ?? song.thumbnailUrl}
           alt=""
           className="w-full h-full object-cover scale-[1.33]"
           loading="lazy"
