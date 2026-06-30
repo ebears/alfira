@@ -1,5 +1,6 @@
 import { eq, sql } from 'drizzle-orm';
 import type { RouteContext } from '../index';
+import { requireAdmin, requireAuth } from '../lib/guards';
 import { json } from '../lib/json';
 import { db, tables } from '../shared/db';
 
@@ -9,9 +10,8 @@ const TAG_COLORS = ['orange', 'sky', 'emerald', 'amber', 'violet'] as const;
 type TagColor = (typeof TAG_COLORS)[number];
 
 async function handleGetTagSongs(ctx: RouteContext, nameLower: string): Promise<Response> {
-  if (!ctx.user) {
-    return json({ error: 'Not authenticated. Please log in at /auth/login.' }, 401);
-  }
+  const userOrErr = requireAuth(ctx);
+  if (userOrErr instanceof Response) return userOrErr;
 
   // Fetch all songs where tags JSON array contains this tag (case-insensitive match)
   const songs = await db
@@ -29,12 +29,10 @@ async function handlePatchTag(
   nameLower: string,
   body: Record<string, unknown>
 ): Promise<Response> {
-  if (!ctx.user) {
-    return json({ error: 'Not authenticated. Please log in at /auth/login.' }, 401);
-  }
-  if (!ctx.isAdmin) {
-    return json({ error: 'Admin access required.' }, 403);
-  }
+  const userOrErr = requireAuth(ctx);
+  if (userOrErr instanceof Response) return userOrErr;
+  const adminErr = requireAdmin(ctx);
+  if (adminErr) return adminErr;
 
   const [existing] = await db
     .select()
@@ -78,12 +76,10 @@ async function handlePatchTag(
 }
 
 async function handleDeleteTag(ctx: RouteContext, nameLower: string): Promise<Response> {
-  if (!ctx.user) {
-    return json({ error: 'Not authenticated. Please log in at /auth/login.' }, 401);
-  }
-  if (!ctx.isAdmin) {
-    return json({ error: 'Admin access required.' }, 403);
-  }
+  const userOrErr = requireAuth(ctx);
+  if (userOrErr instanceof Response) return userOrErr;
+  const adminErr = requireAdmin(ctx);
+  if (adminErr) return adminErr;
 
   const [existing] = await db
     .select()
@@ -123,9 +119,8 @@ export async function handleTags(ctx: RouteContext, request: Request): Promise<R
 
   // GET /api/tags
   if (request.method === 'GET' && pathname === '/api/tags') {
-    if (!ctx.user) {
-      return json({ error: 'Not authenticated. Please log in at /auth/login.' }, 401);
-    }
+    const userOrErr = requireAuth(ctx);
+    if (userOrErr instanceof Response) return userOrErr;
 
     const tags = await db
       .select({
@@ -151,9 +146,8 @@ export async function handleTags(ctx: RouteContext, request: Request): Promise<R
   // GET /api/tags/:nameLower — get single tag
   if (request.method === 'GET' && pathname.startsWith('/api/tags/')) {
     const nameLower = pathname.slice('/api/tags/'.length);
-    if (!ctx.user) {
-      return json({ error: 'Not authenticated. Please log in at /auth/login.' }, 401);
-    }
+    const userOrErr = requireAuth(ctx);
+    if (userOrErr instanceof Response) return userOrErr;
     const [tag] = await db
       .select()
       .from(tagTable)

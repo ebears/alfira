@@ -1,4 +1,5 @@
 import type { RouteContext } from '../index';
+import { requireAdmin } from '../lib/guards';
 import { json } from '../lib/json';
 import { db, tables } from '../shared/db';
 import { logger } from '../shared/logger';
@@ -26,7 +27,8 @@ function buildFilters(payload: CompressorPayload) {
 }
 
 export async function handleCompressor(ctx: RouteContext, request: Request): Promise<Response> {
-  if (!ctx.isAdmin) return json({ error: 'Admin access required.' }, 403);
+  const adminErr = requireAdmin(ctx);
+  if (adminErr) return adminErr;
 
   let body: CompressorPayload;
   try {

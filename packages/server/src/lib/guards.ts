@@ -1,9 +1,9 @@
 import type { RouteContext } from '../index';
 import { json } from './json';
 
-export function requireAuth(ctx: RouteContext): Response | null {
-  if (!ctx.user) return json({ error: 'Login required.' }, 401);
-  return null;
+export function requireAuth(ctx: RouteContext): NonNullable<RouteContext['user']> | Response {
+  if (!ctx.user) return json({ error: 'Not authenticated. Please log in at /auth/login.' }, 401);
+  return ctx.user;
 }
 
 export function requireAdmin(ctx: RouteContext): Response | null {
