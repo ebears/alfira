@@ -1,3 +1,4 @@
+import type { GuildPlayer } from '../GuildPlayer';
 import type { RouteContext } from '../index';
 import { GUILD_ID } from '../lib/config';
 import { requireAdmin, requireAuth } from '../lib/guards';
@@ -16,6 +17,7 @@ import { requireUserInVoice, resolveOrAutoJoinPlayer } from '../lib/voice';
 import {
   fisherYatesShuffle as fisherYatesShuffleImpl,
   type LoopMode,
+  type QueuedSong,
   toQueuedSong,
 } from '../shared';
 import { db, eq, findPlaylistWithSongs, tables } from '../shared/db';
@@ -251,56 +253,70 @@ async function handleUnshuffle(ctx: RouteContext): Promise<Response> {
 }
 
 // ---------------------------------------------------------------------------
-// POST /api/player/quick-add — add YouTube URL to priority queue (admin only)
+// Shared: resolve a YouTube URL into a temp QueuedSong with player ready
 // ---------------------------------------------------------------------------
-async function handleQuickAdd(ctx: RouteContext, request: Request): Promise<Response> {
+
+type YoutubeTempSongResult =
+  | { ok: true; player: GuildPlayer; queuedSong: QueuedSong; metadataTitle: string }
+  | { ok: false; response: Response };
+
+async function resolveYoutubeTempSong(
+  ctx: RouteContext,
+  request: Request
+): Promise<YoutubeTempSongResult> {
   const userOrErr = requireAuth(ctx);
-  if (userOrErr instanceof Response) return userOrErr;
+  if (userOrErr instanceof Response) return { ok: false, response: userOrErr };
   const user = userOrErr;
   const adminErr = requireAdmin(ctx);
-  if (adminErr) return adminErr;
+  if (adminErr) return { ok: false, response: adminErr };
 
   const inVoice = await requireUserInVoice(user.discordId);
-  if (inVoice instanceof Response) return inVoice;
+  if (inVoice instanceof Response) return { ok: false, response: inVoice };
 
   let body: { youtubeUrl?: unknown };
   try {
     body = (await request.json()) as typeof body;
   } catch {
-    return json({ error: 'Invalid JSON body.' }, 400);
+    return { ok: false, response: json({ error: 'Invalid JSON body.' }, 400) };
   }
 
   const urlResult = validateYouTubeUrl(body.youtubeUrl);
-  if (!urlResult.ok) return urlResult.response;
+  if (!urlResult.ok) return { ok: false, response: urlResult.response };
   const url = urlResult.value;
 
   const playerResult = await resolveOrAutoJoinPlayer(user.discordId);
-  if (!playerResult.ok) return playerResult.response;
+  if (!playerResult.ok) return { ok: false, response: playerResult.response };
   const player = playerResult.player;
 
   const metadataResult = await fetchYouTubeMetadata(url);
-  if (!metadataResult.ok) return metadataResult.response;
+  if (!metadataResult.ok) return { ok: false, response: metadataResult.response };
   const metadata = metadataResult.value;
 
-  const requestedBy = user.username;
-  const addedBy = user.discordId;
-  const queuedSong = {
+  const queuedSong: QueuedSong = {
     id: `temp-${Date.now()}`,
     title: metadata.title,
     youtubeUrl: url,
     youtubeId: metadata.youtubeId,
     duration: metadata.duration,
-    thumbnailUrl: metadata.thumbnailUrl,
-    addedBy,
+    thumbnailUrl: metadata.thumbnailUrl ?? '',
+    addedBy: user.discordId,
     createdAt: new Date().toISOString(),
-    requestedBy,
+    requestedBy: user.username,
   };
 
-  await player.addToPriorityQueue(queuedSong);
+  return { ok: true, player, queuedSong, metadataTitle: metadata.title };
+}
 
+// ---------------------------------------------------------------------------
+// POST /api/player/quick-add — add YouTube URL to priority queue (admin only)
+// ---------------------------------------------------------------------------
+async function handleQuickAdd(ctx: RouteContext, request: Request): Promise<Response> {
+  const result = await resolveYoutubeTempSong(ctx, request);
+  if (!result.ok) return result.response;
+  await result.player.addToPriorityQueue(result.queuedSong);
   return json({
-    message: `Added "${metadata.title}" to the queue.`,
-    song: queuedSong,
+    message: `Added "${result.metadataTitle}" to the queue.`,
+    song: result.queuedSong,
   });
 }
 
@@ -485,53 +501,12 @@ async function handleAddToPriority(ctx: RouteContext, request: Request): Promise
 // POST /api/player/override — immediately play YouTube URL (admin only)
 // ---------------------------------------------------------------------------
 async function handleOverride(ctx: RouteContext, request: Request): Promise<Response> {
-  const userOrErr = requireAuth(ctx);
-  if (userOrErr instanceof Response) return userOrErr;
-  const user = userOrErr;
-  const adminErr = requireAdmin(ctx);
-  if (adminErr) return adminErr;
-
-  const inVoice = await requireUserInVoice(user.discordId);
-  if (inVoice instanceof Response) return inVoice;
-
-  let body: { youtubeUrl?: unknown };
-  try {
-    body = (await request.json()) as typeof body;
-  } catch {
-    return json({ error: 'Invalid JSON body.' }, 400);
-  }
-
-  const urlResult = validateYouTubeUrl(body.youtubeUrl);
-  if (!urlResult.ok) return urlResult.response;
-  const url = urlResult.value;
-
-  const playerResult = await resolveOrAutoJoinPlayer(user.discordId);
-  if (!playerResult.ok) return playerResult.response;
-  const player = playerResult.player;
-
-  const metadataResult = await fetchYouTubeMetadata(url);
-  if (!metadataResult.ok) return metadataResult.response;
-  const metadata = metadataResult.value;
-
-  const requestedBy = user.username;
-  const addedBy = user.discordId;
-  const queuedSong = {
-    id: `temp-${Date.now()}`,
-    title: metadata.title,
-    youtubeUrl: url,
-    youtubeId: metadata.youtubeId,
-    duration: metadata.duration,
-    thumbnailUrl: metadata.thumbnailUrl,
-    addedBy,
-    createdAt: new Date().toISOString(),
-    requestedBy,
-  };
-
-  await player.replaceQueueAndPlay([queuedSong]);
-
+  const result = await resolveYoutubeTempSong(ctx, request);
+  if (!result.ok) return result.response;
+  await result.player.replaceQueueAndPlay([result.queuedSong]);
   return json({
-    message: `Now playing "${metadata.title}".`,
-    song: queuedSong,
+    message: `Now playing "${result.metadataTitle}".`,
+    song: result.queuedSong,
   });
 }
 
