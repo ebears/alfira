@@ -31,6 +31,12 @@ jobs:
 
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
+        with:
+          fetch-depth: 0
+
+      - uses: oven-sh/setup-bun@8d6892bda3ebba5a2fe1f65c10f9220d2f428bc9 # v2
+        with:
+          cache: true
 
       - name: Initialize CodeQL
         uses: github/codeql-action/init@b0c4fd77f6c559021d78430ec4d0d169ae74a4eb # v3
@@ -38,8 +44,8 @@ jobs:
           languages: ${{ matrix.language }}
           queries: security-extended
 
-      - name: Autobuild
-        uses: github/codeql-action/autobuild@b0c4fd77f6c559021d78430ec4d0d169ae74a4eb # v3
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
 
       - name: Perform CodeQL Analysis
         uses: github/codeql-action/analyze@b0c4fd77f6c559021d78430ec4d0d169ae74a4eb # v3
