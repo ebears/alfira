@@ -35,8 +35,6 @@ jobs:
           fetch-depth: 0
 
       - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2
-        with:
-          cache: true
 
       - name: Initialize CodeQL
         uses: github/codeql-action/init@b0c4fd77f6c559021d78430ec4d0d169ae74a4eb # v3
