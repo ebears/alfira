@@ -25,7 +25,7 @@ What actually happened.
 - Browser (if web UI issue):
 
 ## Relevant logs
-Please paste any relevant log output (from `docker compose logs -f api` or `docker compose logs -f web`):
+Please paste any relevant log output (from `docker compose logs -f alfira`):
 
 ```
 Paste logs here
