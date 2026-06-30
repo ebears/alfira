@@ -1,5 +1,6 @@
 import { eq } from 'drizzle-orm';
 import type { RouteContext } from '../index';
+import { EQ_BAND_COLUMNS, eqBandsFromRow, eqBandValues } from '../lib/eqBands';
 import { requireAdmin } from '../lib/guards';
 import { json } from '../lib/json';
 import { db, tables } from '../shared/db';
@@ -24,46 +25,12 @@ export async function handleEqualizerGet(ctx: RouteContext): Promise<Response> {
   if (adminErr) return adminErr;
 
   const row = await db
-    .select({
-      eqBand0: tables.guildSettings.eqBand0,
-      eqBand1: tables.guildSettings.eqBand1,
-      eqBand2: tables.guildSettings.eqBand2,
-      eqBand3: tables.guildSettings.eqBand3,
-      eqBand4: tables.guildSettings.eqBand4,
-      eqBand5: tables.guildSettings.eqBand5,
-      eqBand6: tables.guildSettings.eqBand6,
-      eqBand7: tables.guildSettings.eqBand7,
-      eqBand8: tables.guildSettings.eqBand8,
-      eqBand9: tables.guildSettings.eqBand9,
-      eqBand10: tables.guildSettings.eqBand10,
-      eqBand11: tables.guildSettings.eqBand11,
-      eqBand12: tables.guildSettings.eqBand12,
-      eqBand13: tables.guildSettings.eqBand13,
-      eqBand14: tables.guildSettings.eqBand14,
-    })
+    .select(EQ_BAND_COLUMNS)
     .from(tables.guildSettings)
     .where(eq(tables.guildSettings.id, 1))
     .get();
 
-  const bands = row
-    ? [
-        row.eqBand0,
-        row.eqBand1,
-        row.eqBand2,
-        row.eqBand3,
-        row.eqBand4,
-        row.eqBand5,
-        row.eqBand6,
-        row.eqBand7,
-        row.eqBand8,
-        row.eqBand9,
-        row.eqBand10,
-        row.eqBand11,
-        row.eqBand12,
-        row.eqBand13,
-        row.eqBand14,
-      ]
-    : Array(15).fill(50);
+  const bands = eqBandsFromRow(row);
 
   return json({ bands });
 }
@@ -95,43 +62,10 @@ export async function handleEqualizerPatch(ctx: RouteContext, request: Request):
   // Upsert into DB
   await db
     .insert(tables.guildSettings)
-    .values({
-      id: 1,
-      eqBand0: bands[0],
-      eqBand1: bands[1],
-      eqBand2: bands[2],
-      eqBand3: bands[3],
-      eqBand4: bands[4],
-      eqBand5: bands[5],
-      eqBand6: bands[6],
-      eqBand7: bands[7],
-      eqBand8: bands[8],
-      eqBand9: bands[9],
-      eqBand10: bands[10],
-      eqBand11: bands[11],
-      eqBand12: bands[12],
-      eqBand13: bands[13],
-      eqBand14: bands[14],
-    })
+    .values({ id: 1, ...eqBandValues(bands) })
     .onConflictDoUpdate({
       target: tables.guildSettings.id,
-      set: {
-        eqBand0: bands[0],
-        eqBand1: bands[1],
-        eqBand2: bands[2],
-        eqBand3: bands[3],
-        eqBand4: bands[4],
-        eqBand5: bands[5],
-        eqBand6: bands[6],
-        eqBand7: bands[7],
-        eqBand8: bands[8],
-        eqBand9: bands[9],
-        eqBand10: bands[10],
-        eqBand11: bands[11],
-        eqBand12: bands[12],
-        eqBand13: bands[13],
-        eqBand14: bands[14],
-      },
+      set: eqBandValues(bands),
     })
     .run();
 
