@@ -2,6 +2,7 @@ import { eq, inArray, or, sql } from 'drizzle-orm';
 import type { RouteContext } from '../index';
 import { GUILD_ID } from '../lib/config';
 import { getUserDisplayName } from '../lib/displayName';
+import { requireAdmin, requireAuth } from '../lib/guards';
 import { json } from '../lib/json';
 import { formatSong } from '../lib/serialization';
 import { emitSongAdded, emitSongDeleted, emitSongUpdated } from '../lib/socket';
@@ -28,9 +29,8 @@ const { song: songTable } = tables;
 // GET /api/songs — paginated list of songs, newest first.
 // ---------------------------------------------------------------------------
 async function handleGetSongs(ctx: RouteContext, request: Request): Promise<Response> {
-  if (!ctx.user) {
-    return json({ error: 'Not authenticated. Please log in at /auth/login.' }, 401);
-  }
+  const userOrErr = requireAuth(ctx);
+  if (userOrErr instanceof Response) return userOrErr;
 
   const url = new URL(request.url);
   const page = Math.max(1, parseInt(url.searchParams.get('page') ?? '1', 10) || 1);
@@ -100,12 +100,11 @@ async function handleGetSongs(ctx: RouteContext, request: Request): Promise<Resp
 // POST /api/songs — add a song by YouTube URL. Admin only.
 // ---------------------------------------------------------------------------
 async function handlePostSong(ctx: RouteContext, request: Request): Promise<Response> {
-  if (!ctx.user) {
-    return json({ error: 'Not authenticated. Please log in at /auth/login.' }, 401);
-  }
-  if (!ctx.isAdmin) {
-    return json({ error: 'Admin access required.' }, 403);
-  }
+  const userOrErr = requireAuth(ctx);
+  if (userOrErr instanceof Response) return userOrErr;
+  const user = userOrErr;
+  const adminErr = requireAdmin(ctx);
+  if (adminErr) return adminErr;
 
   let body: { youtubeUrl?: unknown; nickname?: unknown; asPlaylist?: unknown };
   try {
@@ -167,7 +166,7 @@ async function handlePostSong(ctx: RouteContext, request: Request): Promise<Resp
       youtubeId: metadata.youtubeId,
       duration: metadata.duration,
       thumbnailUrl: metadata.thumbnailUrl ?? '',
-      addedBy: ctx.user.discordId ?? '',
+      addedBy: user.discordId,
       nickname: nicknameResult.value,
     })
     .returning();
@@ -186,12 +185,11 @@ async function handlePostSong(ctx: RouteContext, request: Request): Promise<Resp
 // POST /api/songs/import-playlist — import YouTube playlist. Admin only.
 // ---------------------------------------------------------------------------
 async function handleImportPlaylist(ctx: RouteContext, request: Request): Promise<Response> {
-  if (!ctx.user) {
-    return json({ error: 'Not authenticated. Please log in at /auth/login.' }, 401);
-  }
-  if (!ctx.isAdmin) {
-    return json({ error: 'Admin access required.' }, 403);
-  }
+  const userOrErr = requireAuth(ctx);
+  if (userOrErr instanceof Response) return userOrErr;
+  const user = userOrErr;
+  const adminErr = requireAdmin(ctx);
+  if (adminErr) return adminErr;
 
   let body: { youtubeUrl?: unknown; maxVideos?: number };
   try {
@@ -253,8 +251,7 @@ async function handleImportPlaylist(ctx: RouteContext, request: Request): Promis
     });
   }
 
-  // Capture discordId before transaction to avoid TypeScript narrowing issues in callbacks
-  const addedByDiscordId = ctx.user?.discordId ?? '';
+  const addedByDiscordId = user.discordId;
 
   // Create songs in a transaction
   const createdSongs = await db.transaction((tx) => {
@@ -299,12 +296,10 @@ async function handleDeleteSong(
   _request: Request,
   id: string
 ): Promise<Response> {
-  if (!ctx.user) {
-    return json({ error: 'Not authenticated. Please log in at /auth/login.' }, 401);
-  }
-  if (!ctx.isAdmin) {
-    return json({ error: 'Admin access required.' }, 403);
-  }
+  const userOrErr = requireAuth(ctx);
+  if (userOrErr instanceof Response) return userOrErr;
+  const adminErr = requireAdmin(ctx);
+  if (adminErr) return adminErr;
 
   const [existing] = await db.select().from(songTable).where(eq(songTable.id, id)).limit(1);
   if (!existing) {
@@ -323,12 +318,10 @@ async function handleDeleteSong(
 // PATCH /api/songs/:id — update song fields. Admin only.
 // ---------------------------------------------------------------------------
 async function handlePatchSong(ctx: RouteContext, request: Request, id: string): Promise<Response> {
-  if (!ctx.user) {
-    return json({ error: 'Not authenticated. Please log in at /auth/login.' }, 401);
-  }
-  if (!ctx.isAdmin) {
-    return json({ error: 'Admin access required.' }, 403);
-  }
+  const userOrErr = requireAuth(ctx);
+  if (userOrErr instanceof Response) return userOrErr;
+  const adminErr = requireAdmin(ctx);
+  if (adminErr) return adminErr;
 
   let body: Record<string, unknown>;
   try {

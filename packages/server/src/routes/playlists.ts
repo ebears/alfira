@@ -1,6 +1,7 @@
 import { and, count, desc, eq, inArray, sql } from 'drizzle-orm';
 import type { RouteContext } from '../index';
 import { getUserDisplayName } from '../lib/displayName';
+import { requireAuth } from '../lib/guards';
 import { json } from '../lib/json';
 import { canAccessPlaylist } from '../lib/playlistAccess';
 import { emitPlaylistUpdated } from '../lib/socket';
@@ -74,9 +75,9 @@ function formatPlaylistSongWithSong(
 // GET /api/playlists — paginated list of playlists
 // ---------------------------------------------------------------------------
 async function handleGetPlaylists(ctx: RouteContext, request: Request): Promise<Response> {
-  if (!ctx.user) {
-    return json({ error: 'Not authenticated. Please log in at /auth/login.' }, 401);
-  }
+  const userOrErr = requireAuth(ctx);
+  if (userOrErr instanceof Response) return userOrErr;
+  const user = userOrErr;
 
   const url = new URL(request.url);
   const adminView = url.searchParams.get('adminView') === 'true';
@@ -103,7 +104,7 @@ async function handleGetPlaylists(ctx: RouteContext, request: Request): Promise<
 
   // Filter private playlists: only visible to creator and admins (in Admin View)
   const filteredPlaylists = playlistsWithCounts.filter(
-    (pl) => canAccessPlaylist(pl, ctx.user ?? undefined, adminView).ok
+    (pl) => canAccessPlaylist(pl, user, adminView).ok
   );
 
   // Fetch creator display names for each playlist
@@ -129,9 +130,9 @@ async function handleGetPlaylists(ctx: RouteContext, request: Request): Promise<
 // POST /api/playlists — create a new empty playlist
 // ---------------------------------------------------------------------------
 async function handlePostPlaylist(ctx: RouteContext, request: Request): Promise<Response> {
-  if (!ctx.user) {
-    return json({ error: 'Not authenticated. Please log in at /auth/login.' }, 401);
-  }
+  const userOrErr = requireAuth(ctx);
+  if (userOrErr instanceof Response) return userOrErr;
+  const user = userOrErr;
 
   let body: { name?: unknown };
   try {
@@ -148,7 +149,7 @@ async function handlePostPlaylist(ctx: RouteContext, request: Request): Promise<
     .insert(playlistTable)
     .values({
       name: trimmedName,
-      createdBy: ctx.user.discordId ?? '',
+      createdBy: user.discordId,
     })
     .returning();
 
@@ -168,9 +169,9 @@ async function handleGetPlaylist(
   request: Request,
   id: string
 ): Promise<Response> {
-  if (!ctx.user) {
-    return json({ error: 'Not authenticated. Please log in at /auth/login.' }, 401);
-  }
+  const userOrErr = requireAuth(ctx);
+  if (userOrErr instanceof Response) return userOrErr;
+  const user = userOrErr;
 
   const url = new URL(request.url);
   const adminView = url.searchParams.get('adminView') === 'true';
@@ -187,7 +188,7 @@ async function handleGetPlaylist(
     return json({ error: 'Playlist not found.' }, 404);
   }
 
-  const accessResult = canAccessPlaylist(playlist, ctx.user ?? undefined, adminView);
+  const accessResult = canAccessPlaylist(playlist, user, adminView);
   if (!accessResult.ok) {
     return json({ error: accessResult.error }, 403);
   }
@@ -284,9 +285,9 @@ async function handlePatchVisibility(
   request: Request,
   id: string
 ): Promise<Response> {
-  if (!ctx.user) {
-    return json({ error: 'Not authenticated. Please log in at /auth/login.' }, 401);
-  }
+  const userOrErr = requireAuth(ctx);
+  if (userOrErr instanceof Response) return userOrErr;
+  const user = userOrErr;
 
   let body: { isPrivate?: unknown; adminView?: unknown };
   try {
@@ -305,7 +306,7 @@ async function handlePatchVisibility(
   }
 
   const adminView = body.adminView === true;
-  const accessResult = canAccessPlaylist(existing, ctx.user ?? undefined, adminView);
+  const accessResult = canAccessPlaylist(existing, user, adminView);
   if (!accessResult.ok) {
     return json({ error: accessResult.error }, 403);
   }
@@ -334,9 +335,9 @@ async function handlePatchPlaylist(
   request: Request,
   id: string
 ): Promise<Response> {
-  if (!ctx.user) {
-    return json({ error: 'Not authenticated. Please log in at /auth/login.' }, 401);
-  }
+  const userOrErr = requireAuth(ctx);
+  if (userOrErr instanceof Response) return userOrErr;
+  const user = userOrErr;
 
   let body: { name?: unknown };
   try {
@@ -354,7 +355,7 @@ async function handlePatchPlaylist(
     return json({ error: 'Playlist not found.' }, 404);
   }
 
-  const accessResult = canAccessPlaylist(existing, ctx.user ?? undefined, undefined);
+  const accessResult = canAccessPlaylist(existing, user, undefined);
   if (!accessResult.ok) {
     return json({ error: `Only the playlist owner or admins can rename this playlist.` }, 403);
   }
@@ -383,16 +384,16 @@ async function handleDeletePlaylist(
   _request: Request,
   id: string
 ): Promise<Response> {
-  if (!ctx.user) {
-    return json({ error: 'Not authenticated. Please log in at /auth/login.' }, 401);
-  }
+  const userOrErr = requireAuth(ctx);
+  if (userOrErr instanceof Response) return userOrErr;
+  const user = userOrErr;
 
   const existing = await findPlaylistOr404(id);
   if (!existing) {
     return json({ error: 'Playlist not found.' }, 404);
   }
 
-  const accessResult = canAccessPlaylist(existing, ctx.user ?? undefined, undefined);
+  const accessResult = canAccessPlaylist(existing, user, undefined);
   if (!accessResult.ok) {
     return json({ error: `Only the playlist owner or admins can delete this playlist.` }, 403);
   }
@@ -406,9 +407,9 @@ async function handleDeletePlaylist(
 // POST /api/playlists/:id/songs — add a song to a playlist
 // ---------------------------------------------------------------------------
 async function handleAddSong(ctx: RouteContext, request: Request, id: string): Promise<Response> {
-  if (!ctx.user) {
-    return json({ error: 'Not authenticated. Please log in at /auth/login.' }, 401);
-  }
+  const userOrErr = requireAuth(ctx);
+  if (userOrErr instanceof Response) return userOrErr;
+  const user = userOrErr;
 
   let body: { songId?: unknown };
   try {
@@ -426,7 +427,7 @@ async function handleAddSong(ctx: RouteContext, request: Request, id: string): P
     return json({ error: 'Playlist not found.' }, 404);
   }
 
-  const accessResult = canAccessPlaylist(playlist, ctx.user ?? undefined, undefined);
+  const accessResult = canAccessPlaylist(playlist, user, undefined);
   if (!accessResult.ok) {
     return json(
       { error: `Only the playlist owner or admins can add songs to this playlist.` },
@@ -498,16 +499,16 @@ async function handleRemoveSong(
   playlistId: string,
   songId: string
 ): Promise<Response> {
-  if (!ctx.user) {
-    return json({ error: 'Not authenticated. Please log in at /auth/login.' }, 401);
-  }
+  const userOrErr = requireAuth(ctx);
+  if (userOrErr instanceof Response) return userOrErr;
+  const user = userOrErr;
 
   const playlist = await findPlaylistOr404(playlistId);
   if (!playlist) {
     return json({ error: 'Playlist not found.' }, 404);
   }
 
-  const accessResult = canAccessPlaylist(playlist, ctx.user ?? undefined, undefined);
+  const accessResult = canAccessPlaylist(playlist, user, undefined);
   if (!accessResult.ok) {
     return json({ error: `Only the playlist owner or admins can remove songs.` }, 403);
   }

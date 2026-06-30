@@ -1,5 +1,6 @@
 import { eq } from 'drizzle-orm';
 import type { RouteContext } from '../index';
+import { requireAdmin } from '../lib/guards';
 import { json } from '../lib/json';
 import { db, tables } from '../shared/db';
 import { logger } from '../shared/logger';
@@ -19,7 +20,8 @@ function buildEqualizerFilter(bands: number[]) {
 }
 
 export async function handleEqualizerGet(ctx: RouteContext): Promise<Response> {
-  if (!ctx.isAdmin) return json({ error: 'Admin access required.' }, 403);
+  const adminErr = requireAdmin(ctx);
+  if (adminErr) return adminErr;
 
   const row = await db
     .select({
@@ -67,7 +69,8 @@ export async function handleEqualizerGet(ctx: RouteContext): Promise<Response> {
 }
 
 export async function handleEqualizerPatch(ctx: RouteContext, request: Request): Promise<Response> {
-  if (!ctx.isAdmin) return json({ error: 'Admin access required.' }, 403);
+  const adminErr = requireAdmin(ctx);
+  if (adminErr) return adminErr;
 
   let body: EqualizerPayload;
   try {
