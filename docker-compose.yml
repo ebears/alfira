@@ -38,8 +38,6 @@ services:
     volumes:
       # Live-mount server source files — restart the service to pick up changes.
       - ./packages/server/src:/app/packages/server/src
-      # Mount shared source so hot-reload picks up DB changes.
-      - ./packages/shared/src:/app/packages/shared/src
       # Persistent SQLite database storage
       - alfira-data:/data
     healthcheck:
