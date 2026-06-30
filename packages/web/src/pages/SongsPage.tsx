@@ -23,7 +23,7 @@ export default function SongsPage() {
   const [search, setSearch] = useState('');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>(() => {
     const saved = localStorage.getItem('alfira-library-view');
-    return saved === 'list' ? 'list' : 'grid';
+    return saved === 'grid' ? 'grid' : 'list';
   });
   const [showAddModal, setShowAddModal] = useState(false);
   const [deleteId, setDeleteId] = useState<string | null>(null);
@@ -173,19 +173,6 @@ export default function SongsPage() {
             surface="surface"
             size="icon"
             onClick={() => {
-              setViewMode('grid');
-              localStorage.setItem('alfira-library-view', 'grid');
-            }}
-            className={isGrid ? 'pressed text-accent' : ''}
-            title="Grid view"
-          >
-            <SquaresFourIcon size={18} weight="duotone" />
-          </Button>
-          <Button
-            variant="inherit"
-            surface="surface"
-            size="icon"
-            onClick={() => {
               setViewMode('list');
               localStorage.setItem('alfira-library-view', 'list');
             }}
@@ -193,6 +180,19 @@ export default function SongsPage() {
             title="List view"
           >
             <ListIcon size={18} weight="duotone" />
+          </Button>
+          <Button
+            variant="inherit"
+            surface="surface"
+            size="icon"
+            onClick={() => {
+              setViewMode('grid');
+              localStorage.setItem('alfira-library-view', 'grid');
+            }}
+            className={isGrid ? 'pressed text-accent' : ''}
+            title="Grid view"
+          >
+            <SquaresFourIcon size={18} weight="duotone" />
           </Button>
         </div>
       </div>
