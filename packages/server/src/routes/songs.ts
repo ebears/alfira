@@ -20,7 +20,8 @@ import {
   validateYouTubeUrl,
   youTubeUrl,
 } from '../lib/validation';
-import { $client, db, tables } from '../shared/db';
+import { db, tables } from '../shared/db';
+import { buildSongSearchClause } from '../lib/search';
 import { getPlayer } from '../startDiscord';
 
 const { song: songTable } = tables;
@@ -41,23 +42,7 @@ async function handleGetSongs(ctx: RouteContext, request: Request): Promise<Resp
   const skip = (page - 1) * limit;
   const search = url.searchParams.get('search')?.trim() ?? '';
 
-  // Build tag-matching IDs via raw SQL (case-insensitive substring on JSON text).
-  const tagMatchingIds = search
-    ? (
-        (await $client
-          .query(`SELECT id FROM "Song" WHERE lower(tags) LIKE lower(?)`)
-          .all(`%${search}%`)) as { id: string }[]
-      ).map((r) => r.id)
-    : [];
-
-  const where = search
-    ? tagMatchingIds.length > 0
-      ? sql`(lower(title) LIKE lower(${`%${search}%`}) OR lower(nickname) LIKE lower(${`%${search}%`}) OR lower(artist) LIKE lower(${`%${search}%`}) OR lower(album) LIKE lower(${`%${search}%`}) OR id IN (${sql.join(
-          tagMatchingIds.map((id) => sql.raw(`'${id}'`)),
-          sql`,`
-        )}))`
-      : sql`(lower(title) LIKE lower(${`%${search}%`}) OR lower(nickname) LIKE lower(${`%${search}%`}) OR lower(artist) LIKE lower(${`%${search}%`}) OR lower(album) LIKE lower(${`%${search}%`}))`
-    : undefined;
+  const where = buildSongSearchClause(search || undefined);
 
   const [songs, countResult] = await Promise.all([
     db

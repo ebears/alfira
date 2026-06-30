@@ -1,4 +1,4 @@
-import { and, count, desc, eq, inArray, sql } from 'drizzle-orm';
+import { and, count, desc, eq, inArray } from 'drizzle-orm';
 import type { RouteContext } from '../index';
 import { getUserDisplayName } from '../lib/displayName';
 import { requireAuth } from '../lib/guards';
@@ -6,7 +6,8 @@ import { json } from '../lib/json';
 import { canAccessPlaylist } from '../lib/playlistAccess';
 import { emitPlaylistUpdated } from '../lib/socket';
 import { validatePlaylistName } from '../lib/validation';
-import { $client, db, tables } from '../shared/db';
+import { buildSongSearchClause } from '../lib/search';
+import { db, tables } from '../shared/db';
 
 const { playlist: playlistTable, playlistSong: playlistSongTable } = tables;
 
@@ -196,24 +197,21 @@ async function handleGetPlaylist(
   // Build list of song IDs to filter by when searching
   let songIds: string[] = [];
   if (search) {
-    const tagMatchingIds = (
-      $client.query(`SELECT id FROM "Song" WHERE lower(tags) LIKE lower(?)`).all(`%${search}%`) as {
-        id: string;
-      }[]
-    ).map((r) => r.id);
-    const where =
-      tagMatchingIds.length > 0
-        ? sql`(lower(title) LIKE lower(${`%${search}%`}) OR lower(nickname) LIKE lower(${`%${search}%`}) OR lower(artist) LIKE lower(${`%${search}%`}) OR lower(album) LIKE lower(${`%${search}%`}) OR id IN (${sql.join(
-            tagMatchingIds.map((id) => sql.raw(`'${id}'`)),
-            sql`,`
-          )}))`
-        : sql`(lower(title) LIKE lower(${`%${search}%`}) OR lower(nickname) LIKE lower(${`%${search}%`}) OR lower(artist) LIKE lower(${`%${search}%`}) OR lower(album) LIKE lower(${`%${search}%`}))`;
     const matching = await db
       .select({ id: tables.song.id })
       .from(tables.song)
-      .where(where)
+      .where(buildSongSearchClause(search))
       .limit(500);
     songIds = matching.map((s) => s.id);
+    if (songIds.length === 0) {
+      return json({
+        ...playlist,
+        createdAt: playlist.createdAt instanceof Date ? playlist.createdAt.toISOString() : playlist.createdAt,
+        songs: [],
+        createdByDisplayName: await getUserDisplayName(playlist.createdBy),
+        pagination: { page, limit, total: 0, totalPages: 0 },
+      });
+    }
   }
 
   // Fetch paginated songs
