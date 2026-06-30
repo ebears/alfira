@@ -750,7 +750,13 @@
 
     .btn-discord:active {
         transform: var(--btn-transform-active);
+        scale: var(--btn-scale-active);
         box-shadow: var(--clay-shadow-flat);
+    }
+    .btn-discord.pressed {
+        transform: var(--btn-transform-active);
+        scale: var(--btn-scale-active);
+        box-shadow: inset 0 2px 4px 0 rgba(0, 0, 0, 0.25);
     }
     .input {
         @apply text-fg font-mono text-sm px-3 py-3 md:py-2 outline-none focus:border-accent/60 transition-all duration-200 placeholder:text-faint w-full;
