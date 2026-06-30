@@ -4,9 +4,9 @@ import { getUserDisplayName } from '../lib/displayName';
 import { requireAuth } from '../lib/guards';
 import { json } from '../lib/json';
 import { canAccessPlaylist } from '../lib/playlistAccess';
+import { buildSongSearchClause } from '../lib/search';
 import { emitPlaylistUpdated } from '../lib/socket';
 import { validatePlaylistName } from '../lib/validation';
-import { buildSongSearchClause } from '../lib/search';
 import { db, tables } from '../shared/db';
 
 const { playlist: playlistTable, playlistSong: playlistSongTable } = tables;
@@ -206,7 +206,10 @@ async function handleGetPlaylist(
     if (songIds.length === 0) {
       return json({
         ...playlist,
-        createdAt: playlist.createdAt instanceof Date ? playlist.createdAt.toISOString() : playlist.createdAt,
+        createdAt:
+          playlist.createdAt instanceof Date
+            ? playlist.createdAt.toISOString()
+            : playlist.createdAt,
         songs: [],
         createdByDisplayName: await getUserDisplayName(playlist.createdBy),
         pagination: { page, limit, total: 0, totalPages: 0 },

@@ -4,6 +4,7 @@ import { GUILD_ID } from '../lib/config';
 import { getUserDisplayName } from '../lib/displayName';
 import { requireAdmin, requireAuth } from '../lib/guards';
 import { json } from '../lib/json';
+import { buildSongSearchClause } from '../lib/search';
 import { formatSong } from '../lib/serialization';
 import { emitSongAdded, emitSongDeleted, emitSongUpdated } from '../lib/socket';
 import { canonicalizeTags } from '../lib/tagCanonicalization';
@@ -21,7 +22,6 @@ import {
   youTubeUrl,
 } from '../lib/validation';
 import { db, tables } from '../shared/db';
-import { buildSongSearchClause } from '../lib/search';
 import { getPlayer } from '../startDiscord';
 
 const { song: songTable } = tables;
