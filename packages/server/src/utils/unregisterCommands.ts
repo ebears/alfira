@@ -119,8 +119,7 @@ export async function unregisterStaleCommands(): Promise<void> {
 
 // Allow running as standalone script: `bun run unregisterCommands.ts`
 if (import.meta.main) {
-  // Load env when run directly (index.ts already loads it on startup)
-  await import('dotenv/config');
+  // Bun auto-loads .env — env vars are already available
   await unregisterStaleCommands();
   process.exit(0);
 }
