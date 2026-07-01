@@ -217,9 +217,11 @@ export async function preloadTrack(
     if (NODELINK_AUTH) headers.Authorization = NODELINK_AUTH;
 
     const body: Record<string, unknown> = { nextTrack: { encoded } };
-    // Include current track if provided so NodeLink associates this with the active player session
+    // Include the current track so NodeLink can validate the session
+    // association. noReplace ensures it doesn't restart playback.
     if (currentEncoded) {
       body.track = { encoded: currentEncoded };
+      body.noReplace = true;
     }
 
     await fetch(url, {
