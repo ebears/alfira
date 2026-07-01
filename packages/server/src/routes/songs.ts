@@ -1,8 +1,9 @@
 import { eq, inArray, or, sql } from 'drizzle-orm';
 import type { RouteContext } from '../index';
 import { GUILD_ID } from '../lib/config';
-import { getUserDisplayName } from '../lib/displayName';
+import { resolveDisplayNames } from '../lib/displayName';
 import { json } from '../lib/json';
+import { parsePagination } from '../lib/pagination';
 import { checkGuards } from '../lib/routeGuards';
 import { buildSongSearchClause } from '../lib/search';
 import { formatSong } from '../lib/serialization';
@@ -34,12 +35,7 @@ async function handleGetSongs(ctx: RouteContext, request: Request): Promise<Resp
   if (guards instanceof Response) return guards;
 
   const url = new URL(request.url);
-  const page = Math.max(1, parseInt(url.searchParams.get('page') ?? '1', 10) || 1);
-  const limit = Math.min(
-    100,
-    Math.max(1, parseInt(url.searchParams.get('limit') ?? '30', 10) || 30)
-  );
-  const skip = (page - 1) * limit;
+  const { page, limit, skip } = parsePagination(url);
   const search = url.searchParams.get('search')?.trim() ?? '';
 
   const where = buildSongSearchClause(search || undefined);
@@ -57,13 +53,7 @@ async function handleGetSongs(ctx: RouteContext, request: Request): Promise<Resp
   const total = parseInt(String(countResult[0]?.count ?? 0), 10);
 
   // Resolve Discord display names for unique addedBy IDs
-  const uniqueIds = [...new Set(songs.map((s) => s.addedBy))];
-  const nameMap = new Map<string, string>();
-  await Promise.all(
-    uniqueIds.map(async (id) => {
-      nameMap.set(id, await getUserDisplayName(id));
-    })
-  );
+  const nameMap = await resolveDisplayNames(songs);
 
   const songsWithNames = songs.map((s) => ({
     ...formatSong(s),

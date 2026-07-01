@@ -1,7 +1,8 @@
 import { and, count, desc, eq, inArray } from 'drizzle-orm';
 import type { RouteContext } from '../index';
-import { getUserDisplayName } from '../lib/displayName';
+import { getUserDisplayName, resolveDisplayNames } from '../lib/displayName';
 import { json } from '../lib/json';
+import { parsePagination } from '../lib/pagination';
 import { canAccessPlaylist } from '../lib/playlistAccess';
 import { checkGuards } from '../lib/routeGuards';
 import { buildSongSearchClause } from '../lib/search';
@@ -82,12 +83,7 @@ async function handleGetPlaylists(ctx: RouteContext, request: Request): Promise<
 
   const url = new URL(request.url);
   const adminView = url.searchParams.get('adminView') === 'true';
-  const page = Math.max(1, parseInt(url.searchParams.get('page') ?? '1', 10) || 1);
-  const limit = Math.min(
-    100,
-    Math.max(1, parseInt(url.searchParams.get('limit') ?? '30', 10) || 30)
-  );
-  const skip = (page - 1) * limit;
+  const { page, limit, skip } = parsePagination(url);
 
   const [playlists, totalResult] = await Promise.all([
     db.select().from(playlistTable).orderBy(playlistTable.createdAt).limit(limit).offset(skip),
@@ -176,12 +172,7 @@ async function handleGetPlaylist(
 
   const url = new URL(request.url);
   const adminView = url.searchParams.get('adminView') === 'true';
-  const page = Math.max(1, parseInt(url.searchParams.get('page') ?? '1', 10) || 1);
-  const limit = Math.min(
-    100,
-    Math.max(1, parseInt(url.searchParams.get('limit') ?? '30', 10) || 30)
-  );
-  const skip = (page - 1) * limit;
+  const { page, limit, skip } = parsePagination(url);
   const search = url.searchParams.get('search')?.trim() ?? '';
 
   const playlist = await findPlaylistOr404(id, true);
@@ -249,13 +240,7 @@ async function handleGetPlaylist(
   const songMap = new Map(songs.map((s) => [s.id, s]));
 
   // Resolve Discord display names for unique addedBy IDs
-  const uniqueIds = [...new Set(songs.map((s) => s.addedBy))];
-  const nameMap = new Map<string, string>();
-  await Promise.all(
-    uniqueIds.map(async (id) => {
-      nameMap.set(id, await getUserDisplayName(id));
-    })
-  );
+  const nameMap = await resolveDisplayNames(songs);
 
   return json({
     ...playlist,
