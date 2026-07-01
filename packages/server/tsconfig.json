@@ -1,13 +1,13 @@
 {
   "compilerOptions": {
-    "target": "ES2020",
+    "target": "ESNext",
     "module": "ESNext",
     "moduleResolution": "bundler",
     "ignoreDeprecations": "6.0",
     "baseUrl": ".",
     "rootDir": "./src",
     "paths": {},
-    "lib": ["ES2022"],
+    "lib": ["ESNext"],
     "types": ["bun-types", "node"],
     "outDir": "./dist",
     "strict": true,

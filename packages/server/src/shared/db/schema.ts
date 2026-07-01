@@ -1,10 +1,9 @@
-import { randomUUID } from 'node:crypto';
 import { index, integer, real, sqliteTable, text, unique } from 'drizzle-orm/sqlite-core';
 
 export const song = sqliteTable('Song', {
   id: text('id')
     .primaryKey()
-    .$defaultFn(() => randomUUID()),
+    .$defaultFn(() => crypto.randomUUID()),
   title: text('title').notNull(),
   youtubeUrl: text('youtubeUrl').notNull().unique(),
   youtubeId: text('youtubeId').notNull().unique(),
@@ -25,7 +24,7 @@ export const song = sqliteTable('Song', {
 export const playlist = sqliteTable('Playlist', {
   id: text('id')
     .primaryKey()
-    .$defaultFn(() => randomUUID()),
+    .$defaultFn(() => crypto.randomUUID()),
   name: text('name').notNull(),
   createdBy: text('createdBy').notNull(),
   isPrivate: integer('isPrivate', { mode: 'boolean' }).default(false).notNull(),
@@ -39,7 +38,7 @@ export const playlistSong = sqliteTable(
   {
     id: text('id')
       .primaryKey()
-      .$defaultFn(() => randomUUID()),
+      .$defaultFn(() => crypto.randomUUID()),
     playlistId: text('playlistId').notNull(),
     songId: text('songId').notNull(),
     position: integer('position').notNull(),
@@ -55,7 +54,7 @@ export const refreshToken = sqliteTable(
   {
     id: text('id')
       .primaryKey()
-      .$defaultFn(() => randomUUID()),
+      .$defaultFn(() => crypto.randomUUID()),
     tokenHash: text('tokenHash').notNull().unique(),
     discordId: text('discordId').notNull(),
     expiresAt: integer('expiresAt', { mode: 'timestamp_ms' }).notNull(),
@@ -69,7 +68,7 @@ export const refreshToken = sqliteTable(
 export const tag = sqliteTable('Tag', {
   id: text('id')
     .primaryKey()
-    .$defaultFn(() => randomUUID()),
+    .$defaultFn(() => crypto.randomUUID()),
   nameLower: text('nameLower').notNull().unique(),
   canonicalName: text('canonicalName').notNull(),
   color: text('color'),

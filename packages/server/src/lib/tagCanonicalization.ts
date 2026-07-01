@@ -1,4 +1,3 @@
-import { randomUUID } from 'node:crypto';
 import { db, eq, tables } from '../shared/db';
 
 const { tag: tagTable } = tables;
@@ -51,7 +50,7 @@ export async function canonicalizeTags(rawTags: string[]): Promise<string[]> {
         await tx
           .insert(tagTable)
           .values({
-            id: randomUUID(),
+            id: crypto.randomUUID(),
             nameLower: spelling.toLowerCase(),
             canonicalName: spelling,
           })

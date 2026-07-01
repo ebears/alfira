@@ -532,7 +532,11 @@ export class GuildPlayer {
       }
 
       const t1 = Date.now();
-      await updateNodeLinkPlayer(this.guildId, sessionId, patch as Parameters<typeof updateNodeLinkPlayer>[2]);
+      await updateNodeLinkPlayer(
+        this.guildId,
+        sessionId,
+        patch as Parameters<typeof updateNodeLinkPlayer>[2]
+      );
       const t2 = Date.now();
 
       this.consecutiveFailures = 0;
@@ -658,10 +662,7 @@ export class GuildPlayer {
     if (!nextTrack) return;
 
     preloadTrack(this.guildId, sessionId, nextTrack.youtubeUrl).catch((err) => {
-      logger.warn(
-        { guildId: this.guildId, track: nextTrack.title, err },
-        'Gapless preload failed'
-      );
+      logger.warn({ guildId: this.guildId, track: nextTrack.title, err }, 'Gapless preload failed');
     });
   }
 
