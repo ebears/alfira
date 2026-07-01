@@ -17,27 +17,14 @@ const NODELINK_AUTH = 'nodelink-internal';
 
 import { logger } from '../shared/logger';
 
-async function restRequest<T>(method: string, path: string, body?: unknown): Promise<T> {
-  const headers: { 'Content-Type': string; Authorization?: string } = {
-    'Content-Type': 'application/json',
-  };
-  if (NODELINK_AUTH) headers.Authorization = NODELINK_AUTH;
+// ---------------------------------------------------------------------------
+// Internal fetch helper — only called with trusted paths
+// ---------------------------------------------------------------------------
 
-  const url = new URL(path, NODELINK_URL);
-  const response = await fetch(url, {
-    method,
-    headers,
-    body: body !== undefined ? JSON.stringify(body) : undefined,
-  });
-
-  if (!response.ok) {
-    throw new Error(`NodeLink REST ${response.status}: ${await response.text()}`);
-  }
-
-  // DELETE returns 204 No Content with no body
-  if (response.status === 204) return undefined as T;
-
-  return response.json() as Promise<T>;
+function nodeLinkHeaders(): Record<string, string> {
+  const h: Record<string, string> = { 'Content-Type': 'application/json' };
+  if (NODELINK_AUTH) h.Authorization = NODELINK_AUTH;
+  return h;
 }
 
 // ---------------------------------------------------------------------------
@@ -124,8 +111,7 @@ export function isYouTubePlaylistUrl(url: string): boolean {
 
 async function loadTrack(url: string): Promise<LoadTrackResponse> {
   // Fetch loadtracks directly — the identifier is user-controlled so
-  // we construct the URL with URLSearchParams and bypass restRequest's
-  // static safety checks (which CodeQL would flag otherwise).
+  // we construct the URL with URLSearchParams to safely encode it.
   const loadUrl = new URL('/v4/loadtracks', NODELINK_URL);
   loadUrl.searchParams.set('identifier', url);
 
@@ -259,9 +245,15 @@ export async function preloadTrack(
     // a body field. Including track in the body without a proper noReplace
     // query param causes NodeLink to restart the currently-playing track
     // (audible restart glitch ~500ms into playback).
-    await restRequest('PATCH', `/v4/sessions/${sessionId}/players/${guildId}`, {
-      nextTrack: { encoded },
+    const patchUrl = new URL(`/v4/sessions/${sessionId}/players/${guildId}`, NODELINK_URL);
+    const patchResp = await fetch(patchUrl, {
+      method: 'PATCH',
+      headers: nodeLinkHeaders(),
+      body: JSON.stringify({ nextTrack: { encoded } }),
     });
+    if (!patchResp.ok) {
+      logger.warn({ status: patchResp.status }, 'Gapless preload PATCH failed');
+    }
   } catch {
     logger.warn({ guildId, youtubeUrl }, 'Gapless preload failed');
   }
@@ -282,7 +274,15 @@ export async function updateNodeLinkPlayer(
   sessionId: string,
   options: UpdatePlayerOptions
 ): Promise<void> {
-  await restRequest('PATCH', `/v4/sessions/${sessionId}/players/${guildId}`, options);
+  const url = new URL(`/v4/sessions/${sessionId}/players/${guildId}`, NODELINK_URL);
+  const response = await fetch(url, {
+    method: 'PATCH',
+    headers: nodeLinkHeaders(),
+    body: JSON.stringify(options),
+  });
+  if (!response.ok) {
+    throw new Error(`NodeLink REST ${response.status}: ${await response.text()}`);
+  }
 }
 
 /**
@@ -292,5 +292,12 @@ export async function updateNodeLinkPlayer(
  * a WebSocketClosedEvent when the destroy is confirmed.
  */
 export async function destroyNodeLinkPlayer(guildId: string, sessionId: string): Promise<void> {
-  await restRequest('DELETE', `/v4/sessions/${sessionId}/players/${guildId}`);
+  const url = new URL(`/v4/sessions/${sessionId}/players/${guildId}`, NODELINK_URL);
+  const response = await fetch(url, {
+    method: 'DELETE',
+    headers: nodeLinkHeaders(),
+  });
+  if (!response.ok && response.status !== 204) {
+    throw new Error(`NodeLink REST ${response.status}: ${await response.text()}`);
+  }
 }
