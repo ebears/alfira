@@ -432,6 +432,10 @@ async function handleAddToPriority(ctx: RouteContext, request: Request): Promise
     { ...song, createdAt: song.createdAt.toISOString() },
     requestedBy
   );
+  // Generate a unique queue-entry id so duplicate adds of the same
+  // library song produce distinguishable entries (the frontend skip
+  // busy-state detection relies on currentSong.id changing on skip).
+  queuedSong.id = `queue-${Date.now()}-${song.id}`;
 
   await player.addToPriorityQueue(queuedSong);
 
