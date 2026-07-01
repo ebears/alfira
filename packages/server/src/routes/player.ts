@@ -2,6 +2,7 @@ import type { GuildPlayer } from '../GuildPlayer';
 import type { RouteContext } from '../index';
 import { GUILD_ID } from '../lib/config';
 import { json } from '../lib/json';
+import { lavalink } from '../lib/lavalink';
 import { requirePlayer, requirePlaying } from '../lib/player';
 import { canAccessPlaylist } from '../lib/playlistAccess';
 import { checkGuards } from '../lib/routeGuards';
@@ -21,7 +22,7 @@ import {
   toQueuedSong,
 } from '../shared';
 import { db, eq, findPlaylistWithSongs, tables } from '../shared/db';
-import { getHoshimi, getPlayer } from '../startDiscord';
+import { getPlayer } from '../startDiscord';
 
 const { song: songTable } = tables;
 
@@ -32,15 +33,13 @@ function handleGetQueue(ctx: RouteContext): Response {
   const guards = checkGuards(ctx);
   if (guards instanceof Response) return guards;
 
-  const hoshimi = getHoshimi();
   const player = getPlayer(GUILD_ID);
-  const hoshimiPlayer = hoshimi?.players.get(GUILD_ID);
 
   if (!player) {
     return json({
       isPlaying: false,
       isPaused: false,
-      isConnectedToVoice: !!hoshimiPlayer?.connected,
+      isConnectedToVoice: lavalink.isGuildConnected(GUILD_ID),
       loopMode: 'off',
       isShuffled: false,
       currentSong: null,
@@ -155,10 +154,8 @@ async function handleLeave(ctx: RouteContext): Promise<Response> {
   if (guards instanceof Response) return guards;
 
   const player = getPlayer(GUILD_ID);
-  const hoshimi = getHoshimi();
-  const hoshimiPlayer = hoshimi?.players.get(GUILD_ID);
 
-  if (!player && !hoshimiPlayer) {
+  if (!player && !lavalink.isGuildConnected(GUILD_ID)) {
     return json({ error: 'The bot is not in a voice channel.' }, 409);
   }
 

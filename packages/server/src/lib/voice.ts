@@ -1,6 +1,7 @@
-import { createPlayer, getClient, getHoshimi, getPlayer } from '../startDiscord';
+import { connectToVoice, createPlayer, getClient, getPlayer } from '../startDiscord';
 import { GUILD_ID, logger } from './config';
 import { json } from './json';
+import { lavalink } from './lavalink';
 
 /**
  * Verifies the requesting user is in a voice channel.
@@ -50,9 +51,7 @@ export async function resolveOrAutoJoinPlayer(
 > {
   const existingPlayer = getPlayer(GUILD_ID);
   if (existingPlayer) {
-    const hoshimi = getHoshimi();
-    const hoshimiPlayer = hoshimi?.players.get(GUILD_ID);
-    if (hoshimiPlayer?.connected) {
+    if (lavalink.isGuildConnected(GUILD_ID)) {
       return { ok: true, player: existingPlayer };
     }
   }
@@ -62,14 +61,6 @@ export async function resolveOrAutoJoinPlayer(
     return {
       ok: false,
       response: json({ error: 'Discord bot is not ready yet.', code: 'BOT_NOT_READY' }, 503),
-    };
-  }
-
-  const hoshimi = getHoshimi();
-  if (!hoshimi) {
-    return {
-      ok: false,
-      response: json({ error: 'Audio node is not ready yet.', code: 'NODELINK_NOT_READY' }, 503),
     };
   }
 
@@ -100,12 +91,10 @@ export async function resolveOrAutoJoinPlayer(
       };
     }
 
-    // Create Hoshimi player and connect to the voice channel.
-    const player = hoshimi.createPlayer({ guildId: GUILD_ID, voiceId: voiceChannelId });
-    await player.connect();
-    player.setVoice({ voiceId: voiceChannelId });
-
-    // Wait briefly for connection to establish.
+    // Connect to voice via the Discord gateway, then create the GuildPlayer.
+    await connectToVoice(GUILD_ID, voiceChannelId);
+    // Give NodeLink time to fully establish the voice connection
+    // before we start sending track data.
     await new Promise((resolve) => setTimeout(resolve, 500));
 
     return { ok: true, player: createPlayer(GUILD_ID, voiceChannelId) };

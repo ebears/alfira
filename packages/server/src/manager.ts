@@ -1,6 +1,4 @@
-import { DestroyReasons } from 'hoshimi';
 import { GuildPlayer } from './GuildPlayer';
-import { getHoshimi } from './startDiscord';
 
 // ---------------------------------------------------------------------------
 // PlayerManager
@@ -49,13 +47,8 @@ export function createPlayer(guildId: string, voiceId: string): GuildPlayer {
  * Used during graceful shutdown to clean up players and voice connections.
  */
 export function destroyAllPlayers(): void {
-  const hoshimi = getHoshimi();
-  for (const [guildId, player] of players) {
+  for (const player of players.values()) {
     player.stop();
-    const p = hoshimi?.players.get(guildId);
-    if (p) {
-      p.destroy(DestroyReasons.Requested);
-    }
   }
   players.clear();
 }

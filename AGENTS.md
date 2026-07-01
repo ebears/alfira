@@ -1,12 +1,8 @@
-# CLAUDE.md
-
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
-
 ## Project Overview
 
 Alfira is a self-hosted Discord music bot with a web UI as the primary interface. It's a Bun workspaces monorepo with two packages:
 
-- `packages/server` — Bun API server + Discord bot (`GuildPlayer`, NodeLink audio via `hoshimi`, Seyfert v4), plus shared types, utilities, DB schema, and logger
+- `packages/server` — Bun API server + Discord bot (`GuildPlayer`, NodeLink audio, Seyfert v4), plus shared types, utilities, DB schema, and logger
 - `packages/web` — React 19 + Tailwind CSS 4 web UI
 
 The bot and API run in a **single Bun process** started from `packages/server/src/index.ts`. They share memory for player state, enabling real-time WebSocket broadcasts directly from playback events.
@@ -16,7 +12,7 @@ The bot and API run in a **single Bun process** started from `packages/server/sr
 - **Runtime:** Bun
 - **Language:** TypeScript
 - **Discord:** Seyfert v4
-- **Audio:** NodeLink (Lavalink v4-compatible) via `hoshimi` v0.3
+- **Audio:** NodeLink (Lavalink v4-compatible) with a thin WebSocket client + REST commands
 - **API:** Bun native HTTP + WebSocket
 - **Database:** SQLite + Drizzle ORM
 - **Frontend:** React 19 + Tailwind CSS 4
@@ -54,7 +50,7 @@ bun run format
 1. Run database migrations (homegrown, reads `packages/shared/dist/db/migrations/*.sql`)
 2. Verify database connectivity
 3. Start NodeLink subprocess
-4. Call `startDiscord()` — initializes Seyfert Discord client + Hoshimi + NodeLink connection
+4. Call `startDiscord()` — initializes Seyfert Discord client + NodeLink connection
 5. Start Bun HTTP server on port 3001 (serves API routes, WebSocket at `/ws`, and static web assets from `packages/web/dist/`)
 
 ### Real-Time Updates (WebSocket Pipeline)
@@ -77,7 +73,7 @@ A single `.env` file at the project root is used for all configuration. Copy `.e
 
 ### NodeLink Audio Service
 
-The bot streams audio from NodeLink (a Lavalink v4-compatible server). The `nodelink` service runs in Docker (docker-compose.yml) on port 2333. `hoshimi` (packages/server) manages players and voice connections. When editing audio-related code, be aware that `stop(true)` on a Hoshimi player destroys the voice session on NodeLink, which can cause the "No voice state, track is enqueued" issue if the next track tries to play before reconnecting.
+The bot streams audio from NodeLink (a Lavalink v4-compatible server). The `nodelink` service runs in Docker (docker-compose.yml) on port 2333. Player control uses NodeLink's REST API directly; events (TrackEnd, etc.) are received over a WebSocket connection managed by `lib/lavalink.ts`. Voice connections use Discord's gateway (VOICE_STATE_UPDATE / VOICE_SERVER_UPDATE) forwarded to NodeLink's REST endpoint.
 
 ## Code Style
 
