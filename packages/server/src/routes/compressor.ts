@@ -1,6 +1,6 @@
 import type { RouteContext } from '../index';
-import { requireAdmin } from '../lib/guards';
 import { json } from '../lib/json';
+import { checkGuards } from '../lib/routeGuards';
 import { db, tables } from '../shared/db';
 import { logger } from '../shared/logger';
 import { getHoshimi } from '../startDiscord';
@@ -27,8 +27,8 @@ function buildFilters(payload: CompressorPayload) {
 }
 
 export async function handleCompressor(ctx: RouteContext, request: Request): Promise<Response> {
-  const adminErr = requireAdmin(ctx);
-  if (adminErr) return adminErr;
+  const guards = await checkGuards(ctx, { admin: true });
+  if (guards instanceof Response) return guards;
 
   let body: CompressorPayload;
   try {

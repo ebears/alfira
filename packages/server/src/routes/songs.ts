@@ -2,8 +2,8 @@ import { eq, inArray, or, sql } from 'drizzle-orm';
 import type { RouteContext } from '../index';
 import { GUILD_ID } from '../lib/config';
 import { getUserDisplayName } from '../lib/displayName';
-import { requireAdmin, requireAuth } from '../lib/guards';
 import { json } from '../lib/json';
+import { checkGuards } from '../lib/routeGuards';
 import { buildSongSearchClause } from '../lib/search';
 import { formatSong } from '../lib/serialization';
 import { emitSongAdded, emitSongDeleted, emitSongUpdated } from '../lib/socket';
@@ -30,8 +30,8 @@ const { song: songTable } = tables;
 // GET /api/songs — paginated list of songs, newest first.
 // ---------------------------------------------------------------------------
 async function handleGetSongs(ctx: RouteContext, request: Request): Promise<Response> {
-  const userOrErr = requireAuth(ctx);
-  if (userOrErr instanceof Response) return userOrErr;
+  const guards = await checkGuards(ctx);
+  if (guards instanceof Response) return guards;
 
   const url = new URL(request.url);
   const page = Math.max(1, parseInt(url.searchParams.get('page') ?? '1', 10) || 1);
@@ -85,11 +85,9 @@ async function handleGetSongs(ctx: RouteContext, request: Request): Promise<Resp
 // POST /api/songs — add a song by YouTube URL. Admin only.
 // ---------------------------------------------------------------------------
 async function handlePostSong(ctx: RouteContext, request: Request): Promise<Response> {
-  const userOrErr = requireAuth(ctx);
-  if (userOrErr instanceof Response) return userOrErr;
-  const user = userOrErr;
-  const adminErr = requireAdmin(ctx);
-  if (adminErr) return adminErr;
+  const guards = await checkGuards(ctx, { admin: true });
+  if (guards instanceof Response) return guards;
+  const { user } = guards;
 
   let body: { youtubeUrl?: unknown; nickname?: unknown; asPlaylist?: unknown };
   try {
@@ -170,11 +168,9 @@ async function handlePostSong(ctx: RouteContext, request: Request): Promise<Resp
 // POST /api/songs/import-playlist — import YouTube playlist. Admin only.
 // ---------------------------------------------------------------------------
 async function handleImportPlaylist(ctx: RouteContext, request: Request): Promise<Response> {
-  const userOrErr = requireAuth(ctx);
-  if (userOrErr instanceof Response) return userOrErr;
-  const user = userOrErr;
-  const adminErr = requireAdmin(ctx);
-  if (adminErr) return adminErr;
+  const guards = await checkGuards(ctx, { admin: true });
+  if (guards instanceof Response) return guards;
+  const { user } = guards;
 
   let body: { youtubeUrl?: unknown; maxVideos?: number };
   try {
@@ -281,10 +277,8 @@ async function handleDeleteSong(
   _request: Request,
   id: string
 ): Promise<Response> {
-  const userOrErr = requireAuth(ctx);
-  if (userOrErr instanceof Response) return userOrErr;
-  const adminErr = requireAdmin(ctx);
-  if (adminErr) return adminErr;
+  const guards = await checkGuards(ctx, { admin: true });
+  if (guards instanceof Response) return guards;
 
   const [existing] = await db.select().from(songTable).where(eq(songTable.id, id)).limit(1);
   if (!existing) {
@@ -303,10 +297,8 @@ async function handleDeleteSong(
 // PATCH /api/songs/:id — update song fields. Admin only.
 // ---------------------------------------------------------------------------
 async function handlePatchSong(ctx: RouteContext, request: Request, id: string): Promise<Response> {
-  const userOrErr = requireAuth(ctx);
-  if (userOrErr instanceof Response) return userOrErr;
-  const adminErr = requireAdmin(ctx);
-  if (adminErr) return adminErr;
+  const guards = await checkGuards(ctx, { admin: true });
+  if (guards instanceof Response) return guards;
 
   let body: Record<string, unknown>;
   try {

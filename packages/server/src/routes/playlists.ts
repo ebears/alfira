@@ -1,9 +1,9 @@
 import { and, count, desc, eq, inArray } from 'drizzle-orm';
 import type { RouteContext } from '../index';
 import { getUserDisplayName } from '../lib/displayName';
-import { requireAuth } from '../lib/guards';
 import { json } from '../lib/json';
 import { canAccessPlaylist } from '../lib/playlistAccess';
+import { checkGuards } from '../lib/routeGuards';
 import { buildSongSearchClause } from '../lib/search';
 import { emitPlaylistUpdated } from '../lib/socket';
 import { validatePlaylistName } from '../lib/validation';
@@ -76,9 +76,9 @@ function formatPlaylistSongWithSong(
 // GET /api/playlists — paginated list of playlists
 // ---------------------------------------------------------------------------
 async function handleGetPlaylists(ctx: RouteContext, request: Request): Promise<Response> {
-  const userOrErr = requireAuth(ctx);
-  if (userOrErr instanceof Response) return userOrErr;
-  const user = userOrErr;
+  const guards = await checkGuards(ctx);
+  if (guards instanceof Response) return guards;
+  const { user } = guards;
 
   const url = new URL(request.url);
   const adminView = url.searchParams.get('adminView') === 'true';
@@ -131,9 +131,9 @@ async function handleGetPlaylists(ctx: RouteContext, request: Request): Promise<
 // POST /api/playlists — create a new empty playlist
 // ---------------------------------------------------------------------------
 async function handlePostPlaylist(ctx: RouteContext, request: Request): Promise<Response> {
-  const userOrErr = requireAuth(ctx);
-  if (userOrErr instanceof Response) return userOrErr;
-  const user = userOrErr;
+  const guards = await checkGuards(ctx);
+  if (guards instanceof Response) return guards;
+  const { user } = guards;
 
   let body: { name?: unknown };
   try {
@@ -170,9 +170,9 @@ async function handleGetPlaylist(
   request: Request,
   id: string
 ): Promise<Response> {
-  const userOrErr = requireAuth(ctx);
-  if (userOrErr instanceof Response) return userOrErr;
-  const user = userOrErr;
+  const guards = await checkGuards(ctx);
+  if (guards instanceof Response) return guards;
+  const { user } = guards;
 
   const url = new URL(request.url);
   const adminView = url.searchParams.get('adminView') === 'true';
@@ -286,9 +286,9 @@ async function handlePatchVisibility(
   request: Request,
   id: string
 ): Promise<Response> {
-  const userOrErr = requireAuth(ctx);
-  if (userOrErr instanceof Response) return userOrErr;
-  const user = userOrErr;
+  const guards = await checkGuards(ctx);
+  if (guards instanceof Response) return guards;
+  const { user } = guards;
 
   let body: { isPrivate?: unknown; adminView?: unknown };
   try {
@@ -336,9 +336,9 @@ async function handlePatchPlaylist(
   request: Request,
   id: string
 ): Promise<Response> {
-  const userOrErr = requireAuth(ctx);
-  if (userOrErr instanceof Response) return userOrErr;
-  const user = userOrErr;
+  const guards = await checkGuards(ctx);
+  if (guards instanceof Response) return guards;
+  const { user } = guards;
 
   let body: { name?: unknown };
   try {
@@ -385,9 +385,9 @@ async function handleDeletePlaylist(
   _request: Request,
   id: string
 ): Promise<Response> {
-  const userOrErr = requireAuth(ctx);
-  if (userOrErr instanceof Response) return userOrErr;
-  const user = userOrErr;
+  const guards = await checkGuards(ctx);
+  if (guards instanceof Response) return guards;
+  const { user } = guards;
 
   const existing = await findPlaylistOr404(id);
   if (!existing) {
@@ -408,9 +408,9 @@ async function handleDeletePlaylist(
 // POST /api/playlists/:id/songs — add a song to a playlist
 // ---------------------------------------------------------------------------
 async function handleAddSong(ctx: RouteContext, request: Request, id: string): Promise<Response> {
-  const userOrErr = requireAuth(ctx);
-  if (userOrErr instanceof Response) return userOrErr;
-  const user = userOrErr;
+  const guards = await checkGuards(ctx);
+  if (guards instanceof Response) return guards;
+  const { user } = guards;
 
   let body: { songId?: unknown };
   try {
@@ -500,9 +500,9 @@ async function handleRemoveSong(
   playlistId: string,
   songId: string
 ): Promise<Response> {
-  const userOrErr = requireAuth(ctx);
-  if (userOrErr instanceof Response) return userOrErr;
-  const user = userOrErr;
+  const guards = await checkGuards(ctx);
+  if (guards instanceof Response) return guards;
+  const { user } = guards;
 
   const playlist = await findPlaylistOr404(playlistId);
   if (!playlist) {
