@@ -11,7 +11,7 @@ import { closeAllClients, registerClient, unregisterClient } from './lib/socket'
 import { verifySessionToken } from './middleware/requireAuth';
 import { handleAuth } from './routes/auth';
 import { handleCompressor } from './routes/compressor';
-import { handleEqualizerGet, handleEqualizerPatch } from './routes/equalizer';
+import { handleEqualizer } from './routes/equalizer';
 import { handlePlayer } from './routes/player';
 import { handlePlaylists } from './routes/playlists';
 import { handleSongs } from './routes/songs';
@@ -190,9 +190,7 @@ const server = Bun.serve({
       return setSecurityHeaders(await handleCompressor(ctx, request));
     }
     if (url.pathname.startsWith('/api/settings/equalizer')) {
-      if (request.method === 'GET') return setSecurityHeaders(await handleEqualizerGet(ctx));
-      if (request.method === 'PATCH')
-        return setSecurityHeaders(await handleEqualizerPatch(ctx, request));
+      return setSecurityHeaders(await handleEqualizer(ctx, request));
     }
     if (url.pathname.startsWith('/auth')) {
       return setSecurityHeaders(await handleAuth(ctx, request));
