@@ -25,6 +25,13 @@ export class GuildPlayer {
   // from handlePlaybackFailure bypass this via playNextUnlocked().
   private playNextLock = false;
 
+  // When true, suppresses queueEnd handler — set during explicit playNext()
+  // calls (skip, addToQueue while paused, replaceQueueAndPlay) so the async
+  // queueEnd from the underlying stop(false) doesn't trigger a redundant
+  // onTrackEnd(). Cleared via setTimeout(0) after playNext() completes so
+  // pending WebSocket messages are processed first.
+  private playNextInProgress = false;
+
   // Hoshimi event handler references for teardown on destroy.
   private readonly trackEndHandler: (
     player: Player,
@@ -33,6 +40,7 @@ export class GuildPlayer {
   ) => void;
   private readonly trackErrorHandler: (player: Player, track: unknown, exception: unknown) => void;
   private readonly playerDestroyHandler: (player: Player) => void;
+  private readonly queueEndHandler: (player: Player, queue: unknown) => void;
 
   // Called when the voice session is torn down so the manager Map can
   // remove this GuildPlayer (see manager.ts).
@@ -129,12 +137,32 @@ export class GuildPlayer {
       if (h) h.off('playerDestroy', this.playerDestroyHandler);
     };
 
+    // Hoshimi's trackEnd function calls queueEnd() (instead of emitting
+    // 'trackEnd') for natural finishes when its internal queue is empty.
+    // Since we call player.play() directly without pushing to Hoshimi's
+    // internal tracks array, its queue size is always 0 — so 'trackEnd'
+    // is never emitted for FINISHED.  Listen to 'queueEnd' to detect
+    // natural track completions.  playNextInProgress suppresses stale
+    // queueEnd events from explicit stop(false) calls (skip, addToQueue
+    // while paused, replaceQueueAndPlay) that our code already handled.
+    this.queueEndHandler = (player: Player, _queue: unknown) => {
+      if (player.guildId !== this.guildId) return;
+      void _queue;
+      // Suppress queueEnd when a playNext() is in progress or just
+      // completed — the explicit action already advanced the queue.
+      if (this.playNextInProgress) return;
+      this.onTrackEnd().catch(() => {
+        // swallow errors — they are logged in handlePlaybackFailure
+      });
+    };
+
     // Register event handlers on the Hoshimi manager for this player's events.
     const hoshimi = getHoshimi();
     if (hoshimi) {
       hoshimi.on('trackEnd', this.trackEndHandler);
       hoshimi.on('trackError', this.trackErrorHandler);
       hoshimi.on('playerDestroy', this.playerDestroyHandler);
+      hoshimi.on('queueEnd', this.queueEndHandler);
     }
   }
 
@@ -150,13 +178,14 @@ export class GuildPlayer {
       player.destroy(DestroyReasons.Requested);
     }
 
-    // Remove trackEnd/trackError handlers immediately so they don't fire
-    // for events on the destroyed player. Keep playerDestroy registered —
-    // it needs to fire when NodeLink confirms the destroy so it can
-    // broadcast the final isConnectedToVoice=false state.
+    // Remove trackEnd/trackError/queueEnd handlers immediately so they
+    // don't fire for events on the destroyed player. Keep playerDestroy
+    // registered — it needs to fire when NodeLink confirms the destroy so
+    // it can broadcast the final isConnectedToVoice=false state.
     if (hoshimi) {
       hoshimi.off('trackEnd', this.trackEndHandler);
       hoshimi.off('trackError', this.trackErrorHandler);
+      hoshimi.off('queueEnd', this.queueEndHandler);
     }
 
     // Remove this GuildPlayer from the manager Map.
@@ -421,14 +450,26 @@ export class GuildPlayer {
   /**
    * Public entry point for advancing playback. Guards against concurrent
    * external invocations (skip + async trackEnd, rapid addToQueue, etc.).
+   *
+   * Sets playNextInProgress to suppress the async queueEnd event that
+   * arrives after a stop(false) call — the flag is kept true until the
+   * next macrotask so pending WebSocket messages are drained first.
    */
   private async playNext(): Promise<void> {
     if (this.playNextLock) return;
     this.playNextLock = true;
+    this.playNextInProgress = true;
     try {
       await this.playNextUnlocked();
     } finally {
       this.playNextLock = false;
+      // Defer clearing playNextInProgress by one macrotask so any
+      // queueEnd WebSocket message triggered by a prior stop(false)
+      // has time to arrive and be processed before the flag goes
+      // back to false.
+      setTimeout(() => {
+        this.playNextInProgress = false;
+      }, 0);
     }
   }
 
