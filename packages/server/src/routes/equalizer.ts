@@ -19,7 +19,7 @@ function buildEqualizerFilter(bands: number[]) {
   }));
 }
 
-export async function handleEqualizerGet(ctx: RouteContext): Promise<Response> {
+async function handleEqualizerGet(ctx: RouteContext): Promise<Response> {
   const guards = await checkGuards(ctx, { admin: true });
   if (guards instanceof Response) return guards;
 
@@ -34,7 +34,7 @@ export async function handleEqualizerGet(ctx: RouteContext): Promise<Response> {
   return json({ bands });
 }
 
-export async function handleEqualizerPatch(ctx: RouteContext, request: Request): Promise<Response> {
+async function handleEqualizerPatch(ctx: RouteContext, request: Request): Promise<Response> {
   const guards = await checkGuards(ctx, { admin: true });
   if (guards instanceof Response) return guards;
 
@@ -72,4 +72,14 @@ export async function handleEqualizerPatch(ctx: RouteContext, request: Request):
   await applyNodeLinkFilter({ equalizer: buildEqualizerFilter(bands) }, 'equalizer');
 
   return json({ bands });
+}
+
+// ---------------------------------------------------------------------------
+// Dispatcher
+// ---------------------------------------------------------------------------
+
+export async function handleEqualizer(ctx: RouteContext, request: Request): Promise<Response> {
+  if (request.method === 'GET') return await handleEqualizerGet(ctx);
+  if (request.method === 'PATCH') return await handleEqualizerPatch(ctx, request);
+  return json({ error: 'Not Found' }, 404);
 }
