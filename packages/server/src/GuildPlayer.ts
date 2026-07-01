@@ -428,7 +428,6 @@ export class GuildPlayer {
 
     if (this.loopMode === 'song' && this.currentSong) {
       await this.playSong(this.currentSong);
-      this.queue.advance();
       return;
     }
 
