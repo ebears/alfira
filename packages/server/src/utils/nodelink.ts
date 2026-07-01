@@ -201,7 +201,7 @@ export async function preloadTrack(
   guildId: string,
   sessionId: string,
   youtubeUrl: string,
-  currentEncoded?: string
+  _currentEncoded?: string
 ): Promise<void> {
   try {
     const response = await restRequest<LoadTrackResponse>(
@@ -216,13 +216,12 @@ export async function preloadTrack(
     };
     if (NODELINK_AUTH) headers.Authorization = NODELINK_AUTH;
 
+    // Only send nextTrack — do NOT include the current track in the PATCH
+    // body. The Lavalink v4 spec expects noReplace as a query parameter, not
+    // a body field. Including track in the body without a proper noReplace
+    // query param causes NodeLink to restart the currently-playing track
+    // (audible restart glitch ~500ms into playback).
     const body: Record<string, unknown> = { nextTrack: { encoded } };
-    // Include the current track so NodeLink can validate the session
-    // association. noReplace ensures it doesn't restart playback.
-    if (currentEncoded) {
-      body.track = { encoded: currentEncoded };
-      body.noReplace = true;
-    }
 
     await fetch(url, {
       method: 'PATCH',
