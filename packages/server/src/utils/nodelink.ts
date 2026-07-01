@@ -23,7 +23,9 @@ async function restRequest<T>(method: string, path: string, body?: unknown): Pro
   };
   if (NODELINK_AUTH) headers.Authorization = NODELINK_AUTH;
 
-  const url = `${NODELINK_URL}${path}`;
+  // Build URL via the URL constructor to prevent injection.
+  // NodeLink only serves paths under /v4/.
+  const url = new URL(path, NODELINK_URL);
   const response = await fetch(url, {
     method,
     headers,
