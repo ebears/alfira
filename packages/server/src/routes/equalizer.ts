@@ -1,8 +1,8 @@
 import { eq } from 'drizzle-orm';
 import type { RouteContext } from '../index';
 import { EQ_BAND_COLUMNS, eqBandsFromRow, eqBandValues } from '../lib/eqBands';
-import { requireAdmin } from '../lib/guards';
 import { json } from '../lib/json';
+import { checkGuards } from '../lib/routeGuards';
 import { db, tables } from '../shared/db';
 import { logger } from '../shared/logger';
 import { getHoshimi } from '../startDiscord';
@@ -21,8 +21,8 @@ function buildEqualizerFilter(bands: number[]) {
 }
 
 export async function handleEqualizerGet(ctx: RouteContext): Promise<Response> {
-  const adminErr = requireAdmin(ctx);
-  if (adminErr) return adminErr;
+  const guards = await checkGuards(ctx, { admin: true });
+  if (guards instanceof Response) return guards;
 
   const row = await db
     .select(EQ_BAND_COLUMNS)
@@ -36,8 +36,8 @@ export async function handleEqualizerGet(ctx: RouteContext): Promise<Response> {
 }
 
 export async function handleEqualizerPatch(ctx: RouteContext, request: Request): Promise<Response> {
-  const adminErr = requireAdmin(ctx);
-  if (adminErr) return adminErr;
+  const guards = await checkGuards(ctx, { admin: true });
+  if (guards instanceof Response) return guards;
 
   let body: EqualizerPayload;
   try {

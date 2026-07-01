@@ -1,7 +1,7 @@
 import { eq, sql } from 'drizzle-orm';
 import type { RouteContext } from '../index';
-import { requireAdmin, requireAuth } from '../lib/guards';
 import { json } from '../lib/json';
+import { checkGuards } from '../lib/routeGuards';
 import { db, tables } from '../shared/db';
 
 const { tag: tagTable, song: songTable } = tables;
@@ -10,8 +10,8 @@ const TAG_COLORS = ['orange', 'sky', 'emerald', 'amber', 'violet'] as const;
 type TagColor = (typeof TAG_COLORS)[number];
 
 async function handleGetTagSongs(ctx: RouteContext, nameLower: string): Promise<Response> {
-  const userOrErr = requireAuth(ctx);
-  if (userOrErr instanceof Response) return userOrErr;
+  const guards = await checkGuards(ctx);
+  if (guards instanceof Response) return guards;
 
   // Fetch all songs where tags JSON array contains this tag (case-insensitive match)
   const songs = await db
@@ -29,10 +29,8 @@ async function handlePatchTag(
   nameLower: string,
   body: Record<string, unknown>
 ): Promise<Response> {
-  const userOrErr = requireAuth(ctx);
-  if (userOrErr instanceof Response) return userOrErr;
-  const adminErr = requireAdmin(ctx);
-  if (adminErr) return adminErr;
+  const guards = await checkGuards(ctx, { admin: true });
+  if (guards instanceof Response) return guards;
 
   const [existing] = await db
     .select()
@@ -76,10 +74,8 @@ async function handlePatchTag(
 }
 
 async function handleDeleteTag(ctx: RouteContext, nameLower: string): Promise<Response> {
-  const userOrErr = requireAuth(ctx);
-  if (userOrErr instanceof Response) return userOrErr;
-  const adminErr = requireAdmin(ctx);
-  if (adminErr) return adminErr;
+  const guards = await checkGuards(ctx, { admin: true });
+  if (guards instanceof Response) return guards;
 
   const [existing] = await db
     .select()
@@ -119,8 +115,8 @@ export async function handleTags(ctx: RouteContext, request: Request): Promise<R
 
   // GET /api/tags
   if (request.method === 'GET' && pathname === '/api/tags') {
-    const userOrErr = requireAuth(ctx);
-    if (userOrErr instanceof Response) return userOrErr;
+    const guards = await checkGuards(ctx);
+    if (guards instanceof Response) return guards;
 
     const tags = await db
       .select({
@@ -146,8 +142,8 @@ export async function handleTags(ctx: RouteContext, request: Request): Promise<R
   // GET /api/tags/:nameLower — get single tag
   if (request.method === 'GET' && pathname.startsWith('/api/tags/')) {
     const nameLower = pathname.slice('/api/tags/'.length);
-    const userOrErr = requireAuth(ctx);
-    if (userOrErr instanceof Response) return userOrErr;
+    const guards = await checkGuards(ctx);
+    if (guards instanceof Response) return guards;
     const [tag] = await db
       .select()
       .from(tagTable)

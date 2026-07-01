@@ -1,10 +1,10 @@
 import type { GuildPlayer } from '../GuildPlayer';
 import type { RouteContext } from '../index';
 import { GUILD_ID } from '../lib/config';
-import { requireAdmin, requireAuth } from '../lib/guards';
 import { json } from '../lib/json';
 import { requirePlayer, requirePlaying } from '../lib/player';
 import { canAccessPlaylist } from '../lib/playlistAccess';
+import { checkGuards } from '../lib/routeGuards';
 import {
   clampMaxVideos,
   fetchPlaylistMetadata,
@@ -13,7 +13,7 @@ import {
   validateYouTubeUrl,
   youTubeUrl,
 } from '../lib/validation';
-import { requireUserInVoice, resolveOrAutoJoinPlayer } from '../lib/voice';
+import { resolveOrAutoJoinPlayer } from '../lib/voice';
 import {
   fisherYatesShuffle as fisherYatesShuffleImpl,
   type LoopMode,
@@ -29,8 +29,8 @@ const { song: songTable } = tables;
 // GET /api/player/queue — returns current queue state
 // ---------------------------------------------------------------------------
 function handleGetQueue(ctx: RouteContext): Response {
-  const userOrErr = requireAuth(ctx);
-  if (userOrErr instanceof Response) return userOrErr;
+  const guards = checkGuards(ctx);
+  if (guards instanceof Response) return guards;
 
   const hoshimi = getHoshimi();
   const player = getPlayer(GUILD_ID);
@@ -57,12 +57,9 @@ function handleGetQueue(ctx: RouteContext): Response {
 // POST /api/player/play — load songs and start playback
 // ---------------------------------------------------------------------------
 async function handlePlay(ctx: RouteContext, request: Request): Promise<Response> {
-  const userOrErr = requireAuth(ctx);
-  if (userOrErr instanceof Response) return userOrErr;
-  const user = userOrErr;
-
-  const inVoice = await requireUserInVoice(user.discordId);
-  if (inVoice instanceof Response) return inVoice;
+  const guards = await checkGuards(ctx, { voice: true });
+  if (guards instanceof Response) return guards;
+  const { user } = guards;
 
   let body: {
     playlistId?: string;
@@ -140,12 +137,8 @@ async function handlePlay(ctx: RouteContext, request: Request): Promise<Response
 // POST /api/player/skip — skip current song
 // ---------------------------------------------------------------------------
 async function handleSkip(ctx: RouteContext): Promise<Response> {
-  const userOrErr = requireAuth(ctx);
-  if (userOrErr instanceof Response) return userOrErr;
-  const user = userOrErr;
-
-  const inVoice = await requireUserInVoice(user.discordId);
-  if (inVoice instanceof Response) return inVoice;
+  const guards = await checkGuards(ctx, { voice: true });
+  if (guards instanceof Response) return guards;
 
   const playingResult = requirePlaying();
   if (!playingResult.ok) return playingResult.response;
@@ -158,12 +151,8 @@ async function handleSkip(ctx: RouteContext): Promise<Response> {
 // POST /api/player/leave — stop and disconnect
 // ---------------------------------------------------------------------------
 async function handleLeave(ctx: RouteContext): Promise<Response> {
-  const userOrErr = requireAuth(ctx);
-  if (userOrErr instanceof Response) return userOrErr;
-  const user = userOrErr;
-
-  const inVoice = await requireUserInVoice(user.discordId);
-  if (inVoice instanceof Response) return inVoice;
+  const guards = await checkGuards(ctx, { voice: true });
+  if (guards instanceof Response) return guards;
 
   const player = getPlayer(GUILD_ID);
   const hoshimi = getHoshimi();
@@ -182,12 +171,8 @@ async function handleLeave(ctx: RouteContext): Promise<Response> {
 // POST /api/player/loop — set loop mode
 // ---------------------------------------------------------------------------
 async function handleLoop(ctx: RouteContext, request: Request): Promise<Response> {
-  const userOrErr = requireAuth(ctx);
-  if (userOrErr instanceof Response) return userOrErr;
-  const user = userOrErr;
-
-  const inVoice = await requireUserInVoice(user.discordId);
-  if (inVoice instanceof Response) return inVoice;
+  const guards = await checkGuards(ctx, { voice: true });
+  if (guards instanceof Response) return guards;
 
   let body: { mode?: LoopMode };
   try {
@@ -213,14 +198,8 @@ async function handleLoop(ctx: RouteContext, request: Request): Promise<Response
 // POST /api/player/shuffle — shuffle queue (admin only)
 // ---------------------------------------------------------------------------
 async function handleShuffle(ctx: RouteContext): Promise<Response> {
-  const userOrErr = requireAuth(ctx);
-  if (userOrErr instanceof Response) return userOrErr;
-  const user = userOrErr;
-  const adminErr = requireAdmin(ctx);
-  if (adminErr) return adminErr;
-
-  const inVoice = await requireUserInVoice(user.discordId);
-  if (inVoice instanceof Response) return inVoice;
+  const guards = await checkGuards(ctx, { admin: true, voice: true });
+  if (guards instanceof Response) return guards;
 
   const player = getPlayer(GUILD_ID);
 
@@ -236,14 +215,8 @@ async function handleShuffle(ctx: RouteContext): Promise<Response> {
 // POST /api/player/unshuffle — restore original queue order (admin only)
 // ---------------------------------------------------------------------------
 async function handleUnshuffle(ctx: RouteContext): Promise<Response> {
-  const userOrErr = requireAuth(ctx);
-  if (userOrErr instanceof Response) return userOrErr;
-  const user = userOrErr;
-  const adminErr = requireAdmin(ctx);
-  if (adminErr) return adminErr;
-
-  const inVoice = await requireUserInVoice(user.discordId);
-  if (inVoice instanceof Response) return inVoice;
+  const guards = await checkGuards(ctx, { admin: true, voice: true });
+  if (guards instanceof Response) return guards;
 
   const playerResult = requirePlayer();
   if (!playerResult.ok) return playerResult.response;
@@ -264,14 +237,9 @@ async function resolveYoutubeTempSong(
   ctx: RouteContext,
   request: Request
 ): Promise<YoutubeTempSongResult> {
-  const userOrErr = requireAuth(ctx);
-  if (userOrErr instanceof Response) return { ok: false, response: userOrErr };
-  const user = userOrErr;
-  const adminErr = requireAdmin(ctx);
-  if (adminErr) return { ok: false, response: adminErr };
-
-  const inVoice = await requireUserInVoice(user.discordId);
-  if (inVoice instanceof Response) return { ok: false, response: inVoice };
+  const guards = await checkGuards(ctx, { admin: true, voice: true });
+  if (guards instanceof Response) return { ok: false, response: guards };
+  const { user } = guards;
 
   let body: { youtubeUrl?: unknown };
   try {
@@ -324,14 +292,9 @@ async function handleQuickAdd(ctx: RouteContext, request: Request): Promise<Resp
 // POST /api/player/quick-add-playlist — add playlist to queue (admin only)
 // ---------------------------------------------------------------------------
 async function handleQuickAddPlaylist(ctx: RouteContext, request: Request): Promise<Response> {
-  const userOrErr = requireAuth(ctx);
-  if (userOrErr instanceof Response) return userOrErr;
-  const user = userOrErr;
-  const adminErr = requireAdmin(ctx);
-  if (adminErr) return adminErr;
-
-  const inVoice = await requireUserInVoice(user.discordId);
-  if (inVoice instanceof Response) return inVoice;
+  const guards = await checkGuards(ctx, { admin: true, voice: true });
+  if (guards instanceof Response) return guards;
+  const { user } = guards;
 
   let body: { youtubeUrl?: unknown; maxVideos?: number };
   try {
@@ -382,12 +345,8 @@ async function handleQuickAddPlaylist(ctx: RouteContext, request: Request): Prom
 // POST /api/player/pause-toggle — pause/resume
 // ---------------------------------------------------------------------------
 async function handlePauseToggle(ctx: RouteContext): Promise<Response> {
-  const userOrErr = requireAuth(ctx);
-  if (userOrErr instanceof Response) return userOrErr;
-  const user = userOrErr;
-
-  const inVoice = await requireUserInVoice(user.discordId);
-  if (inVoice instanceof Response) return inVoice;
+  const guards = await checkGuards(ctx, { voice: true });
+  if (guards instanceof Response) return guards;
 
   const playingResult = requirePlaying();
   if (!playingResult.ok) return playingResult.response;
@@ -400,12 +359,8 @@ async function handlePauseToggle(ctx: RouteContext): Promise<Response> {
 // POST /api/player/seek — seek to position in current track
 // ---------------------------------------------------------------------------
 async function handleSeek(ctx: RouteContext, request: Request): Promise<Response> {
-  const userOrErr = requireAuth(ctx);
-  if (userOrErr instanceof Response) return userOrErr;
-  const user = userOrErr;
-
-  const inVoice = await requireUserInVoice(user.discordId);
-  if (inVoice instanceof Response) return inVoice;
+  const guards = await checkGuards(ctx, { voice: true });
+  if (guards instanceof Response) return guards;
 
   let body: { position?: unknown };
   try {
@@ -431,14 +386,8 @@ async function handleSeek(ctx: RouteContext, request: Request): Promise<Response
 // POST /api/player/clear — clear queue (admin only)
 // ---------------------------------------------------------------------------
 async function handleClear(ctx: RouteContext): Promise<Response> {
-  const userOrErr = requireAuth(ctx);
-  if (userOrErr instanceof Response) return userOrErr;
-  const user = userOrErr;
-  const adminErr = requireAdmin(ctx);
-  if (adminErr) return adminErr;
-
-  const inVoice = await requireUserInVoice(user.discordId);
-  if (inVoice instanceof Response) return inVoice;
+  const guards = await checkGuards(ctx, { admin: true, voice: true });
+  if (guards instanceof Response) return guards;
 
   const playerResult = requirePlayer();
   if (!playerResult.ok) return playerResult.response;
@@ -451,14 +400,9 @@ async function handleClear(ctx: RouteContext): Promise<Response> {
 // POST /api/player/add-to-priority — add library song to Up Next (admin only)
 // ---------------------------------------------------------------------------
 async function handleAddToPriority(ctx: RouteContext, request: Request): Promise<Response> {
-  const userOrErr = requireAuth(ctx);
-  if (userOrErr instanceof Response) return userOrErr;
-  const user = userOrErr;
-  const adminErr = requireAdmin(ctx);
-  if (adminErr) return adminErr;
-
-  const inVoice = await requireUserInVoice(user.discordId);
-  if (inVoice instanceof Response) return inVoice;
+  const guards = await checkGuards(ctx, { admin: true, voice: true });
+  if (guards instanceof Response) return guards;
+  const { user } = guards;
 
   let body: { songId?: unknown };
   try {
