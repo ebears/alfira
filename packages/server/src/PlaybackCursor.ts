@@ -159,13 +159,15 @@ export class PlaybackCursor<T> {
   // ---------------------------------------------------------------------------
 
   /**
-   * Convert remaining items after the current one to an array.
-   * Excludes the item at the current read position (for "queue" display
-   * that should not include the currently-playing song).
+   * Convert all unplayed items to an array for the queue display.
+   *
+   * After advance(), readIndex points to the next song to be played
+   * (not the currently-playing one). We start from readIndex to
+   * include all songs that haven't been played yet.
    */
   toRemaining(): T[] {
     const result: T[] = [];
-    for (let i = this.readIndex + 1; i < this.buffer.length; i++) {
+    for (let i = this.readIndex; i < this.buffer.length; i++) {
       const idx = this.playbackOrder?.[i] ?? i;
       // idx is always valid since i < this.buffer.length and playbackOrder contains valid indices
       const item = this.buffer[idx];

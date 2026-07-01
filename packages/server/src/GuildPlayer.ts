@@ -167,9 +167,16 @@ export class GuildPlayer {
     const arr = Array.isArray(songs) ? songs : [songs];
     this.queue.append(...arr);
 
-    // If paused, clear currentSong so newly added songs start playing
-    // instead of the previously-paused song resuming.
+    // If paused, stop the paused track and clear currentSong so newly
+    // added songs start playing instead of the previously-paused song
+    // resuming. stop(false) is needed so playSong() in the ensuing
+    // ensurePlaying() → playNext() chain doesn't hit the
+    // "player.playing && player.node" gapless-preload skip.
     if (this.paused && this.currentSong !== null) {
+      const hoshimiP = this.hoshimiPlayer();
+      if (hoshimiP) {
+        hoshimiP.stop(false);
+      }
       this.currentSong = null;
     }
 
@@ -183,6 +190,19 @@ export class GuildPlayer {
   }
 
   async replaceQueueAndPlay(songs: QueuedSong[]): Promise<void> {
+    // Stop any currently-playing track before we replace the queue.
+    // stop(false) stops playback without destroying the Hoshimi player or
+    // clearing its voice state, so the subsequent play() in playSong() for
+    // the new first track will start cleanly rather than hitting the
+    // "player.playing && player.node" gapless-preload skip in playSong().
+    //
+    // The async trackEnd event that stop(false) triggers is ignored because
+    // playNext() (called below) holds the playNextLock.
+    const hoshimiP = this.hoshimiPlayer();
+    if (hoshimiP) {
+      hoshimiP.stop(false);
+    }
+
     this.queue.clear();
     this.priorityQueue = [];
     this.currentSong = null;
@@ -190,14 +210,6 @@ export class GuildPlayer {
     this.consecutiveFailures = 0;
     this.queue.replace(songs);
     this.cancelIdleLeave();
-
-    // Note: we intentionally do NOT call player.stop() here. Calling stop(true)
-    // destroys the Hoshimi player, which sends a DELETE to NodeLink and clears its
-    // stored voice session (endpoint/sessionId/token). When the subsequent
-    // play() call then tries to play a new track, NodeLink has no voice state and
-    // logs "No voice state, track is enqueued". Instead, let playNext() call
-    // playSong() which will call play() on the existing player, replacing the
-    // track without destroying the voice session.
 
     await this.playNext();
     this.broadcast();
