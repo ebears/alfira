@@ -262,6 +262,7 @@ export function ContextMenu({
       style={{ position: 'fixed', top: position.top, left: position.left }}
       className="z-9999 min-w-48"
       onKeyDown={activeEditItemId ? undefined : handleKeyDown}
+      onClick={(e) => e.stopPropagation()}
     >
       <div className="bg-base rounded-2xl clay-floating overflow-hidden animate-fade-up">
         {activeSubmenu ? (
