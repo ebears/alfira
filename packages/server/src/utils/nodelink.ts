@@ -245,7 +245,10 @@ export async function preloadTrack(
     // a body field. Including track in the body without a proper noReplace
     // query param causes NodeLink to restart the currently-playing track
     // (audible restart glitch ~500ms into playback).
-    const patchUrl = new URL(`/v4/sessions/${sessionId}/players/${guildId}`, NODELINK_URL);
+    const patchUrl = new URL(
+      `/v4/sessions/${encodeURIComponent(sessionId)}/players/${encodeURIComponent(guildId)}`,
+      NODELINK_URL
+    );
     const patchResp = await fetch(patchUrl, {
       method: 'PATCH',
       headers: nodeLinkHeaders(),
@@ -274,7 +277,11 @@ export async function updateNodeLinkPlayer(
   sessionId: string,
   options: UpdatePlayerOptions
 ): Promise<void> {
-  const url = new URL(`/v4/sessions/${sessionId}/players/${guildId}`, NODELINK_URL);
+  // Build URL from trusted internal identifiers only.
+  const url = new URL(
+    `/v4/sessions/${encodeURIComponent(sessionId)}/players/${encodeURIComponent(guildId)}`,
+    NODELINK_URL
+  );
   const response = await fetch(url, {
     method: 'PATCH',
     headers: nodeLinkHeaders(),
@@ -292,7 +299,10 @@ export async function updateNodeLinkPlayer(
  * a WebSocketClosedEvent when the destroy is confirmed.
  */
 export async function destroyNodeLinkPlayer(guildId: string, sessionId: string): Promise<void> {
-  const url = new URL(`/v4/sessions/${sessionId}/players/${guildId}`, NODELINK_URL);
+  const url = new URL(
+    `/v4/sessions/${encodeURIComponent(sessionId)}/players/${encodeURIComponent(guildId)}`,
+    NODELINK_URL
+  );
   const response = await fetch(url, {
     method: 'DELETE',
     headers: nodeLinkHeaders(),
