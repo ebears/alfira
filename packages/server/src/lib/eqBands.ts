@@ -70,3 +70,14 @@ export function eqBandValues(bands: number[]): Record<EqBandKey, number> {
   }
   return result as Record<EqBandKey, number>;
 }
+
+/**
+ * Convert band values (0-100) to NodeLink equalizer filter format.
+ * Maps: 0 → -0.5, 50 → 0.0 (neutral/flat), 100 → 0.5
+ */
+export function buildEqualizerFilter(bands: number[]): Array<{ band: number; gain: number }> {
+  return bands.map((value, index) => ({
+    band: index,
+    gain: (value - 50) / 100,
+  }));
+}

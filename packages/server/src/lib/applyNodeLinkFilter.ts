@@ -2,6 +2,30 @@ import { updateNodeLinkPlayer } from '../utils/nodelink';
 import { logger } from './config';
 import { lavalink } from './lavalink';
 
+export interface CompressorFilterParams {
+  threshold: number;
+  ratio: number;
+  attack: number;
+  release: number;
+  gain: number;
+}
+
+/**
+ * Build a NodeLink compressor filter payload from numeric parameters.
+ * Does not send anything; purely a data transform.
+ */
+export function buildCompressorFilter(params: CompressorFilterParams) {
+  return {
+    compressor: {
+      threshold: params.threshold,
+      ratio: params.ratio,
+      attack: params.attack,
+      release: params.release,
+      gain: params.gain,
+    },
+  };
+}
+
 /**
  * Applies audio filters to the live NodeLink player for the configured guild.
  * Silently returns if the player is not connected.
