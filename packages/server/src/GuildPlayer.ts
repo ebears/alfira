@@ -20,6 +20,24 @@ export class GuildPlayer {
   private pausedAt: number | null = null;
   private consecutiveFailures = 0;
 
+  // Concurrency guard: prevents concurrent playNext() invocations from
+  // different callers (skip, trackEnd, addToQueue, etc.). Reentrant calls
+  // from handlePlaybackFailure bypass this via playNextUnlocked().
+  private playNextLock = false;
+
+  // Hoshimi event handler references for teardown on destroy.
+  private readonly trackEndHandler: (
+    player: Player,
+    track: unknown,
+    payload: TrackEndEvent
+  ) => void;
+  private readonly trackErrorHandler: (player: Player, track: unknown, exception: unknown) => void;
+  private readonly playerDestroyHandler: (player: Player) => void;
+
+  // Called when the voice session is torn down so the manager Map can
+  // remove this GuildPlayer (see manager.ts).
+  private readonly onDestroyed: () => void;
+
   // Auto-leave idle timer.
   private idleLeaveTimer: ReturnType<typeof setTimeout> | null = null;
 
@@ -58,7 +76,7 @@ export class GuildPlayer {
     );
     const phrase = this.LEAVE_PHRASES[Math.floor(Math.random() * this.LEAVE_PHRASES.length)];
     logger.info({ guildId: this.guildId }, `${phrase} (Left the voice channel due to inactivity.)`);
-    this.destroyPlayer();
+    this.stop();
   }
 
   private readonly guildId: string;
@@ -74,34 +92,49 @@ export class GuildPlayer {
     this.paused = false;
   }
 
-  constructor(guildId: string, voiceId: string, _onDestroyed: () => void) {
+  constructor(guildId: string, voiceId: string, onDestroyed: () => void) {
     this.guildId = guildId;
     this.voiceId = voiceId;
+    this.onDestroyed = onDestroyed;
+
+    // Capture handler references so we can remove them on teardown.
+    this.trackEndHandler = (player: Player, track: unknown, payload: TrackEndEvent) => {
+      if (player.guildId !== this.guildId) return;
+      // 'replaced' fires when play() replaces a track (normal).
+      // 'stopped' fires when skip() calls stop(false) — skip() already
+      // calls playNext() directly, so ignore the async follow-up.
+      if (payload.reason === 'replaced' || payload.reason === 'stopped') return;
+      void track;
+      this.onTrackEnd().catch(() => {
+        // swallow errors — they are logged in handlePlaybackFailure
+      });
+    };
+
+    this.trackErrorHandler = (player: Player, track: unknown, exception: unknown) => {
+      if (player.guildId !== this.guildId) return;
+      const exc = exception as { exception?: { message?: string } };
+      logger.error(
+        { guildId: this.guildId, track: this.currentSong?.title ?? 'unknown' },
+        `Player error: ${exc.exception?.message ?? 'unknown'}`
+      );
+      void track;
+    };
+
+    this.playerDestroyHandler = (player: Player) => {
+      if (player.guildId !== this.guildId) return;
+      this.onDestroyed();
+      this.broadcast();
+      // Self-remove so this handler doesn't outlive the GuildPlayer.
+      const h = getHoshimi();
+      if (h) h.off('playerDestroy', this.playerDestroyHandler);
+    };
 
     // Register event handlers on the Hoshimi manager for this player's events.
     const hoshimi = getHoshimi();
     if (hoshimi) {
-      hoshimi.on('trackEnd', (player: Player, track: unknown, payload: TrackEndEvent) => {
-        if (player.guildId !== this.guildId) return;
-        if (payload.reason === 'replaced') return;
-        void track;
-        this.onTrackEnd().catch(() => {
-          // swallow errors — they are logged in handlePlaybackFailure
-        });
-      });
-      hoshimi.on('trackError', (player: Player, track: unknown, exception: unknown) => {
-        if (player.guildId !== this.guildId) return;
-        const exc = exception as { exception?: { message?: string } };
-        logger.error(
-          { guildId: this.guildId, track: this.currentSong?.title ?? 'unknown' },
-          `Player error: ${exc.exception?.message ?? 'unknown'}`
-        );
-        void track;
-      });
-      hoshimi.on('playerDestroy', (player: Player) => {
-        if (player.guildId !== this.guildId) return;
-        this.broadcast();
-      });
+      hoshimi.on('trackEnd', this.trackEndHandler);
+      hoshimi.on('trackError', this.trackErrorHandler);
+      hoshimi.on('playerDestroy', this.playerDestroyHandler);
     }
   }
 
@@ -116,6 +149,18 @@ export class GuildPlayer {
     if (player) {
       player.destroy(DestroyReasons.Requested);
     }
+
+    // Remove trackEnd/trackError handlers immediately so they don't fire
+    // for events on the destroyed player. Keep playerDestroy registered —
+    // it needs to fire when NodeLink confirms the destroy so it can
+    // broadcast the final isConnectedToVoice=false state.
+    if (hoshimi) {
+      hoshimi.off('trackEnd', this.trackEndHandler);
+      hoshimi.off('trackError', this.trackErrorHandler);
+    }
+
+    // Remove this GuildPlayer from the manager Map.
+    this.onDestroyed();
   }
 
   async addToQueue(songs: QueuedSong | QueuedSong[]): Promise<void> {
@@ -188,7 +233,10 @@ export class GuildPlayer {
     this.trackStartedAt = null;
 
     this.destroyPlayer();
-    // Don't call broadcast() here — let playerDestroy event handler do it
+    // Broadcast the empty queue state immediately. The playerDestroy
+    // event handler (still registered) will broadcast isConnectedToVoice=false
+    // when NodeLink confirms the destroy.
+    this.broadcast();
   }
 
   clearQueue(): void {
@@ -358,7 +406,25 @@ export class GuildPlayer {
     return this.queue.current() as QueuedSong | null;
   }
 
+  /**
+   * Public entry point for advancing playback. Guards against concurrent
+   * external invocations (skip + async trackEnd, rapid addToQueue, etc.).
+   */
   private async playNext(): Promise<void> {
+    if (this.playNextLock) return;
+    this.playNextLock = true;
+    try {
+      await this.playNextUnlocked();
+    } finally {
+      this.playNextLock = false;
+    }
+  }
+
+  /**
+   * Unlocked variant called by handlePlaybackFailure when it needs to try
+   * the next song while the outer playNext() still holds the lock.
+   */
+  private async playNextUnlocked(): Promise<void> {
     const player = this.hoshimiPlayer();
     if (player && !player.connected) {
       // Re-establish the voice connection so playSong() can use it.
@@ -368,6 +434,11 @@ export class GuildPlayer {
     const prioritySong = this.priorityQueue.shift();
     if (prioritySong) {
       this.currentSong = prioritySong;
+      // Default isSeekable to true — priority songs come from the library
+      // and don't have this flag set on the DB record.
+      if (this.currentSong) {
+        this.currentSong = { ...this.currentSong, isSeekable: true };
+      }
       this.paused = false;
       await this.playSong(prioritySong);
       return;
@@ -457,29 +528,52 @@ export class GuildPlayer {
     // Apply volume via NodeLink volume filter.
     const volume = 100 + (next.volumeBoost ?? 0);
 
-    await player.play({
-      track: new Track(
-        {
-          encoded: trackData.track,
-          info: {
-            title: next.title,
-            identifier: next.youtubeId,
-            author: '',
-            length: next.duration * 1000,
-            artworkUrl: '',
-            uri: next.youtubeUrl,
-            isStream: false,
-            isSeekable: true,
-            position: 0,
-            sourceName: SourceNames.Youtube,
-            isrc: null,
+    // If the player is already playing, the gapless preload (PATCH
+    // /nextTrack in playSong's preload block) already auto-started the
+    // next track in NodeLink. Calling play() again would replace it with
+    // itself, causing an audible restart glitch. Skip play() and only
+    // apply volume via REST.
+    logger.debug(
+      { guildId: this.guildId, track: next.title, playing: player.playing, hasNode: !!player.node },
+      'playSong: player.playing=%s hasNode=%s',
+      player.playing,
+      !!player.node
+    );
+    if (player.playing && player.node) {
+      logger.info(
+        { guildId: this.guildId, track: next.title },
+        'playSong: player already playing, skipping play() — applying volume via REST'
+      );
+      await player.node.rest.updatePlayer({
+        guildId: this.guildId,
+        playerOptions: { volume },
+      });
+    } else {
+      logger.info({ guildId: this.guildId, track: next.title }, 'playSong: calling player.play()');
+      await player.play({
+        track: new Track(
+          {
+            encoded: trackData.track,
+            info: {
+              title: next.title,
+              identifier: next.youtubeId,
+              author: '',
+              length: next.duration * 1000,
+              artworkUrl: '',
+              uri: next.youtubeUrl,
+              isStream: false,
+              isSeekable: true,
+              position: 0,
+              sourceName: SourceNames.Youtube,
+              isrc: null,
+            },
+            pluginInfo: {},
           },
-          pluginInfo: {},
-        },
-        {}
-      ),
-      volume,
-    });
+          {}
+        ),
+        volume,
+      });
+    }
 
     // Apply compressor filter if enabled
     const settings = await db
@@ -611,10 +705,14 @@ export class GuildPlayer {
       { guildId: this.guildId, song: this.currentSong?.title },
       `Skipping song — ${skipMessage}`
     );
-    await this.playNext();
+    await this.playNextUnlocked();
   }
 
   private async onTrackEnd(): Promise<void> {
+    // If playNext() is already in flight from a skip() call, don't
+    // clobber its timing state or double-advance the queue.
+    if (this.playNextLock) return;
+
     this.trackStartedAt = null;
     this.pausedAt = null;
 
