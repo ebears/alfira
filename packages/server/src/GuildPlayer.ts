@@ -7,7 +7,7 @@ import type { LoopMode, QueuedSong, QueueState } from './shared';
 import { db, tables } from './shared/db';
 import { logger } from './shared/logger';
 import { broadcastQueueUpdate, connectToVoice, getClient } from './startDiscord';
-import { destroyNodeLinkPlayer, updateNodeLinkPlayer } from './utils/nodelink';
+import { destroyNodeLinkPlayer, preloadTrack, updateNodeLinkPlayer } from './utils/nodelink';
 
 export class GuildPlayer {
   private static readonly MAX_CONSECUTIVE_FAILURES = 3;
@@ -26,6 +26,18 @@ export class GuildPlayer {
   // (skip, trackEnd, addToQueue, etc.). Reentrant calls from
   // handlePlaybackFailure bypass this via playNextUnlocked().
   private playNextLock = false;
+
+  // Set when TrackEndEvent reason is 'gapless' — NodeLink already
+  // auto-started the next track. Cleared after playSong consumes it.
+  private gaplessTransition = false;
+
+  // Gapless preloading via NodeLink's nextTrack is currently disabled.
+  // NodeLink v3.7.0's gapless transition (player.ts:496) calls
+  // connection.play() without awaiting encoder initialization, causing
+  // a ~3s silence gap — worse than a cold start (~1s). Re-enable when
+  // NodeLink fixes the encoder pipeline in its gapless transition.
+  // See: https://github.com/PerformanC/NodeLink/issues (TBD)
+  private static readonly ENABLE_GAPLESS_PRELOAD = true;
 
   // Called when the voice session is torn down so the manager Map can
   // remove this GuildPlayer (see manager.ts).
@@ -102,6 +114,13 @@ export class GuildPlayer {
       // 'replaced' fires when a new track replaces the current one (normal).
       // 'stopped' fires when we explicitly stop/clear.
       if (reason === 'replaced' || reason === 'stopped') return;
+
+      // NodeLink auto-started the next track via gapless preload — flag
+      // this so playSong skips the expensive load-and-play path.
+      if (reason === 'gapless') {
+        this.gaplessTransition = true;
+      }
+
       this.onTrackEnd().catch(() => {
         // errors logged in handlePlaybackFailure
       });
@@ -452,58 +471,13 @@ export class GuildPlayer {
     this.cancelIdleLeave();
     this.paused = false;
 
-    let trackData: { track: string; isWebmOpus: boolean };
-
-    try {
-      trackData = await this.fetchStreamWithRetry(next.youtubeUrl);
-    } catch (error) {
-      logger.error(
-        { guildId: this.guildId, track: next.title, error },
-        'Failed to get stream URL after 3 attempts'
-      );
-      await this.handlePlaybackFailure('could not load the track from NodeLink');
-      return;
-    }
-
     const sessionId = this.getSessionId();
     if (!sessionId) {
       await this.handlePlaybackFailure('NodeLink session not available');
       return;
     }
 
-    // Ensure voice connection is established.
-    if (!lavalink.isGuildConnected(this.guildId)) {
-      if (!this.voiceId) {
-        logger.error({ guildId: this.guildId }, 'Cannot play: no voiceId set');
-        await this.handlePlaybackFailure('not connected to a voice channel');
-        return;
-      }
-      await connectToVoice(this.guildId, this.voiceId);
-      // Give NodeLink time to fully establish the voice connection
-      // before sending track data. Avoids "WrongGroupId" errors
-      // when the voice server update hasn't propagated yet.
-      await new Promise((resolve) => setTimeout(resolve, 500));
-    }
-
-    const volume = 100 + (next.volumeBoost ?? 0);
-
-    // If NodeLink is already playing (gapless preload auto-started the
-    // next track), just update volume. Otherwise send the play command.
-    if (lavalink.isGuildPlaying(this.guildId)) {
-      logger.info(
-        { guildId: this.guildId, track: next.title },
-        'playSong: already playing (gapless preload) — applying volume via REST'
-      );
-      await updateNodeLinkPlayer(this.guildId, sessionId, { volume });
-    } else {
-      logger.info({ guildId: this.guildId, track: next.title }, 'playSong: starting playback');
-      await updateNodeLinkPlayer(this.guildId, sessionId, {
-        track: { encoded: trackData.track },
-        volume,
-      });
-    }
-
-    // Apply compressor filter if enabled.
+    // Load guild settings once for both code paths.
     const settings = await db
       .select({
         enabled: tables.guildSettings.compressorEnabled,
@@ -518,6 +492,113 @@ export class GuildPlayer {
       .where(eq(tables.guildSettings.id, 1))
       .get();
 
+    // If the TrackEndEvent had reason 'gapless', NodeLink already
+    // auto-started the next track.  Skip the expensive load-and-play
+    // path; just update volume and re-apply filters.
+    if (this.gaplessTransition) {
+      this.gaplessTransition = false;
+      const t0 = Date.now();
+      logger.info(
+        { guildId: this.guildId, track: next.title },
+        'playSong: already playing (gapless preload) — applying settings via REST'
+      );
+
+      // Build a single PATCH payload combining volume and any active
+      // filters so NodeLink processes everything in one round-trip.
+      const patch: Record<string, unknown> = {
+        volume: 100 + (next.volumeBoost ?? 0),
+      };
+
+      if (settings?.enabled) {
+        try {
+          const compressorFilter = buildCompressorFilter(settings);
+          patch.filters = { ...(patch.filters as Record<string, unknown>), ...compressorFilter };
+        } catch (err) {
+          logger.error({ err, guildId: this.guildId }, 'Failed to build compressor filter');
+        }
+      }
+
+      const eqBands = eqBandsFromRow(settings);
+      if (eqBands.some((b) => b !== 50)) {
+        try {
+          const equalizerFilter = buildEqualizerFilter(eqBands);
+          patch.filters = {
+            ...(patch.filters as Record<string, unknown>),
+            equalizer: equalizerFilter,
+          };
+        } catch (err) {
+          logger.error({ err, guildId: this.guildId }, 'Failed to build equalizer filter');
+        }
+      }
+
+      const t1 = Date.now();
+      await updateNodeLinkPlayer(this.guildId, sessionId, patch as Parameters<typeof updateNodeLinkPlayer>[2]);
+      const t2 = Date.now();
+
+      this.consecutiveFailures = 0;
+      this.trackStartedAt = Date.now();
+      this.pausedAt = null;
+      this.broadcast();
+      const t3 = Date.now();
+
+      logger.info(
+        {
+          guildId: this.guildId,
+          track: next.title,
+          buildMs: t1 - t0,
+          patchMs: t2 - t1,
+          broadcastMs: t3 - t2,
+          totalMs: t3 - t0,
+        },
+        'playSong: gapless timings'
+      );
+
+      // Gapless preload for the next track.
+      if (GuildPlayer.ENABLE_GAPLESS_PRELOAD) {
+        this.preloadNextTrack(sessionId);
+      }
+      return;
+    }
+
+    // Gapless preload did not work — full load-and-play path.
+    const tCold0 = Date.now();
+    logger.info({ guildId: this.guildId, track: next.title }, 'playSong: starting playback');
+
+    let trackData: { track: string; isWebmOpus: boolean };
+
+    try {
+      trackData = await this.fetchStreamWithRetry(next.youtubeUrl);
+    } catch (error) {
+      logger.error(
+        { guildId: this.guildId, track: next.title, error },
+        'Failed to get stream URL after 3 attempts'
+      );
+      await this.handlePlaybackFailure('could not load the track from NodeLink');
+      return;
+    }
+    const tCold1 = Date.now();
+
+    // Ensure voice connection is established.
+    if (!lavalink.isGuildConnected(this.guildId)) {
+      if (!this.voiceId) {
+        logger.error({ guildId: this.guildId }, 'Cannot play: no voiceId set');
+        await this.handlePlaybackFailure('not connected to a voice channel');
+        return;
+      }
+      await connectToVoice(this.guildId, this.voiceId);
+      await new Promise((resolve) => setTimeout(resolve, 500));
+    }
+    const tCold2 = Date.now();
+
+    const volume = 100 + (next.volumeBoost ?? 0);
+
+    await updateNodeLinkPlayer(this.guildId, sessionId, {
+      track: { encoded: trackData.track },
+      volume,
+    });
+    const tCold3 = Date.now();
+
+    // Apply compressor filter if enabled (shared path).
     if (settings?.enabled) {
       try {
         await updateNodeLinkPlayer(this.guildId, sessionId, {
@@ -531,7 +612,7 @@ export class GuildPlayer {
       }
     }
 
-    // Apply equalizer filter if any band is non-neutral.
+    // Apply equalizer filter if any band is non-neutral (shared path).
     const eqBands = eqBandsFromRow(settings);
     if (eqBands.some((b) => b !== 50)) {
       try {
@@ -554,19 +635,34 @@ export class GuildPlayer {
     this.pausedAt = null;
     this.broadcast();
 
-    // Gapless preload for the next track (fire-and-forget).
-    const nextTrack = this.peekNextTrack();
-    if (nextTrack) {
-      const guildId = this.guildId;
-      const youtubeUrl = nextTrack.youtubeUrl;
-      setTimeout(() => {
-        import('./utils/nodelink').then(({ preloadTrack }) => {
-          preloadTrack(guildId, sessionId, youtubeUrl, trackData.track).catch(() => {
-            /* intentionally empty */
-          });
-        });
-      }, 500);
+    // Gapless preload for the next track.
+    if (GuildPlayer.ENABLE_GAPLESS_PRELOAD) {
+      this.preloadNextTrack(sessionId);
     }
+
+    logger.info(
+      {
+        guildId: this.guildId,
+        track: next.title,
+        loadMs: tCold1 - tCold0,
+        voiceMs: tCold2 - tCold1,
+        playPatchMs: tCold3 - tCold2,
+        totalMs: Date.now() - tCold0,
+      },
+      'playSong: cold-start timings'
+    );
+  }
+
+  private preloadNextTrack(sessionId: string): void {
+    const nextTrack = this.peekNextTrack();
+    if (!nextTrack) return;
+
+    preloadTrack(this.guildId, sessionId, nextTrack.youtubeUrl).catch((err) => {
+      logger.warn(
+        { guildId: this.guildId, track: nextTrack.title, err },
+        'Gapless preload failed'
+      );
+    });
   }
 
   private async fetchStreamWithRetry(

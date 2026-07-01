@@ -225,41 +225,46 @@ export async function getPlaylistMetadataWithVideos(
 export async function preloadTrack(
   guildId: string,
   sessionId: string,
-  youtubeUrl: string,
-  _currentEncoded?: string
+  youtubeUrl: string
 ): Promise<void> {
-  try {
-    const loadUrl = new URL('/v4/loadtracks', NODELINK_URL);
-    loadUrl.searchParams.set('identifier', youtubeUrl);
+  // Resolve the track via NodeLink's loadtracks endpoint.
+  const loadUrl = new URL('/v4/loadtracks', NODELINK_URL);
+  loadUrl.searchParams.set('identifier', youtubeUrl);
 
-    const headers: Record<string, string> = { 'Content-Type': 'application/json' };
-    if (NODELINK_AUTH) headers.Authorization = NODELINK_AUTH;
-    const resp = await fetch(loadUrl, { method: 'GET', headers });
-    if (!resp.ok) return;
-    const data = (await resp.json()) as LoadTrackResponse;
-    const encoded = data.data?.encoded;
-    if (!encoded) return; // Track couldn't be resolved
+  const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+  if (NODELINK_AUTH) headers.Authorization = NODELINK_AUTH;
 
-    // Only send nextTrack — do NOT include the current track in the PATCH
-    // body. The Lavalink v4 spec expects noReplace as a query parameter, not
-    // a body field. Including track in the body without a proper noReplace
-    // query param causes NodeLink to restart the currently-playing track
-    // (audible restart glitch ~500ms into playback).
-    const patchUrl = new URL(
-      `/v4/sessions/${encodeURIComponent(sessionId)}/players/${encodeURIComponent(guildId)}`,
-      NODELINK_URL
-    );
-    const patchResp = await fetch(patchUrl, {
-      method: 'PATCH',
-      headers: nodeLinkHeaders(),
-      body: JSON.stringify({ nextTrack: { encoded } }),
-    });
-    if (!patchResp.ok) {
-      logger.warn({ status: patchResp.status }, 'Gapless preload PATCH failed');
-    }
-  } catch {
-    logger.warn({ guildId, youtubeUrl }, 'Gapless preload failed');
+  const resp = await fetch(loadUrl, { method: 'GET', headers });
+  if (!resp.ok) {
+    throw new Error(`NodeLink loadtracks returned ${resp.status}`);
   }
+
+  const data = (await resp.json()) as LoadTrackResponse;
+  const encoded = data.data?.encoded;
+  if (!encoded) {
+    throw new Error('NodeLink returned no encoded track for preload');
+  }
+
+  // Set nextTrack on the player. Only send nextTrack — do NOT include
+  // the current track in the PATCH body. The Lavalink v4 spec expects
+  // noReplace as a query parameter, not a body field. Including track
+  // in the body without a proper noReplace query param causes NodeLink
+  // to restart the currently-playing track (audible restart glitch
+  // ~500ms into playback).
+  const patchUrl = new URL(
+    `/v4/sessions/${encodeURIComponent(sessionId)}/players/${encodeURIComponent(guildId)}`,
+    NODELINK_URL
+  );
+  const patchResp = await fetch(patchUrl, {
+    method: 'PATCH',
+    headers: nodeLinkHeaders(),
+    body: JSON.stringify({ nextTrack: { encoded } }),
+  });
+  if (!patchResp.ok) {
+    throw new Error(`NodeLink preload PATCH returned ${patchResp.status}`);
+  }
+
+  logger.debug({ guildId, youtubeUrl }, 'Gapless preload succeeded');
 }
 
 // ---------------------------------------------------------------------------
