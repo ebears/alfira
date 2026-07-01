@@ -2,7 +2,23 @@ import { spawn } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { parse } from 'cookie';
+
+function parseCookies(header: string): Record<string, string> {
+  const result: Record<string, string> = {};
+  for (const part of header.split(';')) {
+    const idx = part.indexOf('=');
+    if (idx === -1) continue;
+    const key = part.slice(0, idx).trim();
+    const raw = part.slice(idx + 1).trim();
+    try {
+      result[key] = decodeURIComponent(raw);
+    } catch {
+      result[key] = raw;
+    }
+  }
+  return result;
+}
+
 import { sql } from 'drizzle-orm';
 import { logger } from './lib/config';
 import { ensureTagsMigrated } from './lib/ensureTagsMigrated';
@@ -103,7 +119,7 @@ function serveStatic(filePath: string, pathname: string): Response | undefined {
 // ---------------------------------------------------------------------------
 
 function createContext(request: Request): RouteContext {
-  const parsedCookies = parse(request.headers.get('cookie') || '');
+  const parsedCookies = parseCookies(request.headers.get('cookie') || '');
   const token = parsedCookies.session;
   const user = token ? verifySessionToken(token) : null;
   const cookies: Record<string, string> = {};
@@ -142,7 +158,7 @@ const server = Bun.serve({
 
     // WebSocket upgrade — auth is handled here before upgrade
     if (url.pathname === '/ws') {
-      const cookies = parse(request.headers.get('cookie') || '');
+      const cookies = parseCookies(request.headers.get('cookie') || '');
       const token = cookies.session;
       const user = token ? verifySessionToken(token) : null;
       if (!user) {

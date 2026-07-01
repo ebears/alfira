@@ -7,7 +7,13 @@ import { logger } from '../shared/logger';
 // Types
 // ---------------------------------------------------------------------------
 
-export type TrackEndReason = 'finished' | 'loadFailed' | 'stopped' | 'replaced' | 'cleanup' | 'gapless';
+export type TrackEndReason =
+  | 'finished'
+  | 'loadFailed'
+  | 'stopped'
+  | 'replaced'
+  | 'cleanup'
+  | 'gapless';
 
 interface LavalinkReady {
   op: 'ready';
