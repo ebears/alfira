@@ -1,11 +1,10 @@
 import { eq } from 'drizzle-orm';
 import type { RouteContext } from '../index';
+import { applyNodeLinkFilter } from '../lib/applyNodeLinkFilter';
 import { EQ_BAND_COLUMNS, eqBandsFromRow, eqBandValues } from '../lib/eqBands';
 import { json } from '../lib/json';
 import { checkGuards } from '../lib/routeGuards';
 import { db, tables } from '../shared/db';
-import { logger } from '../shared/logger';
-import { getHoshimi } from '../startDiscord';
 
 interface EqualizerPayload {
   bands: number[]; // length 15, each 0-100
@@ -70,25 +69,7 @@ export async function handleEqualizerPatch(ctx: RouteContext, request: Request):
     .run();
 
   // Apply to live NodeLink player if connected
-  const guildId = process.env.GUILD_ID ?? '';
-  if (!guildId) {
-    logger.warn('GUILD_ID not set, skipping NodeLink equalizer filter update');
-  } else {
-    const hoshimi = getHoshimi();
-    if (hoshimi) {
-      const player = hoshimi.players.get(guildId);
-      if (player?.connected) {
-        try {
-          await player.node.rest.updatePlayer({
-            guildId,
-            playerOptions: { filters: { equalizer: buildEqualizerFilter(bands) } },
-          });
-        } catch (err) {
-          logger.error({ err }, 'Failed to update NodeLink equalizer filter');
-        }
-      }
-    }
-  }
+  await applyNodeLinkFilter({ equalizer: buildEqualizerFilter(bands) }, 'equalizer');
 
   return json({ bands });
 }
