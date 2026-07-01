@@ -7,7 +7,7 @@
 | **Runtime** | Bun |
 | **Language** | TypeScript |
 | **Discord** | `Seyfert` v4 |
-| **Audio** | NodeLink (Lavalink v4) via `hoshimi` |
+| **Audio** | NodeLink (Lavalink v4) — direct WebSocket + REST |
 | **API** | Bun native HTTP + WebSocket |
 | **Database** | SQLite + Drizzle ORM |
 | **Frontend** | React + Bun + Tailwind |
@@ -24,7 +24,7 @@ flowchart TB
 
     subgraph Server["Bun Server"]
         API[Bun API<br/>:3001]
-        BOT[Discord Bot<br/>Seyfert + Hoshimi]
+        BOT[Discord Bot<br/>Seyfert + LavalinkClient]
     end
 
     subgraph Audio["Audio Pipeline"]
@@ -62,7 +62,7 @@ The project is a Bun workspaces monorepo:
 ```
 packages/
 ├── shared    # Shared types and runtime utilities (formatDuration, fisherYatesShuffle)
-├── bot       # Discord bot (GuildPlayer, NodeLink audio via hoshimi)
+├── bot       # Discord bot (GuildPlayer, NodeLink audio via direct REST + WebSocket)
 ├── api       # Bun API, Drizzle ORM
 └── web       # React + Tailwind web UI
 ```

@@ -1,5 +1,6 @@
-import { getHoshimi } from '../startDiscord';
+import { updateNodeLinkPlayer } from '../utils/nodelink';
 import { logger } from './config';
+import { lavalink } from './lavalink';
 
 /**
  * Applies audio filters to the live NodeLink player for the configured guild.
@@ -14,15 +15,13 @@ export async function applyNodeLinkFilter(
     logger.warn(`GUILD_ID not set, skipping NodeLink ${label} filter update`);
     return;
   }
-  const hoshimi = getHoshimi();
-  if (!hoshimi) return;
-  const player = hoshimi.players.get(guildId);
-  if (!player?.connected) return;
+  if (!lavalink.isGuildConnected(guildId)) return;
+
+  const sessionId = lavalink.getSessionId();
+  if (!sessionId) return;
+
   try {
-    await player.node.rest.updatePlayer({
-      guildId,
-      playerOptions: { filters },
-    });
+    await updateNodeLinkPlayer(guildId, sessionId, { filters });
   } catch (err) {
     logger.error({ err }, `Failed to update NodeLink ${label} filter`);
   }

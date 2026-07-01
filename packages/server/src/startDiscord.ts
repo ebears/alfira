@@ -1,10 +1,11 @@
 import { Client, createEvent } from 'seyfert';
+import { lavalink } from './lib/lavalink';
 import { emitPlayerUpdate } from './lib/socket';
 import { getPlayer } from './manager';
 import type { QueueState } from './shared';
 import { logger } from './shared/logger';
+import { updateNodeLinkPlayer } from './utils/nodelink';
 
-export type { DestroyReasons } from 'hoshimi';
 export type { GuildPlayer } from './GuildPlayer';
 export { createPlayer, destroyAllPlayers, getPlayer } from './manager';
 export {
@@ -19,12 +20,11 @@ const NODELINK_URL = 'http://127.0.0.1:2333';
 const NODELINK_AUTH = 'nodelink-internal';
 
 // ---------------------------------------------------------------------------
-// Client singleton (inlined from former lib/client.ts)
+// Client singleton
 // ---------------------------------------------------------------------------
-import type { Hoshimi } from 'hoshimi';
 
 let _client: Client | null = null;
-let _hoshimi: Hoshimi | null = null;
+let _botUserId: string | null = null;
 
 export function setClient(client: Client): void {
   _client = client;
@@ -34,12 +34,84 @@ export function getClient(): Client | null {
   return _client;
 }
 
-export function setHoshimi(hoshimi: Hoshimi): void {
-  _hoshimi = hoshimi;
+// ---------------------------------------------------------------------------
+// Voice connection (direct Discord gateway)
+// ---------------------------------------------------------------------------
+
+interface PendingVoiceConnection {
+  voiceChannelId: string;
+  sessionId: string | null;
+  token: string | null;
+  endpoint: string | null;
+  resolve: () => void;
+  reject: (err: Error) => void;
 }
 
-export function getHoshimi(): Hoshimi | null {
-  return _hoshimi;
+const pendingVoiceConnections = new Map<string, PendingVoiceConnection>();
+
+function tryCompleteVoiceConnection(guildId: string): void {
+  const pending = pendingVoiceConnections.get(guildId);
+  if (!pending) return;
+  if (!pending.sessionId || !pending.token || !pending.endpoint) return;
+
+  const sessionId = lavalink.getSessionId();
+  if (!sessionId) {
+    // Lavalink WebSocket hasn't received its 'ready' event yet.
+    // Retry in 200ms — the connection was just initiated.
+    setTimeout(() => tryCompleteVoiceConnection(guildId), 200);
+    return;
+  }
+
+  pendingVoiceConnections.delete(guildId);
+
+  updateNodeLinkPlayer(guildId, sessionId, {
+    voice: {
+      token: pending.token,
+      endpoint: pending.endpoint,
+      sessionId: pending.sessionId,
+    },
+  })
+    .then(() => {
+      lavalink.markConnected(guildId, true);
+      pending.resolve();
+    })
+    .catch((err: Error) => pending.reject(err));
+}
+
+/**
+ * Connect the bot to a voice channel.
+ *
+ * Sends VOICE_STATE_UPDATE (op 4) to the Discord gateway and resolves
+ * once the voice server data has been forwarded to NodeLink.
+ */
+export function connectToVoice(guildId: string, voiceChannelId: string): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const client = getClient();
+    if (!client) {
+      reject(new Error('Discord client not ready'));
+      return;
+    }
+
+    pendingVoiceConnections.set(guildId, {
+      voiceChannelId,
+      sessionId: null,
+      token: null,
+      endpoint: null,
+      resolve,
+      reject,
+    });
+
+    const shardId = client.gateway.calculateShardId(guildId);
+    client.gateway.send(shardId, {
+      op: 4,
+      d: {
+        guild_id: guildId,
+        channel_id: voiceChannelId,
+        self_mute: false,
+        self_deaf: false,
+      },
+    });
+  });
 }
 
 // ---------------------------------------------------------------------------
@@ -61,28 +133,32 @@ export function broadcastQueueUpdate(state: QueueState): void {
 // Maps voiceChannelId -> Set of human userIds currently in that channel.
 const humanVoiceMembers = new Map<string, Set<string>>();
 
-// Forward raw gateway packets to hoshimi so it can handle voice server updates.
+// Process raw gateway packets for voice connection and human tracking.
 const rawEvent = createEvent({
   data: { name: 'raw' as const },
   run(packet, _client) {
-    const hoshimi = getHoshimi();
-    if (!hoshimi) return;
-    // hoshimi expects GatewayDispatchPayload but Seyfert passes it with extra wrapper;
-    // the raw packet has `t` and `d` properties that hoshimi reads directly
-    hoshimi.updateVoiceState(packet as Parameters<typeof hoshimi.updateVoiceState>[0]);
-
     // Track human users in voice channels for auto-pause.
     if (packet.t === 'VOICE_STATE_UPDATE') {
       const d = packet.d as {
         guild_id: string;
         user_id: string;
         channel_id: string | null;
+        session_id?: string;
         member?: { user?: { bot?: boolean } };
       };
-      const _guildId = d.guild_id;
+      const guildId = d.guild_id;
       const userId = d.user_id;
       const channelId = d.channel_id;
       const isBot = d.member?.user?.bot === true;
+
+      // Track our own bot's voice session ID for pending voice connections.
+      if (userId === _botUserId) {
+        const pending = pendingVoiceConnections.get(guildId);
+        if (pending && d.session_id) {
+          pending.sessionId = d.session_id;
+          tryCompleteVoiceConnection(guildId);
+        }
+      }
 
       // Update human voice membership tracking.
       // For disconnects (channelId === null), we rely on the member data being present
@@ -100,6 +176,17 @@ const rawEvent = createEvent({
           humanVoiceMembers.set(channelId, members);
         }
         members.add(userId);
+      }
+    }
+
+    // Process VOICE_SERVER_UPDATE for pending voice connections.
+    if (packet.t === 'VOICE_SERVER_UPDATE') {
+      const d = packet.d as { guild_id: string; token: string; endpoint: string };
+      const pending = pendingVoiceConnections.get(d.guild_id);
+      if (pending) {
+        pending.token = d.token;
+        pending.endpoint = d.endpoint;
+        tryCompleteVoiceConnection(d.guild_id);
       }
     }
   },
@@ -123,13 +210,11 @@ const voiceStateUpdateEvent = createEvent({
       (previousState as { guildId?: string })?.guildId;
     if (!guildId) return;
 
-    const hoshimi = getHoshimi();
-    if (!hoshimi) return;
+    if (!lavalink.isGuildConnected(guildId)) return;
 
-    const player = hoshimi.players.get(guildId);
-    if (!player) return;
-
-    const botChannelId = player.voiceId;
+    // Get the bot's voice channel ID from our GuildPlayer.
+    const guildPlayer = getPlayer(guildId);
+    const botChannelId = guildPlayer?.getVoiceId();
     if (!botChannelId) return;
 
     // Check if someone left the bot's channel.
@@ -168,11 +253,19 @@ const voiceStateUpdateEvent = createEvent({
 const readyEvent = createEvent({
   data: { name: 'ready' as const, once: true },
   run(user, _client) {
-    const hoshimi = getHoshimi();
-    if (hoshimi) {
-      hoshimi.init({ id: user.id, username: user.username });
-    }
+    _botUserId = user.id;
     logger.info(`Bot logged in as ${user.username}`);
+
+    // Now that we have the bot's Discord user ID, connect to NodeLink.
+    const nodelinkParsed = new URL(NODELINK_URL);
+    const wsProtocol = nodelinkParsed.protocol === 'https:' ? 'wss:' : 'ws:';
+    const wsUrl = `${wsProtocol}//${nodelinkParsed.hostname}:${nodelinkParsed.port || 2333}/v4/websocket`;
+
+    lavalink.connect(wsUrl, NODELINK_AUTH, user.id).then(
+      () => logger.info('Lavalink WebSocket connected'),
+      (err: Error) =>
+        logger.error({ err }, 'Lavalink WebSocket connection failed — audio will be unavailable')
+    );
   },
 });
 
@@ -200,35 +293,10 @@ export async function startDiscord(): Promise<void> {
 
   setClient(client);
 
-  // Initialize Hoshimi manager for audio.
-  const { Hoshimi } = await import('hoshimi');
-  const nodelinkParsed = new URL(NODELINK_URL);
-
-  const hoshimi = new Hoshimi({
-    sendPayload: (guildId: string, payload: unknown) => {
-      const shardId = client.gateway.calculateShardId(guildId);
-      // @ts-expect-error - hoshimi sends raw gateway payloads; gateway accepts them at runtime
-      client.gateway.send(shardId, payload);
-    },
-    nodes: [
-      {
-        host: nodelinkParsed.hostname,
-        port: Number(nodelinkParsed.port) || (nodelinkParsed.protocol === 'https:' ? 443 : 2333),
-        password: NODELINK_AUTH,
-        secure: nodelinkParsed.protocol === 'https:',
-      },
-    ],
-    client: {
-      id: '',
-      username: '',
-    },
-  });
-
-  setHoshimi(hoshimi);
-
-  await client.start();
-
-  // Register events after start.
+  // Register events before client.start(). The ready event handler
+  // will connect to NodeLink once we have the bot's Discord user ID.
   // biome-ignore lint/suspicious/noExplicitAny: createEvent return has `once?: boolean` but ClientEvent needs `once: boolean`; values are correct at runtime
   client.events.set([readyEvent, rawEvent, voiceStateUpdateEvent] as any);
+
+  await client.start();
 }

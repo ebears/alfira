@@ -1,11 +1,12 @@
 import { eq } from 'drizzle-orm';
-import { DestroyReasons, type Player, SourceNames, Track, type TrackEndEvent } from 'hoshimi';
 import { EQ_BAND_COLUMNS, eqBandsFromRow } from './lib/eqBands';
+import { lavalink, type TrackEndReason } from './lib/lavalink';
 import { PlaybackCursor } from './PlaybackCursor';
 import type { LoopMode, QueuedSong, QueueState } from './shared';
 import { db, tables } from './shared/db';
 import { logger } from './shared/logger';
-import { broadcastQueueUpdate, getHoshimi } from './startDiscord';
+import { broadcastQueueUpdate, connectToVoice, getClient } from './startDiscord';
+import { destroyNodeLinkPlayer, updateNodeLinkPlayer } from './utils/nodelink';
 
 export class GuildPlayer {
   private static readonly MAX_CONSECUTIVE_FAILURES = 3;
@@ -20,31 +21,19 @@ export class GuildPlayer {
   private pausedAt: number | null = null;
   private consecutiveFailures = 0;
 
-  // Concurrency guard: prevents concurrent playNext() invocations from
-  // different callers (skip, trackEnd, addToQueue, etc.). Reentrant calls
-  // from handlePlaybackFailure bypass this via playNextUnlocked().
+  // Prevents concurrent playNext() invocations from different callers
+  // (skip, trackEnd, addToQueue, etc.). Reentrant calls from
+  // handlePlaybackFailure bypass this via playNextUnlocked().
   private playNextLock = false;
-
-  // When true, suppresses queueEnd handler — set during explicit playNext()
-  // calls (skip, addToQueue while paused, replaceQueueAndPlay) so the async
-  // queueEnd from the underlying stop(false) doesn't trigger a redundant
-  // onTrackEnd(). Cleared via setTimeout(0) after playNext() completes so
-  // pending WebSocket messages are processed first.
-  private playNextInProgress = false;
-
-  // Hoshimi event handler references for teardown on destroy.
-  private readonly trackEndHandler: (
-    player: Player,
-    track: unknown,
-    payload: TrackEndEvent
-  ) => void;
-  private readonly trackErrorHandler: (player: Player, track: unknown, exception: unknown) => void;
-  private readonly playerDestroyHandler: (player: Player) => void;
-  private readonly queueEndHandler: (player: Player, queue: unknown) => void;
 
   // Called when the voice session is torn down so the manager Map can
   // remove this GuildPlayer (see manager.ts).
   private readonly onDestroyed: () => void;
+
+  // Lavalink event unsubscribe functions for teardown.
+  private readonly _unsubTrackEnd: () => void;
+  private readonly _unsubTrackError: () => void;
+  private readonly _unsubSocketClosed: () => void;
 
   // Auto-leave idle timer.
   private idleLeaveTimer: ReturnType<typeof setTimeout> | null = null;
@@ -90,14 +79,14 @@ export class GuildPlayer {
   private readonly guildId: string;
   private readonly voiceId: string;
 
-  private unpause(): void {
-    const hoshimi = getHoshimi();
-    if (!hoshimi) return;
-    const player = hoshimi.players.get(this.guildId);
-    if (player) {
-      player.setPaused(false);
-    }
-    this.paused = false;
+  /** The voice channel the bot is connected to, or empty string if not set. */
+  public getVoiceId(): string {
+    return this.voiceId;
+  }
+
+  /** Convenience: get the NodeLink session ID for REST calls. */
+  private getSessionId(): string | null {
+    return lavalink.getSessionId();
   }
 
   constructor(guildId: string, voiceId: string, onDestroyed: () => void) {
@@ -105,90 +94,74 @@ export class GuildPlayer {
     this.voiceId = voiceId;
     this.onDestroyed = onDestroyed;
 
-    // Capture handler references so we can remove them on teardown.
-    this.trackEndHandler = (player: Player, track: unknown, payload: TrackEndEvent) => {
-      if (player.guildId !== this.guildId) return;
-      // 'replaced' fires when play() replaces a track (normal).
-      // 'stopped' fires when skip() calls stop(false) — skip() already
-      // calls playNext() directly, so ignore the async follow-up.
-      if (payload.reason === 'replaced' || payload.reason === 'stopped') return;
-      void track;
+    // Subscribe to NodeLink events for this guild.
+    // NodeLink emits TrackEndEvent for ALL track ends — no more
+    // queueEnd vs trackEnd confusion.
+    this._unsubTrackEnd = lavalink.onTrackEnd(this.guildId, (reason: TrackEndReason) => {
+      // 'replaced' fires when a new track replaces the current one (normal).
+      // 'stopped' fires when we explicitly stop/clear.
+      if (reason === 'replaced' || reason === 'stopped') return;
       this.onTrackEnd().catch(() => {
-        // swallow errors — they are logged in handlePlaybackFailure
+        // errors logged in handlePlaybackFailure
       });
-    };
+    });
 
-    this.trackErrorHandler = (player: Player, track: unknown, exception: unknown) => {
-      if (player.guildId !== this.guildId) return;
-      const exc = exception as { exception?: { message?: string } };
-      logger.error(
-        { guildId: this.guildId, track: this.currentSong?.title ?? 'unknown' },
-        `Player error: ${exc.exception?.message ?? 'unknown'}`
-      );
-      void track;
-    };
+    this._unsubTrackError = lavalink.onTrackError(
+      this.guildId,
+      (exception: { message?: string }) => {
+        logger.error(
+          { guildId: this.guildId, track: this.currentSong?.title ?? 'unknown' },
+          `Player error: ${exception.message ?? 'unknown'}`
+        );
+      }
+    );
 
-    this.playerDestroyHandler = (player: Player) => {
-      if (player.guildId !== this.guildId) return;
-      this.onDestroyed();
-      this.broadcast();
-      // Self-remove so this handler doesn't outlive the GuildPlayer.
-      const h = getHoshimi();
-      if (h) h.off('playerDestroy', this.playerDestroyHandler);
-    };
-
-    // Hoshimi's trackEnd function calls queueEnd() (instead of emitting
-    // 'trackEnd') for natural finishes when its internal queue is empty.
-    // Since we call player.play() directly without pushing to Hoshimi's
-    // internal tracks array, its queue size is always 0 — so 'trackEnd'
-    // is never emitted for FINISHED.  Listen to 'queueEnd' to detect
-    // natural track completions.  playNextInProgress suppresses stale
-    // queueEnd events from explicit stop(false) calls (skip, addToQueue
-    // while paused, replaceQueueAndPlay) that our code already handled.
-    this.queueEndHandler = (player: Player, _queue: unknown) => {
-      if (player.guildId !== this.guildId) return;
-      void _queue;
-      // Suppress queueEnd when a playNext() is in progress or just
-      // completed — the explicit action already advanced the queue.
-      if (this.playNextInProgress) return;
-      this.onTrackEnd().catch(() => {
-        // swallow errors — they are logged in handlePlaybackFailure
-      });
-    };
-
-    // Register event handlers on the Hoshimi manager for this player's events.
-    const hoshimi = getHoshimi();
-    if (hoshimi) {
-      hoshimi.on('trackEnd', this.trackEndHandler);
-      hoshimi.on('trackError', this.trackErrorHandler);
-      hoshimi.on('playerDestroy', this.playerDestroyHandler);
-      hoshimi.on('queueEnd', this.queueEndHandler);
-    }
-  }
-
-  private hoshimiPlayer() {
-    return getHoshimi()?.players.get(this.guildId);
+    this._unsubSocketClosed = lavalink.onSocketClosed(
+      this.guildId,
+      (_code: number, _reason: string, _byRemote: boolean) => {
+        this.onDestroyed();
+        this.broadcast();
+        // Clean up all event subscriptions.
+        this._unsubTrackEnd();
+        this._unsubTrackError();
+        this._unsubSocketClosed();
+      }
+    );
   }
 
   private destroyPlayer(): void {
-    const hoshimi = getHoshimi();
-    if (!hoshimi) return;
-    const player = hoshimi.players.get(this.guildId);
-    if (player) {
-      player.destroy(DestroyReasons.Requested);
+    const sessionId = this.getSessionId();
+    if (sessionId) {
+      destroyNodeLinkPlayer(this.guildId, sessionId);
     }
 
-    // Remove trackEnd/trackError/queueEnd handlers immediately so they
-    // don't fire for events on the destroyed player. Keep playerDestroy
-    // registered — it needs to fire when NodeLink confirms the destroy so
-    // it can broadcast the final isConnectedToVoice=false state.
-    if (hoshimi) {
-      hoshimi.off('trackEnd', this.trackEndHandler);
-      hoshimi.off('trackError', this.trackErrorHandler);
-      hoshimi.off('queueEnd', this.queueEndHandler);
+    // Force-reset playing state so a subsequent play sends a new track
+    // instead of hitting the gapless-preload volume-only path.
+    lavalink.markPlaying(this.guildId, false);
+    lavalink.markConnected(this.guildId, false);
+
+    // Tell Discord to leave the voice channel.
+    const client = getClient();
+    if (client) {
+      const shardId = client.gateway.calculateShardId(this.guildId);
+      client.gateway.send(shardId, {
+        op: 4,
+        d: {
+          guild_id: this.guildId,
+          channel_id: null,
+          self_mute: false,
+          self_deaf: false,
+        },
+      });
     }
 
-    // Remove this GuildPlayer from the manager Map.
+    // Remove event handlers immediately so they don't fire for events
+    // on the destroyed player. Keep socketClosed registered — it fires
+    // when NodeLink confirms the destroy so the final broadcast can
+    // include isConnectedToVoice=false.
+    this._unsubTrackEnd();
+    this._unsubTrackError();
+
     this.onDestroyed();
   }
 
@@ -196,15 +169,15 @@ export class GuildPlayer {
     const arr = Array.isArray(songs) ? songs : [songs];
     this.queue.append(...arr);
 
-    // If paused, stop the paused track and clear currentSong so newly
-    // added songs start playing instead of the previously-paused song
-    // resuming. stop(false) is needed so playSong() in the ensuing
-    // ensurePlaying() → playNext() chain doesn't hit the
-    // "player.playing && player.node" gapless-preload skip.
+    // If paused, clear current song and stop the playing track via REST
+    // so newly added songs start instead of the paused one resuming.
     if (this.paused && this.currentSong !== null) {
-      const hoshimiP = this.hoshimiPlayer();
-      if (hoshimiP) {
-        hoshimiP.stop(false);
+      const sessionId = this.getSessionId();
+      if (sessionId) {
+        await updateNodeLinkPlayer(this.guildId, sessionId, {
+          track: { encoded: null },
+          paused: false,
+        });
       }
       this.currentSong = null;
     }
@@ -219,17 +192,13 @@ export class GuildPlayer {
   }
 
   async replaceQueueAndPlay(songs: QueuedSong[]): Promise<void> {
-    // Stop any currently-playing track before we replace the queue.
-    // stop(false) stops playback without destroying the Hoshimi player or
-    // clearing its voice state, so the subsequent play() in playSong() for
-    // the new first track will start cleanly rather than hitting the
-    // "player.playing && player.node" gapless-preload skip in playSong().
-    //
-    // The async trackEnd event that stop(false) triggers is ignored because
-    // playNext() (called below) holds the playNextLock.
-    const hoshimiP = this.hoshimiPlayer();
-    if (hoshimiP) {
-      hoshimiP.stop(false);
+    // Stop the currently-playing track cleanly before replacing the queue.
+    const sessionId = this.getSessionId();
+    if (sessionId) {
+      await updateNodeLinkPlayer(this.guildId, sessionId, {
+        track: { encoded: null },
+        paused: false,
+      });
     }
 
     this.queue.clear();
@@ -247,20 +216,16 @@ export class GuildPlayer {
   async skip(): Promise<void> {
     if (this.currentSong === null) return;
 
-    // Unpause first — stop() on a paused player might not trigger TrackEnd.
-    if (this.paused) {
-      this.unpause();
+    // Stop the current track via REST.
+    const sessionId = this.getSessionId();
+    if (sessionId) {
+      await updateNodeLinkPlayer(this.guildId, sessionId, {
+        track: { encoded: null },
+        paused: false,
+      });
     }
 
-    const player = this.hoshimiPlayer();
-    if (player) {
-      // stop(false) stops playback without destroying the player or clearing
-      // its voice state, so the next track can play without reconnecting.
-      player.stop(false);
-    }
-
-    // Directly advance to the next track instead of relying on the async
-    // trackEnd event chain, which clears queue.current before play() is called.
+    this.paused = false;
     await this.playNext();
   }
 
@@ -274,9 +239,6 @@ export class GuildPlayer {
     this.trackStartedAt = null;
 
     this.destroyPlayer();
-    // Broadcast the empty queue state immediately. The playerDestroy
-    // event handler (still registered) will broadcast isConnectedToVoice=false
-    // when NodeLink confirms the destroy.
     this.broadcast();
   }
 
@@ -297,19 +259,15 @@ export class GuildPlayer {
 
   setLoopMode(mode: LoopMode): void {
     this.loopMode = mode;
-    const player = this.hoshimiPlayer();
-    if (player) {
-      // Hoshimi uses LoopMode enum (Track=1, Queue=2, Off=3)
-      player.setLoop(mode === 'song' ? 1 : mode === 'queue' ? 2 : 3);
-    }
+    // Loop is tracked client-side — NodeLink has no loop opcode.
     this.broadcast();
   }
 
-  togglePause(): boolean {
+  async togglePause(): Promise<boolean> {
     if (!this.currentSong) return false;
 
-    const player = this.hoshimiPlayer();
-    if (!player) return false;
+    const sessionId = this.getSessionId();
+    if (!sessionId) return false;
 
     if (this.paused) {
       this.cancelIdleLeave();
@@ -320,11 +278,11 @@ export class GuildPlayer {
         }
         this.pausedAt = null;
       }
-      player.setPaused(false);
+      await updateNodeLinkPlayer(this.guildId, sessionId, { paused: false });
       this.paused = false;
     } else {
       this.pausedAt = Date.now();
-      player.setPaused(true);
+      await updateNodeLinkPlayer(this.guildId, sessionId, { paused: true });
       this.paused = true;
       this.scheduleIdleLeave();
     }
@@ -336,20 +294,15 @@ export class GuildPlayer {
   async seek(positionMs: number): Promise<void> {
     if (!this.currentSong) return;
 
-    const player = this.hoshimiPlayer();
-    if (!player) return;
+    const sessionId = this.getSessionId();
+    if (!sessionId) return;
 
-    // Clamp to valid range
-    const durationSec = this.currentSong.duration;
-    const durationMs = durationSec * 1000;
+    const durationMs = this.currentSong.duration * 1000;
     const clampedMs = Math.max(0, Math.min(positionMs, durationMs));
 
-    await player.seek(clampedMs);
+    await updateNodeLinkPlayer(this.guildId, sessionId, { position: clampedMs });
 
-    // Adjust trackStartedAt so elapsed time is consistent after seek.
-    // New trackStartedAt = now - seeked position
     this.trackStartedAt = Date.now() - clampedMs;
-    // If we were paused, also update pausedAt so pause offset is preserved
     if (this.paused && this.pausedAt !== null) {
       this.pausedAt = Date.now() - clampedMs;
     }
@@ -361,22 +314,14 @@ export class GuildPlayer {
     return this.currentSong;
   }
 
-  /**
-   * Update volume of the currently-playing track without restarting it.
-   * Does nothing if no track is currently playing.
-   */
   public updateVolumeBoost(boost: number): void {
-    const hoshimi = getHoshimi();
-    if (!hoshimi) return;
-    const hoshimiPlayer = hoshimi.players.get(this.guildId);
-    if (!hoshimiPlayer || !this.currentSong) return;
-    // Use NodeLink REST API directly to bypass Hoshimi's volume filter
-    // NodeLink volume: 0-1000 where 100 = 100%. finalVolume = 100 + boost
-    const node = hoshimiPlayer.node;
-    if (!node) return;
-    node.rest.updatePlayer({
-      guildId: this.guildId,
-      playerOptions: { volume: 100 + boost },
+    if (!this.currentSong) return;
+
+    const sessionId = this.getSessionId();
+    if (!sessionId) return;
+
+    updateNodeLinkPlayer(this.guildId, sessionId, {
+      volume: 100 + boost,
     });
   }
 
@@ -389,19 +334,15 @@ export class GuildPlayer {
   }
 
   isPlaying(): boolean {
-    // Don't wait for NodeLink's playing flag — it's false during the buffering
-    // window after play() is called. We know we're playing if we have a song
-    // loaded and we're not paused.
     if (this.currentSong === null || this.paused) return false;
     return true;
   }
 
   getQueueState(): QueueState {
-    const player = this.hoshimiPlayer();
     return {
       isPlaying: this.isPlaying(),
       isPaused: this.paused,
-      isConnectedToVoice: player?.connected ?? false,
+      isConnectedToVoice: lavalink.isGuildConnected(this.guildId),
       loopMode: this.loopMode,
       isShuffled: this.queue.isShuffled,
       currentSong: this.currentSong,
@@ -425,18 +366,14 @@ export class GuildPlayer {
   }
 
   private peekNextTrack(): QueuedSong | null {
-    // Priority queue peek
     if (this.priorityQueue.length > 0) {
       return this.priorityQueue[0] ?? null;
     }
 
-    // Song loop: always replay current song (checked before isAtEnd to handle
-    // end-of-queue correctly — playNext() replays currentSong even at end)
     if (this.loopMode === 'song' && this.currentSong) {
       return this.currentSong;
     }
 
-    // At end of main queue
     if (this.queue.isAtEnd) {
       if (this.loopMode === 'queue' && !this.queue.isEmpty) {
         return this.queue.current() as QueuedSong | null;
@@ -447,48 +384,25 @@ export class GuildPlayer {
     return this.queue.current() as QueuedSong | null;
   }
 
-  /**
-   * Public entry point for advancing playback. Guards against concurrent
-   * external invocations (skip + async trackEnd, rapid addToQueue, etc.).
-   *
-   * Sets playNextInProgress to suppress the async queueEnd event that
-   * arrives after a stop(false) call — the flag is kept true until the
-   * next macrotask so pending WebSocket messages are drained first.
-   */
   private async playNext(): Promise<void> {
     if (this.playNextLock) return;
     this.playNextLock = true;
-    this.playNextInProgress = true;
     try {
       await this.playNextUnlocked();
     } finally {
       this.playNextLock = false;
-      // Defer clearing playNextInProgress by one macrotask so any
-      // queueEnd WebSocket message triggered by a prior stop(false)
-      // has time to arrive and be processed before the flag goes
-      // back to false.
-      setTimeout(() => {
-        this.playNextInProgress = false;
-      }, 0);
     }
   }
 
-  /**
-   * Unlocked variant called by handlePlaybackFailure when it needs to try
-   * the next song while the outer playNext() still holds the lock.
-   */
   private async playNextUnlocked(): Promise<void> {
-    const player = this.hoshimiPlayer();
-    if (player && !player.connected) {
-      // Re-establish the voice connection so playSong() can use it.
-      await player.connect();
+    // Re-establish voice connection if needed.
+    if (!lavalink.isGuildConnected(this.guildId) && this.voiceId) {
+      await connectToVoice(this.guildId, this.voiceId);
     }
 
     const prioritySong = this.priorityQueue.shift();
     if (prioritySong) {
       this.currentSong = prioritySong;
-      // Default isSeekable to true — priority songs come from the library
-      // and don't have this flag set on the DB record.
       if (this.currentSong) {
         this.currentSong = { ...this.currentSong, isSeekable: true };
       }
@@ -512,8 +426,6 @@ export class GuildPlayer {
       }
     }
 
-    // Song loop: replay current song and advance readIndex so that
-    // disabling loop mode mid-playthrough doesn't cause a ghost loop
     if (this.loopMode === 'song' && this.currentSong) {
       await this.playSong(this.currentSong);
       this.queue.advance();
@@ -528,8 +440,6 @@ export class GuildPlayer {
     }
 
     this.currentSong = next;
-    // Default isSeekable to true (YouTube tracks are virtually always seekable).
-    // NodeLink's actual TrackInfo.isSeekable is not captured from the play response.
     if (this.currentSong) {
       this.currentSong = { ...this.currentSong, isSeekable: true };
     }
@@ -542,12 +452,6 @@ export class GuildPlayer {
     this.cancelIdleLeave();
     this.paused = false;
 
-    const hoshimi = getHoshimi();
-    if (!hoshimi) {
-      await this.handlePlaybackFailure('Hoshimi not available');
-      return;
-    }
-
     let trackData: { track: string; isWebmOpus: boolean };
 
     try {
@@ -555,80 +459,51 @@ export class GuildPlayer {
     } catch (error) {
       logger.error(
         { guildId: this.guildId, track: next.title, error },
-        `Failed to get stream URL after 3 attempts`
+        'Failed to get stream URL after 3 attempts'
       );
       await this.handlePlaybackFailure('could not load the track from NodeLink');
       return;
     }
 
-    let player = hoshimi.players.get(this.guildId);
-    if (!player) {
+    const sessionId = this.getSessionId();
+    if (!sessionId) {
+      await this.handlePlaybackFailure('NodeLink session not available');
+      return;
+    }
+
+    // Ensure voice connection is established.
+    if (!lavalink.isGuildConnected(this.guildId)) {
       if (!this.voiceId) {
-        logger.error(
-          { guildId: this.guildId },
-          'Cannot play: no voiceId set and no existing player'
-        );
+        logger.error({ guildId: this.guildId }, 'Cannot play: no voiceId set');
         await this.handlePlaybackFailure('not connected to a voice channel');
         return;
       }
-      player = hoshimi.createPlayer({ guildId: this.guildId, voiceId: this.voiceId });
-    } else if (!player.connected) {
-      // Player exists but was disconnected (e.g. after stop()). Reconnect first so
-      // NodeLink receives the voice server update and can begin streaming.
-      await player.connect();
+      await connectToVoice(this.guildId, this.voiceId);
+      // Give NodeLink time to fully establish the voice connection
+      // before sending track data. Avoids "WrongGroupId" errors
+      // when the voice server update hasn't propagated yet.
+      await new Promise((resolve) => setTimeout(resolve, 500));
     }
 
-    // Apply volume via NodeLink volume filter.
     const volume = 100 + (next.volumeBoost ?? 0);
 
-    // If the player is already playing, the gapless preload (PATCH
-    // /nextTrack in playSong's preload block) already auto-started the
-    // next track in NodeLink. Calling play() again would replace it with
-    // itself, causing an audible restart glitch. Skip play() and only
-    // apply volume via REST.
-    logger.debug(
-      { guildId: this.guildId, track: next.title, playing: player.playing, hasNode: !!player.node },
-      'playSong: player.playing=%s hasNode=%s',
-      player.playing,
-      !!player.node
-    );
-    if (player.playing && player.node) {
+    // If NodeLink is already playing (gapless preload auto-started the
+    // next track), just update volume. Otherwise send the play command.
+    if (lavalink.isGuildPlaying(this.guildId)) {
       logger.info(
         { guildId: this.guildId, track: next.title },
-        'playSong: player already playing, skipping play() — applying volume via REST'
+        'playSong: already playing (gapless preload) — applying volume via REST'
       );
-      await player.node.rest.updatePlayer({
-        guildId: this.guildId,
-        playerOptions: { volume },
-      });
+      await updateNodeLinkPlayer(this.guildId, sessionId, { volume });
     } else {
-      logger.info({ guildId: this.guildId, track: next.title }, 'playSong: calling player.play()');
-      await player.play({
-        track: new Track(
-          {
-            encoded: trackData.track,
-            info: {
-              title: next.title,
-              identifier: next.youtubeId,
-              author: '',
-              length: next.duration * 1000,
-              artworkUrl: '',
-              uri: next.youtubeUrl,
-              isStream: false,
-              isSeekable: true,
-              position: 0,
-              sourceName: SourceNames.Youtube,
-              isrc: null,
-            },
-            pluginInfo: {},
-          },
-          {}
-        ),
+      logger.info({ guildId: this.guildId, track: next.title }, 'playSong: starting playback');
+      await updateNodeLinkPlayer(this.guildId, sessionId, {
+        track: { encoded: trackData.track },
         volume,
       });
     }
 
-    // Apply compressor filter if enabled
+    // Apply compressor filter if enabled.
     const settings = await db
       .select({
         enabled: tables.guildSettings.compressorEnabled,
@@ -644,51 +519,39 @@ export class GuildPlayer {
       .get();
 
     if (settings?.enabled) {
-      const node = player.node;
-      if (node) {
-        try {
-          await node.rest.updatePlayer({
-            guildId: this.guildId,
-            playerOptions: {
-              filters: {
-                compressor: {
-                  threshold: settings.threshold,
-                  ratio: settings.ratio,
-                  attack: settings.attack,
-                  release: settings.release,
-                  gain: settings.gain,
-                },
-              },
+      try {
+        await updateNodeLinkPlayer(this.guildId, sessionId, {
+          filters: {
+            compressor: {
+              threshold: settings.threshold,
+              ratio: settings.ratio,
+              attack: settings.attack,
+              release: settings.release,
+              gain: settings.gain,
             },
-          } as Parameters<typeof node.rest.updatePlayer>[0]);
-        } catch (err) {
-          // Don't fail playback — log and continue
-          logger.error(
-            { err, guildId: this.guildId },
-            'Failed to apply compressor filter on playback start'
-          );
-        }
+          },
+        });
+      } catch (err) {
+        logger.error(
+          { err, guildId: this.guildId },
+          'Failed to apply compressor filter on playback start'
+        );
       }
     }
 
-    // Apply equalizer filter if any band is non-neutral
+    // Apply equalizer filter if any band is non-neutral.
     const eqBands = eqBandsFromRow(settings);
-
-    const node = player.node;
-    if (node && eqBands.some((b) => b !== 50)) {
+    if (eqBands.some((b) => b !== 50)) {
       try {
         const equalizerFilter = eqBands.map((value, index) => ({
           band: index,
           gain: (value - 50) / 100,
         }));
-        await node.rest.updatePlayer({
-          guildId: this.guildId,
-          playerOptions: {
-            filters: {
-              equalizer: equalizerFilter,
-            },
+        await updateNodeLinkPlayer(this.guildId, sessionId, {
+          filters: {
+            equalizer: equalizerFilter,
           },
-        } as Parameters<typeof node.rest.updatePlayer>[0]);
+        });
       } catch (err) {
         logger.error(
           { err, guildId: this.guildId },
@@ -702,25 +565,18 @@ export class GuildPlayer {
     this.pausedAt = null;
     this.broadcast();
 
-    // Kick off gapless preload for the next track (fire-and-forget)
-    // Delay slightly to ensure current track is fully initialized in NodeLink
-    // before we attempt to preload the next track.
-    const currentEncoded = trackData.track;
+    // Gapless preload for the next track (fire-and-forget).
     const nextTrack = this.peekNextTrack();
     if (nextTrack) {
-      const player = this.hoshimiPlayer();
-      const sessionId = player?.node?.sessionId;
-      if (sessionId) {
-        const guildId = this.guildId;
-        const youtubeUrl = nextTrack.youtubeUrl;
-        setTimeout(() => {
-          import('./utils/nodelink').then(({ preloadTrack }) => {
-            preloadTrack(guildId, sessionId, youtubeUrl, currentEncoded).catch(() => {
-              /* intentionally empty */
-            });
+      const guildId = this.guildId;
+      const youtubeUrl = nextTrack.youtubeUrl;
+      setTimeout(() => {
+        import('./utils/nodelink').then(({ preloadTrack }) => {
+          preloadTrack(guildId, sessionId, youtubeUrl, trackData.track).catch(() => {
+            /* intentionally empty */
           });
-        }, 500);
-      }
+        });
+      }, 500);
     }
   }
 
@@ -749,7 +605,7 @@ export class GuildPlayer {
     if (this.consecutiveFailures >= GuildPlayer.MAX_CONSECUTIVE_FAILURES) {
       logger.error(
         { guildId: this.guildId, song: this.currentSong?.title },
-        `Max consecutive failures reached — stopping playback.`
+        'Max consecutive failures reached — stopping playback.'
       );
       this.stop();
       return;
@@ -762,8 +618,6 @@ export class GuildPlayer {
   }
 
   private async onTrackEnd(): Promise<void> {
-    // If playNext() is already in flight from a skip() call, don't
-    // clobber its timing state or double-advance the queue.
     if (this.playNextLock) return;
 
     this.trackStartedAt = null;

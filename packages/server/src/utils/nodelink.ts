@@ -17,20 +17,48 @@ const NODELINK_AUTH = 'nodelink-internal';
 
 import { logger } from '../shared/logger';
 
-async function restRequest<T>(path: string): Promise<T> {
+async function restRequest<T>(method: string, path: string, body?: unknown): Promise<T> {
   const headers: { 'Content-Type': string; Authorization?: string } = {
     'Content-Type': 'application/json',
   };
   if (NODELINK_AUTH) headers.Authorization = NODELINK_AUTH;
 
   const url = `${NODELINK_URL}${path}`;
-  const response = await fetch(url, { method: 'GET', headers });
+  const response = await fetch(url, {
+    method,
+    headers,
+    body: body !== undefined ? JSON.stringify(body) : undefined,
+  });
 
   if (!response.ok) {
     throw new Error(`NodeLink REST ${response.status}: ${await response.text()}`);
   }
 
+  // DELETE returns 204 No Content with no body
+  if (response.status === 204) return undefined as T;
+
   return response.json() as Promise<T>;
+}
+
+// ---------------------------------------------------------------------------
+// Player command types
+// ---------------------------------------------------------------------------
+
+export interface UpdatePlayerOptions {
+  /** Voice server connection details — sent once to establish the voice link. */
+  voice?: { token: string; endpoint: string; sessionId: string };
+  /** Encoded track to play. Pass { encoded: null } to stop playback. */
+  track?: { encoded: string | null };
+  /** Volume 0–1000 where 100 = 100%. */
+  volume?: number;
+  /** Pause or resume. */
+  paused?: boolean;
+  /** Seek to position in milliseconds. */
+  position?: number;
+  /** Audio filters (equalizer, compressor, etc.) applied server-side. */
+  filters?: Record<string, unknown>;
+  /** When true, don't replace the currently playing track. */
+  noReplace?: boolean;
 }
 
 interface LoadTrackResponse {
@@ -96,6 +124,7 @@ export function isYouTubePlaylistUrl(url: string): boolean {
 
 async function loadTrack(url: string): Promise<LoadTrackResponse> {
   const response = await restRequest<LoadTrackResponse>(
+    'GET',
     `/v4/loadtracks?identifier=${encodeURIComponent(url)}`
   );
   if (response.loadType === 'error' || response.exception) {
@@ -205,30 +234,49 @@ export async function preloadTrack(
 ): Promise<void> {
   try {
     const response = await restRequest<LoadTrackResponse>(
+      'GET',
       `/v4/loadtracks?identifier=${encodeURIComponent(youtubeUrl)}`
     );
     const encoded = response.data?.encoded;
     if (!encoded) return; // Track couldn't be resolved
-
-    const url = `${NODELINK_URL}/v4/sessions/${sessionId}/players/${guildId}`;
-    const headers: { 'Content-Type': string; Authorization?: string } = {
-      'Content-Type': 'application/json',
-    };
-    if (NODELINK_AUTH) headers.Authorization = NODELINK_AUTH;
 
     // Only send nextTrack — do NOT include the current track in the PATCH
     // body. The Lavalink v4 spec expects noReplace as a query parameter, not
     // a body field. Including track in the body without a proper noReplace
     // query param causes NodeLink to restart the currently-playing track
     // (audible restart glitch ~500ms into playback).
-    const body: Record<string, unknown> = { nextTrack: { encoded } };
-
-    await fetch(url, {
-      method: 'PATCH',
-      headers,
-      body: JSON.stringify(body),
+    await restRequest('PATCH', `/v4/sessions/${sessionId}/players/${guildId}`, {
+      nextTrack: { encoded },
     });
   } catch {
     logger.warn({ guildId, youtubeUrl }, 'Gapless preload failed');
   }
+}
+
+// ---------------------------------------------------------------------------
+// Player control (REST)
+// ---------------------------------------------------------------------------
+
+/**
+ * Update a NodeLink player via REST PATCH.
+ *
+ * All player commands (play, stop, pause, seek, volume, filters, voice
+ * connection) go through the same endpoint with different body fields.
+ */
+export async function updateNodeLinkPlayer(
+  guildId: string,
+  sessionId: string,
+  options: UpdatePlayerOptions
+): Promise<void> {
+  await restRequest('PATCH', `/v4/sessions/${sessionId}/players/${guildId}`, options);
+}
+
+/**
+ * Destroy a NodeLink player via REST DELETE.
+ *
+ * This tears down the voice session on NodeLink. The WebSocket will emit
+ * a WebSocketClosedEvent when the destroy is confirmed.
+ */
+export async function destroyNodeLinkPlayer(guildId: string, sessionId: string): Promise<void> {
+  await restRequest('DELETE', `/v4/sessions/${sessionId}/players/${guildId}`);
 }
