@@ -1,9 +1,8 @@
 import type { RouteContext } from '../index';
+import { applyNodeLinkFilter } from '../lib/applyNodeLinkFilter';
 import { json } from '../lib/json';
 import { checkGuards } from '../lib/routeGuards';
 import { db, tables } from '../shared/db';
-import { logger } from '../shared/logger';
-import { getHoshimi } from '../startDiscord';
 
 interface CompressorPayload {
   enabled: boolean;
@@ -78,26 +77,7 @@ export async function handleCompressor(ctx: RouteContext, request: Request): Pro
     .run();
 
   // Apply to live NodeLink player if connected
-  const guildId = process.env.GUILD_ID ?? '';
-  if (!guildId) {
-    logger.warn('GUILD_ID not set, skipping NodeLink filter update');
-  } else {
-    const hoshimi = getHoshimi();
-    if (hoshimi) {
-      const player = hoshimi.players.get(guildId);
-      if (player?.connected) {
-        try {
-          const filters = enabled ? buildFilters(body) : {};
-          await player.node.rest.updatePlayer({
-            guildId,
-            playerOptions: { filters },
-          });
-        } catch (err) {
-          logger.error({ err }, 'Failed to update NodeLink compressor filter');
-        }
-      }
-    }
-  }
+  await applyNodeLinkFilter(enabled ? buildFilters(body) : {}, 'compressor');
 
   return json({ enabled, threshold, ratio, attack, release, gain });
 }
