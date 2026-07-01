@@ -425,7 +425,6 @@ export function NowPlayingBar() {
 
   const [pauseBusy, setPauseBusy] = useState(false);
   const [skipBusy, setSkipBusy] = useState(false);
-  const busySongIdRef = useRef<string | null>(null);
   const [loopBusy, setLoopBusy] = useState(false);
   const [shuffleBusy, setShuffleBusy] = useState(false);
 
@@ -442,21 +441,14 @@ export function NowPlayingBar() {
 
   const handleSkip = useCallback(async () => {
     setSkipBusy(true);
-    busySongIdRef.current = currentSong?.id ?? null;
     try {
       await skip();
     } catch (e) {
       console.error(e);
+    } finally {
       setSkipBusy(false);
     }
-  }, [skip, currentSong]);
-
-  useEffect(() => {
-    if (skipBusy && currentSong?.id !== busySongIdRef.current) {
-      setSkipBusy(false);
-      busySongIdRef.current = null;
-    }
-  }, [skipBusy, currentSong]);
+  }, [skip]);
 
   const handleStop = useCallback(() => {
     leave().catch((e) => console.error(e));
