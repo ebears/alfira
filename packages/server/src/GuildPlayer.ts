@@ -1,5 +1,6 @@
 import { eq } from 'drizzle-orm';
-import { EQ_BAND_COLUMNS, eqBandsFromRow } from './lib/eqBands';
+import { buildCompressorFilter } from './lib/applyNodeLinkFilter';
+import { buildEqualizerFilter, EQ_BAND_COLUMNS, eqBandsFromRow } from './lib/eqBands';
 import { lavalink, type TrackEndReason } from './lib/lavalink';
 import { PlaybackCursor } from './PlaybackCursor';
 import type { LoopMode, QueuedSong, QueueState } from './shared';
@@ -520,15 +521,7 @@ export class GuildPlayer {
     if (settings?.enabled) {
       try {
         await updateNodeLinkPlayer(this.guildId, sessionId, {
-          filters: {
-            compressor: {
-              threshold: settings.threshold,
-              ratio: settings.ratio,
-              attack: settings.attack,
-              release: settings.release,
-              gain: settings.gain,
-            },
-          },
+          filters: buildCompressorFilter(settings),
         });
       } catch (err) {
         logger.error(
@@ -542,10 +535,7 @@ export class GuildPlayer {
     const eqBands = eqBandsFromRow(settings);
     if (eqBands.some((b) => b !== 50)) {
       try {
-        const equalizerFilter = eqBands.map((value, index) => ({
-          band: index,
-          gain: (value - 50) / 100,
-        }));
+        const equalizerFilter = buildEqualizerFilter(eqBands);
         await updateNodeLinkPlayer(this.guildId, sessionId, {
           filters: {
             equalizer: equalizerFilter,

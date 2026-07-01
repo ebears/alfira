@@ -1,22 +1,18 @@
 import { eq } from 'drizzle-orm';
 import type { RouteContext } from '../index';
 import { applyNodeLinkFilter } from '../lib/applyNodeLinkFilter';
-import { EQ_BAND_COLUMNS, eqBandsFromRow, eqBandValues } from '../lib/eqBands';
+import {
+  buildEqualizerFilter,
+  EQ_BAND_COLUMNS,
+  eqBandsFromRow,
+  eqBandValues,
+} from '../lib/eqBands';
 import { json } from '../lib/json';
 import { checkGuards } from '../lib/routeGuards';
 import { db, tables } from '../shared/db';
 
 interface EqualizerPayload {
   bands: number[]; // length 15, each 0-100
-}
-
-// Build NodeLink equalizer filter array from band values (0-100)
-// Maps: 0→-0.5, 50→0.0 (neutral/flat), 100→0.5
-function buildEqualizerFilter(bands: number[]) {
-  return bands.map((value, index) => ({
-    band: index,
-    gain: (value - 50) / 100,
-  }));
 }
 
 async function handleEqualizerGet(ctx: RouteContext): Promise<Response> {

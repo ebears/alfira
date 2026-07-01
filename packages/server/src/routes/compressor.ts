@@ -1,5 +1,5 @@
 import type { RouteContext } from '../index';
-import { applyNodeLinkFilter } from '../lib/applyNodeLinkFilter';
+import { applyNodeLinkFilter, buildCompressorFilter } from '../lib/applyNodeLinkFilter';
 import { json } from '../lib/json';
 import { checkGuards } from '../lib/routeGuards';
 import { db, tables } from '../shared/db';
@@ -11,18 +11,6 @@ interface CompressorPayload {
   attack: number;
   release: number;
   gain: number;
-}
-
-function buildFilters(payload: CompressorPayload) {
-  return {
-    compressor: {
-      threshold: payload.threshold,
-      ratio: payload.ratio,
-      attack: payload.attack,
-      release: payload.release,
-      gain: payload.gain,
-    },
-  };
 }
 
 export async function handleCompressor(ctx: RouteContext, request: Request): Promise<Response> {
@@ -77,7 +65,7 @@ export async function handleCompressor(ctx: RouteContext, request: Request): Pro
     .run();
 
   // Apply to live NodeLink player if connected
-  await applyNodeLinkFilter(enabled ? buildFilters(body) : {}, 'compressor');
+  await applyNodeLinkFilter(enabled ? buildCompressorFilter(body) : {}, 'compressor');
 
   return json({ enabled, threshold, ratio, attack, release, gain });
 }
