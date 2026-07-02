@@ -107,6 +107,8 @@ function generateAccessToken(payload: {
   username: string;
   avatar: string | null;
   isAdmin: boolean;
+  isSetupAdmin?: boolean;
+  roles?: string[];
 }): string {
   return jwt.sign(payload, JWT_SECRET_, {
     expiresIn: ACCESS_TOKEN_EXPIRES_IN,
@@ -219,7 +221,7 @@ async function fetchDiscordUserProfile(
 /** Returns null if the user is not in the guild or Discord is unreachable. */
 async function fetchUserAdminStatus(
   discordId: string
-): Promise<{ isAdmin: boolean; username: string; avatar: string | null } | null> {
+): Promise<{ isAdmin: boolean; username: string; avatar: string | null; roles: string[] } | null> {
   try {
     const userRes = await fetch(`https://discord.com/api/users/${discordId}`, {
       headers: { Authorization: `Bot ${DISCORD_BOT_TOKEN_}` },
@@ -237,6 +239,7 @@ async function fetchUserAdminStatus(
       isAdmin: await isAdminUser(roles),
       username,
       avatar: avatar ? `https://cdn.discordapp.com/avatars/${discordId}/${avatar}.png` : null,
+      roles,
     };
   } catch (err: unknown) {
     logger.error(
@@ -300,17 +303,25 @@ async function fetchDiscordIdentity(
 async function generateAndStoreTokens(
   discordUser: { id: string; username: string; avatar: string | null },
   isAdmin: boolean,
-  isSetupAdmin = false
+  opts: { isSetupAdmin?: boolean; roles?: string[] } = {}
 ): Promise<{ accessToken: string; refreshToken: string }> {
-  const payload = {
+  const payload: {
+    discordId: string;
+    username: string;
+    avatar: string | null;
+    isAdmin: boolean;
+    isSetupAdmin?: boolean;
+    roles?: string[];
+  } = {
     discordId: discordUser.id,
     username: discordUser.username,
     avatar: discordUser.avatar
       ? `https://cdn.discordapp.com/avatars/${discordUser.id}/${discordUser.avatar}.png`
       : null,
     isAdmin,
-    ...(isSetupAdmin ? { isSetupAdmin: true } : {}),
   };
+  if (opts.isSetupAdmin) payload.isSetupAdmin = true;
+  if (opts.roles) payload.roles = opts.roles;
   const accessToken = generateAccessToken(payload);
   const refreshToken = generateRefreshToken(discordUser.id);
 
@@ -436,7 +447,9 @@ async function handleCallback(request: Request, url: URL): Promise<Response> {
       // Fall through to normal auth flow below.
     } else {
       // Fresh install — redirect to setup wizard.
-      const { accessToken, refreshToken } = await generateAndStoreTokens(discordUser, true, true);
+      const { accessToken, refreshToken } = await generateAndStoreTokens(discordUser, true, {
+        isSetupAdmin: true,
+      });
 
       const headers = new Headers();
       headers.append(
@@ -463,7 +476,9 @@ async function handleCallback(request: Request, url: URL): Promise<Response> {
   const isAdmin = await isAdminUser(memberRoles);
 
   // 6. Generate and store tokens.
-  const { accessToken, refreshToken } = await generateAndStoreTokens(discordUser, isAdmin);
+  const { accessToken, refreshToken } = await generateAndStoreTokens(discordUser, isAdmin, {
+    roles: memberRoles,
+  });
 
   // 7. Set cookies and redirect.
   const headers = new Headers();
@@ -533,6 +548,7 @@ async function handleRefresh(ctx: RouteContext): Promise<Response> {
   let avatar: string | null;
   let isAdmin: boolean;
   let isSetupAdmin = false;
+  let roles: string[] | undefined;
 
   if (!setupDone) {
     // Setup not complete — fetch basic profile, grant admin.
@@ -555,16 +571,25 @@ async function handleRefresh(ctx: RouteContext): Promise<Response> {
     username = userInfo.username;
     avatar = userInfo.avatar;
     isAdmin = userInfo.isAdmin;
+    roles = userInfo.roles;
   }
 
   // 7. Generate new tokens.
-  const payload = {
+  const payload: {
+    discordId: string;
+    username: string;
+    avatar: string | null;
+    isAdmin: boolean;
+    isSetupAdmin?: boolean;
+    roles?: string[];
+  } = {
     discordId: decoded.discordId,
     username,
     avatar,
     isAdmin,
-    ...(isSetupAdmin ? { isSetupAdmin: true } : {}),
   };
+  if (isSetupAdmin) payload.isSetupAdmin = true;
+  if (roles) payload.roles = roles;
   const newAccessToken = generateAccessToken(payload);
   const newRefreshToken = generateRefreshToken(decoded.discordId);
 

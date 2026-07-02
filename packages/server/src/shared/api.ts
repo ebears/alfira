@@ -398,3 +398,25 @@ export type GeneralSettingsUpdate = Partial<
 export function updateGeneralSettings(data: GeneralSettingsUpdate): Promise<GeneralSettings> {
   return patch('/api/settings/general', data);
 }
+
+// ---------------------------------------------------------------------------
+// Permissions API Functions
+// ---------------------------------------------------------------------------
+
+export interface PermissionsResponse {
+  mapping: Record<string, string[]>;
+  roles: { id: string; name: string; color: number }[];
+  categories: { label: string; actions: string[] }[];
+  labels: Record<string, string>;
+}
+
+export function fetchPermissions(): Promise<PermissionsResponse> {
+  return get('/api/permissions');
+}
+
+export function updatePermission(
+  action: string,
+  roleIds: string[]
+): Promise<{ action: string; roleIds: string[] }> {
+  return patch('/api/permissions', { action, roleIds });
+}

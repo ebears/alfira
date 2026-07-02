@@ -11,6 +11,7 @@ import { TagsProvider } from './context/TagsContext';
 import { ThemeProvider } from './context/ThemeContext';
 import AudioPage from './pages/AudioPage';
 import LoginPage from './pages/LoginPage';
+import PermissionsPage from './pages/PermissionsPage';
 import PlaylistDetailPage from './pages/PlaylistDetailPage';
 import PlaylistsPage from './pages/PlaylistsPage';
 import SetupWizard from './pages/SetupWizard';
@@ -53,6 +54,7 @@ export default function App() {
                     <Route path="settings" element={<SettingsPage />} />
                     <Route path="audio" element={<AudioPage />} />
                     <Route path="tags" element={<TagsPage />} />
+                    <Route path="permissions" element={<PermissionsPage />} />
                   </Route>
                   <Route path="*" element={<Navigate to="/" replace />} />
                 </Routes>

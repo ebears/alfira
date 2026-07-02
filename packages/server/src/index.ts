@@ -31,6 +31,7 @@ import { handleAuth } from './routes/auth';
 import { handleCompressor } from './routes/compressor';
 import { handleEqualizer } from './routes/equalizer';
 import { handleGeneralSettings } from './routes/generalSettings';
+import { handlePermissions } from './routes/permissions';
 import { handlePlayer } from './routes/player';
 import { handlePlaylists } from './routes/playlists';
 import { handleSetup } from './routes/setup';
@@ -248,6 +249,9 @@ function startServer(): void {
       }
       if (url.pathname.startsWith('/api/settings/equalizer')) {
         return setSecurityHeaders(await handleEqualizer(ctx, request));
+      }
+      if (url.pathname.startsWith('/api/permissions')) {
+        return setSecurityHeaders(await handlePermissions(ctx, request));
       }
       if (url.pathname.startsWith('/api/settings/general')) {
         return setSecurityHeaders(await handleGeneralSettings(ctx, request));

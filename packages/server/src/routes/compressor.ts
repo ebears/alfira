@@ -14,7 +14,7 @@ interface CompressorPayload {
 }
 
 export async function handleCompressor(ctx: RouteContext, request: Request): Promise<Response> {
-  const guards = await checkGuards(ctx, { admin: true });
+  const guards = await checkGuards(ctx, { admin: true, permission: 'audio.manage' });
   if (guards instanceof Response) return guards;
 
   let body: CompressorPayload;
