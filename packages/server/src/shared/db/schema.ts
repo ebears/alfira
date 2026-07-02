@@ -1,4 +1,12 @@
-import { index, integer, real, sqliteTable, text, unique } from 'drizzle-orm/sqlite-core';
+import {
+  index,
+  integer,
+  primaryKey,
+  real,
+  sqliteTable,
+  text,
+  unique,
+} from 'drizzle-orm/sqlite-core';
 
 export const song = sqliteTable('Song', {
   id: text('id')
@@ -110,3 +118,12 @@ export const guildSettings = sqliteTable('guildSettings', {
   publicUrl: text('publicUrl'),
   enabledSources: text('enabledSources').notNull().default('youtube,soundcloud'),
 });
+
+export const rolePermission = sqliteTable(
+  'rolePermission',
+  {
+    action: text('action').notNull(),
+    roleId: text('roleId').notNull(),
+  },
+  (t) => [primaryKey({ columns: [t.action, t.roleId] })]
+);

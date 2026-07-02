@@ -33,6 +33,7 @@ export const tables = {
   refreshToken: schema.refreshToken,
   tag: schema.tag,
   guildSettings: schema.guildSettings,
+  rolePermission: schema.rolePermission,
 };
 
 // ---------------------------------------------------------------------------

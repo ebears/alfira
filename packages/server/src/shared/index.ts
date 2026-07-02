@@ -8,6 +8,7 @@ export type {
   LoopMode,
   PaginatedResult,
   PaginationMeta,
+  PermissionAction,
   Playlist,
   PlaylistDetail,
   QueuedSong,
@@ -18,4 +19,8 @@ export type {
   SetupStatus,
   Song,
   User,
+} from './types';
+export {
+  PERMISSION_CATEGORIES,
+  PERMISSION_LABELS,
 } from './types';

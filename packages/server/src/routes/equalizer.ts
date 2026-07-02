@@ -16,7 +16,7 @@ interface EqualizerPayload {
 }
 
 async function handleEqualizerGet(ctx: RouteContext): Promise<Response> {
-  const guards = await checkGuards(ctx, { admin: true });
+  const guards = await checkGuards(ctx, { admin: true, permission: 'audio.manage' });
   if (guards instanceof Response) return guards;
 
   const row = await db
@@ -31,7 +31,7 @@ async function handleEqualizerGet(ctx: RouteContext): Promise<Response> {
 }
 
 async function handleEqualizerPatch(ctx: RouteContext, request: Request): Promise<Response> {
-  const guards = await checkGuards(ctx, { admin: true });
+  const guards = await checkGuards(ctx, { admin: true, permission: 'audio.manage' });
   if (guards instanceof Response) return guards;
 
   let body: EqualizerPayload;

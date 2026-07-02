@@ -29,7 +29,7 @@ async function handlePatchTag(
   nameLower: string,
   body: Record<string, unknown>
 ): Promise<Response> {
-  const guards = await checkGuards(ctx, { admin: true });
+  const guards = await checkGuards(ctx, { admin: true, permission: 'tags.manage' });
   if (guards instanceof Response) return guards;
 
   const [existing] = await db
@@ -74,7 +74,7 @@ async function handlePatchTag(
 }
 
 async function handleDeleteTag(ctx: RouteContext, nameLower: string): Promise<Response> {
-  const guards = await checkGuards(ctx, { admin: true });
+  const guards = await checkGuards(ctx, { admin: true, permission: 'tags.manage' });
   if (guards instanceof Response) return guards;
 
   const [existing] = await db

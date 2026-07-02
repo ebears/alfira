@@ -76,7 +76,7 @@ async function handleGetSongs(ctx: RouteContext, request: Request): Promise<Resp
 // POST /api/songs — add a song by source URL. Admin only.
 // ---------------------------------------------------------------------------
 async function handlePostSong(ctx: RouteContext, request: Request): Promise<Response> {
-  const guards = await checkGuards(ctx, { admin: true });
+  const guards = await checkGuards(ctx, { admin: true, permission: 'songs.add' });
   if (guards instanceof Response) return guards;
   const { user } = guards;
 
@@ -161,7 +161,7 @@ async function handlePostSong(ctx: RouteContext, request: Request): Promise<Resp
 // POST /api/songs/import-playlist — import playlist. Admin only.
 // ---------------------------------------------------------------------------
 async function handleImportPlaylist(ctx: RouteContext, request: Request): Promise<Response> {
-  const guards = await checkGuards(ctx, { admin: true });
+  const guards = await checkGuards(ctx, { admin: true, permission: 'songs.import' });
   if (guards instanceof Response) return guards;
   const { user } = guards;
 
@@ -275,7 +275,7 @@ async function handleDeleteSong(
   _request: Request,
   id: string
 ): Promise<Response> {
-  const guards = await checkGuards(ctx, { admin: true });
+  const guards = await checkGuards(ctx, { admin: true, permission: 'songs.delete' });
   if (guards instanceof Response) return guards;
 
   const [existing] = await db.select().from(songTable).where(eq(songTable.id, id)).limit(1);
@@ -295,7 +295,7 @@ async function handleDeleteSong(
 // PATCH /api/songs/:id — update song fields. Admin only.
 // ---------------------------------------------------------------------------
 async function handlePatchSong(ctx: RouteContext, request: Request, id: string): Promise<Response> {
-  const guards = await checkGuards(ctx, { admin: true });
+  const guards = await checkGuards(ctx, { admin: true, permission: 'songs.edit' });
   if (guards instanceof Response) return guards;
 
   let body: Record<string, unknown>;

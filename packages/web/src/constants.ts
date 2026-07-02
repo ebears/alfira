@@ -1,6 +1,7 @@
 import {
   MusicNotesIcon,
   PlaylistIcon,
+  ShieldCheckIcon,
   SlidersHorizontalIcon,
   TagIcon,
 } from '@phosphor-icons/react';
@@ -13,4 +14,5 @@ export const NAV_ITEMS = [
 export const ADMIN_NAV_ITEMS = [
   { to: '/audio', label: 'Audio', icon: SlidersHorizontalIcon },
   { to: '/tags', label: 'Tags', icon: TagIcon },
+  { to: '/permissions', label: 'Permissions', icon: ShieldCheckIcon },
 ];

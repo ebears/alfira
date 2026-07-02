@@ -15,6 +15,7 @@ export type {
 export type {
   CompleteSetupPayload,
   GeneralSettingsUpdate,
+  PermissionsResponse,
 } from '@alfira-bot/server/shared/api';
 // ---------------------------------------------------------------------------
 // Re-export everything from shared API with web-compatible names
@@ -32,6 +33,7 @@ export {
   fetchLogout as logout,
   // Auth
   fetchMe as getMe,
+  fetchPermissions,
   fetchPlaylistPage as getPlaylistPage,
   // Playlists
   fetchPlaylists as getPlaylists,
@@ -62,4 +64,5 @@ export {
   togglePlaylistVisibility,
   unshuffleQueue,
   updateGeneralSettings,
+  updatePermission,
 } from '@alfira-bot/server/shared/api';

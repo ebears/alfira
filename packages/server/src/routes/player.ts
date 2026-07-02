@@ -196,7 +196,7 @@ async function handleLoop(ctx: RouteContext, request: Request): Promise<Response
 // POST /api/player/shuffle — shuffle queue (admin only)
 // ---------------------------------------------------------------------------
 async function handleShuffle(ctx: RouteContext): Promise<Response> {
-  const guards = await checkGuards(ctx, { admin: true, voice: true });
+  const guards = await checkGuards(ctx, { admin: true, voice: true, permission: 'queue.shuffle' });
   if (guards instanceof Response) return guards;
 
   const player = getPlayer(getGuildId());
@@ -213,7 +213,7 @@ async function handleShuffle(ctx: RouteContext): Promise<Response> {
 // POST /api/player/unshuffle — restore original queue order (admin only)
 // ---------------------------------------------------------------------------
 async function handleUnshuffle(ctx: RouteContext): Promise<Response> {
-  const guards = await checkGuards(ctx, { admin: true, voice: true });
+  const guards = await checkGuards(ctx, { admin: true, voice: true, permission: 'queue.shuffle' });
   if (guards instanceof Response) return guards;
 
   const playerResult = requirePlayer();
@@ -231,8 +231,12 @@ type UrlTempSongResult =
   | { ok: true; player: GuildPlayer; queuedSong: QueuedSong; metadataTitle: string }
   | { ok: false; response: Response };
 
-async function resolveUrlTempSong(ctx: RouteContext, request: Request): Promise<UrlTempSongResult> {
-  const guards = await checkGuards(ctx, { admin: true, voice: true });
+async function resolveUrlTempSong(
+  ctx: RouteContext,
+  request: Request,
+  permission: 'queue.quickadd' | 'queue.manage'
+): Promise<UrlTempSongResult> {
+  const guards = await checkGuards(ctx, { admin: true, voice: true, permission });
   if (guards instanceof Response) return { ok: false, response: guards };
   const { user } = guards;
 
@@ -274,7 +278,7 @@ async function resolveUrlTempSong(ctx: RouteContext, request: Request): Promise<
 // POST /api/player/quick-add — add YouTube URL to priority queue (admin only)
 // ---------------------------------------------------------------------------
 async function handleQuickAdd(ctx: RouteContext, request: Request): Promise<Response> {
-  const result = await resolveUrlTempSong(ctx, request);
+  const result = await resolveUrlTempSong(ctx, request, 'queue.quickadd');
   if (!result.ok) return result.response;
   await result.player.addToPriorityQueue(result.queuedSong);
   return json({
@@ -287,7 +291,7 @@ async function handleQuickAdd(ctx: RouteContext, request: Request): Promise<Resp
 // POST /api/player/quick-add-playlist — add playlist to queue (admin only)
 // ---------------------------------------------------------------------------
 async function handleQuickAddPlaylist(ctx: RouteContext, request: Request): Promise<Response> {
-  const guards = await checkGuards(ctx, { admin: true, voice: true });
+  const guards = await checkGuards(ctx, { admin: true, voice: true, permission: 'queue.quickadd' });
   if (guards instanceof Response) return guards;
   const { user } = guards;
 
@@ -381,7 +385,7 @@ async function handleSeek(ctx: RouteContext, request: Request): Promise<Response
 // POST /api/player/clear — clear queue (admin only)
 // ---------------------------------------------------------------------------
 async function handleClear(ctx: RouteContext): Promise<Response> {
-  const guards = await checkGuards(ctx, { admin: true, voice: true });
+  const guards = await checkGuards(ctx, { admin: true, voice: true, permission: 'queue.clear' });
   if (guards instanceof Response) return guards;
 
   const playerResult = requirePlayer();
@@ -395,7 +399,7 @@ async function handleClear(ctx: RouteContext): Promise<Response> {
 // POST /api/player/add-to-priority — add library song to Up Next (admin only)
 // ---------------------------------------------------------------------------
 async function handleAddToPriority(ctx: RouteContext, request: Request): Promise<Response> {
-  const guards = await checkGuards(ctx, { admin: true, voice: true });
+  const guards = await checkGuards(ctx, { admin: true, voice: true, permission: 'queue.manage' });
   if (guards instanceof Response) return guards;
   const { user } = guards;
 
@@ -444,7 +448,7 @@ async function handleAddToPriority(ctx: RouteContext, request: Request): Promise
 // POST /api/player/override — immediately play YouTube URL (admin only)
 // ---------------------------------------------------------------------------
 async function handleOverride(ctx: RouteContext, request: Request): Promise<Response> {
-  const result = await resolveUrlTempSong(ctx, request);
+  const result = await resolveUrlTempSong(ctx, request, 'queue.manage');
   if (!result.ok) return result.response;
   await result.player.replaceQueueAndPlay([result.queuedSong]);
   return json({

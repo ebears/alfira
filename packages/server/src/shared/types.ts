@@ -213,4 +213,53 @@ export interface User {
   isAdmin: boolean;
   /** Temporarily granted during first-run setup before admin roles are configured. */
   isSetupAdmin?: boolean;
+  /** Discord role IDs the user has in the guild. Used for granular permission checks. */
+  roles?: string[];
 }
+
+// ---------------------------------------------------------------------------
+// Permissions
+// ---------------------------------------------------------------------------
+
+/** Granular permission actions that can be delegated to non-admin roles. */
+export type PermissionAction =
+  | 'songs.add'
+  | 'songs.edit'
+  | 'songs.delete'
+  | 'songs.import'
+  | 'queue.clear'
+  | 'queue.shuffle'
+  | 'queue.quickadd'
+  | 'queue.manage'
+  | 'tags.manage'
+  | 'audio.manage';
+
+/** Human-readable labels for each permission action. */
+export const PERMISSION_LABELS: Record<PermissionAction, string> = {
+  'songs.add': 'Add songs to library',
+  'songs.edit': 'Edit song metadata',
+  'songs.delete': 'Delete songs',
+  'songs.import': 'Import external playlists',
+  'queue.clear': 'Clear the queue',
+  'queue.shuffle': 'Shuffle / unshuffle queue',
+  'queue.quickadd': 'Quick-add external URLs',
+  'queue.manage': 'Add to Up Next / override',
+  'tags.manage': 'Manage tags',
+  'audio.manage': 'Audio settings (EQ & compressor)',
+};
+
+/** Categories for grouping permissions in the UI. */
+export const PERMISSION_CATEGORIES: { label: string; actions: PermissionAction[] }[] = [
+  {
+    label: 'Library',
+    actions: ['songs.add', 'songs.edit', 'songs.delete', 'songs.import'],
+  },
+  {
+    label: 'Playback',
+    actions: ['queue.clear', 'queue.shuffle', 'queue.quickadd', 'queue.manage'],
+  },
+  {
+    label: 'Management',
+    actions: ['tags.manage', 'audio.manage'],
+  },
+];

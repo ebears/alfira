@@ -1,6 +1,9 @@
+import { and, eq, inArray } from 'drizzle-orm';
 import type { RouteContext } from '../index';
-import type { User } from '../shared';
+import type { PermissionAction, User } from '../shared';
+import { db, tables } from '../shared/db';
 import { requireAdmin, requireAuth } from './guards';
+import { json } from './json';
 import { requireUserInVoice } from './voice';
 
 interface GuardOptions {
@@ -13,6 +16,9 @@ interface GuardOptions {
   setupMode?: boolean;
   /** Require user is in a voice channel. Defaults to false. Requires auth. */
   voice?: boolean;
+  /** Granular permission action. When set with admin:true, super-admins bypass;
+   *  non-admin users are checked against the rolePermission table. */
+  permission?: PermissionAction;
 }
 
 interface GuardResult {
@@ -47,8 +53,20 @@ export async function checkGuards(
   }
 
   if (admin) {
-    const adminErr = requireAdmin(ctx);
-    if (adminErr) return adminErr;
+    // Super-admin bypass: users in adminRoleIds always pass.
+    if (ctx.isAdmin) {
+      // Fall through to voice check below.
+    } else if (options.permission) {
+      // Granular permission check for non-admin users.
+      const hasPermission = await checkRolePermission(user.roles ?? [], options.permission);
+      if (!hasPermission) {
+        return json({ error: 'You do not have permission to perform this action.' }, 403);
+      }
+    } else {
+      // No granular permission — super-admin only.
+      const adminErr = requireAdmin(ctx);
+      if (adminErr) return adminErr;
+    }
   }
 
   if (voice) {
@@ -57,4 +75,27 @@ export async function checkGuards(
   }
 
   return { user };
+}
+
+/**
+ * Check if any of the user's Discord roles have been granted a specific
+ * granular permission via the rolePermission table.
+ */
+async function checkRolePermission(
+  userRoles: string[],
+  action: PermissionAction
+): Promise<boolean> {
+  if (userRoles.length === 0) return false;
+
+  const rows = await db
+    .select({ roleId: tables.rolePermission.roleId })
+    .from(tables.rolePermission)
+    .where(
+      and(
+        eq(tables.rolePermission.action, action),
+        inArray(tables.rolePermission.roleId, userRoles)
+      )
+    );
+
+  return rows.length > 0;
 }
