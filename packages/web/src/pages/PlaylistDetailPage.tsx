@@ -1,4 +1,5 @@
-import type { Playlist, PlaylistDetail, Song } from '@alfira-bot/server/shared';
+import type { Playlist, PlaylistDetail, Song, TagItem } from '@alfira-bot/server/shared';
+import { fetchTags, updatePlaylistTag } from '@alfira-bot/server/shared/api';
 import {
   BombIcon,
   CaretLeftIcon,
@@ -10,6 +11,7 @@ import {
   PlayCircleIcon,
   PlayIcon,
   PlusCircleIcon,
+  TagIcon,
 } from '@phosphor-icons/react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
@@ -40,6 +42,21 @@ import { apiErrorMessage } from '../utils/api';
 
 const ITEMS_PER_PAGE = 24;
 
+const TAG_COLORS: Record<string, { bg: string; text: string }> = {
+  orange: { bg: 'bg-orange-500/15', text: 'text-orange-300' },
+  sky: { bg: 'bg-sky-500/15', text: 'text-sky-300' },
+  emerald: { bg: 'bg-emerald-500/15', text: 'text-emerald-300' },
+  amber: { bg: 'bg-amber-500/15', text: 'text-amber-300' },
+  violet: { bg: 'bg-violet-500/15', text: 'text-violet-300' },
+};
+
+function hashTagColor(tag: string): { bg: string; text: string } {
+  let hash = 5381;
+  for (let i = 0; i < tag.length; i++) hash = (hash * 33) ^ tag.charCodeAt(i);
+  const colors = Object.values(TAG_COLORS);
+  return colors[((hash >>> 0) * 31) % colors.length];
+}
+
 export default function PlaylistDetailPage() {
   const { id } = useParams<{ id: string }>();
   const { isAdminView } = useAdminView();
@@ -54,13 +71,27 @@ export default function PlaylistDetailPage() {
   const [removeId, setRemoveId] = useState<string | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState(false);
   const [playingSongId, setPlayingSongId] = useState<string | null>(null);
+  const [tagSmartConfirm, setTagSmartConfirm] = useState<string | null>(null);
+  const [tags, setTags] = useState<TagItem[]>([]);
   const { handleAddToQueue, notification } = useAddToQueue();
   const { notify } = useNotification();
 
   const isOwner = user?.discordId === playlistDetail?.createdBy;
   const canEdit = isAdminView || isOwner;
+  const isSmart = !!playlistDetail?.tagNameLower;
   const menuTriggerRef = useRef<HTMLButtonElement>(null);
   const [menuOpen, setMenuOpen] = useState(false);
+
+  // Fetch tags for tag change submenu
+  useEffect(() => {
+    if (canEdit) {
+      fetchTags()
+        .then(setTags)
+        .catch(() => {
+          // Tags are non-critical — fail silently
+        });
+    }
+  }, [canEdit]);
 
   const { state: queueState } = usePlayerState();
 
@@ -256,6 +287,49 @@ export default function PlaylistDetailPage() {
     [playlistDetail, queueState.loopMode, notify]
   );
 
+  const handleConvertToRegular = useCallback(async () => {
+    if (!playlistDetail) return;
+    try {
+      await updatePlaylistTag(playlistDetail.id, null);
+      setPlaylistDetail((p) => (p ? { ...p, tagNameLower: null } : p));
+      void loadPage(currentPage, false, true);
+      notify('Playlist converted to regular playlist', 'success');
+    } catch (err: unknown) {
+      notify(apiErrorMessage(err, 'Could not convert playlist.'), 'error', 5000);
+    }
+  }, [playlistDetail, currentPage, loadPage, notify]);
+
+  const handleChangeTag = useCallback(
+    async (tagNameLower: string) => {
+      if (!playlistDetail) return;
+      try {
+        const updated = await updatePlaylistTag(playlistDetail.id, tagNameLower);
+        setPlaylistDetail((p) => (p ? { ...p, tagNameLower: updated.tagNameLower ?? null } : p));
+        void loadPage(currentPage, false, true);
+        notify('Playlist tag updated', 'success');
+      } catch (err: unknown) {
+        notify(apiErrorMessage(err, 'Could not update playlist tag.'), 'error', 5000);
+      }
+    },
+    [playlistDetail, currentPage, loadPage, notify]
+  );
+
+  const handleMakeSmart = useCallback(
+    async (tagNameLower: string) => {
+      if (!playlistDetail) return;
+      setTagSmartConfirm(null);
+      try {
+        const updated = await updatePlaylistTag(playlistDetail.id, tagNameLower);
+        setPlaylistDetail((p) => (p ? { ...p, tagNameLower: updated.tagNameLower ?? null } : p));
+        void loadPage(currentPage, false, true);
+        notify('Playlist now tracking tag', 'success');
+      } catch (err: unknown) {
+        notify(apiErrorMessage(err, 'Could not update playlist tag.'), 'error', 5000);
+      }
+    },
+    [playlistDetail, currentPage, loadPage, notify]
+  );
+
   const handleAddPlaylistToQueue = useCallback(async () => {
     if (!playlistDetail) return;
     try {
@@ -269,6 +343,11 @@ export default function PlaylistDetailPage() {
       notify(apiErrorMessage(err, 'Could not add to queue.'), 'error', 5000);
     }
   }, [playlistDetail, queueState.loopMode, notify]);
+
+  const tagSubmenuItems = tags.map((tag) => ({
+    id: tag.nameLower,
+    label: tag.canonicalName,
+  }));
 
   const menuItems: MenuItem[] = [
     {
@@ -304,12 +383,45 @@ export default function PlaylistDetailPage() {
             ),
             onClick: handleToggleVisibility,
           } as MenuItem,
-          {
-            id: 'add-songs',
-            label: 'Add Songs',
-            icon: <PlayCircleIcon size={14} weight="duotone" />,
-            onClick: () => setShowAddSongs(true),
-          } as MenuItem,
+          ...(isSmart
+            ? [
+                {
+                  id: 'change-tag',
+                  label: 'Change Tracked Tag',
+                  icon: <TagIcon size={14} weight="duotone" />,
+                  submenu: {
+                    title: 'Track Tag',
+                    items: tagSubmenuItems,
+                    onSelect: (tagId: string) => handleChangeTag(tagId),
+                    emptyMessage: 'No tags available',
+                  },
+                } as MenuItem,
+                {
+                  id: 'convert-regular',
+                  label: 'Convert to Regular Playlist',
+                  icon: <PlayCircleIcon size={14} weight="duotone" />,
+                  onClick: handleConvertToRegular,
+                } as MenuItem,
+              ]
+            : [
+                {
+                  id: 'add-songs',
+                  label: 'Add Songs',
+                  icon: <PlayCircleIcon size={14} weight="duotone" />,
+                  onClick: () => setShowAddSongs(true),
+                } as MenuItem,
+                {
+                  id: 'make-smart',
+                  label: 'Track a Tag',
+                  icon: <TagIcon size={14} weight="duotone" />,
+                  submenu: {
+                    title: 'Track Tag',
+                    items: tagSubmenuItems,
+                    onSelect: (tagId: string) => setTagSmartConfirm(tagId),
+                    emptyMessage: 'No tags available',
+                  },
+                } as MenuItem,
+              ]),
           {
             id: 'delete',
             label: 'Delete',
@@ -384,7 +496,7 @@ export default function PlaylistDetailPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-start justify-between mb-6 md:mb-8 gap-4">
         <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             <h1 className="font-display text-3xl md:text-4xl text-fg tracking-wider">
               {playlistDetail.name}
             </h1>
@@ -394,13 +506,34 @@ export default function PlaylistDetailPage() {
                 private
               </span>
             )}
+            {playlistDetail.tagNameLower &&
+              (() => {
+                const tag = tags.find((t) => t.nameLower === playlistDetail.tagNameLower);
+                const displayName = tag?.canonicalName ?? playlistDetail.tagNameLower;
+                const colors = hashTagColor(displayName);
+                return (
+                  <span
+                    className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-xs font-medium ${colors.bg} ${colors.text}`}
+                    title={`Auto-tracking all songs tagged "${displayName}"`}
+                  >
+                    <TagIcon size={12} weight="duotone" />
+                    {displayName}
+                  </span>
+                );
+              })()}
           </div>
           <p className="font-mono text-xs text-muted mt-1">
             {songItems.length} {songItems.length === 1 ? 'track' : 'tracks'}
-            {' • '}
-            {isOwner
-              ? 'Created by you'
-              : `Created by ${playlistDetail.createdByDisplayName || playlistDetail.createdBy}`}
+            {playlistDetail.tagNameLower ? (
+              <span className="text-accent"> • auto-tracked</span>
+            ) : (
+              <>
+                {' • '}
+                {isOwner
+                  ? 'Created by you'
+                  : `Created by ${playlistDetail.createdByDisplayName || playlistDetail.createdBy}`}
+              </>
+            )}
           </p>
         </div>
 
@@ -455,12 +588,24 @@ export default function PlaylistDetailPage() {
 
       {/* Song list */}
       {songItems.length === 0 && !isLoading ? (
-        <EmptyState
-          title="Empty Playlist"
-          isAdmin={canEdit}
-          onAdd={() => setShowAddSongs(true)}
-          addLabel="add some songs"
-        />
+        isSmart ? (
+          <div className="text-center py-24">
+            <p className="font-display text-4xl text-faint tracking-wider mb-2">No Songs Yet</p>
+            <p className="font-mono text-xs text-faint">
+              This playlist tracks the "
+              {tags.find((t) => t.nameLower === playlistDetail.tagNameLower)?.canonicalName ??
+                playlistDetail.tagNameLower}
+              " tag. Tag some songs to populate it.
+            </p>
+          </div>
+        ) : (
+          <EmptyState
+            title="Empty Playlist"
+            isAdmin={canEdit}
+            onAdd={() => setShowAddSongs(true)}
+            addLabel="add some songs"
+          />
+        )
       ) : (
         <VirtualSongList
           items={songItems}
@@ -531,6 +676,24 @@ export default function PlaylistDetailPage() {
             handleDeletePlaylist();
           }}
           onCancel={() => setDeleteConfirm(false)}
+        />
+      )}
+      {tagSmartConfirm && (
+        <ConfirmModal
+          title="Track a Tag"
+          message={
+            <>
+              This will convert the playlist to auto-track the "
+              <span className="text-fg font-semibold">
+                {tags.find((t) => t.nameLower === tagSmartConfirm)?.canonicalName ??
+                  tagSmartConfirm}
+              </span>
+              " tag. All current songs not matching this tag will be removed.
+            </>
+          }
+          confirmLabel="Convert"
+          onConfirm={() => handleMakeSmart(tagSmartConfirm)}
+          onCancel={() => setTagSmartConfirm(null)}
         />
       )}
     </div>

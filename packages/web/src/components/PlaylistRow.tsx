@@ -1,5 +1,5 @@
 import type { Playlist } from '@alfira-bot/server/shared';
-import { CaretRightIcon, GhostIcon, PlaylistIcon } from '@phosphor-icons/react';
+import { CaretRightIcon, GhostIcon, PlaylistIcon, TagIcon } from '@phosphor-icons/react';
 import { memo } from 'react';
 
 interface PlaylistRowProps {
@@ -40,6 +40,14 @@ export const PlaylistRow = memo(
             {playlist.isPrivate && (
               <span className="text-muted" title="Private playlist">
                 <GhostIcon size={14} weight="duotone" />
+              </span>
+            )}
+            {playlist.tagNameLower && (
+              <span
+                className="text-accent"
+                title={`Smart playlist — tracks "${playlist.tagNameLower}" tag`}
+              >
+                <TagIcon size={14} weight="duotone" />
               </span>
             )}
           </div>

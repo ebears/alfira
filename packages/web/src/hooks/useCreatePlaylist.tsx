@@ -11,8 +11,9 @@ async function createPlaylistAction(
   if (!name?.trim()) {
     return { error: 'Playlist name is required' };
   }
+  const tagNameLower = (formData.get('tagNameLower') as string)?.trim() || undefined;
   try {
-    await createPlaylist(name.trim());
+    await createPlaylist(name.trim(), tagNameLower);
     return { error: null };
   } catch {
     return { error: 'Could not create playlist. Try again.' };

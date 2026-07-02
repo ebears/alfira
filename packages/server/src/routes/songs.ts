@@ -1,4 +1,4 @@
-import { eq, inArray, or, sql } from 'drizzle-orm';
+import { and, eq, inArray, or, sql } from 'drizzle-orm';
 import type { RouteContext } from '../index';
 import { getGuildId } from '../lib/config';
 import { getUserDisplayName, resolveDisplayNames } from '../lib/displayName';
@@ -8,7 +8,13 @@ import { checkRateLimit, getClientIp, rateLimitResponse } from '../lib/rateLimit
 import { checkGuards } from '../lib/routeGuards';
 import { buildSongSearchClause } from '../lib/search';
 import { formatSong } from '../lib/serialization';
-import { emitSongAdded, emitSongDeleted, emitSongUpdated } from '../lib/socket';
+import {
+  emitPlaylistUpdated,
+  emitSongAdded,
+  emitSongDeleted,
+  emitSongUpdated,
+} from '../lib/socket';
+import { syncPlaylistToTag } from '../lib/syncPlaylistToTag';
 import { canonicalizeTags } from '../lib/tagCanonicalization';
 import {
   clampMaxVideos,
@@ -26,7 +32,7 @@ import {
 import { db, tables } from '../shared/db';
 import { getPlayer } from '../startDiscord';
 
-const { song: songTable } = tables;
+const { song: songTable, playlist: playlistTable, playlistSong: playlistSongTable } = tables;
 
 // ---------------------------------------------------------------------------
 // GET /api/songs — paginated list of songs, newest first.
@@ -337,6 +343,9 @@ async function handlePatchSong(ctx: RouteContext, request: Request, id: string):
   }
 
   // Tags
+  // Track old tags for smart playlist re-sync
+  const oldTagsLower = new Set((existing.tags ?? []).map((t: string) => t.toLowerCase()));
+
   if ('tags' in body) {
     const tagsResult = validateTags(body.tags);
     if (!tagsResult.ok) return tagsResult.response;
@@ -361,6 +370,50 @@ async function handlePatchSong(ctx: RouteContext, request: Request, id: string):
   }
 
   emitSongUpdated(formatSong(updatedSong));
+
+  // If tags changed, re-sync any smart playlists tracking affected tags
+  if ('tags' in data) {
+    const newTagsLower = new Set(
+      ((data.tags as string[]) ?? []).map((t: string) => t.toLowerCase())
+    );
+
+    // Find all smart playlists whose tagNameLower is in the old or new tag set
+    const affectedTags = new Set([...oldTagsLower, ...newTagsLower]);
+    if (affectedTags.size > 0) {
+      const affectedPlaylists = await db
+        .select({ id: playlistTable.id, tagNameLower: playlistTable.tagNameLower })
+        .from(playlistTable)
+        .where(
+          and(
+            sql`${playlistTable.tagNameLower} IS NOT NULL`,
+            inArray(playlistTable.tagNameLower, [...affectedTags])
+          )
+        );
+
+      for (const pl of affectedPlaylists) {
+        if (pl.tagNameLower) {
+          await syncPlaylistToTag(pl.id);
+          const [updatedPl] = await db
+            .select()
+            .from(playlistTable)
+            .where(eq(playlistTable.id, pl.id))
+            .limit(1);
+          if (updatedPl) {
+            const songCountResult = await db
+              .select({ count: sql<number>`count(*)` })
+              .from(playlistSongTable)
+              .where(eq(playlistSongTable.playlistId, pl.id));
+            const count = songCountResult[0]?.count ?? 0;
+            emitPlaylistUpdated({
+              ...updatedPl,
+              createdAt: updatedPl.createdAt.toISOString(),
+              _count: { songs: count },
+            });
+          }
+        }
+      }
+    }
+  }
 
   // If this song is currently playing, update volume live without restarting
   const player = getPlayer(getGuildId());

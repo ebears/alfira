@@ -188,8 +188,8 @@ export function fetchPlaylists(adminView = false): Promise<Playlist[]> {
   );
 }
 
-export function createPlaylist(name: string): Promise<Playlist> {
-  return post('/api/playlists', { name });
+export function createPlaylist(name: string, tagNameLower?: string): Promise<Playlist> {
+  return post('/api/playlists', { name, ...(tagNameLower && { tagNameLower }) });
 }
 
 export function fetchPlaylistsPage(
@@ -217,6 +217,10 @@ export function fetchPlaylistPage(
 
 export function renamePlaylist(id: string, name: string): Promise<Playlist> {
   return patch(`/api/playlists/${id}`, { name });
+}
+
+export function updatePlaylistTag(id: string, tagNameLower: string | null): Promise<Playlist> {
+  return patch(`/api/playlists/${id}`, { tagNameLower });
 }
 
 export function deletePlaylist(id: string): Promise<void> {

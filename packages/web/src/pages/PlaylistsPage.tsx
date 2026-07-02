@@ -1,4 +1,5 @@
-import type { Playlist } from '@alfira-bot/server/shared';
+import type { Playlist, TagItem } from '@alfira-bot/server/shared';
+import { fetchTags } from '@alfira-bot/server/shared/api';
 import { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getPlaylistsPage } from '../api/api';
@@ -106,6 +107,16 @@ export default function PlaylistsPage() {
 function CreatePlaylistModal({ onClose }: { onClose: () => void }) {
   const [state, formAction] = useCreatePlaylist();
   const [name, setName] = useState('');
+  const [tags, setTags] = useState<TagItem[]>([]);
+  const [selectedTag, setSelectedTag] = useState('');
+
+  useEffect(() => {
+    fetchTags()
+      .then(setTags)
+      .catch(() => {
+        // Tags are non-critical — fail silently
+      });
+  }, []);
 
   // Close modal on success (error === null means success)
   useEffect(() => {
@@ -137,6 +148,22 @@ function CreatePlaylistModal({ onClose }: { onClose: () => void }) {
           }}
           required
         />
+        <div className="mb-3">
+          <p className="font-mono text-xs text-muted mb-1.5">track a tag (optional)</p>
+          <select
+            name="tagNameLower"
+            className="input w-full"
+            value={selectedTag}
+            onChange={(e) => setSelectedTag(e.target.value)}
+          >
+            <option value="">None (manual playlist)</option>
+            {tags.map((tag) => (
+              <option key={tag.nameLower} value={tag.nameLower}>
+                {tag.canonicalName}
+              </option>
+            ))}
+          </select>
+        </div>
         {state?.error && <p className="font-mono text-xs text-danger mb-3">{state.error}</p>}
         <div className="flex gap-2 justify-end">
           <Button variant="inherit" type="button" onClick={onClose} surface="surface">

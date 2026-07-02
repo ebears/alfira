@@ -8,6 +8,7 @@ import { checkRateLimit, getClientIp, rateLimitResponse } from '../lib/rateLimit
 import { checkGuards } from '../lib/routeGuards';
 import { buildSongSearchClause } from '../lib/search';
 import { emitPlaylistUpdated } from '../lib/socket';
+import { syncPlaylistToTag } from '../lib/syncPlaylistToTag';
 import { validatePlaylistName } from '../lib/validation';
 import { db, tables } from '../shared/db';
 
@@ -26,6 +27,7 @@ type PlaylistRow = {
   name: string;
   createdBy: string;
   isPrivate: boolean;
+  tagNameLower: string | null;
   createdAt: Date;
   _count?: { songs: number };
 };
@@ -37,6 +39,7 @@ async function findPlaylistOr404(id: string, withCount = false): Promise<Playlis
       name: playlistTable.name,
       createdBy: playlistTable.createdBy,
       isPrivate: playlistTable.isPrivate,
+      tagNameLower: playlistTable.tagNameLower,
       createdAt: playlistTable.createdAt,
     })
     .from(playlistTable)
@@ -132,7 +135,7 @@ async function handlePostPlaylist(ctx: RouteContext, request: Request): Promise<
   if (guards instanceof Response) return guards;
   const { user } = guards;
 
-  let body: { name?: unknown };
+  let body: { name?: unknown; tagNameLower?: unknown };
   try {
     body = (await request.json()) as typeof body;
   } catch {
@@ -143,11 +146,17 @@ async function handlePostPlaylist(ctx: RouteContext, request: Request): Promise<
   if (!nameResult.ok) return nameResult.response;
   const trimmedName = nameResult.value;
 
+  const tagNameLower =
+    typeof body.tagNameLower === 'string' && body.tagNameLower.trim().length > 0
+      ? body.tagNameLower.trim().toLowerCase()
+      : null;
+
   const [playlist] = await db
     .insert(playlistTable)
     .values({
       name: trimmedName,
       createdBy: user.discordId,
+      tagNameLower,
     })
     .returning();
 
@@ -155,7 +164,13 @@ async function handlePostPlaylist(ctx: RouteContext, request: Request): Promise<
     return json({ error: 'Failed to create playlist.' }, 500);
   }
 
-  emitPlaylistUpdated(formatPlaylist(playlist, 0));
+  // If smart playlist, populate with matching songs
+  if (tagNameLower) {
+    await syncPlaylistToTag(playlist.id);
+  }
+
+  const songCount = await getPlaylistSongCount(playlist.id);
+  emitPlaylistUpdated(formatPlaylist(playlist, songCount));
   return json(playlist, 201);
 }
 
@@ -326,16 +341,12 @@ async function handlePatchPlaylist(
   if (guards instanceof Response) return guards;
   const { user } = guards;
 
-  let body: { name?: unknown };
+  let body: { name?: unknown; tagNameLower?: unknown };
   try {
     body = (await request.json()) as typeof body;
   } catch {
     return json({ error: 'Invalid JSON body.' }, 400);
   }
-
-  const nameResult = validatePlaylistName(body.name);
-  if (!nameResult.ok) return nameResult.response;
-  const trimmedName = nameResult.value;
 
   const existing = await findPlaylistOr404(id);
   if (!existing) {
@@ -347,14 +358,39 @@ async function handlePatchPlaylist(
     return json({ error: `Only the playlist owner or admins can rename this playlist.` }, 403);
   }
 
+  const data: Record<string, unknown> = {};
+
+  if (body.name !== undefined) {
+    const nameResult = validatePlaylistName(body.name);
+    if (!nameResult.ok) return nameResult.response;
+    data.name = nameResult.value;
+  }
+
+  if (body.tagNameLower !== undefined) {
+    if (body.tagNameLower === null || body.tagNameLower === '') {
+      data.tagNameLower = null;
+    } else if (typeof body.tagNameLower === 'string' && body.tagNameLower.trim().length > 0) {
+      data.tagNameLower = body.tagNameLower.trim().toLowerCase();
+    }
+  }
+
+  if (Object.keys(data).length === 0) {
+    return json({ error: 'No valid fields to update.' }, 400);
+  }
+
   const [updatedPlaylist] = await db
     .update(playlistTable)
-    .set({ name: trimmedName })
+    .set(data)
     .where(eq(playlistTable.id, id))
     .returning();
 
   if (!updatedPlaylist) {
     return json({ error: 'Failed to update playlist.' }, 500);
+  }
+
+  // If tag was set or changed, sync songs to tag
+  if ('tagNameLower' in data) {
+    await syncPlaylistToTag(updatedPlaylist.id);
   }
 
   const value = await getPlaylistSongCount(updatedPlaylist.id);
@@ -412,6 +448,19 @@ async function handleAddSong(ctx: RouteContext, request: Request, id: string): P
   const playlist = await findPlaylistOr404(id);
   if (!playlist) {
     return json({ error: 'Playlist not found.' }, 404);
+  }
+
+  // Smart playlists are auto-managed — reject manual adds
+  if (playlist.tagNameLower) {
+    return json(
+      {
+        error:
+          'This playlist automatically tracks the "' +
+          playlist.tagNameLower +
+          '" tag. Songs are added when tagged and cannot be added manually.',
+      },
+      409
+    );
   }
 
   const accessResult = canAccessPlaylist(playlist, user, undefined);
