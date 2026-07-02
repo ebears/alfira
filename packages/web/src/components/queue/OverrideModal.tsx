@@ -12,16 +12,16 @@ export default function OverrideModal({
   onClose: () => void;
   onOverride: () => void;
 }) {
-  const [youtubeUrl, setYoutubeUrl] = useState('');
+  const [sourceUrl, setSourceUrl] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
 
   const handleSubmit = async () => {
-    if (!youtubeUrl.trim()) return;
+    if (!sourceUrl.trim()) return;
     setSubmitting(true);
     setError('');
     try {
-      await overridePlay(youtubeUrl.trim());
+      await overridePlay(sourceUrl.trim());
       onOverride();
     } catch (err: unknown) {
       setError(apiErrorMessage(err, 'Could not override playback. Is the bot in a voice channel?'));
@@ -41,20 +41,20 @@ export default function OverrideModal({
         <div className="space-y-4 mb-6">
           <div>
             <p className="font-mono text-xs text-muted mb-2 uppercase tracking-widest">
-              YouTube URL
+              Source URL
             </p>
             <input
               type="text"
-              value={youtubeUrl}
+              value={sourceUrl}
               onChange={(e) => {
-                setYoutubeUrl(e.target.value);
+                setSourceUrl(e.target.value);
                 setError('');
               }}
-              placeholder="https://youtube.com/watch?v=..."
+              placeholder="https://..."
               className="input w-full"
               disabled={submitting}
               onKeyDown={(e) => {
-                if (e.key === 'Enter' && youtubeUrl.trim()) {
+                if (e.key === 'Enter' && sourceUrl.trim()) {
                   handleSubmit();
                 }
               }}
@@ -85,7 +85,7 @@ export default function OverrideModal({
             variant="danger"
             type="button"
             onClick={handleSubmit}
-            disabled={submitting || !youtubeUrl.trim()}
+            disabled={submitting || !sourceUrl.trim()}
           >
             {submitting ? 'Overriding...' : 'Override & Play'}
           </Button>

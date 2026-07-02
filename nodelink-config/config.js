@@ -135,7 +135,7 @@ export default {
       },
     },
     soundcloud: {
-      enabled: false,
+      enabled: true,
     },
     spotify: {
       enabled: false,

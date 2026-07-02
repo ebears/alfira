@@ -2,8 +2,8 @@ import { logger } from '../shared/logger';
 import {
   getMetadata,
   getPlaylistMetadataWithVideos,
-  isValidYouTubeUrl,
-  isYouTubePlaylistUrl,
+  isPlaylistUrl,
+  isValidSourceUrl,
 } from '../startDiscord';
 import { json } from './json';
 
@@ -15,14 +15,14 @@ type ValidationResult<T> = ValidationSuccess<T> | ValidationError;
 
 /**
  * Validates and trims a URL input. Returns null if validation fails.
- * Used by YouTube URL validators to avoid duplication.
+ * Used by URL validators to avoid duplication.
  */
-function validateUrlInput(youtubeUrl: unknown): ValidationResult<string> {
-  if (!youtubeUrl || typeof youtubeUrl !== 'string') {
-    return { ok: false, response: json({ error: 'youtubeUrl is required.' }, 400) };
+function validateUrlInput(sourceUrl: unknown): ValidationResult<string> {
+  if (!sourceUrl || typeof sourceUrl !== 'string') {
+    return { ok: false, response: json({ error: 'url is required.' }, 400) };
   }
 
-  const url = youtubeUrl.trim();
+  const url = sourceUrl.trim();
 
   if (url.length > MAX_URL_LENGTH) {
     return {
@@ -34,33 +34,38 @@ function validateUrlInput(youtubeUrl: unknown): ValidationResult<string> {
   return { ok: true, value: url };
 }
 
-/** Validates a YouTube URL for single video endpoints. */
-export function validateYouTubeUrl(youtubeUrl: unknown): ValidationResult<string> {
-  const result = validateUrlInput(youtubeUrl);
+/** Validates a source URL for single video endpoints. */
+export function validateSourceUrl(sourceUrl: unknown): ValidationResult<string> {
+  const result = validateUrlInput(sourceUrl);
   if (!result.ok) return result;
 
-  if (!isValidYouTubeUrl(result.value)) {
+  if (!isValidSourceUrl(result.value)) {
     return {
       ok: false,
-      response: json({ error: 'That does not look like a valid YouTube URL.' }, 400),
+      response: json(
+        {
+          error: "Supported sources are YouTube and SoundCloud. That URL doesn't look right.",
+        },
+        400
+      ),
     };
   }
 
   return result;
 }
 
-/** Validates a YouTube playlist URL. */
-export function validateYouTubePlaylistUrl(youtubeUrl: unknown): ValidationResult<string> {
-  const result = validateUrlInput(youtubeUrl);
+/** Validates a playlist URL. */
+export function validatePlaylistUrl(playlistUrl: unknown): ValidationResult<string> {
+  const result = validateUrlInput(playlistUrl);
   if (!result.ok) return result;
 
-  if (!isYouTubePlaylistUrl(result.value)) {
+  if (!isPlaylistUrl(result.value)) {
     return {
       ok: false,
       response: json(
         {
           error:
-            'That does not look like a valid YouTube playlist URL. It should contain a "list" parameter.',
+            'That does not look like a valid playlist URL. Supported sources are YouTube and SoundCloud.',
         },
         400
       ),
@@ -97,22 +102,22 @@ async function wrapBotCall<T>(
 }
 
 /**
- * Fetches YouTube metadata for a single video URL.
+ * Fetches metadata for a single source URL.
  * Returns error Response if fetch fails.
  */
-export function fetchYouTubeMetadata(
+export function fetchSourceMetadata(
   url: string
 ): Promise<
   { ok: true; value: Awaited<ReturnType<typeof getMetadata>> } | { ok: false; response: Response }
 > {
   return wrapBotCall(
     () => getMetadata(url),
-    'Could not fetch video info. The video may be private, age-restricted, or unavailable.'
+    'Could not fetch track info. The track may be private, age-restricted, or unavailable.'
   );
 }
 
 /**
- * Fetches YouTube playlist metadata with videos.
+ * Fetches playlist metadata with tracks.
  * Returns error Response if fetch fails.
  */
 export function fetchPlaylistMetadata(

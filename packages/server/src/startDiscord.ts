@@ -9,8 +9,8 @@ export { createPlayer, destroyAllPlayers, getPlayer } from './manager';
 export {
   getMetadata,
   getPlaylistMetadataWithVideos,
-  isValidYouTubeUrl,
-  isYouTubePlaylistUrl,
+  isPlaylistUrl,
+  isValidSourceUrl,
   type PlaylistMetadata,
 } from './utils/nodelink';
 

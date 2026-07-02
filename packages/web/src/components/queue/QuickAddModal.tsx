@@ -11,27 +11,27 @@ export default function QuickAddModal({
   onClose: () => void;
   onAdded: () => void;
 }) {
-  const [youtubeUrl, setYoutubeUrl] = useState('');
+  const [sourceUrl, setSourceUrl] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
-  const isPlaylist = youtubeUrl.includes('list=');
+  const isPlaylist = sourceUrl.includes('list=');
   const [importFullPlaylist, setImportFullPlaylist] = useState(false);
 
   const handleSubmit = async () => {
-    if (!youtubeUrl.trim()) return;
+    if (!sourceUrl.trim()) return;
     setSubmitting(true);
     setError('');
     setSuccessMsg('');
     try {
       if (importFullPlaylist) {
-        const result = await quickAddPlaylistToQueue(youtubeUrl.trim());
+        const result = await quickAddPlaylistToQueue(sourceUrl.trim());
         setSuccessMsg(result.message);
         setTimeout(() => {
           onAdded();
         }, 1500);
       } else {
-        await quickAddToQueue(youtubeUrl.trim());
+        await quickAddToQueue(sourceUrl.trim());
         onAdded();
       }
     } catch (err: unknown) {
@@ -45,27 +45,27 @@ export default function QuickAddModal({
       <div className="p-5 md:p-6 w-full max-w-sm mx-4 modal-clay animate-fade-up">
         <h2 className="font-display text-2xl md:text-3xl text-fg tracking-wider mb-1">Quick Add</h2>
         <p className="font-mono text-xs text-muted mb-4 md:mb-6">
-          add a song to Up Next without saving to library
+          add a YouTube or SoundCloud url to Up Next without saving to library
         </p>
 
         <div className="space-y-4 mb-6">
           <div>
             <p className="font-mono text-xs text-muted mb-2 uppercase tracking-widest">
-              YouTube URL
+              Source URL
             </p>
             <input
               type="text"
-              value={youtubeUrl}
+              value={sourceUrl}
               onChange={(e) => {
-                setYoutubeUrl(e.target.value);
+                setSourceUrl(e.target.value);
                 setError('');
                 setSuccessMsg('');
               }}
-              placeholder="https://youtube.com/watch?v=..."
+              placeholder="https://..."
               className="input w-full"
               disabled={submitting}
               onKeyDown={(e) => {
-                if (e.key === 'Enter' && youtubeUrl.trim()) {
+                if (e.key === 'Enter' && sourceUrl.trim()) {
                   handleSubmit();
                 }
               }}
@@ -109,7 +109,7 @@ export default function QuickAddModal({
             variant="primary"
             type="button"
             onClick={handleSubmit}
-            disabled={submitting || !youtubeUrl.trim()}
+            disabled={submitting || !sourceUrl.trim()}
           >
             {submitting ? 'Adding...' : importFullPlaylist ? 'Add Playlist' : 'Add to Up Next'}
           </Button>

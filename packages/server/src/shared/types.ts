@@ -15,8 +15,8 @@
 export interface Song {
   id: string;
   title: string;
-  youtubeUrl: string;
-  youtubeId: string;
+  sourceUrl: string;
+  sourceId: string;
   duration: number; // seconds
   thumbnailUrl: string;
   addedBy: string; // Discord user ID

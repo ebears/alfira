@@ -10,9 +10,9 @@ import { checkGuards } from '../lib/routeGuards';
 import {
   clampMaxVideos,
   fetchPlaylistMetadata,
-  fetchYouTubeMetadata,
-  validateYouTubePlaylistUrl,
-  validateYouTubeUrl,
+  fetchSourceMetadata,
+  validatePlaylistUrl,
+  validateSourceUrl,
   youTubeUrl,
 } from '../lib/validation';
 import { resolveOrAutoJoinPlayer } from '../lib/voice';
@@ -224,29 +224,26 @@ async function handleUnshuffle(ctx: RouteContext): Promise<Response> {
 }
 
 // ---------------------------------------------------------------------------
-// Shared: resolve a YouTube URL into a temp QueuedSong with player ready
+// Shared: resolve a source URL into a temp QueuedSong with player ready
 // ---------------------------------------------------------------------------
 
-type YoutubeTempSongResult =
+type UrlTempSongResult =
   | { ok: true; player: GuildPlayer; queuedSong: QueuedSong; metadataTitle: string }
   | { ok: false; response: Response };
 
-async function resolveYoutubeTempSong(
-  ctx: RouteContext,
-  request: Request
-): Promise<YoutubeTempSongResult> {
+async function resolveUrlTempSong(ctx: RouteContext, request: Request): Promise<UrlTempSongResult> {
   const guards = await checkGuards(ctx, { admin: true, voice: true });
   if (guards instanceof Response) return { ok: false, response: guards };
   const { user } = guards;
 
-  let body: { youtubeUrl?: unknown };
+  let body: { url?: unknown };
   try {
     body = (await request.json()) as typeof body;
   } catch {
     return { ok: false, response: json({ error: 'Invalid JSON body.' }, 400) };
   }
 
-  const urlResult = validateYouTubeUrl(body.youtubeUrl);
+  const urlResult = validateSourceUrl(body.url);
   if (!urlResult.ok) return { ok: false, response: urlResult.response };
   const url = urlResult.value;
 
@@ -254,15 +251,15 @@ async function resolveYoutubeTempSong(
   if (!playerResult.ok) return { ok: false, response: playerResult.response };
   const player = playerResult.player;
 
-  const metadataResult = await fetchYouTubeMetadata(url);
+  const metadataResult = await fetchSourceMetadata(url);
   if (!metadataResult.ok) return { ok: false, response: metadataResult.response };
   const metadata = metadataResult.value;
 
   const queuedSong: QueuedSong = {
     id: `temp-${Date.now()}`,
     title: metadata.title,
-    youtubeUrl: url,
-    youtubeId: metadata.youtubeId,
+    sourceUrl: url,
+    sourceId: metadata.sourceId,
     duration: metadata.duration,
     thumbnailUrl: metadata.thumbnailUrl ?? '',
     addedBy: user.discordId,
@@ -277,7 +274,7 @@ async function resolveYoutubeTempSong(
 // POST /api/player/quick-add — add YouTube URL to priority queue (admin only)
 // ---------------------------------------------------------------------------
 async function handleQuickAdd(ctx: RouteContext, request: Request): Promise<Response> {
-  const result = await resolveYoutubeTempSong(ctx, request);
+  const result = await resolveUrlTempSong(ctx, request);
   if (!result.ok) return result.response;
   await result.player.addToPriorityQueue(result.queuedSong);
   return json({
@@ -294,7 +291,7 @@ async function handleQuickAddPlaylist(ctx: RouteContext, request: Request): Prom
   if (guards instanceof Response) return guards;
   const { user } = guards;
 
-  let body: { youtubeUrl?: unknown; maxVideos?: number };
+  let body: { url?: unknown; maxVideos?: number };
   try {
     body = (await request.json()) as typeof body;
   } catch {
@@ -302,7 +299,7 @@ async function handleQuickAddPlaylist(ctx: RouteContext, request: Request): Prom
   }
 
   const maxVideos = clampMaxVideos(body.maxVideos);
-  const urlResult = validateYouTubePlaylistUrl(body.youtubeUrl);
+  const urlResult = validatePlaylistUrl(body.url);
   if (!urlResult.ok) return urlResult.response;
   const url = urlResult.value;
 
@@ -319,8 +316,8 @@ async function handleQuickAddPlaylist(ctx: RouteContext, request: Request): Prom
   const queuedSongs = playlistMetadata.videos.map((video) => ({
     id: `temp-${Date.now()}-${video.id}`,
     title: video.title,
-    youtubeUrl: youTubeUrl(video.id),
-    youtubeId: video.id,
+    sourceUrl: youTubeUrl(video.id),
+    sourceId: video.id,
     duration: video.duration,
     thumbnailUrl: video.thumbnailUrl,
     addedBy,
@@ -447,7 +444,7 @@ async function handleAddToPriority(ctx: RouteContext, request: Request): Promise
 // POST /api/player/override — immediately play YouTube URL (admin only)
 // ---------------------------------------------------------------------------
 async function handleOverride(ctx: RouteContext, request: Request): Promise<Response> {
-  const result = await resolveYoutubeTempSong(ctx, request);
+  const result = await resolveUrlTempSong(ctx, request);
   if (!result.ok) return result.response;
   await result.player.replaceQueueAndPlay([result.queuedSong]);
   return json({

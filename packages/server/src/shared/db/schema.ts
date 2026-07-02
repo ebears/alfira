@@ -5,8 +5,8 @@ export const song = sqliteTable('Song', {
     .primaryKey()
     .$defaultFn(() => crypto.randomUUID()),
   title: text('title').notNull(),
-  youtubeUrl: text('youtubeUrl').notNull().unique(),
-  youtubeId: text('youtubeId').notNull().unique(),
+  sourceUrl: text('sourceUrl').notNull().unique(),
+  sourceId: text('sourceId').notNull().unique(),
   duration: integer('duration').notNull(),
   thumbnailUrl: text('thumbnailUrl').notNull(),
   addedBy: text('addedBy').notNull(),

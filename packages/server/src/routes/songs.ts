@@ -13,14 +13,14 @@ import { canonicalizeTags } from '../lib/tagCanonicalization';
 import {
   clampMaxVideos,
   fetchPlaylistMetadata,
-  fetchYouTubeMetadata,
+  fetchSourceMetadata,
   validateArtworkUrl,
   validateNickname,
   validateOptionalString,
+  validatePlaylistUrl,
+  validateSourceUrl,
   validateTags,
   validateVolumeBoost,
-  validateYouTubePlaylistUrl,
-  validateYouTubeUrl,
   youTubeUrl,
 } from '../lib/validation';
 import { db, tables } from '../shared/db';
@@ -73,14 +73,14 @@ async function handleGetSongs(ctx: RouteContext, request: Request): Promise<Resp
 }
 
 // ---------------------------------------------------------------------------
-// POST /api/songs — add a song by YouTube URL. Admin only.
+// POST /api/songs — add a song by source URL. Admin only.
 // ---------------------------------------------------------------------------
 async function handlePostSong(ctx: RouteContext, request: Request): Promise<Response> {
   const guards = await checkGuards(ctx, { admin: true });
   if (guards instanceof Response) return guards;
   const { user } = guards;
 
-  let body: { youtubeUrl?: unknown; nickname?: unknown; asPlaylist?: unknown };
+  let body: { url?: unknown; nickname?: unknown; asPlaylist?: unknown };
   try {
     body = (await request.json()) as typeof body;
   } catch {
@@ -91,13 +91,13 @@ async function handlePostSong(ctx: RouteContext, request: Request): Promise<Resp
   const nicknameResult = validateNickname(body.nickname);
   if (!nicknameResult.ok) return nicknameResult.response;
 
-  const urlResult = validateYouTubeUrl(body.youtubeUrl);
+  const urlResult = validateSourceUrl(body.url);
   if (!urlResult.ok) return urlResult.response;
   let url = urlResult.value;
 
   // If user wants to import as playlist, validate as playlist URL first.
   if (asPlaylist) {
-    const playlistResult = validateYouTubePlaylistUrl(url);
+    const playlistResult = validatePlaylistUrl(url);
     if (!playlistResult.ok) return playlistResult.response;
     url = playlistResult.value;
   } else {
@@ -111,15 +111,15 @@ async function handlePostSong(ctx: RouteContext, request: Request): Promise<Resp
     }
   }
 
-  const metadataResult = await fetchYouTubeMetadata(url);
+  const metadataResult = await fetchSourceMetadata(url);
   if (!metadataResult.ok) return metadataResult.response;
   const metadata = metadataResult.value;
 
-  // Check for duplicate by youtubeId.
+  // Check for duplicate by sourceId.
   const [existing] = await db
     .select()
     .from(songTable)
-    .where(eq(songTable.youtubeId, metadata.youtubeId))
+    .where(eq(songTable.sourceId, metadata.sourceId))
     .limit(1);
 
   if (existing) {
@@ -136,8 +136,8 @@ async function handlePostSong(ctx: RouteContext, request: Request): Promise<Resp
     .insert(songTable)
     .values({
       title: metadata.title,
-      youtubeUrl: url,
-      youtubeId: metadata.youtubeId,
+      sourceUrl: url,
+      sourceId: metadata.sourceId,
       duration: metadata.duration,
       thumbnailUrl: metadata.thumbnailUrl ?? '',
       addedBy: user.discordId,
@@ -158,14 +158,14 @@ async function handlePostSong(ctx: RouteContext, request: Request): Promise<Resp
 }
 
 // ---------------------------------------------------------------------------
-// POST /api/songs/import-playlist — import YouTube playlist. Admin only.
+// POST /api/songs/import-playlist — import playlist. Admin only.
 // ---------------------------------------------------------------------------
 async function handleImportPlaylist(ctx: RouteContext, request: Request): Promise<Response> {
   const guards = await checkGuards(ctx, { admin: true });
   if (guards instanceof Response) return guards;
   const { user } = guards;
 
-  let body: { youtubeUrl?: unknown; maxVideos?: number };
+  let body: { url?: unknown; maxVideos?: number };
   try {
     body = (await request.json()) as typeof body;
   } catch {
@@ -173,7 +173,7 @@ async function handleImportPlaylist(ctx: RouteContext, request: Request): Promis
   }
 
   const maxVideos = clampMaxVideos(body.maxVideos);
-  const urlResult = validateYouTubePlaylistUrl(body.youtubeUrl);
+  const urlResult = validatePlaylistUrl(body.url);
   if (!urlResult.ok) return urlResult.response;
   const url = urlResult.value;
 
@@ -187,19 +187,19 @@ async function handleImportPlaylist(ctx: RouteContext, request: Request): Promis
     canonicalUrl: youTubeUrl(v.id),
   }));
 
-  let existingSongs: { youtubeId: string; youtubeUrl: string }[] = [];
+  let existingSongs: { sourceId: string; sourceUrl: string }[] = [];
   if (videosWithUrls.length > 0) {
     existingSongs = await db
-      .select({ youtubeId: songTable.youtubeId, youtubeUrl: songTable.youtubeUrl })
+      .select({ sourceId: songTable.sourceId, sourceUrl: songTable.sourceUrl })
       .from(songTable)
       .where(
         or(
           inArray(
-            songTable.youtubeId,
+            songTable.sourceId,
             videosWithUrls.map((v) => v.id)
           ),
           inArray(
-            songTable.youtubeUrl,
+            songTable.sourceUrl,
             videosWithUrls.map((v) => v.canonicalUrl)
           )
         )
@@ -207,12 +207,12 @@ async function handleImportPlaylist(ctx: RouteContext, request: Request): Promis
   }
 
   // Create sets for quick lookup
-  const existingYoutubeIds = new Set(existingSongs.map((s) => s.youtubeId));
-  const existingYoutubeUrls = new Set(existingSongs.map((s) => s.youtubeUrl));
+  const existingSourceIds = new Set(existingSongs.map((s) => s.sourceId));
+  const existingSourceUrls = new Set(existingSongs.map((s) => s.sourceUrl));
 
-  // Filter out duplicates (check both youtubeId and youtubeUrl)
+  // Filter out duplicates (check both sourceId and sourceUrl)
   const newVideos = videosWithUrls.filter(
-    (v) => !existingYoutubeIds.has(v.id) && !existingYoutubeUrls.has(v.canonicalUrl)
+    (v) => !existingSourceIds.has(v.id) && !existingSourceUrls.has(v.canonicalUrl)
   );
 
   if (newVideos.length === 0) {
@@ -234,8 +234,8 @@ async function handleImportPlaylist(ctx: RouteContext, request: Request): Promis
       .values(
         newVideos.map((video) => ({
           title: video.title,
-          youtubeUrl: video.canonicalUrl,
-          youtubeId: video.id,
+          sourceUrl: video.canonicalUrl,
+          sourceId: video.id,
           duration: video.duration,
           thumbnailUrl: video.thumbnailUrl ?? '',
           addedBy: addedByDiscordId,
