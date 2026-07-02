@@ -85,6 +85,9 @@ async function handlePatchGeneral(ctx: RouteContext, request: Request): Promise<
     if (typeof body.adminRoleIds !== 'string') {
       return json({ error: 'adminRoleIds must be a string' }, 400);
     }
+    if (body.adminRoleIds.trim().length === 0) {
+      return json({ error: 'adminRoleIds must not be empty' }, 400);
+    }
     updates.adminRoleIds = body.adminRoleIds;
   }
 
