@@ -4,6 +4,7 @@ export { toQueuedSong } from './queue';
 export { fisherYatesShuffle } from './shuffle';
 export type {
   CompressorSettings,
+  GeneralSettings,
   LoopMode,
   PaginatedResult,
   PaginationMeta,
@@ -11,6 +12,10 @@ export type {
   PlaylistDetail,
   QueuedSong,
   QueueState,
+  SetupChannel,
+  SetupGuild,
+  SetupRole,
+  SetupStatus,
   Song,
   User,
 } from './types';

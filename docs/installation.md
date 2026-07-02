@@ -9,6 +9,7 @@ This guide covers everything you need to set up Alfira for both development and 
 - [Configuration](#configuration)
 - [Development Setup](#development-setup)
 - [Production Setup](#production-setup)
+- [Setup Wizard](#setup-wizard)
 - [Upgrading](#upgrading)
 
 ---
@@ -56,47 +57,39 @@ docker compose up -d
 
 ### Environment Variables
 
-#### Required (API)
+#### Required
 
 | Variable | Description | Example |
 |----------|-------------|---------|
 | `DISCORD_CLIENT_ID` | Discord application client ID | `123456789012345678` |
 | `DISCORD_CLIENT_SECRET` | Discord application client secret | `abc123...` |
 | `DISCORD_BOT_TOKEN` | Discord bot token | `MTAwMC4...` |
-| `GUILD_ID` | Discord server ID | `987654321098765432` |
+| `DISCORD_REDIRECT_URI` | OAuth2 redirect URI | `https://your-domain.com/auth/callback` |
 | `JWT_SECRET` | Secret for signing JWT tokens | `your-secure-random-string` |
-| `ADMIN_ROLE_IDS` | Discord role ID(s) for admin permissions (comma-separated) | `123456789012345678` |
 
 > **Security:** Use a strong, random `JWT_SECRET`. Generate one with: `openssl rand -hex 32`
-
-#### Required (Bot)
-
-| Variable | Description | Example |
-|----------|-------------|---------|
-| `DISCORD_BOT_TOKEN` | Discord bot token (same as API) | `MTAwMC4...` |
-| `DISCORD_CLIENT_ID` | Discord application client ID (same as API) | `123456789012345678` |
 
 #### Optional
 
 | Variable | Description | Default |
 |----------|-------------|---------|
-| `DATABASE_URL` | SQLite database path | `/data/alfira.db` |
-| `WEB_UI_ORIGIN` | Public URL of the web UI | `http://localhost:3001` |
-| `DISCORD_REDIRECT_URI` | OAuth2 redirect URI | `http://localhost:3001/auth/callback` |
-| `VOICE_IDLE_TIMEOUT_MINUTES` | Minutes before bot leaves voice channel when idle | `5` |
+| `DATABASE_URL` | SQLite database path | Set automatically in Docker |
+| `GUILD_ID` | Pre-seed Discord server ID (for existing deployments) | — |
+| `ADMIN_ROLE_IDS` | Pre-seed admin role IDs (for existing deployments) | — |
+| `VOICE_IDLE_TIMEOUT_MINUTES` | Override idle timeout (can also be set via wizard/settings) | `5` |
 | `LOG_LEVEL` | Log verbosity: `debug`, `info`, `warn`, `error`, `fatal` | `info` |
-| `LOG_FORMAT` | Set to `json` for machine-readable structured logging; defaults to human-readable colored output | — |
+| `LOG_FORMAT` | Set to `json` for machine-readable structured logging | — |
 | `NO_COLOR` | Set to any value to disable colored log output | — |
+| `JWT_EXPIRES_IN` | JWT refresh token expiration (e.g., `30d`, `7d`, `24h`) | `30d` |
 
-> **Note:** `DATABASE_URL` is set automatically. You typically don't need to set it manually.
+> **Note:** `GUILD_ID` and `ADMIN_ROLE_IDS` are **not required** for new installs — these are configured through the in-app setup wizard. They're only needed for existing deployments migrating from an earlier version.
 
 ### Reverse Proxy
 
-For use with a reverse proxy, change WEB_UI_ORIGIN and DISCORD_REDIRECT_URI so they're pointing to your custom domain:
+For use with a reverse proxy, change `DISCORD_REDIRECT_URI` to point to your custom domain:
 
 | Variable | Local | Reverse Proxy |
 |----------|-------------|---------|
-| `WEB_UI_ORIGIN` | `http://localhost:3001` | `https://your-domain.com` |
 | `DISCORD_REDIRECT_URI` | `http://localhost:3001/auth/callback` | `https://your-domain.com/auth/callback` |
 
 > **Important:** Ensure your redirect URL in the Discord Developer Portal also uses the custom domain.
@@ -118,7 +111,7 @@ For use with a reverse proxy, change WEB_UI_ORIGIN and DISCORD_REDIRECT_URI so t
 4. Copy the token — this is your `DISCORD_BOT_TOKEN`. You won't be able to see it again!
 5. Under **Privileged Gateway Intents**, enable:
    - **Message Content Intent**
-   - **Server Members Intent** (optional, for role-based features)
+   - **Server Members Intent** (required for admin role detection)
 6. Click **"Save Changes"**.
 
 #### 3. Configure OAuth2
@@ -132,36 +125,33 @@ For use with a reverse proxy, change WEB_UI_ORIGIN and DISCORD_REDIRECT_URI so t
 
 #### 4. Invite the Bot to Your Server
 
+You can invite the bot during the setup wizard (it shows an invite link), or manually:
+
 1. Navigate to **OAuth2** → **URL Generator**.
 2. Under **Scopes**, check:
    - `bot`
 3. Under **Bot Permissions**, check:
    - `Connect`
    - `Speak`
-   - `Use Voice Activity`
    - `View Channels`
    - `Send Messages`
-   - `Embed Links`
-4. Copy the generated URL at the bottom, open it in your browser, and authorize the bot for your server.
+4. Copy the generated URL, open it in your browser, and authorize the bot for your server.
 
-#### 5. Get Your Guild and Role IDs
+---
 
-1. Enable **Developer Mode** in Discord: Settings → Advanced → Developer Mode.
-2. Right-click your server icon and select **"Copy Server ID"** — this is your `GUILD_ID`.
-3. Right-click the **admin role** (the role that should have permission to add songs/manage the bot) and select **"Copy Role ID"** — this is your `ADMIN_ROLE_IDS`.
-   - For multiple admin roles, use comma-separated IDs: `123456789012345678,987654321098765432`
-   - **Important:** Only users with this role will see the "Add Song" button and other admin features in the web UI. Non-admin users can only play existing songs from the library.
+## Setup Wizard
 
-#### 6. Enable Server Members Intent (Required for Admin Detection)
+After starting Alfira and logging in for the first time, you'll be guided through a setup wizard that configures:
 
-The bot needs to fetch guild member roles to determine admin status. This requires the **Server Members Intent**:
+1. **Discord Server** — Choose which server Alfira operates in
+2. **Admin Roles** — Select which Discord roles can manage the bot
+3. **Notification Channel** — (Optional) Channel where Alfira posts idle-leave messages
+4. **Idle Timeout** — Minutes before the bot auto-leaves an empty voice channel
+5. **Public URL** — (Optional) Your public-facing URL
 
-1. Go to the [Discord Developer Portal](https://discord.com/developers/applications) → your application.
-2. Navigate to **Bot** in the left sidebar.
-3. Under **Privileged Gateway Intents**, enable **Server Members Intent** (in addition to Message Content Intent).
-4. Click **"Save Changes"**.
+All of these settings can be changed later from the **Settings → Admin** page.
 
-> **Without this intent**, the bot cannot verify admin roles — all users will be treated as non-admin, and the "Add Song" button will not appear for anyone.
+> **Note:** If you're upgrading from a previous version that used `GUILD_ID` and `ADMIN_ROLE_IDS` in `.env`, those values are automatically migrated — you won't see the wizard.
 
 ---
 

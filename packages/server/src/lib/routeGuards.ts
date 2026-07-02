@@ -8,6 +8,9 @@ interface GuardOptions {
   auth?: boolean;
   /** Require admin role. Defaults to false. */
   admin?: boolean;
+  /** Allow access during first-run setup (user must have isSetupAdmin flag).
+   *  Overrides the normal admin check. Defaults to false. */
+  setupMode?: boolean;
   /** Require user is in a voice channel. Defaults to false. Requires auth. */
   voice?: boolean;
 }
@@ -27,11 +30,21 @@ export async function checkGuards(
   ctx: RouteContext,
   options: GuardOptions = {}
 ): Promise<GuardResult | Response> {
-  const { admin = false, voice = false } = options;
+  const { admin = false, setupMode = false, voice = false } = options;
 
   const authResult = requireAuth(ctx);
   if (authResult instanceof Response) return authResult;
   const user = authResult;
+
+  // Setup mode: grant access to the first user who logs in during setup.
+  // This bypasses the normal admin check since admin roles aren't configured yet.
+  if (setupMode && user.isSetupAdmin) {
+    if (voice) {
+      const inVoice = await requireUserInVoice(user.discordId);
+      if (inVoice instanceof Response) return inVoice;
+    }
+    return { user };
+  }
 
   if (admin) {
     const adminErr = requireAdmin(ctx);

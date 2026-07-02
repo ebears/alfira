@@ -1,12 +1,12 @@
 import type { GuildPlayer } from '../startDiscord';
 import { getPlayer } from '../startDiscord';
-import { GUILD_ID } from './config';
+import { getGuildId } from './config';
 import { json } from './json';
 
 export function requirePlaying():
   | { ok: true; player: GuildPlayer }
   | { ok: false; response: Response } {
-  const player = getPlayer(GUILD_ID);
+  const player = getPlayer(getGuildId());
   if (!player?.getCurrentSong()) {
     return {
       ok: false,
@@ -19,7 +19,7 @@ export function requirePlaying():
 export function requirePlayer():
   | { ok: true; player: GuildPlayer }
   | { ok: false; response: Response } {
-  const player = getPlayer(GUILD_ID);
+  const player = getPlayer(getGuildId());
   if (!player) {
     return {
       ok: false,

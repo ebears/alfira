@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { fetchVersion } from '../../api/api';
 import { useAuth } from '../../context/AuthContext';
+import AdminTab from './AdminTab';
 import AppearanceTab from './AppearanceTab';
 
 export default function SettingsPage() {
@@ -33,7 +34,7 @@ export default function SettingsPage() {
         <section>
           <h2 className="font-mono text-xs text-muted uppercase tracking-wider mb-4">Admin</h2>
           <div className="bg-elevated border border-border rounded-xl p-5">
-            <p className="text-sm text-muted">Server-side settings will appear here.</p>
+            <AdminTab />
           </div>
         </section>
       )}

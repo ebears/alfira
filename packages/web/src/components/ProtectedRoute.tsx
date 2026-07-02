@@ -1,9 +1,10 @@
 import type React from 'react';
-import { Navigate } from 'react-router-dom';
+import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 
 export default function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
+  const location = useLocation();
 
   if (loading) {
     return (
@@ -17,6 +18,11 @@ export default function ProtectedRoute({ children }: { children: React.ReactNode
   }
 
   if (!user) return <Navigate to="/login" replace />;
+
+  // During first-run setup, lock all routes except /setup.
+  if (user.isSetupAdmin && location.pathname !== '/setup') {
+    return <Navigate to="/setup" replace />;
+  }
 
   return <>{children}</>;
 }

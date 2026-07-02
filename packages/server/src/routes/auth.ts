@@ -2,21 +2,19 @@ import crypto from 'node:crypto';
 import { and, eq, lt } from 'drizzle-orm';
 import jwt from 'jsonwebtoken';
 import type { RouteContext } from '../index';
-import { WEB_UI_ORIGIN } from '../lib/config';
+import { getGuildId } from '../lib/config';
 import { json } from '../lib/json';
 import { db, tables } from '../shared/db';
 import { logger } from '../shared/logger';
 
-const { refreshToken: refreshTokenTable } = tables;
+const { refreshToken: refreshTokenTable, guildSettings: guildSettingsTable } = tables;
 
 const {
   DISCORD_CLIENT_ID,
   DISCORD_CLIENT_SECRET,
   DISCORD_REDIRECT_URI,
   DISCORD_BOT_TOKEN,
-  GUILD_ID,
   JWT_SECRET,
-  ADMIN_ROLE_IDS,
 } = process.env;
 
 if (
@@ -24,7 +22,6 @@ if (
   !DISCORD_CLIENT_SECRET ||
   !DISCORD_REDIRECT_URI ||
   !DISCORD_BOT_TOKEN ||
-  !GUILD_ID ||
   !JWT_SECRET
 ) {
   throw new Error('Missing required environment variables for auth');
@@ -35,20 +32,51 @@ const DISCORD_CLIENT_ID_: string = DISCORD_CLIENT_ID;
 const DISCORD_CLIENT_SECRET_: string = DISCORD_CLIENT_SECRET;
 const DISCORD_REDIRECT_URI_: string = DISCORD_REDIRECT_URI;
 const DISCORD_BOT_TOKEN_: string = DISCORD_BOT_TOKEN;
-const GUILD_ID_: string = GUILD_ID;
 const JWT_SECRET_: string = JWT_SECRET;
-
-const ADMIN_ROLE_ID_SET = new Set(
-  (ADMIN_ROLE_IDS ?? '')
-    .split(',')
-    .map((id) => id.trim())
-    .filter(Boolean)
-);
 
 const isProduction = process.env.NODE_ENV === 'production';
 
-function isAdminUser(memberRoles: string[]): boolean {
-  return memberRoles.some((roleId) => ADMIN_ROLE_ID_SET.has(roleId));
+/** Read admin role IDs from the database (set via setup wizard or admin settings). */
+async function getAdminRoleIdSet(): Promise<Set<string>> {
+  try {
+    const row = await db
+      .select({ adminRoleIds: guildSettingsTable.adminRoleIds })
+      .from(guildSettingsTable)
+      .where(eq(guildSettingsTable.id, 1))
+      .get();
+
+    if (row?.adminRoleIds) {
+      return new Set(
+        row.adminRoleIds
+          .split(',')
+          .map((id: string) => id.trim())
+          .filter(Boolean)
+      );
+    }
+  } catch {
+    // DB not ready yet.
+  }
+
+  return new Set();
+}
+
+/** Check whether the setup wizard has been completed. */
+async function isSetupCompleted(): Promise<boolean> {
+  try {
+    const row = await db
+      .select({ setupCompleted: guildSettingsTable.setupCompleted })
+      .from(guildSettingsTable)
+      .where(eq(guildSettingsTable.id, 1))
+      .get();
+    return row?.setupCompleted ?? false;
+  } catch {
+    return false;
+  }
+}
+
+async function isAdminUser(memberRoles: string[]): Promise<boolean> {
+  const adminSet = await getAdminRoleIdSet();
+  return memberRoles.some((roleId) => adminSet.has(roleId));
 }
 
 // Access tokens are short-lived (1h). Refresh tokens are long-lived (30d default),
@@ -139,9 +167,12 @@ function authRateLimit(ip: string): boolean {
 
 /** Fetches guild member roles. Returns 'not-in-guild' on 404, null on other errors. */
 async function fetchGuildMemberRoles(discordId: string): Promise<string[] | null | 'not-in-guild'> {
+  const guildId = getGuildId();
+  if (!guildId) return null; // guild not configured yet
+
   try {
     const memberRes = await fetch(
-      `https://discord.com/api/guilds/${GUILD_ID_}/members/${discordId}`,
+      `https://discord.com/api/guilds/${guildId}/members/${discordId}`,
       { headers: { Authorization: `Bot ${DISCORD_BOT_TOKEN_}` } }
     );
     if (memberRes.status === 404) {
@@ -157,6 +188,30 @@ async function fetchGuildMemberRoles(discordId: string): Promise<string[] | null
       { err: err instanceof Error ? err.message : String(err) },
       'Failed to fetch guild member roles'
     );
+    return null;
+  }
+}
+
+/**
+ * Fetch a Discord user's basic profile (username, avatar).
+ * Does NOT check guild membership. Used during setup mode.
+ */
+async function fetchDiscordUserProfile(
+  discordId: string
+): Promise<{ username: string; avatar: string | null } | null> {
+  try {
+    const res = await fetch(`https://discord.com/api/users/${discordId}`, {
+      headers: { Authorization: `Bot ${DISCORD_BOT_TOKEN_}` },
+    });
+    if (!res.ok) return null;
+    const data = (await res.json()) as { username: string; avatar: string | null };
+    return {
+      username: data.username,
+      avatar: data.avatar
+        ? `https://cdn.discordapp.com/avatars/${discordId}/${data.avatar}.png`
+        : null,
+    };
+  } catch {
     return null;
   }
 }
@@ -179,7 +234,7 @@ async function fetchUserAdminStatus(
     if (roles === null || roles === 'not-in-guild') return null;
 
     return {
-      isAdmin: isAdminUser(roles),
+      isAdmin: await isAdminUser(roles),
       username,
       avatar: avatar ? `https://cdn.discordapp.com/avatars/${discordId}/${avatar}.png` : null,
     };
@@ -244,7 +299,8 @@ async function fetchDiscordIdentity(
  */
 async function generateAndStoreTokens(
   discordUser: { id: string; username: string; avatar: string | null },
-  isAdmin: boolean
+  isAdmin: boolean,
+  isSetupAdmin = false
 ): Promise<{ accessToken: string; refreshToken: string }> {
   const payload = {
     discordId: discordUser.id,
@@ -253,6 +309,7 @@ async function generateAndStoreTokens(
       ? `https://cdn.discordapp.com/avatars/${discordUser.id}/${discordUser.avatar}.png`
       : null,
     isAdmin,
+    ...(isSetupAdmin ? { isSetupAdmin: true } : {}),
   };
   const accessToken = generateAccessToken(payload);
   const refreshToken = generateRefreshToken(discordUser.id);
@@ -345,20 +402,70 @@ async function handleCallback(request: Request, url: URL): Promise<Response> {
     return json({ error: 'Failed to fetch Discord user info.' }, 502);
   }
 
-  // 3. Verify guild membership and get member roles.
+  // 3. Check if setup has been completed.
+  const setupDone = await isSetupCompleted();
+
+  if (!setupDone) {
+    // If GUILD_ID and ADMIN_ROLE_IDS are in env (existing deployment),
+    // auto-complete setup. Otherwise, redirect to the setup wizard.
+    const envGuildId = process.env.GUILD_ID;
+    if (envGuildId) {
+      // Seed env vars into DB and mark setup complete.
+      await db
+        .insert(guildSettingsTable)
+        .values({
+          id: 1,
+          guildId: envGuildId,
+          setupCompleted: true,
+          adminRoleIds: process.env.ADMIN_ROLE_IDS ?? '',
+        })
+        .onConflictDoUpdate({
+          target: guildSettingsTable.id,
+          set: {
+            guildId: envGuildId,
+            setupCompleted: true,
+            adminRoleIds: process.env.ADMIN_ROLE_IDS ?? '',
+          },
+        })
+        .run();
+
+      // Refresh the in-memory guild ID cache.
+      const { refreshGuildId } = await import('../lib/config');
+      refreshGuildId(envGuildId);
+
+      // Fall through to normal auth flow below.
+    } else {
+      // Fresh install — redirect to setup wizard.
+      const { accessToken, refreshToken } = await generateAndStoreTokens(discordUser, true, true);
+
+      const headers = new Headers();
+      headers.append(
+        'Set-Cookie',
+        buildCookieHeader(ACCESS_COOKIE_NAME, accessToken, { maxAge: 60 * 60 * 1000 })
+      );
+      headers.append(
+        'Set-Cookie',
+        buildCookieHeader(REFRESH_COOKIE_NAME, refreshToken, { maxAge: REFRESH_TOKEN_MAX_AGE })
+      );
+      headers.append('Location', '/setup');
+      return new Response(null, { status: 302, headers });
+    }
+  }
+
+  // 4. Normal flow — verify guild membership and get member roles.
   const rolesResult = await fetchGuildMemberRoles(discordUser.id);
   if (rolesResult === null || rolesResult === 'not-in-guild') {
     return json({ error: 'You must be a member of the server to use this app.' }, 403);
   }
   const memberRoles = rolesResult;
 
-  // 4. Determine admin status.
-  const isAdmin = isAdminUser(memberRoles);
+  // 5. Determine admin status.
+  const isAdmin = await isAdminUser(memberRoles);
 
-  // 5. Generate and store tokens.
+  // 6. Generate and store tokens.
   const { accessToken, refreshToken } = await generateAndStoreTokens(discordUser, isAdmin);
 
-  // 6. Set cookies and redirect.
+  // 7. Set cookies and redirect.
   const headers = new Headers();
   headers.append(
     'Set-Cookie',
@@ -368,7 +475,7 @@ async function handleCallback(request: Request, url: URL): Promise<Response> {
     'Set-Cookie',
     buildCookieHeader(REFRESH_COOKIE_NAME, refreshToken, { maxAge: REFRESH_TOKEN_MAX_AGE })
   );
-  headers.append('Location', WEB_UI_ORIGIN);
+  headers.append('Location', '/');
   return new Response(null, { status: 302, headers });
 }
 
@@ -420,18 +527,43 @@ async function handleRefresh(ctx: RouteContext): Promise<Response> {
     );
 
   // 6. Re-fetch user info from Discord (including admin status).
-  const userInfo = await fetchUserAdminStatus(decoded.discordId);
-  if (!userInfo) {
-    await db.delete(refreshTokenTable).where(eq(refreshTokenTable.discordId, decoded.discordId));
-    return json({ error: 'Unable to verify user membership. Please log in again.' }, 401);
+  //    During setup mode, skip guild membership check.
+  const setupDone = await isSetupCompleted();
+  let username: string;
+  let avatar: string | null;
+  let isAdmin: boolean;
+  let isSetupAdmin = false;
+
+  if (!setupDone) {
+    // Setup not complete — fetch basic profile, grant admin.
+    const profile = await fetchDiscordUserProfile(decoded.discordId);
+    if (!profile) {
+      await db.delete(refreshTokenTable).where(eq(refreshTokenTable.discordId, decoded.discordId));
+      return json({ error: 'Unable to verify user identity. Please log in again.' }, 401);
+    }
+    username = profile.username;
+    avatar = profile.avatar;
+    isAdmin = true;
+    isSetupAdmin = true;
+  } else {
+    // Normal flow — verify guild membership and roles.
+    const userInfo = await fetchUserAdminStatus(decoded.discordId);
+    if (!userInfo) {
+      await db.delete(refreshTokenTable).where(eq(refreshTokenTable.discordId, decoded.discordId));
+      return json({ error: 'Unable to verify user membership. Please log in again.' }, 401);
+    }
+    username = userInfo.username;
+    avatar = userInfo.avatar;
+    isAdmin = userInfo.isAdmin;
   }
 
   // 7. Generate new tokens.
   const payload = {
     discordId: decoded.discordId,
-    username: userInfo.username,
-    avatar: userInfo.avatar,
-    isAdmin: userInfo.isAdmin,
+    username,
+    avatar,
+    isAdmin,
+    ...(isSetupAdmin ? { isSetupAdmin: true } : {}),
   };
   const newAccessToken = generateAccessToken(payload);
   const newRefreshToken = generateRefreshToken(decoded.discordId);

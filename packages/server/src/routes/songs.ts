@@ -1,6 +1,6 @@
 import { eq, inArray, or, sql } from 'drizzle-orm';
 import type { RouteContext } from '../index';
-import { GUILD_ID } from '../lib/config';
+import { getGuildId } from '../lib/config';
 import { getUserDisplayName, resolveDisplayNames } from '../lib/displayName';
 import { json } from '../lib/json';
 import { parsePagination } from '../lib/pagination';
@@ -363,7 +363,7 @@ async function handlePatchSong(ctx: RouteContext, request: Request, id: string):
   emitSongUpdated(formatSong(updatedSong));
 
   // If this song is currently playing, update volume live without restarting
-  const player = getPlayer(GUILD_ID);
+  const player = getPlayer(getGuildId());
   if (player && data.volumeBoost !== undefined) {
     const currentSong = player.getCurrentSong();
     if (currentSong?.id === id) {

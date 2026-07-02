@@ -1,6 +1,6 @@
 import { logger } from '../shared/logger';
 import { connectToVoice, createPlayer, getClient, getPlayer } from '../startDiscord';
-import { GUILD_ID } from './config';
+import { getGuildId } from './config';
 import { json } from './json';
 import { lavalink } from './lavalink';
 
@@ -15,7 +15,7 @@ export async function requireUserInVoice(discordId: string): Promise<true | Resp
   }
 
   try {
-    const guild = await client.guilds.fetch(GUILD_ID);
+    const guild = await client.guilds.fetch(getGuildId());
     const member = await guild.members.resolve(discordId);
 
     if (!member) {
@@ -50,9 +50,10 @@ export async function resolveOrAutoJoinPlayer(
   | { ok: true; player: NonNullable<ReturnType<typeof getPlayer>> }
   | { ok: false; response: Response }
 > {
-  const existingPlayer = getPlayer(GUILD_ID);
+  const guildId = getGuildId();
+  const existingPlayer = getPlayer(guildId);
   if (existingPlayer) {
-    if (lavalink.isGuildConnected(GUILD_ID)) {
+    if (lavalink.isGuildConnected(guildId)) {
       return { ok: true, player: existingPlayer };
     }
   }
@@ -66,7 +67,7 @@ export async function resolveOrAutoJoinPlayer(
   }
 
   try {
-    const guild = await discordClient.guilds.fetch(GUILD_ID);
+    const guild = await discordClient.guilds.fetch(guildId);
     const member = await guild.members.resolve(discordId);
 
     if (!member) {
@@ -93,12 +94,12 @@ export async function resolveOrAutoJoinPlayer(
     }
 
     // Connect to voice via the Discord gateway, then create the GuildPlayer.
-    await connectToVoice(GUILD_ID, voiceChannelId);
+    await connectToVoice(guildId, voiceChannelId);
     // Give NodeLink time to fully establish the voice connection
     // before we start sending track data.
     await new Promise((resolve) => setTimeout(resolve, 500));
 
-    return { ok: true, player: createPlayer(GUILD_ID, voiceChannelId) };
+    return { ok: true, player: createPlayer(guildId, voiceChannelId) };
   } catch (error) {
     logger.error({ err: error as Error }, 'Failed to auto-join voice channel');
     return {

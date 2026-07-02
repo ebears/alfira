@@ -100,4 +100,12 @@ export const guildSettings = sqliteTable('guildSettings', {
   eqBand12: integer('eqBand12').notNull().default(50),
   eqBand13: integer('eqBand13').notNull().default(50),
   eqBand14: integer('eqBand14').notNull().default(50),
+
+  // General setup / admin settings
+  guildId: text('guildId'),
+  setupCompleted: integer('setupCompleted', { mode: 'boolean' }).notNull().default(false),
+  adminRoleIds: text('adminRoleIds').notNull().default(''),
+  voiceIdleTimeoutMinutes: integer('voiceIdleTimeoutMinutes').notNull().default(5),
+  notificationChannelId: text('notificationChannelId'),
+  publicUrl: text('publicUrl'),
 });

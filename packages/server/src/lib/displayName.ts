@@ -1,12 +1,12 @@
 import { getClient } from '../startDiscord';
-import { GUILD_ID } from './config';
+import { getGuildId } from './config';
 
 export async function getUserDisplayName(discordId: string): Promise<string> {
   const client = getClient();
   if (!client) return discordId;
 
   try {
-    const guild = await client.guilds.fetch(GUILD_ID);
+    const guild = await client.guilds.fetch(getGuildId());
     const member = await guild.members.resolve(discordId);
     if (!member) return discordId;
     // GuildMemberStructure has 'nick' (server nickname) and the user object

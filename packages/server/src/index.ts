@@ -20,7 +20,7 @@ function parseCookies(header: string): Record<string, string> {
 }
 
 import { sql } from 'drizzle-orm';
-import { VERSION } from './lib/config';
+import { initGuildId, VERSION } from './lib/config';
 import { ensureTagsMigrated } from './lib/ensureTagsMigrated';
 import { json } from './lib/json';
 import { lavalink } from './lib/lavalink';
@@ -30,8 +30,10 @@ import { verifySessionToken } from './middleware/requireAuth';
 import { handleAuth } from './routes/auth';
 import { handleCompressor } from './routes/compressor';
 import { handleEqualizer } from './routes/equalizer';
+import { handleGeneralSettings } from './routes/generalSettings';
 import { handlePlayer } from './routes/player';
 import { handlePlaylists } from './routes/playlists';
+import { handleSetup } from './routes/setup';
 import { handleSongs } from './routes/songs';
 import { handleTags } from './routes/tags';
 import { $client, db } from './shared/db';
@@ -46,7 +48,6 @@ const requiredVars = [
   'DISCORD_CLIENT_ID',
   'DISCORD_CLIENT_SECRET',
   'DISCORD_REDIRECT_URI',
-  'GUILD_ID',
   'DATABASE_URL',
   'JWT_SECRET',
 ];
@@ -248,6 +249,12 @@ function startServer(): void {
       if (url.pathname.startsWith('/api/settings/equalizer')) {
         return setSecurityHeaders(await handleEqualizer(ctx, request));
       }
+      if (url.pathname.startsWith('/api/settings/general')) {
+        return setSecurityHeaders(await handleGeneralSettings(ctx, request));
+      }
+      if (url.pathname.startsWith('/api/setup')) {
+        return setSecurityHeaders(await handleSetup(ctx, request));
+      }
       if (url.pathname.startsWith('/auth')) {
         return setSecurityHeaders(await handleAuth(ctx, request));
       }
@@ -403,6 +410,14 @@ async function main(): Promise<void> {
   } catch (error) {
     logger.error(error, 'Could not connect to the database');
     process.exit(1);
+  }
+
+  // 2.5. Initialize guild ID cache.
+  try {
+    await initGuildId();
+    logger.info('Guild ID cache initialized');
+  } catch (error) {
+    logger.error(error, 'Failed to initialize guild settings');
   }
 
   // 3. Start NodeLink in-process.
