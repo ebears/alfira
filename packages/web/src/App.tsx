@@ -9,10 +9,12 @@ import { PlayerProvider } from './context/PlayerContext';
 import { SongEditProvider } from './context/SongEditContext';
 import { TagsProvider } from './context/TagsContext';
 import { ThemeProvider } from './context/ThemeContext';
+import AudioPage from './pages/AudioPage';
 import LoginPage from './pages/LoginPage';
 import PlaylistDetailPage from './pages/PlaylistDetailPage';
 import PlaylistsPage from './pages/PlaylistsPage';
 import SongsPage from './pages/SongsPage';
+import TagsPage from './pages/TagsPage';
 
 export default function App() {
   return (
@@ -40,6 +42,8 @@ export default function App() {
                     <Route path="playlists" element={<PlaylistsPage />} />
                     <Route path="playlists/:id" element={<PlaylistDetailPage />} />
                     <Route path="settings" element={<SettingsPage />} />
+                    <Route path="audio" element={<AudioPage />} />
+                    <Route path="tags" element={<TagsPage />} />
                   </Route>
                   <Route path="*" element={<Navigate to="/" replace />} />
                 </Routes>

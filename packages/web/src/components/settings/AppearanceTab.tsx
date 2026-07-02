@@ -1,32 +1,12 @@
 import { DesktopIcon, MoonIcon, SunIcon } from '@phosphor-icons/react';
-import { useAdminView } from '../../context/AdminViewContext';
-import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 import { Button } from '../ui/Button';
-import SettingsToggle from './SettingsToggle';
 
 export default function AppearanceTab() {
-  const { user } = useAuth();
-  const { isAdminView, toggleAdminView } = useAdminView();
   const { colorTheme, mode, setColorTheme, setMode, colorThemes } = useTheme();
 
   return (
     <div className="space-y-6">
-      {user?.isAdmin && (
-        <>
-          <div className="space-y-2">
-            <h3 className="font-mono text-[11px] text-muted uppercase tracking-wider">Admin</h3>
-            <SettingsToggle
-              label="Admin View"
-              description="Enable administrative features and controls"
-              checked={isAdminView}
-              onChange={toggleAdminView}
-            />
-          </div>
-          <div className="border-t border-muted/20 my-4" />
-        </>
-      )}
-
       {/* Appearance: Auto / Light / Dark */}
       <div className="space-y-2">
         <h3 className="font-mono text-[11px] text-muted uppercase tracking-wider">Appearance</h3>

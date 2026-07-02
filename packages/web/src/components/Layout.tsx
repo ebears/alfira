@@ -1,7 +1,7 @@
 import { CaretLeftIcon, CraneTowerIcon, GuitarIcon, StairsIcon } from '@phosphor-icons/react';
 import { useEffect, useState } from 'react';
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
-import { NAV_ITEMS } from '../constants';
+import { ADMIN_NAV_ITEMS, NAV_ITEMS } from '../constants';
 import { useAdminView } from '../context/AdminViewContext';
 import { useAuth } from '../context/AuthContext';
 import { QueuePanelProvider, useQueuePanel } from '../context/QueuePanelContext';
@@ -22,7 +22,7 @@ export default function Layout() {
 
 function LayoutContent() {
   const { user, logout } = useAuth();
-  const { isAdminView } = useAdminView();
+  const { isAdminView, toggleAdminView } = useAdminView();
   const connectionStatus = useConnectionStatus();
   const navigate = useNavigate();
   const [collapsed, setCollapsed] = useState(() => {
@@ -65,29 +65,46 @@ function LayoutContent() {
         >
           {!collapsed && (
             <div className="flex items-center gap-2 min-w-0">
-              {isAdminView ? (
-                <span className="flex items-center justify-center w-10 h-10 shrink-0 rounded border border-accent/30 bg-accent/10 self-end">
+              <button
+                type="button"
+                onClick={toggleAdminView}
+                title={
+                  user?.isAdmin
+                    ? isAdminView
+                      ? 'Switch to Member view'
+                      : 'Switch to Admin view'
+                    : undefined
+                }
+                className={`flex items-center justify-center w-10 h-10 shrink-0 rounded border border-accent/30 bg-accent/10 self-end transition-opacity ${user?.isAdmin ? 'cursor-pointer hover:opacity-80' : 'cursor-default'}`}
+              >
+                {isAdminView ? (
                   <CraneTowerIcon size={24} weight="duotone" className="text-accent" />
-                </span>
-              ) : (
-                <span className="flex items-center justify-center w-10 h-10 shrink-0 rounded border border-accent/30 bg-accent/10 self-end">
+                ) : (
                   <GuitarIcon size={24} weight="duotone" className="text-accent" />
-                </span>
-              )}
+                )}
+              </button>
               <span className="font-display text-5xl text-accent tracking-wider">Alfira</span>
             </div>
           )}
           {collapsed && (
-            <div
-              className="w-10 h-10 flex items-center justify-center shrink-0 rounded border border-accent/30 bg-accent/10"
-              title={isAdminView ? 'Admin mode' : 'Member mode'}
+            <button
+              type="button"
+              onClick={toggleAdminView}
+              className={`w-10 h-10 flex items-center justify-center shrink-0 rounded border border-accent/30 bg-accent/10 transition-opacity ${user?.isAdmin ? 'cursor-pointer hover:opacity-80' : 'cursor-default'}`}
+              title={
+                user?.isAdmin
+                  ? isAdminView
+                    ? 'Admin mode — click to switch'
+                    : 'Member mode — click to switch'
+                  : undefined
+              }
             >
               {isAdminView ? (
                 <CraneTowerIcon size={24} weight="duotone" className="text-accent" />
               ) : (
                 <GuitarIcon size={24} weight="duotone" className="text-accent" />
               )}
-            </div>
+            </button>
           )}
         </div>
 
@@ -120,6 +137,36 @@ function LayoutContent() {
               <Icon size={22} weight="duotone" />
             </NavLink>
           ))}
+          {isAdminView && ADMIN_NAV_ITEMS.length > 0 && (
+            <>
+              {/* Separator between user and admin nav items */}
+              {collapsed ? (
+                <div className="flex justify-center px-2 py-1">
+                  <div className="w-6 h-px bg-fg/15" />
+                </div>
+              ) : (
+                <div className="px-2 py-1">
+                  <div className="h-px bg-fg/15" />
+                </div>
+              )}
+              {ADMIN_NAV_ITEMS.map(({ to, label, icon: Icon }) => (
+                <NavLink
+                  key={to}
+                  to={to}
+                  title={collapsed ? label : undefined}
+                  className={({ isActive }) =>
+                    `flex items-center rounded-xl font-body text-md transition-all duration-150 cursor-pointer ${
+                      collapsed ? 'justify-center px-0 py-3' : 'px-3 py-3'
+                    } ${isActive ? 'btn-inherit pressed' : 'btn-inherit'}`
+                  }
+                  style={{ '--btn-surface': 'var(--color-elevated)' } as React.CSSProperties}
+                >
+                  {!collapsed && <span className="mr-auto">{label}</span>}
+                  <Icon size={22} weight="duotone" />
+                </NavLink>
+              ))}
+            </>
+          )}
         </nav>
 
         {/* Connection status */}

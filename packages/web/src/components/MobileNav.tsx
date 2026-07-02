@@ -7,7 +7,7 @@ import {
 } from '@phosphor-icons/react';
 import { useEffect, useRef, useState } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
-import { NAV_ITEMS } from '../constants';
+import { ADMIN_NAV_ITEMS, NAV_ITEMS } from '../constants';
 import { useAdminView } from '../context/AdminViewContext';
 import { useAuth } from '../context/AuthContext';
 import SettingsMenu from './SettingsMenu';
@@ -167,6 +167,29 @@ export default function MobileNav() {
               <Icon size={22} weight="duotone" />
             </NavLink>
           ))}
+          {isAdminView && ADMIN_NAV_ITEMS.length > 0 && (
+            <>
+              <div className="px-2 py-1">
+                <div className="h-px bg-fg/15" />
+              </div>
+              {ADMIN_NAV_ITEMS.map(({ to, label, icon: Icon }) => (
+                <NavLink
+                  key={to}
+                  to={to}
+                  onClick={() => setIsOpen(false)}
+                  className={({ isActive }) =>
+                    `flex items-center rounded-xl font-body transition-all duration-150 cursor-pointer px-3 py-3 ${
+                      isActive ? 'btn-inherit pressed' : 'btn-inherit'
+                    }`
+                  }
+                  style={{ '--btn-surface': 'var(--color-elevated)' } as React.CSSProperties}
+                >
+                  <span className="mr-auto">{label}</span>
+                  <Icon size={22} weight="duotone" />
+                </NavLink>
+              ))}
+            </>
+          )}
         </nav>
 
         {/* Bottom section: Settings, separator, user */}
