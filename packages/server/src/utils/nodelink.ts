@@ -177,10 +177,6 @@ function getEnabledSourcesSync(): string[] {
   return ALL_SOURCE_KEYS;
 }
 
-export function getEnabledSourceKeys(): string[] {
-  return getEnabledSourcesSync();
-}
-
 export function getEnabledSourceDisplayNames(): string[] {
   return getEnabledSourcesSync()
     .map((key) => SOURCE_DEFINITIONS[key]?.displayName)

@@ -8,7 +8,6 @@ export type { GuildPlayer } from './GuildPlayer';
 export { createPlayer, destroyAllPlayers, getPlayer } from './manager';
 export {
   getEnabledSourceDisplayNames,
-  getEnabledSourceKeys,
   getMetadata,
   getPlaylistMetadataWithVideos,
   initEnabledSources,
