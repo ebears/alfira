@@ -1,9 +1,11 @@
-interface SongMetadata {
+export interface SongMetadata {
   title: string;
   sourceId: string;
   duration: number; // seconds
   thumbnailUrl: string;
   sourceName?: string;
+  artist?: string;
+  artworkUrl?: string;
 }
 
 export interface PlaylistMetadata {
@@ -16,6 +18,8 @@ export interface PlaylistMetadata {
     duration: number;
     thumbnailUrl: string;
     sourceName?: string;
+    artist?: string;
+    artworkUrl?: string;
   }[];
 }
 
@@ -307,12 +311,16 @@ export async function getMetadata(url: string): Promise<SongMetadata> {
     const info = first.info;
     const sourceId = info.identifier ?? '';
     const title = info.title ?? 'Unknown';
+    const artist = info.author || undefined;
+    const artworkUrl = info.artworkUrl || undefined;
     return {
       title,
       sourceId,
       duration: Math.round((info.length ?? 0) / 1000),
       thumbnailUrl: resolveThumbnail(info),
       sourceName: info.sourceName,
+      artist,
+      artworkUrl,
     };
   }
 
@@ -324,12 +332,17 @@ export async function getMetadata(url: string): Promise<SongMetadata> {
   const sourceId = info.identifier ?? '';
   const title = info.title ?? 'Unknown';
 
+  const artist = info.author || undefined;
+  const artworkUrl = info.artworkUrl || undefined;
+
   return {
     title,
     sourceId,
     duration: Math.round((info.length ?? 0) / 1000),
     thumbnailUrl: resolveThumbnail(info),
     sourceName: info.sourceName,
+    artist,
+    artworkUrl,
   };
 }
 
@@ -379,6 +392,8 @@ export async function getPlaylistMetadataWithVideos(
       duration: Math.round((t.info?.length ?? 0) / 1000),
       thumbnailUrl: resolveThumbnail(t.info),
       sourceName: t.info?.sourceName,
+      artist: t.info?.author || undefined,
+      artworkUrl: t.info?.artworkUrl || undefined,
     };
   });
 
