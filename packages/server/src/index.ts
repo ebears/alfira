@@ -20,10 +20,9 @@ function parseCookies(header: string): Record<string, string> {
 }
 
 import { sql } from 'drizzle-orm';
-import { logger } from './lib/config';
 import { ensureTagsMigrated } from './lib/ensureTagsMigrated';
 import { json } from './lib/json';
-import { closeAllClients, registerClient, unregisterClient } from './lib/socket';
+import { closeAllClients, registerClient, unregisterClient, type WsClient } from './lib/socket';
 import { verifySessionToken } from './middleware/requireAuth';
 import { handleAuth } from './routes/auth';
 import { handleCompressor } from './routes/compressor';
@@ -33,8 +32,8 @@ import { handlePlaylists } from './routes/playlists';
 import { handleSongs } from './routes/songs';
 import { handleTags } from './routes/tags';
 import { $client, db } from './shared/db';
+import { logger } from './shared/logger';
 import { destroyAllPlayers, startDiscord } from './startDiscord';
-import { unregisterStaleCommands } from './utils/unregisterCommands';
 
 // ---------------------------------------------------------------------------
 // Validate required environment variables.
@@ -115,13 +114,18 @@ function serveStatic(filePath: string, pathname: string): Response | undefined {
 }
 
 // ---------------------------------------------------------------------------
-// Route context creation
+// Session helpers
 // ---------------------------------------------------------------------------
+
+function getSessionUser(cookieHeader: string): ReturnType<typeof verifySessionToken> {
+  const cookies = parseCookies(cookieHeader);
+  const token = cookies.session;
+  return token ? verifySessionToken(token) : null;
+}
 
 function createContext(request: Request): RouteContext {
   const parsedCookies = parseCookies(request.headers.get('cookie') || '');
-  const token = parsedCookies.session;
-  const user = token ? verifySessionToken(token) : null;
+  const user = getSessionUser(request.headers.get('cookie') || '');
   const cookies: Record<string, string> = {};
   for (const [key, value] of Object.entries(parsedCookies)) {
     if (value !== undefined) cookies[key] = value;
@@ -144,101 +148,106 @@ async function handleHealth(): Promise<Response> {
 
 // ---------------------------------------------------------------------------
 // Main server
+//
+// Created during startup in main() after migrations, DB verification,
+// and NodeLink are ready. A module-level mutable variable is used because
+// the fetch handler closes over `server` for server.upgrade() calls.
 // ---------------------------------------------------------------------------
 
-const server = Bun.serve({
-  port: PORT,
-  async fetch(request) {
-    const url = new URL(request.url);
+let server: ReturnType<typeof Bun.serve>;
 
-    // Health check
-    if (url.pathname === '/health') {
-      return setSecurityHeaders(await handleHealth());
-    }
+function startServer(): void {
+  server = Bun.serve({
+    port: PORT,
+    async fetch(request) {
+      const url = new URL(request.url);
 
-    // WebSocket upgrade — auth is handled here before upgrade
-    if (url.pathname === '/ws') {
-      const cookies = parseCookies(request.headers.get('cookie') || '');
-      const token = cookies.session;
-      const user = token ? verifySessionToken(token) : null;
-      if (!user) {
-        return new Response('Unauthorized', { status: 401 });
+      // Health check
+      if (url.pathname === '/health') {
+        return setSecurityHeaders(await handleHealth());
       }
-      // Use server.upgrade() instead of WebSocketPair — it auto-returns 101
-      // and attaches data to the WebSocket accessible in the websocket handler.
-      const success = server.upgrade(request, { data: { user } });
-      if (success) return undefined;
-      return new Response('WebSocket upgrade failed', { status: 500 });
-    }
 
-    // Serve built web assets statically (SPA fallback for client-side routing)
-    const pathname = url.pathname;
-    const ext = pathname.includes('.') ? `.${pathname.split('.').pop()}` : '.html';
-    const isAsset =
-      Object.hasOwn(STATIC_EXTENSIONS, ext) ||
-      url.pathname.startsWith('/assets/') ||
-      url.pathname === '/sw.js' ||
-      url.pathname === '/registerSW.js';
+      // WebSocket upgrade — auth is handled here before upgrade
+      if (url.pathname === '/ws') {
+        const user = getSessionUser(request.headers.get('cookie') || '');
+        if (!user) {
+          return new Response('Unauthorized', { status: 401 });
+        }
+        // server is assigned before requests arrive (in main()).
+        // The closure captures the mutable variable — it's set by then.
+        const success = server?.upgrade(request, { data: { user } });
+        if (success) return undefined;
+        return new Response('WebSocket upgrade failed', { status: 500 });
+      }
 
-    if (isAsset || url.pathname === '/') {
-      const filePath = `/app/packages/web/dist${url.pathname === '/' ? '/index.html' : url.pathname}`;
-      const response = serveStatic(filePath, url.pathname);
-      if (response) return response;
-    }
+      // Serve built web assets statically (SPA fallback for client-side routing)
+      const pathname = url.pathname;
+      const ext = pathname.includes('.') ? `.${pathname.split('.').pop()}` : '.html';
+      const isAsset =
+        Object.hasOwn(STATIC_EXTENSIONS, ext) ||
+        url.pathname.startsWith('/assets/') ||
+        url.pathname === '/sw.js' ||
+        url.pathname === '/registerSW.js';
 
-    // Create auth context for all other routes
-    const ctx = createContext(request);
+      if (isAsset || url.pathname === '/') {
+        const filePath = `/app/packages/web/dist${url.pathname === '/' ? '/index.html' : url.pathname}`;
+        const response = serveStatic(filePath, url.pathname);
+        if (response) return response;
+      }
 
-    // Route matching
-    if (url.pathname.startsWith('/api/tags')) {
-      return setSecurityHeaders(await handleTags(ctx, request));
-    }
-    if (url.pathname.startsWith('/api/songs')) {
-      return setSecurityHeaders(await handleSongs(ctx, request));
-    }
-    if (url.pathname.startsWith('/api/playlists')) {
-      return setSecurityHeaders(await handlePlaylists(ctx, request));
-    }
-    if (url.pathname.startsWith('/api/player')) {
-      return setSecurityHeaders(await handlePlayer(ctx, request));
-    }
-    if (url.pathname.startsWith('/api/settings/compressor')) {
-      return setSecurityHeaders(await handleCompressor(ctx, request));
-    }
-    if (url.pathname.startsWith('/api/settings/equalizer')) {
-      return setSecurityHeaders(await handleEqualizer(ctx, request));
-    }
-    if (url.pathname.startsWith('/auth')) {
-      return setSecurityHeaders(await handleAuth(ctx, request));
-    }
+      // Create auth context for all other routes
+      const ctx = createContext(request);
 
-    return (
-      serveStatic('/app/packages/web/dist/index.html', '/index.html') ??
-      setSecurityHeaders(json({ error: 'Not Found' }, 404))
-    );
-  },
-  websocket: {
-    data: {} as { user: NonNullable<ReturnType<typeof verifySessionToken>> },
-    open(ws) {
-      // Log only — user was stored via server.upgrade() data.
-      // biome-ignore lint/suspicious/noExplicitAny: ServerWebSocket doesn't expose id at type level
-      logger.debug({ socketId: (ws as any).id }, 'WebSocket opened');
-      registerClient(ws, ws.data.user);
+      // Route matching
+      if (url.pathname.startsWith('/api/tags')) {
+        return setSecurityHeaders(await handleTags(ctx, request));
+      }
+      if (url.pathname.startsWith('/api/songs')) {
+        return setSecurityHeaders(await handleSongs(ctx, request));
+      }
+      if (url.pathname.startsWith('/api/playlists')) {
+        return setSecurityHeaders(await handlePlaylists(ctx, request));
+      }
+      if (url.pathname.startsWith('/api/player')) {
+        return setSecurityHeaders(await handlePlayer(ctx, request));
+      }
+      if (url.pathname.startsWith('/api/settings/compressor')) {
+        return setSecurityHeaders(await handleCompressor(ctx, request));
+      }
+      if (url.pathname.startsWith('/api/settings/equalizer')) {
+        return setSecurityHeaders(await handleEqualizer(ctx, request));
+      }
+      if (url.pathname.startsWith('/auth')) {
+        return setSecurityHeaders(await handleAuth(ctx, request));
+      }
+
+      return (
+        serveStatic('/app/packages/web/dist/index.html', '/index.html') ??
+        setSecurityHeaders(json({ error: 'Not Found' }, 404))
+      );
     },
-    message(ws, message) {
-      // No-op: client does not send messages
-      // biome-ignore lint/suspicious/noExplicitAny: ServerWebSocket doesn't expose id at type level
-      logger.debug({ socketId: (ws as any).id, message }, 'Unexpected WebSocket message received');
+    websocket: {
+      data: {} as { user: NonNullable<ReturnType<typeof verifySessionToken>> },
+      open(ws) {
+        const wsc = ws as unknown as WsClient;
+        logger.debug({ socketId: wsc.id }, 'WebSocket opened');
+        registerClient(wsc, ws.data.user);
+      },
+      message(ws, message) {
+        const wsc = ws as unknown as WsClient;
+        // No-op: client does not send messages
+        logger.debug({ socketId: wsc.id, message }, 'Unexpected WebSocket message received');
+      },
+      close(ws, code, reason) {
+        const wsc = ws as unknown as WsClient;
+        unregisterClient(wsc);
+        logger.info({ socketId: wsc.id, code, reason }, 'WebSocket closed');
+      },
     },
-    close(ws, code, reason) {
-      unregisterClient(ws);
-      // biome-ignore lint/suspicious/noExplicitAny: ServerWebSocket doesn't expose id at type level
-      logger.info({ socketId: (ws as any).id, code, reason }, 'WebSocket closed');
-    },
-  },
-});
+  });
 
-logger.info({ port: PORT }, 'Bun server listening');
+  logger.info({ port: PORT }, 'Bun server listening');
+}
 
 // ---------------------------------------------------------------------------
 // Startup sequence
@@ -314,7 +323,11 @@ function startNodeLink(): Promise<void> {
     });
 
     nodelinkProcess.stderr?.on('data', (data: Buffer) => {
-      logger.warn({ component: 'NodeLink' }, data.toString().trimEnd());
+      const line = data.toString().trimEnd();
+      // NodeLink runs git commands internally — these fail harmlessly when
+      // there's no .git directory (production container). Suppress the noise.
+      if (line.includes('fatal:')) return;
+      logger.warn({ component: 'NodeLink' }, line);
     });
 
     const checkReady = async () => {
@@ -361,13 +374,6 @@ async function main(): Promise<void> {
     process.exit(1);
   }
 
-  // 2.5. Unregister stale Discord slash commands (from pre-web-UI versions).
-  try {
-    await unregisterStaleCommands();
-  } catch (error) {
-    logger.error(error, 'Failed to unregister stale commands (non-fatal)');
-  }
-
   // 3. Start NodeLink in-process.
   try {
     await startNodeLink();
@@ -381,6 +387,9 @@ async function main(): Promise<void> {
   } catch (error) {
     logger.error(error, 'Failed to start the Discord bot');
   }
+
+  // 5. Start the HTTP server — only after everything else is ready.
+  startServer();
 }
 
 main().catch((err) => {
@@ -405,7 +414,7 @@ function shutdown(signal: string): void {
   logger.info('NodeLink stopped');
 
   // 2. Stop accepting connections and close all WebSocket clients.
-  server.stop();
+  server?.stop();
   closeAllClients();
   logger.info('Server stopped');
 
