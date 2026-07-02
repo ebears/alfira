@@ -20,23 +20,26 @@ See [AGENTS.md](../AGENTS.md) for the full git workflow and commit conventions.
 
 ## Development Workflow
 
-The main dev command is `bun run dev`, which builds the shared and bot packages locally (for editor LSP support) and then starts all services with Docker.
+The main dev command is `bun run dev`, which builds the server dist/ locally and then starts all services with Docker.
 
 | What Changed | Action |
 |--------------|--------|
-| Any of the above | `bun run dev` — builds changed packages and restarts Docker |
+| Any of the above | `bun run dev` — rebuilds server dist/ and restarts Docker |
 | `packages/web/src/**` | Run `bun run web:build` locally to rebuild the UI, then `docker compose restart alfira` |
-| `packages/api/src/**` | `docker compose restart alfira` |
+| `packages/server/src/**` | `docker compose restart alfira` (source is live-mounted) |
 
 ## Database Migrations
 
-Migrations run automatically on startup via the `migrate` service.
+Migrations run automatically on startup — the server applies any pending SQL migration files before starting the HTTP server.
 
 ### Manual Migration Commands
 
 ```bash
-# Run migrations manually
-docker compose run --rm migrate
+# Generate new migration files after schema changes
+bun run db:generate
+
+# Run migrations manually via Drizzle Kit
+bun run db:migrate
 
 # Reset database (wipe all data)
 docker compose down -v

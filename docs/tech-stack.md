@@ -22,9 +22,8 @@ flowchart TB
         DISC[Discord Client]
     end
 
-    subgraph Server["Bun Server"]
-        API[Bun API<br/>:3001]
-        BOT[Discord Bot<br/>Seyfert + LavalinkClient]
+    subgraph Server["Bun Server (single process)"]
+        APP[API + Discord Bot<br/>:3001]
     end
 
     subgraph Audio["Audio Pipeline"]
@@ -37,23 +36,20 @@ flowchart TB
     end
 
     %% User interactions
-    WEB -->|OAuth2 Login| API
-    WEB -->|REST API| API
-    WEB <-->|WebSocket| SOCKET
-    DISC <-->|Voice Channel| BOT
+    WEB -->|OAuth2 Login| APP
+    WEB -->|REST API| APP
+    WEB <-->|WebSocket| APP
+    DISC <-->|Voice Channel| APP
 
     %% Server internal
-    API <--> DRIZZLE
-    BOT <--> SOCKET
+    APP <--> DRIZZLE
 
     %% Audio pipeline
-    BOT <-->|Player Control| NL
+    APP <-->|Player Control| NL
 
     %% Database
     DRIZZLE --> DB
 ```
-
-The bot and API run in a **single Bun process**, sharing the same memory for the player state. This allows real-time updates to be broadcast directly from the bot's playback events without any additional infrastructure.
 
 ## Project Structure
 
@@ -61,11 +57,13 @@ The project is a Bun workspaces monorepo:
 
 ```
 packages/
-├── shared    # Shared types and runtime utilities (formatDuration, fisherYatesShuffle)
-├── bot       # Discord bot (GuildPlayer, NodeLink audio via direct REST + WebSocket)
-├── api       # Bun API, Drizzle ORM
-└── web       # React + Tailwind web UI
+├── server    # Bun API + Discord bot (GuildPlayer, NodeLink audio, Seyfert v4)
+│             # Also contains shared types, utilities, DB schema, and logger
+└── web       # React 19 + Tailwind CSS 4 web UI
 ```
+
+Shared code lives in `packages/server/src/shared/` and is imported by the web
+package via the `@alfira-bot/server/shared` export.
 
 ## Development Scripts
 
@@ -73,7 +71,7 @@ Top-level scripts:
 
 | Script | Description |
 |--------|-------------|
-| `bun run dev` | Build shared + bot locally, then start all services with Docker |
+| `bun run dev` | Build server dist/, then start all services with Docker |
 | `bun run web:build` | Build the web UI (used by Docker) |
 | `bun run db:generate` | Generate Drizzle migration files |
 | `bun run db:migrate` | Run Drizzle migrations |
@@ -83,7 +81,7 @@ Top-level scripts:
 
 ## Shared Package Exports
 
-`@alfira-bot/shared` provides types and utilities consumed by all other packages:
+`@alfira-bot/server/shared` provides types and utilities consumed by the web package:
 
 ### Types
 
@@ -96,7 +94,6 @@ Top-level scripts:
 | `Playlist` | Database playlist model with optional song count |
 | `PlaylistSong` | Join table entry linking a song to a playlist at a position |
 | `PlaylistDetail` | Playlist with fully populated songs array |
-| `PlaylistSongWithSong` | PlaylistSong where the song is guaranteed present |
 | `User` | Authenticated Discord user (discordId, username, avatar, isAdmin) |
 
 ### Utilities
