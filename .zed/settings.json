@@ -11,16 +11,29 @@
     "TypeScript": {
       "language_servers": ["biome", "..."],
       "formatter": "language_server",
-      "format_on_save": "on"
+      "format_on_save": "on",
+      "inlay_hints": {
+        "enabled": true,
+        "show_parameter_hints": true,
+        "show_type_hints": true
+      }
     },
     "TSX": {
       "language_servers": ["biome", "..."],
       "formatter": "language_server",
-      "format_on_save": "on"
+      "format_on_save": "on",
+      "inlay_hints": {
+        "enabled": true,
+        "show_parameter_hints": true,
+        "show_type_hints": true
+      }
     },
     "JSON": {
       "language_servers": ["biome", "..."],
       "formatter": "language_server",
+      "format_on_save": "on"
+    },
+    "Markdown": {
       "format_on_save": "on"
     }
   },

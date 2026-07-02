@@ -1,0 +1,32 @@
+[
+  {
+    "label": "dev",
+    "command": "bun run dev",
+    "cwd": "$ZED_WORKTREE_ROOT",
+    "use_new_terminal": true
+  },
+  {
+    "label": "check",
+    "command": "bun run check",
+    "cwd": "$ZED_WORKTREE_ROOT",
+    "use_new_terminal": true
+  },
+  {
+    "label": "web:build",
+    "command": "bun run web:build",
+    "cwd": "$ZED_WORKTREE_ROOT",
+    "use_new_terminal": true
+  },
+  {
+    "label": "db:migrate",
+    "command": "bun run db:migrate",
+    "cwd": "$ZED_WORKTREE_ROOT",
+    "use_new_terminal": true
+  },
+  {
+    "label": "db:generate",
+    "command": "bun run db:generate",
+    "cwd": "$ZED_WORKTREE_ROOT",
+    "use_new_terminal": true
+  }
+]
