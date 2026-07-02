@@ -1,7 +1,7 @@
 import { eq } from 'drizzle-orm';
 import type { CompressorSettings, Playlist, QueueState, Song, User } from '../shared';
 import { db, tables } from '../shared/db';
-import { logger } from './config';
+import { logger } from '../shared/logger';
 
 import { formatSong } from './serialization';
 
@@ -14,8 +14,13 @@ type SerializedPlaylist = Omit<Playlist, 'createdAt'> & { createdAt: string | Da
 // WebSocket client registry
 // ---------------------------------------------------------------------------
 
-// biome-ignore lint/suspicious/noExplicitAny: Bun's WebSocket type is incompatible with global WebSocket
-const clients = new Set<any>();
+export interface WsClient {
+  readonly id: number;
+  send(data: string): void;
+  close(): void;
+}
+
+const clients = new Set<WsClient>();
 
 export async function getCompressorSettings(): Promise<CompressorSettings | null> {
   const row = await db
@@ -44,11 +49,7 @@ export async function getCompressorSettings(): Promise<CompressorSettings | null
 /**
  * Registers a newly connected WebSocket client after auth in fetch().
  */
-export function registerClient(
-  // biome-ignore lint/suspicious/noExplicitAny: Bun's WebSocket type is incompatible with global WebSocket
-  ws: any,
-  user: User
-): void {
+export function registerClient(ws: WsClient, user: User): void {
   clients.add(ws);
   logger.info({ socketId: ws.id, username: user.username }, 'WebSocket client connected');
 }
@@ -56,10 +57,7 @@ export function registerClient(
 /**
  * Removes a disconnected WebSocket client.
  */
-export function unregisterClient(
-  // biome-ignore lint/suspicious/noExplicitAny: Bun's WebSocket type is incompatible with global WebSocket
-  ws: any
-): void {
+export function unregisterClient(ws: WsClient): void {
   clients.delete(ws);
   logger.info({ socketId: ws.id }, 'WebSocket client disconnected');
 }

@@ -1,5 +1,5 @@
+import { logger } from '../shared/logger';
 import { updateNodeLinkPlayer } from '../utils/nodelink';
-import { logger } from './config';
 import { lavalink } from './lavalink';
 
 export interface CompressorFilterParams {

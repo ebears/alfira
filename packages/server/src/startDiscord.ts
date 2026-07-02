@@ -1,8 +1,6 @@
 import { Client, createEvent } from 'seyfert';
 import { lavalink } from './lib/lavalink';
-import { emitPlayerUpdate } from './lib/socket';
 import { getPlayer } from './manager';
-import type { QueueState } from './shared';
 import { logger } from './shared/logger';
 import { updateNodeLinkPlayer } from './utils/nodelink';
 
@@ -112,17 +110,6 @@ export function connectToVoice(guildId: string, voiceChannelId: string): Promise
       },
     });
   });
-}
-
-// ---------------------------------------------------------------------------
-// Broadcast (inlined — calls emitPlayerUpdate directly, no more indirection)
-// ---------------------------------------------------------------------------
-
-/**
- * Called by GuildPlayer after every state-changing operation.
- */
-export function broadcastQueueUpdate(state: QueueState): void {
-  emitPlayerUpdate(state);
 }
 
 // ---------------------------------------------------------------------------
@@ -295,8 +282,12 @@ export async function startDiscord(): Promise<void> {
 
   // Register events before client.start(). The ready event handler
   // will connect to NodeLink once we have the bot's Discord user ID.
-  // biome-ignore lint/suspicious/noExplicitAny: createEvent return has `once?: boolean` but ClientEvent needs `once: boolean`; values are correct at runtime
-  client.events.set([readyEvent, rawEvent, voiceStateUpdateEvent] as any);
+  // Seyfert's ClientEvent type requires `once: boolean` on every event,
+  // but createEvent returns `once?: boolean`. The values are correct at
+  // runtime — events have `once` set where needed.
+  client.events.set([readyEvent, rawEvent, voiceStateUpdateEvent] as Parameters<
+    typeof client.events.set
+  >[0]);
 
   await client.start();
 }
