@@ -1,0 +1,94 @@
+---
+name: alfira-web
+description: React 19 + Tailwind CSS 4 web UI, component and page structure, API client, WebSocket client, virtual list pattern, and settings sections. Use when working on packages/web/src/, UI components, or frontend features.
+---
+
+# Alfira Web UI
+
+## Tech
+
+- **Framework:** React 19
+- **Styling:** Tailwind CSS 4
+- **Bundler:** Bun (builds to `packages/web/dist/`)
+- **Build command:** `bun run web:build`
+
+## Entry Point & Routing
+
+- **Entry:** `packages/web/src/main.tsx` — mounts `<App />`
+- **Router:** `App.tsx` — client-side SPA routing (no react-router, likely custom/hash-based)
+- **Auth guard:** Routes check auth state, redirect to `/login` if unauthenticated
+
+## Page Map
+
+| Page file | Route | Purpose |
+|-----------|-------|---------|
+| `LoginPage.tsx` | `/login` | Discord OAuth2 login |
+| `SetupWizard.tsx` | `/setup` | Initial guild setup (first run) |
+| `SongsPage.tsx` | `/songs` | Song library with search, filter, add |
+| `PlaylistsPage.tsx` | `/playlists` | Playlist list with create/delete |
+| `PlaylistDetailPage.tsx` | `/playlists/:id` | Single playlist with songs + reorder |
+| `TagsPage.tsx` | `/tags` | Tag management |
+| `AudioPage.tsx` | `/audio` | Compressor + equalizer settings |
+| `PermissionsPage.tsx` | `/permissions` | Role-based permission config |
+
+## Component Map
+
+### Core UI Components
+| Component | Purpose |
+|-----------|---------|
+| `Backdrop.tsx` | Modal backdrop overlay |
+| `ConfirmModal.tsx` | Confirmation dialog |
+| `PlayModal.tsx` | Play action modal (play now, play next, add to queue) |
+| `MobileNav.tsx` | Mobile navigation bar |
+| `SettingsMenu.tsx` | Settings navigation menu |
+
+### Player Components
+| Component | Purpose |
+|-----------|---------|
+| `QueuePanel.tsx` | Now playing + upcoming queue |
+| `SongRow.tsx` | Single song display row (thumbnail, title, actions) |
+| `SongEditPanel.tsx` | Song metadata editor (tags, volume boost, etc.) |
+| `VirtualSongList.tsx` | Virtualized song list for performance |
+| `SourceIcons.tsx` | Source platform icons (YouTube, SoundCloud, etc.) |
+
+### Settings Components
+| Component | Purpose |
+|-----------|---------|
+| `SettingsPage.tsx` | Settings page shell with tabs |
+| `SettingsToggle.tsx` | Toggle switch component |
+| `AdminTab.tsx` | Admin settings (roles, idle timeout, sources) |
+| `AppearanceTab.tsx` | Theme/appearance settings |
+| `CompressorSection.tsx` | Compressor controls (threshold, ratio, etc.) |
+| `EqualizerSection.tsx` | 15-band equalizer sliders |
+
+## API Client (`packages/web/src/utils/api.ts`)
+
+Centralized API client. All frontend API calls go through this file. Provides typed functions for:
+- Song CRUD: `fetchSongs()`, `createSong()`, `updateSong()`, `deleteSong()`
+- Playlist operations: `fetchPlaylists()`, `createPlaylist()`, `updatePlaylist()`, `importPlaylist()`, etc.
+- Player control: `play()`, `pause()`, `skip()`, `seek()`, `setVolume()`, etc.
+- Settings: compressor, equalizer, general, permissions
+- Authentication: login, logout, session check
+
+Uses the shared API service from `@alfira-bot/server/shared/api` for type consistency. Always use this client — never raw `fetch` in components.
+
+## WebSocket Client
+
+Connects to `/ws` for real-time player state updates. Used primarily by the now-playing bar and queue panel. The client is receive-only (never sends messages).
+
+## Constants (`packages/web/src/constants.ts`)
+
+Shared constants used across the web UI. Common values like API base URLs, default settings, etc.
+
+## Tailwind CSS 4 Conventions
+
+- Use Tailwind utility classes for all styling
+- Custom components use Tailwind's `@apply` sparingly
+- Dark theme is the default
+- Responsive design: mobile-first with breakpoint utilities
+
+## Build & Serve
+
+- `bun run web:build` — Builds to `packages/web/dist/`
+- Served by the Bun server as static files with SPA fallback (`index.html` for non-asset paths)
+- Static extensions mapped in `index.ts`: `.html`, `.js`, `.css`, `.png`, `.jpg`, `.svg`, `.ico`, `.webmanifest`, `.woff2`

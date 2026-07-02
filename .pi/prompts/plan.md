@@ -35,6 +35,15 @@ Example:
 ### Risks / edge cases
 Anything that could go wrong or needs special attention.
 
+### Skills
+Which Pi skills are relevant for this task? Load them via `read` before writing the plan if you haven't already:
+- `alfira-architecture` — server startup, WebSocket pipeline, build cycle
+- `alfira-audio` — audio pipeline, GuildPlayer, voice connections
+- `alfira-database` — schema, migrations, query patterns
+- `alfira-api` — routes, auth, middleware
+- `alfira-web` — components, pages, API client
+- `alfira-troubleshooting` — debugging common issues
+
 ### Verification
 What to check after implementation:
 - [ ] `bun run check` passes
