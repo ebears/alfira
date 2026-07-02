@@ -193,6 +193,11 @@ function startServer(): void {
         return setSecurityHeaders(await handleHealth());
       }
 
+      // Version — public, no auth required
+      if (url.pathname === '/api/version') {
+        return setSecurityHeaders(json({ version: VERSION }));
+      }
+
       // WebSocket upgrade — auth is handled here before upgrade
       if (url.pathname === '/ws') {
         const user = getSessionUser(request.headers.get('cookie') || '');

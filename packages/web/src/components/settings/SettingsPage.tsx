@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { fetchVersion } from '../../api/api';
 import AppearanceTab from './AppearanceTab';
 import ServerTab from './ServerTab';
 import SettingsTabs from './SettingsTabs';
@@ -6,6 +7,13 @@ import TagsTab from './TagsTab';
 
 export default function SettingsPage() {
   const [activeTab, setActiveTab] = useState('appearance');
+  const [version, setVersion] = useState<string | null>(null);
+
+  useEffect(() => {
+    fetchVersion()
+      .then(({ version }) => setVersion(version))
+      .catch(() => setVersion(null));
+  }, []);
 
   const renderTab = () => {
     switch (activeTab) {
@@ -32,6 +40,13 @@ export default function SettingsPage() {
 
       {/* Tab content */}
       <div className="mt-6">{renderTab()}</div>
+
+      {/* Version */}
+      {version !== null && (
+        <div className="mt-8 pt-6 border-t border-border">
+          <p className="font-mono text-xs text-faint">{version}</p>
+        </div>
+      )}
     </div>
   );
 }
