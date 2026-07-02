@@ -5,6 +5,8 @@ argument-hint: "[version or semver bump: major|minor|patch]"
 
 Follow these steps exactly, reporting progress as you go.
 
+> ⚠️ **Releases touch `main`, trigger CI/CD, and publish artifacts. This is the riskiest operation in the workflow. Double-check everything before pushing.**
+
 ## 1. Check what's pending
 
 ```bash
@@ -56,6 +58,8 @@ Compute: `v<major>.<minor>.<patch>`.
 Tell the user what you determined and why (e.g., "Bumping minor because there are feat commits: v0.1.0 → v0.2.0"). If they disagree, they can provide a different version.
 
 ## 4. Update the changelog
+
+Check that `CHANGELOG.md` exists. If it doesn't, stop and ask: "No CHANGELOG.md found. Want me to create one?"
 
 Read `CHANGELOG.md`. Replace the `## [Unreleased]` section with:
 

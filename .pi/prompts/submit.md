@@ -27,6 +27,8 @@ If lint or format issues are found, fix them before proceeding. If fixes produce
 
 ## 3. Create a feature branch
 
+Validate the branch name: `<type>/<short-description>`. `type` must be one of `feat`, `fix`, `chore`, `refactor`, `docs`, `ci`, `style`, `test`, `perf`, `security`, `revert`, `ui`, `cleanup`. Reject anything else.
+
 If currently on `main` or `dev`, create a new branch from `dev` that is up to date:
 
 ```bash

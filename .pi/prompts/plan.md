@@ -5,6 +5,12 @@ argument-hint: "<task description>"
 
 Before writing any code, produce a plan. If the user provided a task description ($@), use it as the starting point. Otherwise, ask what we're building.
 
+## Guardrails
+
+**Don't plan too much at once.** If the task naturally breaks into 8+ steps touching 10+ files, it's too big for one plan. Say so and suggest splitting it into smaller pieces.
+
+**Re-plan when necessary.** If implementation reveals the plan was wrong — a step doesn't work, a dependency was missed, the architecture doesn't support the approach — stop and update the plan. Don't bulldoze through a broken plan.
+
 ## Plan format
 
 Output a plan with these sections:
