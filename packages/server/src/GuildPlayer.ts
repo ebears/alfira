@@ -622,7 +622,7 @@ export class GuildPlayer {
     let trackData: { track: string; isWebmOpus: boolean };
 
     try {
-      trackData = await this.fetchStreamWithRetry(next.youtubeUrl);
+      trackData = await this.fetchStreamWithRetry(next.sourceUrl);
     } catch (error) {
       logger.error(
         { guildId: this.guildId, track: next.title, error },
@@ -712,13 +712,13 @@ export class GuildPlayer {
     const nextTrack = this.peekNextTrack();
     if (!nextTrack) return;
 
-    preloadTrack(this.guildId, sessionId, nextTrack.youtubeUrl).catch((err) => {
+    preloadTrack(this.guildId, sessionId, nextTrack.sourceUrl).catch((err) => {
       logger.warn({ guildId: this.guildId, track: nextTrack.title, err }, 'Gapless preload failed');
     });
   }
 
   private async fetchStreamWithRetry(
-    youtubeUrl: string
+    sourceUrl: string
   ): Promise<{ track: string; isWebmOpus: boolean }> {
     const RETRY_ATTEMPTS = 3;
     const RETRY_DELAY_MS = 1_000;
@@ -726,7 +726,7 @@ export class GuildPlayer {
     for (let attempt = 0; attempt < RETRY_ATTEMPTS; attempt++) {
       try {
         const { getStreamFormat } = await import('./utils/nodelink');
-        return await getStreamFormat(youtubeUrl);
+        return await getStreamFormat(sourceUrl);
       } catch (error) {
         lastError = error;
         if (attempt < RETRY_ATTEMPTS - 1) {

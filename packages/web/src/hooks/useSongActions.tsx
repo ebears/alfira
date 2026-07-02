@@ -99,7 +99,7 @@ export function useSongActions({
               id: 'open-link',
               label: 'Open Link',
               icon: <ArrowSquareOutIcon size={14} weight="duotone" />,
-              onClick: () => window.open(song.youtubeUrl, '_blank'),
+              onClick: () => window.open(song.sourceUrl, '_blank'),
             },
             // Delete + Requested By (library context, admin only)
             ...(isAdmin && onDelete
@@ -127,7 +127,7 @@ export function useSongActions({
     ],
     [
       onAddToQueue,
-      song.youtubeUrl,
+      song.sourceUrl,
       song.addedByDisplayName,
       song.addedBy,
       onRemove,

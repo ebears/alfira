@@ -1,19 +1,9 @@
 import type { Song } from '@alfira-bot/server/shared';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { addSong, importPlaylist } from '../api/api';
 import { apiErrorMessage } from '../utils/api';
 import { Backdrop } from './Backdrop';
 import { Button } from './ui/Button';
-
-const YOUTUBE_HOSTS = ['youtube.com', 'www.youtube.com', 'youtu.be', 'music.youtube.com'] as const;
-
-function isValidYouTubeUrl(url: string): boolean {
-  try {
-    return YOUTUBE_HOSTS.includes(new URL(url).hostname as (typeof YOUTUBE_HOSTS)[number]);
-  } catch {
-    return false;
-  }
-}
 
 export default function AddSongModal({
   onClose,
@@ -30,9 +20,6 @@ export default function AddSongModal({
   const isPlaylist = url.includes('list=');
   const [importFullPlaylist, setImportFullPlaylist] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
-
-  const trimmedUrl = url.trim();
-  const urlIsValid = useMemo(() => isValidYouTubeUrl(trimmedUrl), [trimmedUrl]);
 
   useEffect(() => {
     inputRef.current?.focus();
@@ -80,12 +67,14 @@ export default function AddSongModal({
     <Backdrop onClose={onClose}>
       <div className="bg-surface rounded-xl p-5 md:p-6 w-full max-w-md mx-4 modal-clay animate-fade-up">
         <h2 className="font-display text-2xl md:text-3xl text-fg tracking-wider mb-1">Add Song</h2>
-        <p className="font-mono text-xs text-muted mb-4 md:mb-6">paste a youtube url</p>
+        <p className="font-mono text-xs text-muted mb-4 md:mb-6">
+          paste a YouTube or SoundCloud url
+        </p>
 
         <input
           ref={inputRef}
           className="input mb-3"
-          placeholder="https://youtube.com/watch?v=..."
+          placeholder="https://..."
           value={url}
           onChange={(e) => {
             setUrl(e.target.value);
@@ -109,9 +98,9 @@ export default function AddSongModal({
           </label>
         )}
 
-        {urlIsValid && !importFullPlaylist && (
+        {!importFullPlaylist && (
           <input
-            className="input mb-3 animate-fade-up"
+            className="input mb-3"
             placeholder="Nickname (optional)"
             value={nickname}
             onChange={(e) => setNickname(e.target.value)}
@@ -134,13 +123,7 @@ export default function AddSongModal({
           <Button variant="inherit" onClick={onClose} disabled={loading} surface="surface">
             Cancel
           </Button>
-          <Button
-            variant="primary"
-            onClick={handleSubmit}
-            disabled={
-              loading || (!importFullPlaylist && !urlIsValid) || (importFullPlaylist && !url.trim())
-            }
-          >
+          <Button variant="primary" onClick={handleSubmit} disabled={loading || !url.trim()}>
             {importFullPlaylist ? 'Import' : 'Add'}
           </Button>
         </div>

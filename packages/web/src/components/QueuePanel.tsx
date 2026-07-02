@@ -521,7 +521,7 @@ const NowPlayingCard = memo(function NowPlayingCard({
         </div>
         <div className="flex-1 flex flex-col justify-center min-w-0">
           <a
-            href={song.youtubeUrl}
+            href={song.sourceUrl}
             target="_blank"
             rel="noopener noreferrer"
             className="font-body text-sm text-fg hover:text-accent line-clamp-2"

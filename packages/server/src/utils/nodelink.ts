@@ -1,15 +1,22 @@
 interface SongMetadata {
   title: string;
-  youtubeId: string;
+  sourceId: string;
   duration: number; // seconds
   thumbnailUrl: string;
+  sourceName?: string;
 }
 
 export interface PlaylistMetadata {
   title: string;
   playlistId: string;
   videoCount: number;
-  videos: { id: string; title: string; duration: number; thumbnailUrl: string }[];
+  videos: {
+    id: string;
+    title: string;
+    duration: number;
+    thumbnailUrl: string;
+    sourceName?: string;
+  }[];
 }
 
 const NODELINK_URL = 'http://127.0.0.1:2333';
@@ -61,6 +68,7 @@ interface LoadTrackResponse {
       position?: number;
       author?: string;
       artworkUrl?: string;
+      sourceName?: string;
       name?: string; // playlist name when loadType is "playlist"
       selectedTrack?: number;
     };
@@ -90,23 +98,63 @@ interface TrackInfo {
   pluginInfo?: Record<string, unknown>;
 }
 
-const YOUTUBE_HOSTS = ['youtube.com', 'www.youtube.com', 'youtu.be', 'music.youtube.com'];
+// ---------------------------------------------------------------------------
+// Supported sources — add new hostnames here to enable more sources.
+// NodeLink must also support the source for it to work end-to-end.
+// ---------------------------------------------------------------------------
 
-export function isValidYouTubeUrl(url: string): boolean {
+const SUPPORTED_HOSTS = [
+  // YouTube
+  'youtube.com',
+  'www.youtube.com',
+  'youtu.be',
+  'music.youtube.com',
+  // SoundCloud
+  'soundcloud.com',
+  'www.soundcloud.com',
+];
+
+export function isValidSourceUrl(url: string): boolean {
   try {
-    return YOUTUBE_HOSTS.includes(new URL(url).hostname);
+    const parsed = new URL(url);
+    if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') return false;
+    return SUPPORTED_HOSTS.some(
+      (host) => parsed.hostname === host || parsed.hostname.endsWith(`.${host}`)
+    );
   } catch {
     return false;
   }
 }
 
-export function isYouTubePlaylistUrl(url: string): boolean {
-  if (!isValidYouTubeUrl(url)) return false;
+export function isPlaylistUrl(url: string): boolean {
+  if (!isValidSourceUrl(url)) return false;
   try {
-    return new URL(url).searchParams.has('list');
+    const parsed = new URL(url);
+    // YouTube playlists
+    if (parsed.searchParams.has('list')) return true;
+    // SoundCloud sets
+    if (parsed.hostname.includes('soundcloud.com') && parsed.pathname.includes('/sets/'))
+      return true;
+    return false;
   } catch {
     return false;
   }
+}
+
+function resolveThumbnail(info: TrackInfo['info']): string {
+  const identifier = info?.identifier ?? '';
+  const artworkUrl = info?.artworkUrl;
+  const sourceName = info?.sourceName;
+
+  // Prefer artworkUrl from NodeLink when available (SoundCloud, Bandcamp, etc.)
+  if (artworkUrl) return artworkUrl;
+
+  // Fall back to YouTube thumbnail for YouTube identifiers
+  if (sourceName === 'youtube' && identifier) {
+    return `https://img.youtube.com/vi/${identifier}/hqdefault.jpg`;
+  }
+
+  return '';
 }
 
 async function loadTrack(url: string): Promise<LoadTrackResponse> {
@@ -129,8 +177,8 @@ async function loadTrack(url: string): Promise<LoadTrackResponse> {
   return data;
 }
 
-export async function getMetadata(youtubeUrl: string): Promise<SongMetadata> {
-  const response = await loadTrack(youtubeUrl);
+export async function getMetadata(url: string): Promise<SongMetadata> {
+  const response = await loadTrack(url);
 
   const data = response.data;
 
@@ -140,13 +188,14 @@ export async function getMetadata(youtubeUrl: string): Promise<SongMetadata> {
     const first = data.tracks[0];
     if (!first?.info) throw new Error('NodeLink returned no track data');
     const info = first.info;
-    const youtubeId = info.identifier ?? '';
+    const sourceId = info.identifier ?? '';
     const title = info.title ?? 'Unknown';
     return {
       title,
-      youtubeId,
-      duration: (info.length ?? 0) / 1000,
-      thumbnailUrl: `https://img.youtube.com/vi/${youtubeId}/hqdefault.jpg`,
+      sourceId,
+      duration: Math.round((info.length ?? 0) / 1000),
+      thumbnailUrl: resolveThumbnail(info),
+      sourceName: info.sourceName,
     };
   }
 
@@ -155,21 +204,22 @@ export async function getMetadata(youtubeUrl: string): Promise<SongMetadata> {
   }
 
   const info = data.info;
-  const youtubeId = info.identifier ?? '';
+  const sourceId = info.identifier ?? '';
   const title = info.title ?? 'Unknown';
 
   return {
     title,
-    youtubeId,
-    duration: (info.length ?? 0) / 1000,
-    thumbnailUrl: `https://img.youtube.com/vi/${youtubeId}/hqdefault.jpg`,
+    sourceId,
+    duration: Math.round((info.length ?? 0) / 1000),
+    thumbnailUrl: resolveThumbnail(info),
+    sourceName: info.sourceName,
   };
 }
 
 export async function getStreamFormat(
-  youtubeUrl: string
+  url: string
 ): Promise<{ track: string; isWebmOpus: boolean }> {
-  const response = await loadTrack(youtubeUrl);
+  const response = await loadTrack(url);
 
   const data = response.data;
 
@@ -193,7 +243,7 @@ export async function getPlaylistMetadataWithVideos(
   playlistUrl: string,
   maxVideos?: number
 ): Promise<PlaylistMetadata> {
-  // NodeLink v4 uses /v4/loadtracks with YouTube playlist URL.
+  // NodeLink v4 uses /v4/loadtracks with the playlist URL.
   // It returns a "playlist" loadType with track array.
   const response = await loadTrack(playlistUrl);
 
@@ -209,8 +259,9 @@ export async function getPlaylistMetadataWithVideos(
     return {
       id,
       title: t.info?.title ?? 'Unknown',
-      duration: (t.info?.length ?? 0) / 1000,
-      thumbnailUrl: `https://img.youtube.com/vi/${id}/hqdefault.jpg`,
+      duration: Math.round((t.info?.length ?? 0) / 1000),
+      thumbnailUrl: resolveThumbnail(t.info),
+      sourceName: t.info?.sourceName,
     };
   });
 
@@ -222,14 +273,10 @@ export async function getPlaylistMetadataWithVideos(
   };
 }
 
-export async function preloadTrack(
-  guildId: string,
-  sessionId: string,
-  youtubeUrl: string
-): Promise<void> {
+export async function preloadTrack(guildId: string, sessionId: string, url: string): Promise<void> {
   // Resolve the track via NodeLink's loadtracks endpoint.
   const loadUrl = new URL('/v4/loadtracks', NODELINK_URL);
-  loadUrl.searchParams.set('identifier', youtubeUrl);
+  loadUrl.searchParams.set('identifier', url);
 
   const headers: Record<string, string> = { 'Content-Type': 'application/json' };
   if (NODELINK_AUTH) headers.Authorization = NODELINK_AUTH;
@@ -264,7 +311,7 @@ export async function preloadTrack(
     throw new Error(`NodeLink preload PATCH returned ${patchResp.status}`);
   }
 
-  logger.debug({ guildId, youtubeUrl }, 'Gapless preload succeeded');
+  logger.debug({ guildId, url }, 'Gapless preload succeeded');
 }
 
 // ---------------------------------------------------------------------------

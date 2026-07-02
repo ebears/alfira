@@ -121,13 +121,9 @@ export function fetchSongsPage(
   return get(`/api/songs?${params}`);
 }
 
-export function createSong(
-  youtubeUrl: string,
-  nickname?: string,
-  asPlaylist?: boolean
-): Promise<Song> {
+export function createSong(url: string, nickname?: string, asPlaylist?: boolean): Promise<Song> {
   return post('/api/songs', {
-    youtubeUrl,
+    url,
     ...(nickname && { nickname }),
     ...(asPlaylist && { asPlaylist }),
   });
@@ -293,15 +289,15 @@ export function seek(positionMs: number): Promise<void> {
   return post('/api/player/seek', { position: positionMs });
 }
 
-export function quickAddToQueue(youtubeUrl: string): Promise<{
+export function quickAddToQueue(url: string): Promise<{
   message: string;
   song: { title: string; duration: number; thumbnailUrl: string; requestedBy: string };
 }> {
-  return post('/api/player/quick-add', { youtubeUrl });
+  return post('/api/player/quick-add', { url });
 }
 
 export function quickAddPlaylistToQueue(
-  youtubeUrl: string,
+  url: string,
   maxVideos?: number
 ): Promise<{
   message: string;
@@ -311,7 +307,7 @@ export function quickAddPlaylistToQueue(
   songs: Array<{ title: string; duration: number; thumbnailUrl: string; requestedBy: string }>;
 }> {
   return post('/api/player/quick-add-playlist', {
-    youtubeUrl,
+    url,
     ...(maxVideos && { maxVideos }),
   });
 }
@@ -323,11 +319,11 @@ export function addToPriorityQueue(songId: string): Promise<{
   return post('/api/player/add-to-priority', { songId });
 }
 
-export function overridePlay(youtubeUrl: string): Promise<{
+export function overridePlay(url: string): Promise<{
   message: string;
   song: { title: string; duration: number; thumbnailUrl: string; requestedBy: string };
 }> {
-  return post('/api/player/override', { youtubeUrl });
+  return post('/api/player/override', { url });
 }
 
 // ---------------------------------------------------------------------------
@@ -343,11 +339,8 @@ export interface ImportPlaylistResult {
   songs: Song[];
 }
 
-export function importPlaylist(
-  youtubeUrl: string,
-  maxVideos?: number
-): Promise<ImportPlaylistResult> {
-  return post('/api/songs/import-playlist', { youtubeUrl, ...(maxVideos && { maxVideos }) });
+export function importPlaylist(url: string, maxVideos?: number): Promise<ImportPlaylistResult> {
+  return post('/api/songs/import-playlist', { url, ...(maxVideos && { maxVideos }) });
 }
 
 // ---------------------------------------------------------------------------
