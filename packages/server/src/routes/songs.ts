@@ -86,35 +86,50 @@ async function handlePostSong(ctx: RouteContext, request: Request): Promise<Resp
   if (guards instanceof Response) return guards;
   const { user } = guards;
 
-  let body: { url?: unknown; nickname?: unknown; asPlaylist?: unknown };
+  let body: {
+    url?: unknown;
+    nickname?: unknown;
+    artist?: unknown;
+    album?: unknown;
+    artwork?: unknown;
+    tags?: unknown;
+    volumeBoost?: unknown;
+  };
   try {
     body = (await request.json()) as typeof body;
   } catch {
     return json({ error: 'Invalid JSON body.' }, 400);
   }
 
-  const asPlaylist = body.asPlaylist === true;
   const nicknameResult = validateNickname(body.nickname);
   if (!nicknameResult.ok) return nicknameResult.response;
+
+  const artist = validateOptionalString(body.artist);
+  const album = validateOptionalString(body.album);
+
+  const artworkResult = validateArtworkUrl(body.artwork);
+  if (!artworkResult.ok) return artworkResult.response;
+
+  const tagsResult = validateTags(body.tags);
+  if (!tagsResult.ok) return tagsResult.response;
+
+  const volumeBoostResult = validateVolumeBoost(body.volumeBoost);
+  if (!volumeBoostResult.ok) return volumeBoostResult.response;
+  // Only use the user-supplied volume boost if explicitly provided (not undefined).
+  // undefined means "don't set", null means "clear to 0".
+  const volumeBoost = volumeBoostResult.value !== undefined ? volumeBoostResult.value : null;
 
   const urlResult = validateSourceUrl(body.url);
   if (!urlResult.ok) return urlResult.response;
   let url = urlResult.value;
 
-  // If user wants to import as playlist, validate as playlist URL first.
-  if (asPlaylist) {
-    const playlistResult = validatePlaylistUrl(url);
-    if (!playlistResult.ok) return playlistResult.response;
-    url = playlistResult.value;
-  } else {
-    // Strip any ?list=... query param so a plain song URL always adds a single track.
-    try {
-      const parsed = new URL(url);
-      parsed.searchParams.delete('list');
-      url = parsed.toString();
-    } catch {
-      // leave URL unchanged
-    }
+  // Strip any ?list=... query param so a plain song URL always adds a single track.
+  try {
+    const parsed = new URL(url);
+    parsed.searchParams.delete('list');
+    url = parsed.toString();
+  } catch {
+    // leave URL unchanged
   }
 
   const metadataResult = await fetchSourceMetadata(url);
@@ -148,6 +163,11 @@ async function handlePostSong(ctx: RouteContext, request: Request): Promise<Resp
       thumbnailUrl: metadata.thumbnailUrl ?? '',
       addedBy: user.discordId,
       nickname: nicknameResult.value,
+      artist: artist ?? metadata.artist ?? null,
+      album: album ?? null,
+      artwork: artworkResult.value ?? metadata.artworkUrl ?? null,
+      tags: tagsResult.value.length > 0 ? await canonicalizeTags(tagsResult.value) : [],
+      volumeBoost,
     })
     .returning();
 
@@ -161,6 +181,59 @@ async function handlePostSong(ctx: RouteContext, request: Request): Promise<Resp
   emitSongAdded(enriched);
 
   return json(enriched, 201);
+}
+
+// ---------------------------------------------------------------------------
+// POST /api/songs/preview — resolve URL metadata without creating a song.
+// Admin only (same guard as adding).
+// ---------------------------------------------------------------------------
+async function handlePreviewSong(ctx: RouteContext, request: Request): Promise<Response> {
+  const guards = await checkGuards(ctx, { admin: true, permission: 'songs.add' });
+  if (guards instanceof Response) return guards;
+
+  let body: { url?: unknown };
+  try {
+    body = (await request.json()) as typeof body;
+  } catch {
+    return json({ error: 'Invalid JSON body.' }, 400);
+  }
+
+  const urlResult = validateSourceUrl(body.url);
+  if (!urlResult.ok) return urlResult.response;
+  let url = urlResult.value;
+
+  // Strip any ?list=... query param so a playlist-tagged URL can still
+  // be previewed as a single track.
+  try {
+    const parsed = new URL(url);
+    parsed.searchParams.delete('list');
+    url = parsed.toString();
+  } catch {
+    // leave URL unchanged
+  }
+
+  const metadataResult = await fetchSourceMetadata(url);
+  if (!metadataResult.ok) return metadataResult.response;
+  const metadata = metadataResult.value;
+
+  // Check for duplicate by sourceId.
+  const [existing] = await db
+    .select()
+    .from(songTable)
+    .where(eq(songTable.sourceId, metadata.sourceId))
+    .limit(1);
+
+  return json({
+    title: metadata.title,
+    sourceId: metadata.sourceId,
+    duration: metadata.duration,
+    thumbnailUrl: metadata.thumbnailUrl ?? '',
+    sourceName: metadata.sourceName ?? null,
+    artist: metadata.artist ?? null,
+    artworkUrl: metadata.artworkUrl ?? null,
+    alreadyExists: !!existing,
+    existingSong: existing ? formatSong(existing) : null,
+  });
 }
 
 // ---------------------------------------------------------------------------
@@ -245,6 +318,8 @@ async function handleImportPlaylist(ctx: RouteContext, request: Request): Promis
           duration: video.duration,
           thumbnailUrl: video.thumbnailUrl ?? '',
           addedBy: addedByDiscordId,
+          artist: video.artist ?? null,
+          artwork: video.artworkUrl ?? null,
         }))
       )
       .returning();
@@ -442,6 +517,11 @@ export async function handleSongs(ctx: RouteContext, request: Request): Promise<
     if (!checkRateLimit('songs-mutations', ip, { windowMs: 60_000, maxRequests: 20 })) {
       return rateLimitResponse(60);
     }
+  }
+
+  // POST /api/songs/preview
+  if (request.method === 'POST' && pathname === '/api/songs/preview') {
+    return await handlePreviewSong(ctx, request);
   }
 
   // POST /api/songs/import-playlist

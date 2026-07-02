@@ -121,11 +121,25 @@ export function fetchSongsPage(
   return get(`/api/songs?${params}`);
 }
 
-export function createSong(url: string, nickname?: string, asPlaylist?: boolean): Promise<Song> {
+export interface SongCreateData {
+  url: string;
+  nickname?: string | null;
+  artist?: string | null;
+  album?: string | null;
+  artwork?: string | null;
+  tags?: string[];
+  volumeBoost?: number | null;
+}
+
+export function createSong(data: SongCreateData): Promise<Song> {
   return post('/api/songs', {
-    url,
-    ...(nickname && { nickname }),
-    ...(asPlaylist && { asPlaylist }),
+    url: data.url,
+    ...(data.nickname != null && { nickname: data.nickname }),
+    ...(data.artist != null && { artist: data.artist }),
+    ...(data.album != null && { album: data.album }),
+    ...(data.artwork != null && { artwork: data.artwork }),
+    ...(data.tags != null && { tags: data.tags }),
+    ...(data.volumeBoost !== undefined && { volumeBoost: data.volumeBoost }),
   });
 }
 
@@ -333,6 +347,22 @@ export function overridePlay(url: string): Promise<{
 // ---------------------------------------------------------------------------
 // Import Playlist API Functions
 // ---------------------------------------------------------------------------
+
+export interface SongPreview {
+  title: string;
+  sourceId: string;
+  duration: number;
+  thumbnailUrl: string;
+  sourceName: string | null;
+  artist: string | null;
+  artworkUrl: string | null;
+  alreadyExists: boolean;
+  existingSong: Song | null;
+}
+
+export function previewSong(url: string): Promise<SongPreview> {
+  return post('/api/songs/preview', { url });
+}
 
 export interface ImportPlaylistResult {
   message: string;
