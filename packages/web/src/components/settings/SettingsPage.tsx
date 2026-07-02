@@ -1,12 +1,10 @@
 import { useEffect, useState } from 'react';
 import { fetchVersion } from '../../api/api';
+import { useAuth } from '../../context/AuthContext';
 import AppearanceTab from './AppearanceTab';
-import ServerTab from './ServerTab';
-import SettingsTabs from './SettingsTabs';
-import TagsTab from './TagsTab';
 
 export default function SettingsPage() {
-  const [activeTab, setActiveTab] = useState('appearance');
+  const { user } = useAuth();
   const [version, setVersion] = useState<string | null>(null);
 
   useEffect(() => {
@@ -15,19 +13,6 @@ export default function SettingsPage() {
       .catch(() => setVersion(null));
   }, []);
 
-  const renderTab = () => {
-    switch (activeTab) {
-      case 'appearance':
-        return <AppearanceTab />;
-      case 'audio':
-        return <ServerTab />;
-      case 'tags':
-        return <TagsTab />;
-      default:
-        return <AppearanceTab />;
-    }
-  };
-
   return (
     <div className="p-4 md:p-8">
       {/* Page header */}
@@ -35,11 +20,23 @@ export default function SettingsPage() {
         <h1 className="font-display text-3xl md:text-4xl text-fg tracking-wider">Settings</h1>
       </div>
 
-      {/* Tabs */}
-      <SettingsTabs activeTab={activeTab} onTabChange={setActiveTab} />
+      {/* User settings */}
+      <section className="mb-8">
+        <h2 className="font-mono text-xs text-muted uppercase tracking-wider mb-4">User</h2>
+        <div className="bg-elevated border border-border rounded-xl p-5">
+          <AppearanceTab />
+        </div>
+      </section>
 
-      {/* Tab content */}
-      <div className="mt-6">{renderTab()}</div>
+      {/* Admin settings */}
+      {user?.isAdmin && (
+        <section>
+          <h2 className="font-mono text-xs text-muted uppercase tracking-wider mb-4">Admin</h2>
+          <div className="bg-elevated border border-border rounded-xl p-5">
+            <p className="text-sm text-muted">Server-side settings will appear here.</p>
+          </div>
+        </section>
+      )}
 
       {/* Version */}
       {version !== null && (

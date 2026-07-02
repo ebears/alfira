@@ -1,8 +1,8 @@
 import { deleteTag, fetchTagSongs, fetchTags, updateTag } from '@alfira-bot/server/shared/api';
 import type { Song } from '@alfira-bot/server/shared/types';
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { useTagColors } from '../../context/TagsContext';
-import ConfirmModal from '../ConfirmModal';
+import ConfirmModal from '../components/ConfirmModal';
+import { useTagColors } from '../context/TagsContext';
 
 const TAG_COLORS = [
   {
@@ -45,7 +45,7 @@ interface TagItem {
   color?: string | null;
 }
 
-export default function TagsTab() {
+export default function TagsPage() {
   const [allTags, setAllTags] = useState<TagItem[]>([]);
   const [search, setSearch] = useState('');
   const [selected, setSelected] = useState<TagItem | null>(null);
@@ -139,8 +139,11 @@ export default function TagsTab() {
   }, [selected, refreshTags]);
 
   return (
-    <div className="space-y-2">
-      <h3 className="font-mono text-[11px] text-muted uppercase tracking-wider">Tags</h3>
+    <div className="p-4 md:p-8">
+      {/* Page header */}
+      <div className="mb-6 md:mb-8">
+        <h1 className="font-display text-3xl md:text-4xl text-fg tracking-wider">Tag Editor</h1>
+      </div>
 
       <div className="flex gap-4 h-105">
         {/* Left pane: tag list */}
@@ -245,7 +248,7 @@ export default function TagsTab() {
                             viewBox="0 0 12 12"
                             aria-hidden="true"
                           >
-                            <path d="M10.28 2.28L4.5 8.06l-2.78-2.79a.5.5 0 0 0-.71.71l3.15 3.15a.5.5 0 0 0 .71 0l6.36-6.36a.5.5 0 0 0 0-.71.5.5.5 0 0 0-.71 0z" />
+                            <path d="M10.28 2.28L4.5 8.06l-2.78-2.79a.5.5 0 0 0-.71.71l3.15 3.15a.5.5 0 0 0 .71 0l6.36-6.36a.5.5 0 0 0 0-.71.5.5 0 0 0-.71 0z" />
                           </svg>
                         ) : null}
                       </button>
