@@ -1,14 +1,16 @@
 /**
  * unregisterCommands.ts
  *
- * Unregisters stale Discord slash commands from the bot.
- * Runs automatically on server startup, or can be invoked manually:
+ * Standalone script to clean up Discord slash commands from the pre-web-UI era.
+ * No longer runs automatically on startup — Alfira is web-first now.
+ *
+ * Run manually if needed:
  *   bun run packages/server/src/utils/unregisterCommands.ts
  *
  * Requires: DISCORD_BOT_TOKEN, DISCORD_CLIENT_ID, GUILD_ID in .env
  */
 
-import { logger } from '../lib/config';
+import { logger } from '../shared/logger';
 
 /** Delay helper for rate limit pacing. */
 function delay(ms: number): Promise<void> {
