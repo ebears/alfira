@@ -1,4 +1,4 @@
-import { CaretLeftIcon, CraneTowerIcon, GuitarIcon, StairsIcon } from '@phosphor-icons/react';
+import { CaretLeftIcon, CraneTowerIcon, GuitarIcon } from '@phosphor-icons/react';
 import { useEffect, useState } from 'react';
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
 import { ADMIN_NAV_ITEMS, NAV_ITEMS } from '../constants';
@@ -10,7 +10,7 @@ import MobileNav from './MobileNav';
 import { NowPlayingBar } from './NowPlayingBar';
 import QueuePanel from './QueuePanel';
 import SettingsMenu from './SettingsMenu';
-import { Button } from './ui/Button';
+import UserMenu from './UserMenu';
 
 export default function Layout() {
   return (
@@ -230,68 +230,11 @@ function LayoutContent() {
         )}
 
         {/* User section */}
-        <div className="p-3">
-          {collapsed ? (
-            <div className="flex flex-col items-center gap-4">
-              <div
-                className="w-7 h-7 rounded-full bg-elevated flex items-center justify-center overflow-hidden"
-                title={user?.username}
-              >
-                {user?.avatar ? (
-                  <img
-                    src={user.avatar}
-                    alt={user.username}
-                    className="w-full h-full object-cover"
-                    decoding="async"
-                  />
-                ) : (
-                  <span className="font-mono text-sm text-muted">
-                    {user?.username?.[0]?.toUpperCase()}
-                  </span>
-                )}
-              </div>
-              <div className="flex justify-center px-2 pt-1">
-                <Button
-                  variant="danger"
-                  size="default"
-                  className="w-full! flex justify-center py-2.5! rounded-xl! min-h-0!"
-                  onClick={handleLogout}
-                  title="Log out"
-                >
-                  <StairsIcon size={16} weight="duotone" />
-                </Button>
-              </div>
-            </div>
-          ) : (
-            <>
-              <div className="flex items-center gap-3 px-2 py-2 mb-3">
-                {user?.avatar ? (
-                  <img
-                    src={user.avatar}
-                    alt={user.username}
-                    className="w-7 h-7 rounded-full"
-                    decoding="async"
-                  />
-                ) : (
-                  <div className="w-7 h-7 rounded-full bg-elevated flex items-center justify-center">
-                    <span className="font-mono text-sm text-muted">
-                      {user?.username?.[0]?.toUpperCase()}
-                    </span>
-                  </div>
-                )}
-                <span className="text-fg font-body truncate flex-1">{user?.username}</span>
-              </div>
-              <Button
-                variant="danger"
-                onClick={handleLogout}
-                className="flex items-center px-3 py-2 w-full"
-              >
-                <span className="mr-auto text-sm">log out</span>
-                <StairsIcon size={18} weight="duotone" />
-              </Button>
-            </>
-          )}
-        </div>
+        {user && (
+          <div className={collapsed ? 'px-2 py-3' : 'p-3'}>
+            <UserMenu user={user} collapsed={collapsed} onLogout={handleLogout} />
+          </div>
+        )}
       </aside>
 
       {/* ------------------------------------------------------------------ */}
