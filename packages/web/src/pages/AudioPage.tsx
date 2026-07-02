@@ -1,9 +1,13 @@
 import CompressorSection from '../components/settings/CompressorSection';
 import EqualizerSection from '../components/settings/EqualizerSection';
 import { useAdminView } from '../context/AdminViewContext';
+import { usePermissions } from '../context/PermissionsContext';
 
 export default function AudioPage() {
   const { isAdminView } = useAdminView();
+  const { hasPermission } = usePermissions();
+
+  const canManage = isAdminView || hasPermission('audio.manage');
 
   return (
     <div className="p-4 md:p-8">
@@ -13,8 +17,8 @@ export default function AudioPage() {
       </div>
 
       <div className="space-y-2">
-        {isAdminView && <EqualizerSection />}
-        {isAdminView && (
+        {canManage && <EqualizerSection />}
+        {canManage && (
           <>
             <div className="border-t border-muted/20 my-4" />
             <CompressorSection />

@@ -6,7 +6,6 @@ import SongRow from './SongRow';
 interface VirtualSongListProps {
   items: Song[];
   viewMode: 'grid' | 'list';
-  isAdmin: boolean;
   isAdminView: boolean;
   playlists: Playlist[];
   isLoading: boolean;
@@ -68,7 +67,6 @@ function SkeletonList() {
 export const VirtualSongList = memo(function VirtualSongList({
   items,
   viewMode,
-  isAdmin,
   isAdminView,
   playlists,
   isLoading,
@@ -98,7 +96,6 @@ export const VirtualSongList = memo(function VirtualSongList({
             <SongCard
               key={song.id}
               song={song}
-              isAdmin={isAdmin}
               isAdminView={isAdminView}
               playlists={playlists}
               onDelete={onDelete}
@@ -146,7 +143,6 @@ export const VirtualSongList = memo(function VirtualSongList({
           <SongRow
             key={song.id}
             song={song}
-            isAdmin={isAdmin}
             isAdminView={isAdminView}
             playlists={playlists}
             onDelete={onDelete}

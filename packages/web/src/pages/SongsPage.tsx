@@ -8,6 +8,7 @@ import NotificationToast from '../components/NotificationToast';
 import { Button } from '../components/ui/Button';
 import { VirtualSongList } from '../components/VirtualSongList';
 import { useAdminView } from '../context/AdminViewContext';
+import { usePermissions } from '../context/PermissionsContext';
 import { usePlayerState } from '../context/PlayerContext';
 import { useAddToQueue } from '../hooks/useAddToQueue';
 import { useNotification } from '../hooks/useNotification';
@@ -19,6 +20,7 @@ const ITEMS_PER_PAGE = 24;
 
 export default function SongsPage() {
   const { isAdminView } = useAdminView();
+  const { hasPermission } = usePermissions();
   const { state: queueState } = usePlayerState();
   const [search, setSearch] = useState('');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>(() => {
@@ -139,7 +141,7 @@ export default function SongsPage() {
             {isLoading ? '—' : `${total} track${total !== 1 ? 's' : ''}`}
           </p>
         </div>
-        {isAdminView && (
+        {(isAdminView || hasPermission('songs.add')) && (
           <Button
             variant="primary"
             onClick={() => setShowAddModal(true)}
@@ -201,7 +203,6 @@ export default function SongsPage() {
       <VirtualSongList
         items={items}
         viewMode={viewMode}
-        isAdmin={isAdminView}
         isAdminView={isAdminView}
         playlists={playlists}
         isLoading={isLoading}

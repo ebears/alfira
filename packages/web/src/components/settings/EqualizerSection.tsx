@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useAdminView } from '../../context/AdminViewContext';
+import { usePermissions } from '../../context/PermissionsContext';
 
 const FREQ_LABELS = [
   '25',
@@ -22,6 +23,9 @@ const DEFAULT_BANDS = Array(15).fill(50);
 
 export default function EqualizerSection() {
   const { isAdminView } = useAdminView();
+  const { hasPermission } = usePermissions();
+
+  const canManage = isAdminView || hasPermission('audio.manage');
   const [bands, setBands] = useState<number[]>(DEFAULT_BANDS);
   const [savedBands, setSavedBands] = useState<number[]>(DEFAULT_BANDS);
   const [saving, setSaving] = useState(false);
@@ -39,8 +43,8 @@ export default function EqualizerSection() {
         // silently fail
       }
     }
-    if (isAdminView) load();
-  }, [isAdminView]);
+    if (canManage) load();
+  }, [canManage]);
 
   const hasChanges = JSON.stringify(bands) !== JSON.stringify(savedBands);
 
@@ -79,7 +83,7 @@ export default function EqualizerSection() {
   }
 
   return (
-    <div className={`space-y-3 ${!isAdminView ? 'opacity-40 pointer-events-none' : ''}`}>
+    <div className={`space-y-3 ${!canManage ? 'opacity-40 pointer-events-none' : ''}`}>
       <h4 className="font-mono text-[11px] text-muted uppercase tracking-wider">Equalizer</h4>
       <div className="flex flex-wrap justify-center gap-2 md:flex-nowrap">
         {bands.map((value, i) => (

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useAdminView } from '../../context/AdminViewContext';
+import { usePermissions } from '../../context/PermissionsContext';
 import SettingsToggle from './SettingsToggle';
 
 const DEFAULTS = { enabled: false, threshold: -6, ratio: 4.0, attack: 5, release: 50, gain: 3 };
@@ -25,6 +26,9 @@ interface CompressorValues {
 
 export default function CompressorSection() {
   const { isAdminView } = useAdminView();
+  const { hasPermission } = usePermissions();
+
+  const canManage = isAdminView || hasPermission('audio.manage');
   const [values, setValues] = useState<CompressorValues>(DEFAULTS);
   const [savedValues, setSavedValues] = useState<CompressorValues>(DEFAULTS);
   const [saving, setSaving] = useState(false);
@@ -42,8 +46,8 @@ export default function CompressorSection() {
         // silently fail
       }
     }
-    if (isAdminView) load();
-  }, [isAdminView]);
+    if (canManage) load();
+  }, [canManage]);
 
   const hasChanges = JSON.stringify(values) !== JSON.stringify(savedValues);
 
@@ -73,7 +77,7 @@ export default function CompressorSection() {
     setValues((v) => ({ ...v, [key]: value }));
   }
 
-  const dimmed = !isAdminView;
+  const dimmed = !canManage;
 
   return (
     <div className={`space-y-3 ${dimmed ? 'opacity-40 pointer-events-none' : ''}`}>
