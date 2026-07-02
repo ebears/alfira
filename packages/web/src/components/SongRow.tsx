@@ -10,23 +10,31 @@ import {
   TagIcon,
   UserIcon,
 } from '@phosphor-icons/react';
-import { memo, useState } from 'react';
+import { memo, useMemo, useState } from 'react';
 import { useSongEdit } from '../context/SongEditContext';
 import { useSongActions } from '../hooks/useSongActions';
+import { getSourceKey } from '../utils/source';
 import { ContextMenu, ContextMenuTrigger } from './ContextMenu';
 import SongEditPanel from './SongEditPanel';
+import { SourceIcon } from './SourceIcons';
 import TagTicker from './TagTicker';
 import { Button } from './ui/Button';
 
 interface MetaInfoProps {
   song: Song;
   isHovered?: boolean;
+  sourceKey: string | null;
 }
 
-function MetaInfo({ song, isHovered }: MetaInfoProps) {
+function MetaInfo({ song, isHovered, sourceKey }: MetaInfoProps) {
   const tags = song.tags ?? [];
   return (
     <>
+      {sourceKey && (
+        <span className="flex items-center shrink-0 grayscale opacity-50 [&_svg]:w-3 [&_svg]:h-3">
+          <SourceIcon sourceKey={sourceKey} />
+        </span>
+      )}
       <span className="flex items-center gap-1.5 font-mono text-xs text-muted">
         {formatDuration(song.duration)}
         <ClockIcon size={11} weight="fill" className="shrink-0" />
@@ -82,6 +90,7 @@ export const SongRow = memo(
     const { openSongId, setOpenSongId } = useSongEdit();
     const [isRowHovered, setIsRowHovered] = useState(false);
     const isOpen = openSongId === song.id;
+    const sourceKey = useMemo(() => getSourceKey(song.sourceUrl), [song.sourceUrl]);
     const { menuOpen, setMenuOpen, triggerRef, menuItems } = useSongActions({
       song,
       isAdmin,
@@ -162,7 +171,7 @@ export const SongRow = memo(
             })()}
           </div>
           <div className="hidden md:flex flex-col items-end gap-px shrink-0 mr-2">
-            <MetaInfo song={song} isHovered={isRowHovered} />
+            <MetaInfo song={song} isHovered={isRowHovered} sourceKey={sourceKey} />
           </div>
           <Button
             variant="primary"
