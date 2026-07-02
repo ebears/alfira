@@ -11,7 +11,7 @@
 | **API** | Bun native HTTP + WebSocket |
 | **Database** | SQLite + Drizzle ORM |
 | **Frontend** | React + Bun + Tailwind |
-| **Logging** | Pino |
+| **Logging** | Custom (shared/logger) |
 
 ## Architecture
 
