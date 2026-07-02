@@ -8,6 +8,7 @@
  */
 
 import { db, sql, tables } from '../shared/db';
+import { logger } from '../shared/logger';
 import { canonicalizeTags } from './tagCanonicalization';
 
 const { song: songTable } = tables;
@@ -21,14 +22,14 @@ const normalizeTag = (t: string) => t.replace(/\s+/g, '-').trim();
  * Safe to call multiple times — already-migrated songs are skipped.
  */
 export async function runTagMigration(): Promise<{ normalized: number; errors: number }> {
-  console.log('Starting tag normalization migration...');
+  logger.info('Starting tag normalization migration');
 
   const songs = await db
     .select({ id: songTable.id, tags: songTable.tags })
     .from(songTable)
     .where(sql`${songTable.tags} IS NOT NULL AND ${songTable.tags} != '[]'`);
 
-  console.log(`Found ${songs.length} songs with tags`);
+  logger.info({ count: songs.length }, 'Found songs with tags');
 
   let normalized = 0;
   let errors = 0;
@@ -44,19 +45,19 @@ export async function runTagMigration(): Promise<{ normalized: number; errors: n
         normalized++;
       }
     } catch (err) {
-      console.error(`Error normalizing tags for song ${song.id}:`, err);
+      logger.error({ songId: song.id, err }, 'Error normalizing tags');
       errors++;
     }
   }
 
-  console.log(`Migration complete: ${normalized} songs normalized, ${errors} errors`);
+  logger.info({ normalized, errors }, 'Tag migration complete');
   return { normalized, errors };
 }
 
 // Standalone entry point — run with: bun run packages/server/src/lib/migrateExistingTags.ts
 if (__filename.includes('migrateExistingTags')) {
   runTagMigration().catch((err) => {
-    console.error('Migration failed:', err);
+    logger.fatal(err, 'Tag migration failed');
     process.exit(1);
   });
 }

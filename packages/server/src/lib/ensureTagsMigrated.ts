@@ -1,4 +1,5 @@
 import { db, sql, tables } from '../shared/db';
+import { logger } from '../shared/logger';
 import { runTagMigration } from './migrateExistingTags';
 
 const { tag: tagTable, song: songTable } = tables;
@@ -31,5 +32,5 @@ export async function ensureTagsMigrated(): Promise<void> {
   if (errors > 0) {
     throw new Error(`Tag migration failed with ${errors} errors`);
   }
-  console.log(`[ensureTagsMigrated] Migrated tags from ${normalized} songs`);
+  logger.info({ count: normalized }, 'Migrated tags from songs');
 }
