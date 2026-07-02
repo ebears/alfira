@@ -34,19 +34,17 @@ Common issues and solutions for Alfira.
 1. Verify `DISCORD_REDIRECT_URI` matches exactly in:
    - Discord Developer Portal → OAuth2 → Redirects
    - Your `.env` file
-2. Check that `WEB_UI_ORIGIN` matches your actual domain.
-3. Ensure you're using `https://` in production.
+2. Ensure you're using `https://` in production.
 
 ### "Add Song" button not visible / Admin features missing
 
 **Symptoms:** Logged in but no "Add Song" button, can't use quick-add, can't manage playlists.
 
 **Solutions:**
-1. **Check `ADMIN_ROLE_IDS` in `.env`** — must be set to your actual Discord role ID (not the placeholder).
+1. **Check admin role configuration** — Go to **Settings → Admin** and verify the correct roles are selected under "Admin Roles". Save changes if needed.
 2. **Enable Server Members Intent** — Go to Discord Developer Portal → Bot → Privileged Gateway Intents → enable **Server Members Intent** → Save Changes.
-3. **Verify role ID** — Enable Developer Mode in Discord (Settings → Advanced), right-click the admin role → "Copy Role ID".
-4. **Re-login** — Admin status is cached in the JWT token. Log out and log back in after fixing the above.
-5. **Check logs** — Run `docker compose logs alfira | grep -i admin` to verify the bot detects your admin status.
+3. **Re-login** — Admin status is cached in the JWT token. Log out and log back in after fixing the above.
+4. **Check logs** — Run `docker compose logs alfira | grep -i admin` to verify the bot detects your admin status.
 
 ### "undefined command does not have 'run' callback" / Slash commands not working
 

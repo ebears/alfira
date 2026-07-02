@@ -70,7 +70,7 @@ The server is compiled to `packages/server/dist/` during Docker image build. If 
 
 ### Environment Configuration
 
-A single `.env` file at the project root is used for all configuration. Copy `.env.example` to `.env` and fill in all values before running. Required: `DISCORD_BOT_TOKEN`, `DISCORD_CLIENT_ID`, `DISCORD_CLIENT_SECRET`, `GUILD_ID`, `JWT_SECRET`, `ADMIN_ROLE_IDS`, `DATABASE_URL`.
+A single `.env` file at the project root is used for all configuration. Copy `.env.example` to `.env` and fill in all values before running. Required: `DISCORD_BOT_TOKEN`, `DISCORD_CLIENT_ID`, `DISCORD_CLIENT_SECRET`, `DISCORD_REDIRECT_URI`, `JWT_SECRET`. Guild ID, admin roles, idle timeout, and notification channel are configured via the in-app setup wizard (or optionally via `GUILD_ID` / `ADMIN_ROLE_IDS` env vars for existing deployments).
 
 ### NodeLink Audio Service
 

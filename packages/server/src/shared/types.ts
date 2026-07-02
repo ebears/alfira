@@ -75,6 +75,66 @@ export interface EqualizerSettings {
 }
 
 // ---------------------------------------------------------------------------
+// GeneralSettings
+//
+// Guild-level general configuration. Stored in guildSettings table,
+// configured via the setup wizard and the Admin Settings page.
+// ---------------------------------------------------------------------------
+export interface GeneralSettings {
+  guildId: string | null;
+  setupCompleted: boolean;
+  adminRoleIds: string;
+  voiceIdleTimeoutMinutes: number;
+  notificationChannelId: string | null;
+  publicUrl: string | null;
+}
+
+// ---------------------------------------------------------------------------
+// SetupStatus
+//
+// Returned by GET /api/setup/status to tell the frontend whether to show
+// the setup wizard.
+// ---------------------------------------------------------------------------
+export interface SetupStatus {
+  setupCompleted: boolean;
+  guildName: string | null;
+  clientId: string;
+}
+
+// ---------------------------------------------------------------------------
+// SetupRole
+//
+// A simplified role object returned by the setup API for the role picker.
+// ---------------------------------------------------------------------------
+export interface SetupRole {
+  id: string;
+  name: string;
+  color: number;
+}
+
+// ---------------------------------------------------------------------------
+// SetupChannel
+//
+// A simplified text-channel object returned by the setup API for the
+// channel picker.
+// ---------------------------------------------------------------------------
+export interface SetupChannel {
+  id: string;
+  name: string;
+}
+
+// ---------------------------------------------------------------------------
+// SetupGuild
+//
+// A simplified guild object returned by the setup API for the guild picker.
+// ---------------------------------------------------------------------------
+export interface SetupGuild {
+  id: string;
+  name: string;
+  icon: string | null;
+}
+
+// ---------------------------------------------------------------------------
 // QueueState
 //
 // A snapshot of the GuildPlayer's current state. This is the payload for
@@ -144,4 +204,6 @@ export interface User {
   username: string;
   avatar: string | null;
   isAdmin: boolean;
+  /** Temporarily granted during first-run setup before admin roles are configured. */
+  isSetupAdmin?: boolean;
 }

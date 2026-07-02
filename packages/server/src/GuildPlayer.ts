@@ -53,16 +53,38 @@ export class GuildPlayer {
   // Auto-leave idle timer.
   private idleLeaveTimer: ReturnType<typeof setTimeout> | null = null;
 
-  private getIdleTimeoutMinutes(): number {
+  private async getIdleTimeoutMinutes(): Promise<number> {
+    // Read from DB first (set via setup wizard or admin settings).
+    try {
+      const row = await db
+        .select({ timeout: tables.guildSettings.voiceIdleTimeoutMinutes })
+        .from(tables.guildSettings)
+        .where(eq(tables.guildSettings.id, 1))
+        .get();
+      if (row && Number.isFinite(row.timeout) && row.timeout > 0) {
+        return row.timeout;
+      }
+    } catch {
+      // DB not available — fall through to env / default.
+    }
+
+    // Fall back to env var, then default.
     const raw = process.env.VOICE_IDLE_TIMEOUT_MINUTES;
     const parsed = Number(raw);
     return Number.isFinite(parsed) && parsed > 0 ? parsed : 5;
   }
 
-  private scheduleIdleLeave(): void {
+  private async scheduleIdleLeave(): Promise<void> {
     this.cancelIdleLeave();
-    const minutes = this.getIdleTimeoutMinutes();
-    this.idleLeaveTimer = setTimeout(() => this.leaveOnIdle(), minutes * 60 * 1000);
+    const minutes = await this.getIdleTimeoutMinutes();
+    this.idleLeaveTimer = setTimeout(
+      () => {
+        this.leaveOnIdle().catch(() => {
+          // noop — errors are already logged inside leaveOnIdle
+        });
+      },
+      minutes * 60 * 1000
+    );
   }
 
   private cancelIdleLeave(): void {
@@ -81,13 +103,40 @@ export class GuildPlayer {
     '💀 Alfira failed the last death saving throw.',
   ];
 
-  private leaveOnIdle(): void {
+  private async leaveOnIdle(): Promise<void> {
+    const timeoutMinutes = await this.getIdleTimeoutMinutes();
     logger.info(
       { guildId: this.guildId },
-      `Auto-leaving voice channel after idle (${this.getIdleTimeoutMinutes()} minutes).`
+      `Auto-leaving voice channel after idle (${timeoutMinutes} minutes).`
     );
     const phrase = this.LEAVE_PHRASES[Math.floor(Math.random() * this.LEAVE_PHRASES.length)];
     logger.info({ guildId: this.guildId }, `${phrase} (Left the voice channel due to inactivity.)`);
+
+    // Send notification to the configured channel, if any.
+    try {
+      const row = await db
+        .select({ channelId: tables.guildSettings.notificationChannelId })
+        .from(tables.guildSettings)
+        .where(eq(tables.guildSettings.id, 1))
+        .get();
+
+      if (row?.channelId) {
+        const token = process.env.DISCORD_BOT_TOKEN;
+        if (token) {
+          await fetch(`https://discord.com/api/v10/channels/${row.channelId}/messages`, {
+            method: 'POST',
+            headers: {
+              Authorization: `Bot ${token}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ content: phrase }),
+          });
+        }
+      }
+    } catch (err) {
+      logger.warn({ err, guildId: this.guildId }, 'Failed to send idle-leave notification');
+    }
+
     this.stop();
   }
 
@@ -306,7 +355,7 @@ export class GuildPlayer {
       this.pausedAt = Date.now();
       await updateNodeLinkPlayer(this.guildId, sessionId, { paused: true });
       this.paused = true;
-      this.scheduleIdleLeave();
+      await this.scheduleIdleLeave();
     }
 
     this.broadcast();
@@ -443,7 +492,7 @@ export class GuildPlayer {
         this.currentSong = null;
         this.queue.clear();
         this.broadcast();
-        this.scheduleIdleLeave();
+        await this.scheduleIdleLeave();
         return;
       }
     }

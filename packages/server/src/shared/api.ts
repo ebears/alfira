@@ -1,10 +1,15 @@
 import type {
+  GeneralSettings,
   LoopMode,
   PaginatedResult,
   PaginationMeta,
   Playlist,
   PlaylistDetail,
   QueueState,
+  SetupChannel,
+  SetupGuild,
+  SetupRole,
+  SetupStatus,
   Song,
   User,
 } from './types';
@@ -343,4 +348,55 @@ export function importPlaylist(
   maxVideos?: number
 ): Promise<ImportPlaylistResult> {
   return post('/api/songs/import-playlist', { youtubeUrl, ...(maxVideos && { maxVideos }) });
+}
+
+// ---------------------------------------------------------------------------
+// Setup API Functions
+// ---------------------------------------------------------------------------
+
+export function fetchSetupStatus(): Promise<SetupStatus> {
+  return get('/api/setup/status');
+}
+
+export function fetchSetupGuilds(): Promise<{ guilds: SetupGuild[] }> {
+  return get('/api/setup/guilds');
+}
+
+export function fetchSetupRoles(guildId: string): Promise<{ roles: SetupRole[] }> {
+  return get(`/api/setup/roles?guildId=${encodeURIComponent(guildId)}`);
+}
+
+export function fetchSetupChannels(guildId: string): Promise<{ channels: SetupChannel[] }> {
+  return get(`/api/setup/channels?guildId=${encodeURIComponent(guildId)}`);
+}
+
+export interface CompleteSetupPayload {
+  guildId: string;
+  adminRoleIds: string;
+  voiceIdleTimeoutMinutes: number;
+  notificationChannelId?: string | null;
+  publicUrl?: string | null;
+}
+
+export function completeSetup(data: CompleteSetupPayload): Promise<{ success: boolean }> {
+  return post('/api/setup/complete', data);
+}
+
+// ---------------------------------------------------------------------------
+// General Settings API Functions
+// ---------------------------------------------------------------------------
+
+export function fetchGeneralSettings(): Promise<GeneralSettings> {
+  return get('/api/settings/general');
+}
+
+export type GeneralSettingsUpdate = Partial<
+  Pick<
+    GeneralSettings,
+    'adminRoleIds' | 'voiceIdleTimeoutMinutes' | 'notificationChannelId' | 'publicUrl'
+  >
+>;
+
+export function updateGeneralSettings(data: GeneralSettingsUpdate): Promise<GeneralSettings> {
+  return patch('/api/settings/general', data);
 }

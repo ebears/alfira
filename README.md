@@ -84,6 +84,8 @@ vi .env
 
 # 3. Start the stack — web UI at http://localhost:8180
 docker compose up -d
+
+# 4. Open the web UI, log in with Discord, and complete the setup wizard.
 ```
 
 See the **[Installation Guide](docs/installation.md)** for full details.

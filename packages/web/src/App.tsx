@@ -13,6 +13,7 @@ import AudioPage from './pages/AudioPage';
 import LoginPage from './pages/LoginPage';
 import PlaylistDetailPage from './pages/PlaylistDetailPage';
 import PlaylistsPage from './pages/PlaylistsPage';
+import SetupWizard from './pages/SetupWizard';
 import SongsPage from './pages/SongsPage';
 import TagsPage from './pages/TagsPage';
 
@@ -26,6 +27,14 @@ export default function App() {
               <SongEditProvider>
                 <Routes>
                   <Route path="/login" element={<LoginPage />} />
+                  <Route
+                    path="/setup"
+                    element={
+                      <ProtectedRoute>
+                        <SetupWizard />
+                      </ProtectedRoute>
+                    }
+                  />
                   <Route
                     path="/"
                     element={

@@ -1,6 +1,6 @@
 import type { GuildPlayer } from '../GuildPlayer';
 import type { RouteContext } from '../index';
-import { GUILD_ID } from '../lib/config';
+import { getGuildId } from '../lib/config';
 import { json } from '../lib/json';
 import { lavalink } from '../lib/lavalink';
 import { requirePlayer, requirePlaying } from '../lib/player';
@@ -34,13 +34,13 @@ function handleGetQueue(ctx: RouteContext): Response {
   const guards = checkGuards(ctx);
   if (guards instanceof Response) return guards;
 
-  const player = getPlayer(GUILD_ID);
+  const player = getPlayer(getGuildId());
 
   if (!player) {
     return json({
       isPlaying: false,
       isPaused: false,
-      isConnectedToVoice: lavalink.isGuildConnected(GUILD_ID),
+      isConnectedToVoice: lavalink.isGuildConnected(getGuildId()),
       loopMode: 'off',
       isShuffled: false,
       currentSong: null,
@@ -154,9 +154,9 @@ async function handleLeave(ctx: RouteContext): Promise<Response> {
   const guards = await checkGuards(ctx, { voice: true });
   if (guards instanceof Response) return guards;
 
-  const player = getPlayer(GUILD_ID);
+  const player = getPlayer(getGuildId());
 
-  if (!player && !lavalink.isGuildConnected(GUILD_ID)) {
+  if (!player && !lavalink.isGuildConnected(getGuildId())) {
     return json({ error: 'The bot is not in a voice channel.' }, 409);
   }
 
@@ -199,7 +199,7 @@ async function handleShuffle(ctx: RouteContext): Promise<Response> {
   const guards = await checkGuards(ctx, { admin: true, voice: true });
   if (guards instanceof Response) return guards;
 
-  const player = getPlayer(GUILD_ID);
+  const player = getPlayer(getGuildId());
 
   if (!player || player.getQueue().length === 0) {
     return json({ error: 'No songs in the queue to shuffle.' }, 409);
