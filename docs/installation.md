@@ -84,6 +84,9 @@ docker compose up -d
 | `WEB_UI_ORIGIN` | Public URL of the web UI | `http://localhost:3001` |
 | `DISCORD_REDIRECT_URI` | OAuth2 redirect URI | `http://localhost:3001/auth/callback` |
 | `VOICE_IDLE_TIMEOUT_MINUTES` | Minutes before bot leaves voice channel when idle | `5` |
+| `LOG_LEVEL` | Log verbosity: `debug`, `info`, `warn`, `error`, `fatal` | `info` |
+| `LOG_FORMAT` | Set to `json` for machine-readable structured logging; defaults to human-readable colored output | — |
+| `NO_COLOR` | Set to any value to disable colored log output | — |
 
 > **Note:** `DATABASE_URL` is set automatically. You typically don't need to set it manually.
 

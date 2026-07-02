@@ -14,6 +14,14 @@ Docker + Bun + SQLite means no external managed services. One `docker compose up
 
 Prefer stdlib/native runtime APIs over npm packages. Bun's built-in HTTP, WebSocket, test runner, and SQLite driver replace whole categories of dependencies. Drizzle gives type-safe SQL without ORM bloat.
 
+### Dependencies we keep intentionally
+
+**`ws`** — Bun's global `WebSocket` follows the WHATWG standard (`new WebSocket(url, protocols?)`) which provides no way to set custom HTTP headers on the handshake. The `ws` library supports `new WebSocket(url, { headers })`, which is needed to send `Authorization` and `User-Id` headers when connecting to NodeLink. This is a small (sub-1MB), focused, well-maintained package filling a genuine gap in the WHATWG API.
+
+**`seyfert`** — Handles the Discord gateway protocol: heartbeats, identify, resume, sharding, opcode dispatch, and rate-limit backpressure. The codebase interacts with it at only ~6 call sites, but those are backed by hundreds of lines of non-trivial protocol logic. Reimplementing that correctly would be error-prone and violate the spirit of "better dependencies."
+
+**`jsonwebtoken`** — Bun has Web Crypto API primitives (HMAC-SHA256, base64url) but no built-in JWT encode/decode. Implementing JWT from scratch — with correct expiration, audience, and algorithm handling — would be a net negative in maintenance surface area. This is a focused, zero-dependency library.
+
 ---
 
 ## 3. Single-process simplicity by design
