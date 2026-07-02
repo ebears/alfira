@@ -4,6 +4,7 @@ import { GUILD_ID } from '../lib/config';
 import { getUserDisplayName, resolveDisplayNames } from '../lib/displayName';
 import { json } from '../lib/json';
 import { parsePagination } from '../lib/pagination';
+import { checkRateLimit, getClientIp, rateLimitResponse } from '../lib/rateLimit';
 import { checkGuards } from '../lib/routeGuards';
 import { buildSongSearchClause } from '../lib/search';
 import { formatSong } from '../lib/serialization';
@@ -380,6 +381,15 @@ async function handlePatchSong(ctx: RouteContext, request: Request, id: string):
 export async function handleSongs(ctx: RouteContext, request: Request): Promise<Response> {
   const url = new URL(request.url);
   const pathname = url.pathname;
+
+  // Rate-limit mutation endpoints — 20 requests per 60s per IP.
+  // GET is exempt to allow the UI to fetch pages freely.
+  if (request.method !== 'GET') {
+    const ip = getClientIp(request);
+    if (!checkRateLimit('songs-mutations', ip, { windowMs: 60_000, maxRequests: 20 })) {
+      return rateLimitResponse(60);
+    }
+  }
 
   // POST /api/songs/import-playlist
   if (request.method === 'POST' && pathname === '/api/songs/import-playlist') {

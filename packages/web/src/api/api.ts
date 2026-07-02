@@ -26,6 +26,8 @@ export {
   fetchQueueState,
   // Songs
   fetchSongsPage as getSongsPage,
+  // Version
+  fetchVersion,
   importPlaylist,
   leaveVoice,
   overridePlay,

@@ -20,8 +20,11 @@ function parseCookies(header: string): Record<string, string> {
 }
 
 import { sql } from 'drizzle-orm';
+import { VERSION } from './lib/config';
 import { ensureTagsMigrated } from './lib/ensureTagsMigrated';
 import { json } from './lib/json';
+import { lavalink } from './lib/lavalink';
+import { pruneRateLimitStores } from './lib/rateLimit';
 import { closeAllClients, registerClient, unregisterClient, type WsClient } from './lib/socket';
 import { verifySessionToken } from './middleware/requireAuth';
 import { handleAuth } from './routes/auth';
@@ -138,12 +141,35 @@ function createContext(request: Request): RouteContext {
 // ---------------------------------------------------------------------------
 
 async function handleHealth(): Promise<Response> {
+  const checks: Record<string, string> = {};
+
+  // Database
   try {
     await db.all(sql`SELECT 1`);
-    return json({ status: 'ok' });
+    checks.database = 'ok';
   } catch {
-    return json({ status: 'degraded' }, 503);
+    checks.database = 'error';
   }
+
+  // NodeLink
+  try {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 500);
+    const res = await fetch('http://127.0.0.1:2333/v4/info', {
+      headers: { Authorization: 'nodelink-internal' },
+      signal: controller.signal,
+    });
+    clearTimeout(timeout);
+    checks.nodelink = res.ok ? 'ok' : 'error';
+  } catch {
+    checks.nodelink = 'error';
+  }
+
+  // Discord gateway
+  checks.discord = lavalink.getSessionId() ? 'ok' : 'disconnected';
+
+  const allOk = Object.values(checks).every((v) => v === 'ok');
+  return json({ status: allOk ? 'ok' : 'degraded', version: VERSION, checks }, allOk ? 200 : 503);
 }
 
 // ---------------------------------------------------------------------------
@@ -165,6 +191,11 @@ function startServer(): void {
       // Health check
       if (url.pathname === '/health') {
         return setSecurityHeaders(await handleHealth());
+      }
+
+      // Version — public, no auth required
+      if (url.pathname === '/api/version') {
+        return setSecurityHeaders(json({ version: VERSION }));
       }
 
       // WebSocket upgrade — auth is handled here before upgrade
@@ -380,6 +411,9 @@ async function main(): Promise<void> {
   } catch (error) {
     logger.error(error, 'Failed to start NodeLink');
   }
+
+  // 3.5. Periodically prune stale rate-limit entries (every 5 minutes).
+  setInterval(pruneRateLimitStores, 5 * 60_000);
 
   // 4. Start the Discord bot.
   try {

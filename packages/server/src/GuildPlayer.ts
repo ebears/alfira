@@ -32,11 +32,12 @@ export class GuildPlayer {
   // auto-started the next track. Cleared after playSong consumes it.
   private gaplessTransition = false;
 
-  // Gapless preloading via NodeLink's nextTrack is currently disabled.
-  // NodeLink v3.7.0's gapless transition (player.ts:496) calls
-  // connection.play() without awaiting encoder initialization, causing
-  // a ~3s silence gap — worse than a cold start (~1s). Re-enable when
-  // NodeLink fixes the encoder pipeline in its gapless transition.
+  // Gapless preloading via NodeLink's nextTrack.
+  // When enabled, the next track is preloaded into NodeLink so that a
+  // gapless TrackEndEvent can transition without a cold-start load.
+  // NodeLink v3.7.0 had a bug (~3s silence) in its gapless pipeline;
+  // if the encoder issue recurs, set this to false and fall back to
+  // cold-start loading for each track.
   // See: https://github.com/PerformanC/NodeLink/issues (TBD)
   private static readonly ENABLE_GAPLESS_PRELOAD = true;
 
