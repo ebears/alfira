@@ -36,6 +36,7 @@ export const playlist = sqliteTable('Playlist', {
   name: text('name').notNull(),
   createdBy: text('createdBy').notNull(),
   isPrivate: integer('isPrivate', { mode: 'boolean' }).default(false).notNull(),
+  tagNameLower: text('tagNameLower'),
   createdAt: integer('createdAt', { mode: 'timestamp_ms' })
     .notNull()
     .$defaultFn(() => new Date()),

@@ -172,6 +172,7 @@ export interface Playlist {
   createdBy: string;
   createdByDisplayName?: string;
   isPrivate: boolean;
+  tagNameLower?: string | null;
   createdAt: string; // ISO 8601 string (JSON wire format)
   songs?: { id: string; playlistId: string; songId: string; position: number; song?: Song }[];
   _count?: { songs: number };
