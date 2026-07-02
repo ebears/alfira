@@ -5,6 +5,7 @@ import { json } from '../lib/json';
 import { lavalink } from '../lib/lavalink';
 import { requirePlayer, requirePlaying } from '../lib/player';
 import { canAccessPlaylist } from '../lib/playlistAccess';
+import { checkRateLimit, getClientIp, rateLimitResponse } from '../lib/rateLimit';
 import { checkGuards } from '../lib/routeGuards';
 import {
   clampMaxVideos,
@@ -465,6 +466,15 @@ export async function handlePlayer(ctx: RouteContext, request: Request): Promise
 
   // Strip /api/player prefix
   const path = pathname.slice('/api/player'.length);
+
+  // Rate-limit mutation endpoints — 30 requests per 60s per IP.
+  // GET /queue is exempt to allow the UI to poll freely.
+  if (request.method !== 'GET') {
+    const ip = getClientIp(request);
+    if (!checkRateLimit('player-mutations', ip, { windowMs: 60_000, maxRequests: 30 })) {
+      return rateLimitResponse(60);
+    }
+  }
 
   if (path === '/queue' && request.method === 'GET') return await handleGetQueue(ctx);
   if (path === '/play' && request.method === 'POST') return await handlePlay(ctx, request);

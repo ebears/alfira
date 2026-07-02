@@ -1,4 +1,5 @@
 export const WEB_UI_ORIGIN = process.env.WEB_UI_ORIGIN ?? 'http://localhost:3001';
+export const VERSION = process.env.ALFIRA_VERSION ?? 'dev';
 
 const _GUILD_ID = process.env.GUILD_ID;
 if (!_GUILD_ID) {
