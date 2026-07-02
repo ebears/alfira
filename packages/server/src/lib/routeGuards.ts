@@ -3,7 +3,7 @@ import type { User } from '../shared';
 import { requireAdmin, requireAuth } from './guards';
 import { requireUserInVoice } from './voice';
 
-export interface GuardOptions {
+interface GuardOptions {
   /** Require authenticated user. Defaults to true. */
   auth?: boolean;
   /** Require admin role. Defaults to false. */
@@ -12,7 +12,7 @@ export interface GuardOptions {
   voice?: boolean;
 }
 
-export interface GuardResult {
+interface GuardResult {
   user: User;
 }
 

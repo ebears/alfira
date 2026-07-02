@@ -1,6 +1,3 @@
-export const TAG_COLOR_NAMES = ['orange', 'sky', 'emerald', 'amber', 'violet'] as const;
-export type TagColorName = (typeof TAG_COLOR_NAMES)[number];
-
 const TAG_COLORS = [
   {
     name: 'orange' as const,
@@ -56,8 +53,4 @@ export function getTagColorClasses(
     if (found) return found;
   }
   return TAG_COLORS[djb2(tag.toLowerCase()) % TAG_COLORS.length];
-}
-
-export function getColorClassesByName(colorName: TagColorName): (typeof TAG_COLORS)[number] {
-  return TAG_COLORS.find((c) => c.name === colorName) ?? TAG_COLORS[0];
 }

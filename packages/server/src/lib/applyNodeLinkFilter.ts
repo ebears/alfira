@@ -2,7 +2,7 @@ import { logger } from '../shared/logger';
 import { updateNodeLinkPlayer } from '../utils/nodelink';
 import { lavalink } from './lavalink';
 
-export interface CompressorFilterParams {
+interface CompressorFilterParams {
   threshold: number;
   ratio: number;
   attack: number;

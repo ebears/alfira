@@ -31,7 +31,7 @@ function nodeLinkHeaders(): Record<string, string> {
 // Player command types
 // ---------------------------------------------------------------------------
 
-export interface UpdatePlayerOptions {
+interface UpdatePlayerOptions {
   /** Voice server connection details — sent once to establish the voice link. */
   voice?: { token: string; endpoint: string; sessionId: string };
   /** Encoded track to play. Pass { encoded: null } to stop playback. */
