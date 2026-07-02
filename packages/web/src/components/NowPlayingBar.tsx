@@ -189,9 +189,8 @@ const LoopShuffleControls = memo(function LoopShuffleControls({
 interface ScrubberProps {
   isSeekable: boolean;
   duration: number; // seconds
-  elapsed: number; // seconds
   registerProgress: (ref: HTMLDivElement | null) => void;
-  registerRangeInput: (ref: HTMLInputElement | null) => void;
+  registerThumb: (ref: HTMLDivElement | null) => void;
   onSeek: (seconds: number) => void;
   setOverrideElapsed: (seconds: number) => void;
 }
@@ -199,9 +198,8 @@ interface ScrubberProps {
 const Scrubber = memo(function Scrubber({
   isSeekable,
   duration,
-  elapsed,
   registerProgress,
-  registerRangeInput: _registerRangeInput,
+  registerThumb,
   onSeek,
   setOverrideElapsed,
 }: ScrubberProps) {
@@ -213,8 +211,20 @@ const Scrubber = memo(function Scrubber({
   // Last known slider value during drag (used to commit seek on pointer up)
   const lastDragValueRef = useRef<number>(0);
 
-  const pct = duration > 0 ? elapsed / duration : 0;
-  const pctStr = `${pct * 100}%`;
+  // Register the thumb div with the rAF loop so it glides at display-native rate.
+  useEffect(() => {
+    if (thumbRef.current) {
+      registerThumb(thumbRef.current);
+    }
+  }, [registerThumb]);
+
+  // Position both fill bar and thumb directly in the DOM during drag.
+  // Bypasses React + rAF entirely — immediate, jank-free visual feedback.
+  const seekElements = useCallback((trackPct: number) => {
+    const pctStr = `${trackPct * 100}%`;
+    if (fillRef.current) fillRef.current.style.width = pctStr;
+    if (thumbRef.current) thumbRef.current.style.left = pctStr;
+  }, []);
 
   const handlePointerMove = useCallback(
     (e: PointerEvent) => {
@@ -224,12 +234,9 @@ const Scrubber = memo(function Scrubber({
       const seekSec = Math.round(trackPct * duration);
       lastDragValueRef.current = seekSec;
       setOverrideElapsed(seekSec);
-      // Directly position the thumb to avoid waiting for React re-render
-      if (thumbRef.current) {
-        thumbRef.current.style.left = `${trackPct * 100}%`;
-      }
+      seekElements(trackPct);
     },
-    [duration, setOverrideElapsed]
+    [duration, setOverrideElapsed, seekElements]
   );
 
   const handlePointerUp = useCallback(() => {
@@ -247,30 +254,29 @@ const Scrubber = memo(function Scrubber({
       if (!isSeekable) return;
       e.currentTarget.setPointerCapture(e.pointerId);
       isDraggingRef.current = true;
-      // Compute initial position from click location
       if (trackRef.current) {
         const rect = trackRef.current.getBoundingClientRect();
         const trackPct = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
         const seekSec = Math.round(trackPct * duration);
         lastDragValueRef.current = seekSec;
         setOverrideElapsed(seekSec);
-        if (thumbRef.current) {
-          thumbRef.current.style.left = `${trackPct * 100}%`;
-        }
+        seekElements(trackPct);
       }
       document.addEventListener('pointermove', handlePointerMove);
       document.addEventListener('pointerup', handlePointerUp);
     },
-    [isSeekable, duration, handlePointerMove, handlePointerUp, setOverrideElapsed]
+    [isSeekable, duration, handlePointerMove, handlePointerUp, setOverrideElapsed, seekElements]
   );
 
   if (!isSeekable) {
     return (
       <div className="w-full h-2 clay-inset rounded-full relative overflow-hidden cursor-not-allowed opacity-50">
         <div
-          ref={fillRef}
+          ref={(ref) => {
+            fillRef.current = ref;
+            registerProgress(ref);
+          }}
           className="absolute inset-y-0 left-0 bg-accent rounded-full"
-          style={{ width: pctStr }}
         />
       </div>
     );
@@ -288,13 +294,12 @@ const Scrubber = memo(function Scrubber({
           registerProgress(ref);
         }}
         className="absolute inset-y-0 left-0 bg-accent rounded-full"
-        style={{ width: pctStr }}
       />
-      {/* Custom thumb — positioned manually via ref, not via native range input */}
+      {/* Fill & thumb — positioned entirely by useProgressBar (rAF + effect).
+           No React style props. */}
       <div
         ref={thumbRef}
         className="scrubber-thumb absolute top-1/2 -translate-y-1/2 w-3.5 h-3.5 rounded-full bg-surface border-2 border-accent opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity"
-        style={{ left: pctStr }}
       />
       {/* Invisible hit area for hovering */}
       <div className="absolute inset-0" />
@@ -306,7 +311,7 @@ interface ProgressBarProps {
   currentSong: QueuedSong | null;
   elapsed: number;
   registerProgress: (ref: HTMLDivElement | null) => void;
-  registerRangeInput: (ref: HTMLInputElement | null) => void;
+  registerThumb: (ref: HTMLDivElement | null) => void;
   onSeek?: (seconds: number) => void;
   setOverrideElapsed: (seconds: number) => void;
   variant: 'mobile' | 'desktop';
@@ -316,7 +321,7 @@ const ProgressBar = memo(function ProgressBar({
   currentSong,
   elapsed,
   registerProgress,
-  registerRangeInput,
+  registerThumb,
   onSeek,
   setOverrideElapsed,
   variant,
@@ -358,9 +363,8 @@ const ProgressBar = memo(function ProgressBar({
       <Scrubber
         isSeekable={currentSong?.isSeekable ?? false}
         duration={currentSong?.duration ?? 0}
-        elapsed={elapsed}
         registerProgress={registerProgress}
-        registerRangeInput={registerRangeInput}
+        registerThumb={registerThumb}
         onSeek={onSeek ?? (() => undefined)}
         setOverrideElapsed={setOverrideElapsed}
       />
@@ -408,7 +412,7 @@ export function NowPlayingBar() {
     state,
     elapsed,
     registerProgress,
-    registerRangeInput,
+    registerThumb,
     skip,
     leave,
     pause,
@@ -496,7 +500,7 @@ export function NowPlayingBar() {
       <ProgressBar
         currentSong={currentSong}
         registerProgress={registerProgress}
-        registerRangeInput={registerRangeInput}
+        registerThumb={registerThumb}
         elapsed={elapsed}
         setOverrideElapsed={setOverrideElapsed}
         variant="mobile"
@@ -523,7 +527,7 @@ export function NowPlayingBar() {
         <ProgressBar
           currentSong={currentSong}
           registerProgress={registerProgress}
-          registerRangeInput={registerRangeInput}
+          registerThumb={registerThumb}
           elapsed={elapsed}
           onSeek={handleSeek}
           setOverrideElapsed={setOverrideElapsed}
