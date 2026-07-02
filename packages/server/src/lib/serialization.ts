@@ -2,7 +2,7 @@ import type { Song } from '../shared';
 
 // Accept both Date and string createdAt — Drizzle uses Date at the DB level,
 // but we serialize to ISO string for JSON serialization.
-type SerializedSong = Omit<Song, 'createdAt'> & { createdAt: string | Date };
+export type SerializedSong = Omit<Song, 'createdAt'> & { createdAt: string | Date };
 
 // ---------------------------------------------------------------------------
 // Serialization helpers

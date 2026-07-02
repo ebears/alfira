@@ -1,13 +1,12 @@
 import { eq } from 'drizzle-orm';
-import type { CompressorSettings, Playlist, QueueState, Song, User } from '../shared';
+import type { CompressorSettings, Playlist, QueueState, User } from '../shared';
 import { db, tables } from '../shared/db';
 import { logger } from '../shared/logger';
 
-import { formatSong } from './serialization';
+import { formatSong, type SerializedSong } from './serialization';
 
 // Accept both Date and string createdAt — Drizzle uses Date at the DB level,
 // but we serialize to ISO string for JSON serialization.
-type SerializedSong = Omit<Song, 'createdAt'> & { createdAt: string | Date };
 type SerializedPlaylist = Omit<Playlist, 'createdAt'> & { createdAt: string | Date };
 
 // ---------------------------------------------------------------------------
