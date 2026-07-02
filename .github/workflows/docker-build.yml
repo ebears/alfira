@@ -7,11 +7,21 @@ on:
       - dev
     paths-ignore:
       - "docs/**"
-      - "README.md"
+      - "**.md"
+      - ".zed/**"
+      - ".pi/**"
+      - "LICENSE"
+      - ".git-commit-template"
+      - ".env.example"
   pull_request:
     paths-ignore:
       - "docs/**"
-      - "README.md"
+      - "**.md"
+      - ".zed/**"
+      - ".pi/**"
+      - "LICENSE"
+      - ".git-commit-template"
+      - ".env.example"
   workflow_dispatch:
 
 jobs:
