@@ -24,6 +24,10 @@ Follow these principles:
 
 The goal is a clean, legible codebase that's easy to reason about and extend. Every removal or simplification should raise the bar, not just churn the code.
 
+## Boundaries
+
+Structural design issues — long functions, god objects, feature envy, inconsistent patterns — aren't cleanup. Use `/smell` for those.
+
 ## Honesty
 
 If you don't find anything worth acting on, say so. It's better to be honest than to manufacture a problem that doesn't exist. No cleanup is still a valid result.

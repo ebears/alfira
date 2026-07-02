@@ -4,6 +4,16 @@ description: Run quality checks and review the diff before submitting — the ga
 
 Run the verification gate. Do not proceed to `/submit` until this passes.
 
+## 0. Scope check
+
+```bash
+git diff --stat
+```
+
+If only non-code files changed (`.pi/prompts/`, `docs/`, `README.md`, `*.md`, `.gitignore`, etc.), skip TypeScript compilation (step 2). Linting and diff review still apply.
+
+If the diff is large (200+ lines), flag it: "Large diff — review carefully."
+
 ## 1. Lint and format
 
 ```bash
