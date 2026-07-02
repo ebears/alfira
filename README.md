@@ -65,7 +65,7 @@
 
 ## Features
 
-- **Import songs** — Paste a YouTube link to save it to your library.
+- **Import songs** — Paste a link from YouTube, SoundCloud, Spotify, Apple Music, Tidal, or Google Drive to save it to your library. Configure which sources are enabled in settings.
 - **Playback** — Play, pause, seek, skip, loop, and shuffle. Optional server-wide equalizer and compressor.
 - **Metadata editing** — Customize title, artist, album, cover art, tags, and per-song volume.
 - **Playlists** — Create and manage private or public playlists from your library.

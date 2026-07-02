@@ -1,4 +1,10 @@
-import { GlobeIcon, MegaphoneIcon, TimerIcon } from '@phosphor-icons/react';
+import {
+  GlobeIcon,
+  MegaphoneIcon,
+  MusicNotesIcon,
+  QuestionIcon,
+  TimerIcon,
+} from '@phosphor-icons/react';
 import { useEffect, useState } from 'react';
 import {
   fetchGeneralSettings,
@@ -9,6 +15,7 @@ import {
   type SetupRole,
   updateGeneralSettings,
 } from '../../api/api';
+import { SourceIcon } from '../SourceIcons';
 
 export default function AdminTab() {
   const [saved, setSaved] = useState<GeneralSettings | null>(null);
@@ -16,6 +23,17 @@ export default function AdminTab() {
   const [timeoutMinutes, setTimeoutMinutes] = useState(5);
   const [notificationChannelId, setNotificationChannelId] = useState<string | null>(null);
   const [publicUrl, setPublicUrl] = useState<string | null>(null);
+  const [enabledSources, setEnabledSources] = useState('youtube,soundcloud');
+  const [availableSources, setAvailableSources] = useState<
+    { key: string; displayName: string; requiresCredentials: boolean; helpText: string | null }[]
+  >([]);
+
+  const selectedSourceKeySet = new Set(
+    enabledSources
+      .split(',')
+      .map((s) => s.trim())
+      .filter(Boolean)
+  );
 
   const [roles, setRoles] = useState<SetupRole[]>([]);
   const [channels, setChannels] = useState<SetupChannel[]>([]);
@@ -33,6 +51,8 @@ export default function AdminTab() {
         setTimeoutMinutes(settings.voiceIdleTimeoutMinutes);
         setNotificationChannelId(settings.notificationChannelId);
         setPublicUrl(settings.publicUrl);
+        setEnabledSources(settings.enabledSources);
+        setAvailableSources(settings.availableSources);
 
         // Load roles and channels for the pickers.
         if (settings.guildId) {
@@ -54,7 +74,8 @@ export default function AdminTab() {
     ? adminRoleIds !== saved.adminRoleIds ||
       timeoutMinutes !== saved.voiceIdleTimeoutMinutes ||
       notificationChannelId !== saved.notificationChannelId ||
-      publicUrl !== saved.publicUrl
+      publicUrl !== saved.publicUrl ||
+      enabledSources !== saved.enabledSources
     : false;
 
   async function handleSave() {
@@ -67,6 +88,7 @@ export default function AdminTab() {
         voiceIdleTimeoutMinutes: timeoutMinutes,
         notificationChannelId,
         publicUrl,
+        enabledSources,
       });
       setSaved(updated);
       setSuccessMsg('Settings saved.');
@@ -87,6 +109,19 @@ export default function AdminTab() {
     if (set.has(id)) set.delete(id);
     else set.add(id);
     setAdminRoleIds([...set].join(','));
+  }
+
+  function toggleSource(key: string) {
+    const current = new Set(
+      enabledSources
+        .split(',')
+        .map((s) => s.trim())
+        .filter(Boolean)
+    );
+    if (current.size === 1 && current.has(key)) return; // Last one — can't disable.
+    if (current.has(key)) current.delete(key);
+    else current.add(key);
+    setEnabledSources([...current].join(','));
   }
 
   const selectedRoleIdSet = new Set(
@@ -145,6 +180,65 @@ export default function AdminTab() {
                 />
                 <span className="text-sm text-fg">{r.name}</span>
               </label>
+            ))}
+          </div>
+        )}
+      </div>
+
+      <div className="border-t border-muted/20" />
+
+      {/* Music Sources */}
+      <div className="space-y-2">
+        <div className="flex items-center gap-2">
+          <MusicNotesIcon size={14} weight="duotone" className="text-muted" />
+          <h3 className="font-mono text-[11px] text-muted uppercase tracking-wider">
+            Music Sources
+          </h3>
+        </div>
+        <p className="text-xs text-muted">
+          Choose which music platforms Alfira can play from. At least one must be enabled.
+        </p>
+        {availableSources.length === 0 ? (
+          <p className="text-xs text-muted italic">No sources available.</p>
+        ) : (
+          <div className="space-y-1.5">
+            {availableSources.map((source) => (
+              <>
+                <label
+                  key={source.key}
+                  className={`flex items-center gap-3 p-2.5 rounded-lg border cursor-pointer transition-colors ${
+                    selectedSourceKeySet.has(source.key)
+                      ? 'border-accent bg-accent/5'
+                      : 'border-border hover:border-muted'
+                  }`}
+                >
+                  <input
+                    type="checkbox"
+                    checked={selectedSourceKeySet.has(source.key)}
+                    onChange={() => toggleSource(source.key)}
+                    className="accent-accent"
+                  />
+                  <SourceIcon sourceKey={source.key} className="shrink-0" />
+                  <span className="text-sm text-fg">{source.displayName}</span>
+                  {source.helpText && (
+                    <span className="relative group">
+                      <QuestionIcon size={14} weight="duotone" className="text-muted cursor-help" />
+                      <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-56 p-2 rounded-lg bg-elevated border border-border text-xs text-muted opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity z-10">
+                        {source.helpText}
+                      </span>
+                    </span>
+                  )}
+                  {selectedSourceKeySet.size === 1 && selectedSourceKeySet.has(source.key) && (
+                    <span className="text-xs text-muted ml-auto">(must keep at least one)</span>
+                  )}
+                </label>
+                {source.requiresCredentials && selectedSourceKeySet.has(source.key) && (
+                  <p className="text-xs text-warning ml-9">
+                    This source requires credentials to be configured via environment variables
+                    before it can play music.
+                  </p>
+                )}
+              </>
             ))}
           </div>
         )}

@@ -67,9 +67,7 @@ export default function AddSongModal({
     <Backdrop onClose={onClose}>
       <div className="bg-surface rounded-xl p-5 md:p-6 w-full max-w-md mx-4 modal-clay animate-fade-up">
         <h2 className="font-display text-2xl md:text-3xl text-fg tracking-wider mb-1">Add Song</h2>
-        <p className="font-mono text-xs text-muted mb-4 md:mb-6">
-          paste a YouTube or SoundCloud url
-        </p>
+        <p className="font-mono text-xs text-muted mb-4 md:mb-6">paste a url</p>
 
         <input
           ref={inputRef}

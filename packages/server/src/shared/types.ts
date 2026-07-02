@@ -87,6 +87,13 @@ export interface GeneralSettings {
   voiceIdleTimeoutMinutes: number;
   notificationChannelId: string | null;
   publicUrl: string | null;
+  enabledSources: string;
+  availableSources: {
+    key: string;
+    displayName: string;
+    requiresCredentials: boolean;
+    helpText: string | null;
+  }[];
 }
 
 // ---------------------------------------------------------------------------

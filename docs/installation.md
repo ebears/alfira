@@ -81,8 +81,16 @@ docker compose up -d
 | `LOG_FORMAT` | Set to `json` for machine-readable structured logging | — |
 | `NO_COLOR` | Set to any value to disable colored log output | — |
 | `JWT_EXPIRES_IN` | JWT refresh token expiration (e.g., `30d`, `7d`, `24h`) | `30d` |
+| `ENABLED_SOURCES` | Comma-separated list of music sources to enable by default | `youtube,soundcloud` |
+| `SPOTIFY_CLIENT_ID` | Spotify API client ID (from [Spotify Developer Dashboard](https://developer.spotify.com/dashboard)) | — |
+| `SPOTIFY_CLIENT_SECRET` | Spotify API client secret | — |
+| `APPLE_MUSIC_MEDIA_API_TOKEN` | Apple Music developer token (set to `token_here` for auto-fetch, or provide a JWT) | — |
+| `TIDAL_TOKEN` | Tidal authentication token | — |
+| `GOOGLE_DRIVE_COOKIES` | Cookie header for accessing private Google Drive files | — |
 
 > **Note:** `GUILD_ID` and `ADMIN_ROLE_IDS` are **not required** for new installs — these are configured through the in-app setup wizard. They're only needed for existing deployments migrating from an earlier version.
+
+> **Music sources:** Spotify, Apple Music, and Tidal require credentials to work. Without them, these sources cannot be enabled — their checkboxes will show a warning in the setup wizard and admin settings. YouTube, SoundCloud, and Google Drive work out of the box.
 
 ### Reverse Proxy
 
@@ -144,10 +152,11 @@ You can invite the bot during the setup wizard (it shows an invite link), or man
 After starting Alfira and logging in for the first time, you'll be guided through a setup wizard that configures:
 
 1. **Discord Server** — Choose which server Alfira operates in
-2. **Admin Roles** — Select which Discord roles can manage the bot
-3. **Notification Channel** — (Optional) Channel where Alfira posts idle-leave messages
-4. **Idle Timeout** — Minutes before the bot auto-leaves an empty voice channel
-5. **Public URL** — (Optional) Your public-facing URL
+2. **Music Sources** — Choose which music platforms to enable (YouTube, SoundCloud, Spotify, Apple Music, Tidal, Google Drive)
+3. **Admin Roles** — Select which Discord roles can manage the bot
+4. **Notification Channel** — (Optional) Channel where Alfira posts idle-leave messages
+5. **Idle Timeout** — Minutes before the bot auto-leaves an empty voice channel
+6. **Public URL** — (Optional) Your public-facing URL
 
 All of these settings can be changed later from the **Settings → Admin** page.
 

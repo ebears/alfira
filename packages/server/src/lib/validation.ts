@@ -1,5 +1,6 @@
 import { logger } from '../shared/logger';
 import {
+  getEnabledSourceDisplayNames,
   getMetadata,
   getPlaylistMetadataWithVideos,
   isPlaylistUrl,
@@ -40,14 +41,11 @@ export function validateSourceUrl(sourceUrl: unknown): ValidationResult<string> 
   if (!result.ok) return result;
 
   if (!isValidSourceUrl(result.value)) {
+    const names = getEnabledSourceDisplayNames();
+    const list = names.length > 0 ? names.join(' and ') : 'no sources';
     return {
       ok: false,
-      response: json(
-        {
-          error: "Supported sources are YouTube and SoundCloud. That URL doesn't look right.",
-        },
-        400
-      ),
+      response: json({ error: `Supported sources: ${list}. That URL doesn't look right.` }, 400),
     };
   }
 
@@ -60,12 +58,13 @@ export function validatePlaylistUrl(playlistUrl: unknown): ValidationResult<stri
   if (!result.ok) return result;
 
   if (!isPlaylistUrl(result.value)) {
+    const names = getEnabledSourceDisplayNames();
+    const list = names.length > 0 ? names.join(' and ') : 'no sources';
     return {
       ok: false,
       response: json(
         {
-          error:
-            'That does not look like a valid playlist URL. Supported sources are YouTube and SoundCloud.',
+          error: `That does not look like a valid playlist URL. Supported sources: ${list}.`,
         },
         400
       ),

@@ -45,7 +45,7 @@ export default function QuickAddModal({
       <div className="p-5 md:p-6 w-full max-w-sm mx-4 modal-clay animate-fade-up">
         <h2 className="font-display text-2xl md:text-3xl text-fg tracking-wider mb-1">Quick Add</h2>
         <p className="font-mono text-xs text-muted mb-4 md:mb-6">
-          add a YouTube or SoundCloud url to Up Next without saving to library
+          add a url to Up Next without saving to library
         </p>
 
         <div className="space-y-4 mb-6">

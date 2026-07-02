@@ -65,6 +65,28 @@ Common issues and solutions for Alfira.
    (Requires `.env` with `DISCORD_BOT_TOKEN`, `DISCORD_CLIENT_ID`, `GUILD_ID`)
 4. **Wait for Discord cache** — After unregistering, commands disappear from Discord's menu immediately for guild commands (global commands can take up to 1 hour).
 
+## Music Source Issues
+
+### Spotify / Apple Music / Tidal tracks won't load
+
+**Symptoms:** Pasting a Spotify, Apple Music, or Tidal URL returns "Could not fetch track info" or similar error.
+
+**Cause:** These sources require API credentials that aren't configured.
+
+**Solutions:**
+1. Add the required credentials to your `.env` file (see [Installation Guide](installation.md#optional)).
+2. Restart Alfira after adding credentials: `docker compose restart alfira`
+3. Verify the source is enabled in **Settings → Admin → Music Sources**.
+
+### "That URL doesn't look right" error
+
+**Symptoms:** Pasting a valid URL from a supported source but getting a validation error.
+
+**Solutions:**
+1. Check that the source is enabled in **Settings → Admin → Music Sources**.
+2. The error message lists which sources are currently enabled — check those match what you expect.
+3. Ensure the URL is a direct track/playlist link (not a search results page).
+
 ## Database Issues
 
 ### Connection errors

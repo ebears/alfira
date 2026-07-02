@@ -420,6 +420,15 @@ async function main(): Promise<void> {
     logger.error(error, 'Failed to initialize guild settings');
   }
 
+  // 2.6. Initialize enabled sources cache.
+  try {
+    const { initEnabledSources } = await import('./startDiscord');
+    await initEnabledSources();
+    logger.info('Enabled sources cache initialized');
+  } catch (error) {
+    logger.error(error, 'Failed to initialize enabled sources cache');
+  }
+
   // 3. Start NodeLink in-process.
   try {
     await startNodeLink();
