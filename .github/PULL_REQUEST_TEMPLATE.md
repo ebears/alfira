@@ -1,28 +1,30 @@
-## What does this PR do?
-A brief description of the changes introduced by this PR.
+## Summary
 
-## Related issue
+<!-- Briefly describe what this PR does and why. -->
+
+## Changes
+
+<!-- List key changes as bullet points. -->
+
+-
+-
+
+## Related
+
+<!-- Link related issues or PRs. -->
 Closes #
 
-## Type of change
-- [ ] Bug fix (non-breaking change which fixes an issue)
-- [ ] New feature (non-breaking change which adds functionality)
-- [ ] Breaking change (fix or feature that would cause existing functionality to not work as expected)
-- [ ] Documentation update
-- [ ] Refactoring (no functional changes)
-- [ ] CI/CD improvement
+## Screenshots
 
-## Testing
-How was this tested? Describe the steps you took to verify the changes.
+<!-- If UI changes, add before/after screenshots. Otherwise delete this section. -->
 
 ## Checklist
-- [ ] TypeScript compiles without errors (`bunx tsc --noEmit -p packages/<pkg>/tsconfig.json`)
-- [ ] Docker images build successfully (`docker compose build`)
+
+- [ ] `bun run check` passes
+- [ ] TypeScript compiles (`bunx tsc --noEmit -p packages/server/tsconfig.json`)
+- [ ] Manual testing done (describe below)
 - [ ] Documentation updated if needed
-- [ ] Changes follow the project's code style
 
-## Screenshots (if applicable)
-Add screenshots to help explain your changes.
+### Testing
 
-## Additional notes
-Any other information that reviewers should know about.
+<!-- How was this tested? -->
