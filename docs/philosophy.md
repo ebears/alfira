@@ -38,6 +38,6 @@ Not a slash-command-only workflow. The Discord bot is the playback engine; the w
 
 ---
 
-## 5. Type safety across the boundary
+## 5. Audio is audio — no assumptions about content
 
-Shared package (`@alfira-bot/server/shared`) gives end-to-end types from DB → API → WebSocket → React. TypeScript is the contract — no manual DTOs, no `any` at the seams. Verified by `bun run check` across the workspace.
+Alfira functions equally as a traditional music bot and as a tabletop audio player. The data model — songs, playlists, tags — is content-type-agnostic: a three-minute pop song and an hour-long dungeon ambience are the same shape under the hood. Nothing in the schema or UI enforces "music" as the only valid use case.
