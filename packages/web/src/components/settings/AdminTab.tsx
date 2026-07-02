@@ -106,8 +106,12 @@ export default function AdminTab() {
       .map((s) => s.trim())
       .filter(Boolean);
     const set = new Set(current);
-    if (set.has(id)) set.delete(id);
-    else set.add(id);
+    if (set.has(id)) {
+      if (set.size === 1) return; // Last one — can't remove.
+      set.delete(id);
+    } else {
+      set.add(id);
+    }
     setAdminRoleIds([...set].join(','));
   }
 
@@ -179,6 +183,9 @@ export default function AdminTab() {
                   }}
                 />
                 <span className="text-sm text-fg">{r.name}</span>
+                {selectedRoleIdSet.size === 1 && selectedRoleIdSet.has(r.id) && (
+                  <span className="text-xs text-muted ml-auto">(must keep at least one)</span>
+                )}
               </label>
             ))}
           </div>
