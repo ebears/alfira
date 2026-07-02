@@ -9,21 +9,15 @@ export type {
   SetupChannel,
   SetupGuild,
   SetupRole,
-  SetupStatus,
 } from '@alfira-bot/server/shared';
 
-export type {
-  CompleteSetupPayload,
-  GeneralSettingsUpdate,
-  PermissionsResponse,
-} from '@alfira-bot/server/shared/api';
+export type { PermissionsResponse } from '@alfira-bot/server/shared/api';
 // ---------------------------------------------------------------------------
 // Re-export everything from shared API with web-compatible names
 // ---------------------------------------------------------------------------
 export {
   addSongToPlaylist,
   addToPriorityQueue,
-  clearQueue,
   completeSetup,
   createPlaylist,
   createSong as addSong,
@@ -38,8 +32,6 @@ export {
   // Playlists
   fetchPlaylists as getPlaylists,
   fetchPlaylistsPage as getPlaylistsPage,
-  // Player
-  fetchQueueState,
   // Setup
   fetchSetupChannels,
   fetchSetupGuilds,
@@ -50,19 +42,13 @@ export {
   // Version
   fetchVersion,
   importPlaylist,
-  leaveVoice,
   overridePlay,
   quickAddPlaylistToQueue,
   quickAddToQueue,
   removeSongFromPlaylist,
   renamePlaylist,
-  setLoopMode,
-  shuffleQueue,
-  skipTrack,
   startPlayback,
-  togglePause,
   togglePlaylistVisibility,
-  unshuffleQueue,
   updateGeneralSettings,
   updatePermission,
 } from '@alfira-bot/server/shared/api';
