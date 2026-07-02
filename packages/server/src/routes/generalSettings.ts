@@ -4,6 +4,18 @@ import { json } from '../lib/json';
 import { checkGuards } from '../lib/routeGuards';
 import type { GeneralSettings } from '../shared';
 import { db, tables } from '../shared/db';
+import { SOURCE_DEFINITIONS } from '../startDiscord';
+
+const AVAILABLE_SOURCES = Object.entries(SOURCE_DEFINITIONS).map(([key, def]) => ({
+  key,
+  displayName: def.displayName,
+  requiresCredentials: def.requiresCredentials ?? false,
+  helpText: def.helpText ?? null,
+}));
+
+function attachAvailableSources(row: Omit<GeneralSettings, 'availableSources'>): GeneralSettings {
+  return { ...row, availableSources: AVAILABLE_SOURCES };
+}
 
 const SETTINGS_COLUMNS = {
   guildId: tables.guildSettings.guildId,
@@ -12,6 +24,7 @@ const SETTINGS_COLUMNS = {
   voiceIdleTimeoutMinutes: tables.guildSettings.voiceIdleTimeoutMinutes,
   notificationChannelId: tables.guildSettings.notificationChannelId,
   publicUrl: tables.guildSettings.publicUrl,
+  enabledSources: tables.guildSettings.enabledSources,
 };
 
 // ---------------------------------------------------------------------------
@@ -28,17 +41,20 @@ async function handleGetGeneral(ctx: RouteContext): Promise<Response> {
     .get();
 
   if (!row) {
-    return json({
-      guildId: null,
-      setupCompleted: false,
-      adminRoleIds: '',
-      voiceIdleTimeoutMinutes: 5,
-      notificationChannelId: null,
-      publicUrl: null,
-    });
+    return json(
+      attachAvailableSources({
+        guildId: null,
+        setupCompleted: false,
+        adminRoleIds: '',
+        voiceIdleTimeoutMinutes: 5,
+        notificationChannelId: null,
+        publicUrl: null,
+        enabledSources: 'youtube,soundcloud',
+      })
+    );
   }
 
-  return json(row as GeneralSettings);
+  return json(attachAvailableSources(row as Omit<GeneralSettings, 'availableSources'>));
 }
 
 // ---------------------------------------------------------------------------
@@ -49,6 +65,7 @@ interface GeneralSettingsPatch {
   voiceIdleTimeoutMinutes?: number;
   notificationChannelId?: string | null;
   publicUrl?: string | null;
+  enabledSources?: string;
 }
 
 async function handlePatchGeneral(ctx: RouteContext, request: Request): Promise<Response> {
@@ -93,6 +110,13 @@ async function handlePatchGeneral(ctx: RouteContext, request: Request): Promise<
     updates.publicUrl = body.publicUrl;
   }
 
+  if (body.enabledSources !== undefined) {
+    if (typeof body.enabledSources !== 'string' || body.enabledSources.trim().length === 0) {
+      return json({ error: 'enabledSources must be a non-empty comma-separated string' }, 400);
+    }
+    updates.enabledSources = body.enabledSources.trim();
+  }
+
   if (Object.keys(updates).length === 0) {
     return json({ error: 'No fields to update' }, 400);
   }
@@ -106,6 +130,12 @@ async function handlePatchGeneral(ctx: RouteContext, request: Request): Promise<
     })
     .run();
 
+  // Refresh the enabled sources cache if sources were updated.
+  if (updates.enabledSources) {
+    const { refreshEnabledSources } = await import('../startDiscord');
+    refreshEnabledSources(updates.enabledSources as string);
+  }
+
   // Return the full updated row.
   const row = await db
     .select(SETTINGS_COLUMNS)
@@ -113,7 +143,7 @@ async function handlePatchGeneral(ctx: RouteContext, request: Request): Promise<
     .where(eq(tables.guildSettings.id, 1))
     .get();
 
-  return json(row as GeneralSettings);
+  return json(attachAvailableSources(row as Omit<GeneralSettings, 'availableSources'>));
 }
 
 // ---------------------------------------------------------------------------

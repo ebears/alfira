@@ -87,7 +87,7 @@ Top-level scripts:
 
 | Type | Description |
 |------|-------------|
-| `Song` | Database song model (id, title, youtubeUrl, duration, thumbnailUrl, etc.) |
+| `Song` | Database song model (id, title, sourceUrl, sourceId, duration, thumbnailUrl, etc.) |
 | `QueuedSong` | Song with `requestedBy` display name (runtime queue property) |
 | `LoopMode` | `'off'` \| `'song'` \| `'queue'` |
 | `QueueState` | Full player state snapshot for real-time broadcasts |

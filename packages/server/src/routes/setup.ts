@@ -208,6 +208,7 @@ async function handlePostComplete(ctx: RouteContext, request: Request): Promise<
     voiceIdleTimeoutMinutes?: unknown;
     notificationChannelId?: unknown;
     publicUrl?: unknown;
+    enabledSources?: unknown;
   };
 
   try {
@@ -247,6 +248,12 @@ async function handlePostComplete(ctx: RouteContext, request: Request): Promise<
   const publicUrl =
     body.publicUrl && typeof body.publicUrl === 'string' ? body.publicUrl.trim() : null;
 
+  // Validate enabledSources (optional, defaults to all sources)
+  const enabledSources =
+    body.enabledSources && typeof body.enabledSources === 'string'
+      ? body.enabledSources.trim()
+      : 'youtube,soundcloud';
+
   try {
     await db
       .insert(tables.guildSettings)
@@ -258,6 +265,7 @@ async function handlePostComplete(ctx: RouteContext, request: Request): Promise<
         voiceIdleTimeoutMinutes: timeout,
         notificationChannelId,
         publicUrl,
+        enabledSources,
       })
       .onConflictDoUpdate({
         target: tables.guildSettings.id,
@@ -268,12 +276,17 @@ async function handlePostComplete(ctx: RouteContext, request: Request): Promise<
           voiceIdleTimeoutMinutes: timeout,
           notificationChannelId,
           publicUrl,
+          enabledSources,
         },
       })
       .run();
 
     // Update the in-memory guild ID cache so getGuildId() returns the new value.
     refreshGuildId(body.guildId);
+
+    // Update the enabled sources cache.
+    const { refreshEnabledSources } = await import('../startDiscord');
+    refreshEnabledSources(enabledSources);
 
     return json({ success: true });
   } catch (err) {

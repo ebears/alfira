@@ -3,6 +3,8 @@ import {
   CheckIcon,
   GlobeIcon,
   MegaphoneIcon,
+  MusicNotesIcon,
+  QuestionIcon,
   ShieldCheckIcon,
   TimerIcon,
 } from '@phosphor-icons/react';
@@ -19,18 +21,42 @@ import {
   type SetupGuild,
   type SetupRole,
 } from '../api/api';
+import { SourceIcon } from '../components/SourceIcons';
 import { useAuth } from '../context/AuthContext';
 
-type Step = 'welcome' | 'guild' | 'roles' | 'channel' | 'timeout' | 'publicUrl' | 'confirm';
+type Step =
+  | 'welcome'
+  | 'guild'
+  | 'sources'
+  | 'roles'
+  | 'channel'
+  | 'timeout'
+  | 'publicUrl'
+  | 'confirm';
 
 const STEP_ORDER: Step[] = [
   'welcome',
   'guild',
+  'sources',
   'roles',
   'channel',
   'timeout',
   'publicUrl',
   'confirm',
+];
+
+const AVAILABLE_SOURCES = [
+  { key: 'youtube', displayName: 'YouTube', requiresCredentials: false, helpText: undefined },
+  { key: 'soundcloud', displayName: 'SoundCloud', requiresCredentials: false, helpText: undefined },
+  { key: 'spotify', displayName: 'Spotify', requiresCredentials: true, helpText: undefined },
+  { key: 'applemusic', displayName: 'Apple Music', requiresCredentials: true, helpText: undefined },
+  { key: 'tidal', displayName: 'Tidal', requiresCredentials: true, helpText: undefined },
+  {
+    key: 'googledrive',
+    displayName: 'Google Drive',
+    requiresCredentials: false,
+    helpText: 'Paste a Google Drive share link to play audio files hosted on Google Drive.',
+  },
 ];
 
 export default function SetupWizard() {
@@ -45,6 +71,9 @@ export default function SetupWizard() {
   // Form state
   const [guilds, setGuilds] = useState<SetupGuild[]>([]);
   const [selectedGuildId, setSelectedGuildId] = useState<string>('');
+  const [selectedSourceKeys, setSelectedSourceKeys] = useState<Set<string>>(
+    new Set(['youtube', 'soundcloud'])
+  );
   const [roles, setRoles] = useState<SetupRole[]>([]);
   const [selectedRoleIds, setSelectedRoleIds] = useState<Set<string>>(new Set());
   const [channels, setChannels] = useState<SetupChannel[]>([]);
@@ -155,6 +184,7 @@ export default function SetupWizard() {
 
   async function handleSubmit() {
     if (!selectedGuildId || selectedRoleIds.size === 0) return;
+    if (selectedSourceKeys.size === 0) return;
     setSaving(true);
     setError(null);
     try {
@@ -164,6 +194,7 @@ export default function SetupWizard() {
         voiceIdleTimeoutMinutes: timeoutMinutes,
         notificationChannelId: selectedChannelId || null,
         publicUrl: publicUrl.trim() || null,
+        enabledSources: [...selectedSourceKeys].join(','),
       });
       // Clear the old session (still has isSetupAdmin in the JWT),
       // then redirect to /login for a fresh OAuth flow.
@@ -181,6 +212,17 @@ export default function SetupWizard() {
       const next = new Set(prev);
       if (next.has(id)) next.delete(id);
       else next.add(id);
+      return next;
+    });
+  }
+
+  function toggleSource(key: string) {
+    setSelectedSourceKeys((prev) => {
+      const next = new Set(prev);
+      // Prevent deselecting the last source.
+      if (next.size === 1 && next.has(key)) return prev;
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
       return next;
     });
   }
@@ -300,10 +342,92 @@ export default function SetupWizard() {
                 </button>
                 <button
                   type="button"
-                  onClick={loadRoles}
+                  onClick={() => setStep('sources')}
                   disabled={!selectedGuildId}
                   className={`px-5 py-2 rounded-xl font-body text-sm transition-colors ${
                     selectedGuildId
+                      ? 'btn-primary cursor-pointer'
+                      : 'bg-elevated text-muted cursor-not-allowed'
+                  }`}
+                >
+                  Next
+                </button>
+              </div>
+            </div>
+          )}
+
+          {step === 'sources' && (
+            <div className="space-y-5">
+              <div className="flex items-center gap-3">
+                <MusicNotesIcon size={24} weight="duotone" className="text-accent" />
+                <h2 className="font-display text-xl text-fg">Music Sources</h2>
+              </div>
+              <p className="text-sm text-muted">
+                Choose which music platforms Alfira can play from. At least one source must be
+                enabled.
+              </p>
+              <div className="space-y-2">
+                {AVAILABLE_SOURCES.map((source) => (
+                  <>
+                    <label
+                      key={source.key}
+                      className={`flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-colors ${
+                        selectedSourceKeys.has(source.key)
+                          ? 'border-accent bg-accent/5'
+                          : 'border-border hover:border-muted'
+                      }`}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={selectedSourceKeys.has(source.key)}
+                        onChange={() => toggleSource(source.key)}
+                        className="accent-accent"
+                      />
+                      <SourceIcon sourceKey={source.key} className="shrink-0" />
+                      <span className="text-sm text-fg">{source.displayName}</span>
+                      {source.helpText && (
+                        <span className="relative group">
+                          <QuestionIcon
+                            size={14}
+                            weight="duotone"
+                            className="text-muted cursor-help"
+                          />
+                          <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-56 p-2 rounded-lg bg-elevated border border-border text-xs text-muted opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity z-10">
+                            {source.helpText}
+                          </span>
+                        </span>
+                      )}
+                      {selectedSourceKeys.size === 1 && selectedSourceKeys.has(source.key) && (
+                        <span className="text-xs text-muted ml-auto">(must keep at least one)</span>
+                      )}
+                    </label>
+                    {source.requiresCredentials && selectedSourceKeys.has(source.key) && (
+                      <p className="text-xs text-warning ml-9">
+                        This source requires credentials to be configured via environment variables
+                        before it can play music.
+                      </p>
+                    )}
+                  </>
+                ))}
+              </div>
+              {selectedSourceKeys.size === 0 && (
+                <p className="text-xs text-danger">Please enable at least one music source.</p>
+              )}
+              <div className="flex justify-between pt-2">
+                <button
+                  type="button"
+                  onClick={() => setStep('guild')}
+                  className="flex items-center gap-1 text-sm text-muted hover:text-fg transition-colors cursor-pointer"
+                >
+                  <CaretLeftIcon size={14} />
+                  Back
+                </button>
+                <button
+                  type="button"
+                  onClick={loadRoles}
+                  disabled={selectedSourceKeys.size === 0}
+                  className={`px-5 py-2 rounded-xl font-body text-sm transition-colors ${
+                    selectedSourceKeys.size > 0
                       ? 'btn-primary cursor-pointer'
                       : 'bg-elevated text-muted cursor-not-allowed'
                   }`}
@@ -357,7 +481,7 @@ export default function SetupWizard() {
               <div className="flex justify-between pt-2">
                 <button
                   type="button"
-                  onClick={() => setStep('guild')}
+                  onClick={() => setStep('sources')}
                   className="flex items-center gap-1 text-sm text-muted hover:text-fg transition-colors cursor-pointer"
                 >
                   <CaretLeftIcon size={14} />
@@ -538,6 +662,14 @@ export default function SetupWizard() {
                   <span className="text-muted">Server</span>
                   <span className="text-fg">
                     {guilds.find((g) => g.id === selectedGuildId)?.name ?? selectedGuildId}
+                  </span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted">Music Sources</span>
+                  <span className="text-fg">
+                    {[...selectedSourceKeys]
+                      .map((k) => AVAILABLE_SOURCES.find((s) => s.key === k)?.displayName ?? k)
+                      .join(', ')}
                   </span>
                 </div>
                 <div className="flex justify-between text-sm">

@@ -7,11 +7,16 @@ import { updateNodeLinkPlayer } from './utils/nodelink';
 export type { GuildPlayer } from './GuildPlayer';
 export { createPlayer, destroyAllPlayers, getPlayer } from './manager';
 export {
+  getEnabledSourceDisplayNames,
+  getEnabledSourceKeys,
   getMetadata,
   getPlaylistMetadataWithVideos,
+  initEnabledSources,
   isPlaylistUrl,
   isValidSourceUrl,
   type PlaylistMetadata,
+  refreshEnabledSources,
+  SOURCE_DEFINITIONS,
 } from './utils/nodelink';
 
 const NODELINK_URL = 'http://127.0.0.1:2333';

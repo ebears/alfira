@@ -108,4 +108,5 @@ export const guildSettings = sqliteTable('guildSettings', {
   voiceIdleTimeoutMinutes: integer('voiceIdleTimeoutMinutes').notNull().default(5),
   notificationChannelId: text('notificationChannelId'),
   publicUrl: text('publicUrl'),
+  enabledSources: text('enabledSources').notNull().default('youtube,soundcloud'),
 });

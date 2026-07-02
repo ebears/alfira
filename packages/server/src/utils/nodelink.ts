@@ -99,28 +99,150 @@ interface TrackInfo {
 }
 
 // ---------------------------------------------------------------------------
-// Supported sources — add new hostnames here to enable more sources.
-// NodeLink must also support the source for it to work end-to-end.
+// Source definitions
+//
+// Each source has:
+// - hosts: hostnames to validate URLs against
+// - displayName: human-readable name for UI / error messages
+// - isPlaylistUrl: optional fn to detect playlist URLs for this source
 // ---------------------------------------------------------------------------
 
-const SUPPORTED_HOSTS = [
-  // YouTube
-  'youtube.com',
-  'www.youtube.com',
-  'youtu.be',
-  'music.youtube.com',
-  // SoundCloud
-  'soundcloud.com',
-  'www.soundcloud.com',
-];
+export interface SourceDefinition {
+  key: string;
+  displayName: string;
+  hosts: string[];
+  isPlaylistUrl?: (parsed: URL) => boolean;
+  requiresCredentials?: boolean;
+  helpText?: string;
+}
+
+export const SOURCE_DEFINITIONS: Record<string, SourceDefinition> = {
+  youtube: {
+    key: 'youtube',
+    displayName: 'YouTube',
+    hosts: ['youtube.com', 'www.youtube.com', 'youtu.be', 'music.youtube.com'],
+    isPlaylistUrl: (parsed: URL) => parsed.searchParams.has('list'),
+  },
+  soundcloud: {
+    key: 'soundcloud',
+    displayName: 'SoundCloud',
+    hosts: ['soundcloud.com', 'www.soundcloud.com'],
+    isPlaylistUrl: (parsed: URL) => parsed.pathname.includes('/sets/'),
+  },
+  spotify: {
+    key: 'spotify',
+    displayName: 'Spotify',
+    hosts: ['open.spotify.com', 'spotify.com', 'www.spotify.com'],
+    isPlaylistUrl: (parsed: URL) =>
+      parsed.pathname.includes('/playlist/') || parsed.pathname.includes('/album/'),
+    requiresCredentials: true,
+  },
+  applemusic: {
+    key: 'applemusic',
+    displayName: 'Apple Music',
+    hosts: ['music.apple.com'],
+    isPlaylistUrl: (parsed: URL) =>
+      parsed.pathname.includes('/playlist/') || parsed.pathname.includes('/album/'),
+    requiresCredentials: true,
+  },
+  tidal: {
+    key: 'tidal',
+    displayName: 'Tidal',
+    hosts: ['tidal.com', 'www.tidal.com', 'listen.tidal.com'],
+    isPlaylistUrl: (parsed: URL) =>
+      parsed.pathname.includes('/playlist/') || parsed.pathname.includes('/album/'),
+    requiresCredentials: true,
+  },
+  googledrive: {
+    key: 'googledrive',
+    displayName: 'Google Drive',
+    hosts: ['drive.google.com'],
+    helpText: 'Paste a Google Drive share link to play audio files hosted on Google Drive.',
+  },
+};
+
+// ---------------------------------------------------------------------------
+// Enabled sources cache — mirrors getGuildId() / initGuildId() pattern.
+// Loaded async from DB on startup, read synchronously at call time.
+// Falls back to ENABLED_SOURCES env var, then to all sources.
+// ---------------------------------------------------------------------------
+
+let _cachedEnabledSources: string[] | null = null;
+let _enabledSourcesLoaded = false;
+
+const ALL_SOURCE_KEYS = Object.keys(SOURCE_DEFINITIONS);
+
+function getEnabledSourcesSync(): string[] {
+  if (_cachedEnabledSources) return _cachedEnabledSources;
+  return ALL_SOURCE_KEYS;
+}
+
+export function getEnabledSourceKeys(): string[] {
+  return getEnabledSourcesSync();
+}
+
+export function getEnabledSourceDisplayNames(): string[] {
+  return getEnabledSourcesSync()
+    .map((key) => SOURCE_DEFINITIONS[key]?.displayName)
+    .filter(Boolean) as string[];
+}
+
+export async function initEnabledSources(): Promise<void> {
+  if (_enabledSourcesLoaded) return;
+  try {
+    const { db, tables, eq } = await import('../shared/db');
+    const row = await db
+      .select({ enabledSources: tables.guildSettings.enabledSources })
+      .from(tables.guildSettings)
+      .where(eq(tables.guildSettings.id, 1))
+      .get();
+    if (row?.enabledSources) {
+      _cachedEnabledSources = row.enabledSources
+        .split(',')
+        .map((s) => s.trim())
+        .filter(Boolean);
+    } else {
+      _cachedEnabledSources = parseEnabledSourcesEnv();
+    }
+  } catch {
+    _cachedEnabledSources = parseEnabledSourcesEnv();
+  }
+  _enabledSourcesLoaded = true;
+}
+
+function parseEnabledSourcesEnv(): string[] {
+  const envVal = process.env.ENABLED_SOURCES;
+  if (envVal) {
+    const keys = envVal
+      .split(',')
+      .map((s) => s.trim().toLowerCase())
+      .filter(Boolean);
+    const valid = keys.filter((k) => SOURCE_DEFINITIONS[k]);
+    if (valid.length > 0) return valid;
+  }
+  return ALL_SOURCE_KEYS;
+}
+
+/** Update the in-memory cache after setup wizard or admin settings save. */
+export function refreshEnabledSources(sources: string): void {
+  _cachedEnabledSources = sources
+    .split(',')
+    .map((s) => s.trim())
+    .filter(Boolean);
+}
 
 export function isValidSourceUrl(url: string): boolean {
   try {
     const parsed = new URL(url);
     if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') return false;
-    return SUPPORTED_HOSTS.some(
-      (host) => parsed.hostname === host || parsed.hostname.endsWith(`.${host}`)
-    );
+    const enabled = getEnabledSourcesSync();
+    return enabled.some((key) => {
+      const def = SOURCE_DEFINITIONS[key];
+      if (!def) return false;
+      return def.hosts.some(
+        (host) => parsed.hostname === host || parsed.hostname.endsWith(`.${host}`)
+      );
+    });
   } catch {
     return false;
   }
@@ -130,15 +252,11 @@ export function isPlaylistUrl(url: string): boolean {
   if (!isValidSourceUrl(url)) return false;
   try {
     const parsed = new URL(url);
-    // YouTube playlists
-    if (parsed.searchParams.has('list')) return true;
-    // SoundCloud sets
-    if (
-      (parsed.hostname === 'soundcloud.com' || parsed.hostname.endsWith('.soundcloud.com')) &&
-      parsed.pathname.includes('/sets/')
-    )
-      return true;
-    return false;
+    const enabled = getEnabledSourcesSync();
+    return enabled.some((key) => {
+      const def = SOURCE_DEFINITIONS[key];
+      return def?.isPlaylistUrl?.(parsed) ?? false;
+    });
   } catch {
     return false;
   }

@@ -369,6 +369,7 @@ export interface CompleteSetupPayload {
   voiceIdleTimeoutMinutes: number;
   notificationChannelId?: string | null;
   publicUrl?: string | null;
+  enabledSources?: string;
 }
 
 export function completeSetup(data: CompleteSetupPayload): Promise<{ success: boolean }> {
@@ -386,7 +387,11 @@ export function fetchGeneralSettings(): Promise<GeneralSettings> {
 export type GeneralSettingsUpdate = Partial<
   Pick<
     GeneralSettings,
-    'adminRoleIds' | 'voiceIdleTimeoutMinutes' | 'notificationChannelId' | 'publicUrl'
+    | 'adminRoleIds'
+    | 'voiceIdleTimeoutMinutes'
+    | 'notificationChannelId'
+    | 'publicUrl'
+    | 'enabledSources'
   >
 >;
 
