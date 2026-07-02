@@ -125,7 +125,11 @@ export default function UserMenu({ user, collapsed, onLogout }: UserMenuProps) {
         } ${open ? 'pressed text-accent' : ''}`}
         style={triggerSurfaceVar}
       >
-        {!collapsed && <span className="text-fg truncate mr-auto">{user.username}</span>}
+        {!collapsed && (
+          <span className={`truncate mr-auto ${open ? 'text-accent' : 'text-fg'}`}>
+            {user.username}
+          </span>
+        )}
         {avatar}
       </button>
 
