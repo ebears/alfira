@@ -1,3 +1,5 @@
+# AGENTS.md
+
 ## Project Overview
 
 Alfira is a self-hosted Discord music bot with a web UI as the primary interface. It's a Bun workspaces monorepo with two packages:
