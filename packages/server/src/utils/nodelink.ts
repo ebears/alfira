@@ -133,7 +133,10 @@ export function isPlaylistUrl(url: string): boolean {
     // YouTube playlists
     if (parsed.searchParams.has('list')) return true;
     // SoundCloud sets
-    if (parsed.hostname.includes('soundcloud.com') && parsed.pathname.includes('/sets/'))
+    if (
+      (parsed.hostname === 'soundcloud.com' || parsed.hostname.endsWith('.soundcloud.com')) &&
+      parsed.pathname.includes('/sets/')
+    )
       return true;
     return false;
   } catch {
