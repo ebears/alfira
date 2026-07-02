@@ -4,6 +4,18 @@ Thanks for your interest in contributing! This guide covers the development work
 
 For setup instructions, see the **[Installation Guide](docs/installation.md)**.
 
+## Branching Model
+
+```
+feature branch  ──PR──►  dev  ──release PR──►  main
+```
+
+- **`main`** — protected, production-ready. Only updated via release PRs from `dev`.
+- **`dev`** — integration branch. All feature work merges here.
+- **Feature branches** — created from `dev`, named `type/short-description` (e.g., `feat/playlist-folders`, `fix/login-redirect`).
+
+See [AGENTS.md](../AGENTS.md) for the full git workflow and commit conventions.
+
 ---
 
 ## Development Workflow

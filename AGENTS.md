@@ -94,6 +94,72 @@ The bot streams audio from NodeLink (a Lavalink v4-compatible server). The `node
 
 **API Service:** `@alfira-bot/server/shared/api` provides centralized API functions (`fetchSongs`, `createSong`, `importPlaylist`, etc.) that should be used by all consumers.
 
+## Git Workflow
+
+### Branch Model
+
+```
+feature branches  ──PR──►  dev  ──release PR──►  main
+```
+
+- `main` — protected, production-ready code. Only updated via release PRs from `dev`.
+- `dev` — integration branch. All feature work merges here via PR.
+- Feature branches — created from `dev`, merged back to `dev`.
+
+Never commit directly to `main` or `dev`. All work happens in feature branches.
+
+### Branch Naming
+
+Feature branches must follow: `<type>/<short-description>`
+
+Valid types: `feat`, `fix`, `chore`, `refactor`, `docs`, `ci`, `security`, `revert`, `ui`, `cleanup`, `test`
+
+Examples: `fix/websocket-reconnect`, `feat/playlist-folders`, `chore/update-deps`
+
+### Commit Messages
+
+Use [Conventional Commits](https://www.conventionalcommits.org/) format:
+
+```
+<type>[optional scope]: <description>
+
+[optional body]
+
+[optional footer(s)]
+```
+
+- `type` must be one of: `feat`, `fix`, `chore`, `refactor`, `docs`, `ci`, `style`, `test`, `perf`, `revert`, `security`
+- `scope` is optional and should match the affected package/area (e.g., `server`, `web`, `deps`, `db`, `docker`, `auth`)
+- Description should be lowercase, imperative mood, no trailing period
+
+A commit template is available at `.git-commit-template`. Enable it locally:
+```bash
+git config commit.template .git-commit-template
+```
+
+Examples:
+```
+feat(server): add queue reordering endpoint
+fix(web): prevent scrubber thumb from sticking at 0
+chore(deps): bump ws to 8.21.0
+refactor(server): extract shared audio filter builders
+```
+
+### PR Workflow
+
+1. Create a feature branch from `dev` (not `main`)
+2. Make changes, run `bun run check` before committing
+3. Commit with a semantic message
+4. Push the branch
+5. Create a PR with `gh pr create`:
+   - Use the conventional commit subject as the PR title
+   - Include a brief summary of changes in the body
+   - Target `dev` as the base branch
+
+### Before Committing
+
+Always run `bun run check` and resolve any lint/format issues before committing.
+
 ## Documentation
 
 - [Installation Guide](docs/installation.md) — Setup, environment variables, Docker commands

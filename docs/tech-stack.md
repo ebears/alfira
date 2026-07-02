@@ -112,5 +112,6 @@ Three GitHub Actions workflows run on the repository:
 
 | Workflow | Trigger | Purpose |
 |----------|---------|---------|
-| **typecheck.yml** | PRs and pushes to `main` | Lint with Biome + typecheck all packages |
-| **docker-build.yml** | PRs and pushes to `main` (ignores `docs/`) | Build Docker images; publish to GHCR on `main` |
+| **ci.yml** | All PRs, pushes to `main` and `dev` | Lint with Biome + typecheck all packages |
+| **codeql.yml** | All PRs, pushes to `main` and `dev`, weekly schedule | CodeQL security analysis |
+| **docker-build.yml** | All PRs, pushes to `main` and `dev` (ignores `docs/`) | Build Docker images; publish to GHCR on `main` |
