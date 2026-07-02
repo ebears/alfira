@@ -1,5 +1,6 @@
+import { logger } from '../shared/logger';
 import { connectToVoice, createPlayer, getClient, getPlayer } from '../startDiscord';
-import { GUILD_ID, logger } from './config';
+import { GUILD_ID } from './config';
 import { json } from './json';
 import { lavalink } from './lavalink';
 

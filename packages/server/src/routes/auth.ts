@@ -2,9 +2,10 @@ import crypto from 'node:crypto';
 import { and, eq, lt } from 'drizzle-orm';
 import jwt from 'jsonwebtoken';
 import type { RouteContext } from '../index';
-import { logger, WEB_UI_ORIGIN } from '../lib/config';
+import { WEB_UI_ORIGIN } from '../lib/config';
 import { json } from '../lib/json';
 import { db, tables } from '../shared/db';
+import { logger } from '../shared/logger';
 
 const { refreshToken: refreshTokenTable } = tables;
 

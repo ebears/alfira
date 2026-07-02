@@ -57,9 +57,8 @@ bun run format
 
 The bot never directly holds WebSocket connections. Instead:
 
-1. `GuildPlayer` calls `broadcastQueueUpdate(state)` (packages/server/src/startDiscord.ts)
-2. `broadcastQueueUpdate` calls `emitPlayerUpdate(state)` directly (same package)
-3. `emitPlayerUpdate` (packages/server/src/lib/socket.ts) sends to all registered WebSocket clients
+1. `GuildPlayer` calls `emitPlayerUpdate(state)` directly (packages/server/src/lib/socket.ts)
+2. `emitPlayerUpdate` fetches compressor settings, serializes the state, and sends to all registered WebSocket clients
 
 WebSocket clients authenticate via session cookie on connection. The client never sends messages — it's receive-only.
 
@@ -98,5 +97,6 @@ The bot streams audio from NodeLink (a Lavalink v4-compatible server). The `node
 ## Documentation
 
 - [Installation Guide](docs/installation.md) — Setup, environment variables, Docker commands
+- [Philosophy](docs/philosophy.md) — Design principles guiding the project
 - [Tech Stack](docs/tech-stack.md) — Detailed architecture
 - [Troubleshooting](docs/troubleshooting.md) — Common issues and solutions

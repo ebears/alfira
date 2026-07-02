@@ -17,7 +17,8 @@ WORKDIR /usr/local/nodelink
 ARG NODELINK_VERSION=v3.7.0
 RUN git clone --depth 1 --branch ${NODELINK_VERSION} https://github.com/PerformanC/NodeLink.git . && \
     bun install && \
-    bun run build
+    bun run build && \
+    rm -rf .git
 WORKDIR /app
 
 COPY package.json bun.lock ./

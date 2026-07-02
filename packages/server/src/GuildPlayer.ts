@@ -2,11 +2,12 @@ import { eq } from 'drizzle-orm';
 import { buildCompressorFilter } from './lib/applyNodeLinkFilter';
 import { buildEqualizerFilter, EQ_BAND_COLUMNS, eqBandsFromRow } from './lib/eqBands';
 import { lavalink, type TrackEndReason } from './lib/lavalink';
+import { emitPlayerUpdate } from './lib/socket';
 import { PlaybackCursor } from './PlaybackCursor';
 import type { LoopMode, QueuedSong, QueueState } from './shared';
 import { db, tables } from './shared/db';
 import { logger } from './shared/logger';
-import { broadcastQueueUpdate, connectToVoice, getClient } from './startDiscord';
+import { connectToVoice, getClient } from './startDiscord';
 import { destroyNodeLinkPlayer, preloadTrack, updateNodeLinkPlayer } from './utils/nodelink';
 
 export class GuildPlayer {
@@ -382,7 +383,7 @@ export class GuildPlayer {
   }
 
   private broadcast(): void {
-    void broadcastQueueUpdate(this.getQueueState());
+    void emitPlayerUpdate(this.getQueueState());
   }
 
   private peekNextTrack(): QueuedSong | null {
