@@ -15,7 +15,9 @@ Read `git diff --stat` and `git diff` (or `git diff --cached` if staged) to unde
 
 If the user provided an argument ($@), use it to help formulate the message. If they provided a full conventional commit string (e.g. `fix(server): handle websocket timeout`), use it as-is.
 
-## 2. Run quality checks
+## 2. Run quality checks (fast gate)
+
+This step assumes `/verify` has already been run and passed. If it hasn't, stop and run `/verify` first.
 
 ```bash
 bun run check
@@ -36,10 +38,16 @@ If already on a feature branch (not `main` or `dev`), ask the user whether to us
 
 ## 4. Stage and commit
 
-Stage all changes:
+Stage changes (but exclude any files that don't belong — `.env`, `dist/`, `data/`, `node_modules/` are already gitignored):
 
 ```bash
 git add -A
+```
+
+Verify only intended files are staged:
+
+```bash
+git diff --cached --stat
 ```
 
 Commit with the semantic message:

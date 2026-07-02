@@ -58,6 +58,8 @@ COPY packages/server/src/shared/db/migrations packages/server/dist/shared/db/mig
 # ---------------------------------------------------------------------------
 FROM oven/bun:1-alpine AS runtime
 
+ARG ALFIRA_VERSION=dev
+
 RUN apk add --no-cache \
     ca-certificates
 
@@ -88,6 +90,7 @@ ENV PATH=/usr/local/bin:$PATH
 USER nodejs
 
 ENV NODE_ENV=production
+ENV ALFIRA_VERSION=${ALFIRA_VERSION}
 
 EXPOSE 3001
 
