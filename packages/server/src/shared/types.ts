@@ -31,20 +31,6 @@ export interface Song {
 }
 
 // ---------------------------------------------------------------------------
-// Tag
-//
-// Stores canonical tag spellings, keyed by lowercase name.
-// The first spelling introduced becomes the canonical form.
-// ---------------------------------------------------------------------------
-export interface Tag {
-  id: string;
-  nameLower: string;
-  canonicalName: string;
-  color?: string | null;
-  createdAt: string; // ISO 8601 string
-}
-
-// ---------------------------------------------------------------------------
 // QueuedSong
 //
 // A Song that has been placed into the GuildPlayer's queue. Extends Song with
@@ -120,16 +106,8 @@ export interface Playlist {
   createdByDisplayName?: string;
   isPrivate: boolean;
   createdAt: string; // ISO 8601 string (JSON wire format)
-  songs?: PlaylistSong[];
+  songs?: { id: string; playlistId: string; songId: string; position: number; song?: Song }[];
   _count?: { songs: number };
-}
-
-export interface PlaylistSong {
-  id: string;
-  playlistId: string;
-  songId: string;
-  position: number;
-  song?: Song;
 }
 
 // ---------------------------------------------------------------------------
@@ -138,7 +116,7 @@ export interface PlaylistSong {
 // A Playlist with its songs fully populated. Used by GET /api/playlists/:id
 // ---------------------------------------------------------------------------
 export interface PlaylistDetail extends Omit<Playlist, 'songs'> {
-  songs: (Omit<PlaylistSong, 'song'> & { song: Song })[];
+  songs: { id: string; playlistId: string; songId: string; position: number; song: Song }[];
 }
 
 // ---------------------------------------------------------------------------
