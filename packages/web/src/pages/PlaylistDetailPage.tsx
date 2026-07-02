@@ -34,6 +34,7 @@ import { Button } from '../components/ui/Button';
 import { VirtualSongList } from '../components/VirtualSongList';
 import { useAdminView } from '../context/AdminViewContext';
 import { useAuth } from '../context/AuthContext';
+import { usePermissions } from '../context/PermissionsContext';
 import { usePlayerState } from '../context/PlayerContext';
 import { useAddToQueue } from '../hooks/useAddToQueue';
 import { useNotification } from '../hooks/useNotification';
@@ -60,6 +61,7 @@ function hashTagColor(tag: string): { bg: string; text: string } {
 export default function PlaylistDetailPage() {
   const { id } = useParams<{ id: string }>();
   const { isAdminView } = useAdminView();
+  const { hasPermission } = usePermissions();
   const { user } = useAuth();
   const navigate = useNavigate();
 
@@ -77,7 +79,7 @@ export default function PlaylistDetailPage() {
   const { notify } = useNotification();
 
   const isOwner = user?.discordId === playlistDetail?.createdBy;
-  const canEdit = isAdminView || isOwner;
+  const canEdit = isAdminView || isOwner || hasPermission('songs.edit');
   const isSmart = !!playlistDetail?.tagNameLower;
   const menuTriggerRef = useRef<HTMLButtonElement>(null);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -610,7 +612,6 @@ export default function PlaylistDetailPage() {
         <VirtualSongList
           items={songItems}
           viewMode="list"
-          isAdmin={canEdit}
           isAdminView={isAdminView}
           playlists={[]}
           isLoading={isLoading}

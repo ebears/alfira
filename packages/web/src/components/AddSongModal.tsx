@@ -1,6 +1,8 @@
 import type { Song } from '@alfira-bot/server/shared';
 import { useEffect, useRef, useState } from 'react';
 import { addSong, importPlaylist } from '../api/api';
+import { useAdminView } from '../context/AdminViewContext';
+import { usePermissions } from '../context/PermissionsContext';
 import { apiErrorMessage } from '../utils/api';
 import { Backdrop } from './Backdrop';
 import { Button } from './ui/Button';
@@ -12,12 +14,15 @@ export default function AddSongModal({
   onClose: () => void;
   onAdded: (song: Song) => void;
 }) {
+  const { isAdminView } = useAdminView();
+  const { hasPermission } = usePermissions();
   const [url, setUrl] = useState('');
   const [nickname, setNickname] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
   const isPlaylist = url.includes('list=');
+  const canImport = isAdminView || hasPermission('songs.import');
   const [importFullPlaylist, setImportFullPlaylist] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -83,7 +88,7 @@ export default function AddSongModal({
           disabled={loading}
         />
 
-        {isPlaylist && (
+        {isPlaylist && canImport && (
           <label className="flex items-center gap-2 mb-3 cursor-pointer">
             <input
               type="checkbox"

@@ -13,7 +13,8 @@ import { useNotification } from './useNotification';
 
 interface UseSongActionsOptions {
   song: Song;
-  isAdmin: boolean;
+  canEdit: boolean;
+  canDelete: boolean;
   playlists: Playlist[];
   onAddToQueue: () => void;
   onDelete?: () => void;
@@ -23,7 +24,8 @@ interface UseSongActionsOptions {
 
 export function useSongActions({
   song,
-  isAdmin,
+  canEdit,
+  canDelete,
   playlists,
   onAddToQueue,
   onDelete,
@@ -76,7 +78,7 @@ export function useSongActions({
           ]
         : [
             // Full admin submenu (when onDelete is provided, library context)
-            ...(isAdmin && onDelete
+            ...(canEdit && onDelete
               ? [
                   {
                     id: 'add-to-playlist',
@@ -101,8 +103,8 @@ export function useSongActions({
               icon: <ArrowSquareOutIcon size={14} weight="duotone" />,
               onClick: () => window.open(song.sourceUrl, '_blank'),
             },
-            // Delete + Requested By (library context, admin only)
-            ...(isAdmin && onDelete
+            // Delete + Requested By (library context, can delete)
+            ...(canDelete && onDelete
               ? [
                   {
                     id: 'delete',
@@ -133,7 +135,8 @@ export function useSongActions({
       onRemove,
       removeLabel,
       onDelete,
-      isAdmin,
+      canEdit,
+      canDelete,
       playlists,
       optimisticAdded,
       handleAddToPlaylist,

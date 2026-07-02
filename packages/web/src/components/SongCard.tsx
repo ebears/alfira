@@ -2,6 +2,7 @@ import type { Playlist, Song } from '@alfira-bot/server/shared';
 import { formatDuration } from '@alfira-bot/server/shared';
 import { CircleNotchIcon, HeadphonesIcon, PlayIcon } from '@phosphor-icons/react';
 import React, { useCallback, useMemo } from 'react';
+import { usePermissions } from '../context/PermissionsContext';
 import { useSongEdit } from '../context/SongEditContext';
 import { useSongActions } from '../hooks/useSongActions';
 import { ContextMenu, ContextMenuTrigger } from './ContextMenu';
@@ -10,7 +11,6 @@ import { Button } from './ui/Button';
 
 interface SongCardProps {
   song: Song;
-  isAdmin: boolean;
   playlists: Playlist[];
   delay?: number;
   isAdminView?: boolean;
@@ -22,7 +22,6 @@ interface SongCardProps {
 
 const SongCardInner = ({
   song,
-  isAdmin,
   playlists,
   delay,
   isAdminView,
@@ -32,6 +31,7 @@ const SongCardInner = ({
   onAddToQueue,
 }: SongCardProps) => {
   const { openSongId, setOpenSongId } = useSongEdit();
+  const { hasPermission } = usePermissions();
   const isOpen = openSongId === song.id;
   const style = useMemo(
     () => ({ animationDelay: `${Math.min((delay ?? 0) * 30, 300)}ms` }),
@@ -41,6 +41,9 @@ const SongCardInner = ({
   const handlePlay = useCallback(() => onPlay(song.id), [onPlay, song.id]);
   const handleAddToQueue = useCallback(() => onAddToQueue(song.id), [onAddToQueue, song.id]);
 
+  const canEdit = isAdminView || hasPermission('songs.edit');
+  const canDelete = isAdminView || hasPermission('songs.delete');
+
   const actionHandlers = useMemo(
     () => ({ onAddToQueue: handleAddToQueue, onDelete: handleDelete }),
     [handleAddToQueue, handleDelete]
@@ -48,7 +51,8 @@ const SongCardInner = ({
 
   const { menuOpen, setMenuOpen, triggerRef, menuItems } = useSongActions({
     song,
-    isAdmin,
+    canEdit,
+    canDelete,
     playlists,
     ...actionHandlers,
   });
@@ -58,7 +62,7 @@ const SongCardInner = ({
       className={`animate-fade-up opacity-0 flex flex-col bg-elevated rounded-xl clay-resting transition-all duration-100${isAdminView ? ' hover:clay-raised hover:-translate-y-px active:clay-flat active:translate-y-0 group cursor-pointer' : ''}`}
       style={style}
       data-song-edit-container
-      onClick={() => isAdmin && setOpenSongId(isOpen ? null : song.id)}
+      onClick={() => canEdit && setOpenSongId(isOpen ? null : song.id)}
     >
       {/* Thumbnail with play overlay */}
       <div

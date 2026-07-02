@@ -11,6 +11,7 @@ import {
   UserIcon,
 } from '@phosphor-icons/react';
 import { memo, useMemo, useState } from 'react';
+import { usePermissions } from '../context/PermissionsContext';
 import { useSongEdit } from '../context/SongEditContext';
 import { useSongActions } from '../hooks/useSongActions';
 import { getSourceKey } from '../utils/source';
@@ -61,7 +62,6 @@ function MetaInfo({ song, isHovered, sourceKey }: MetaInfoProps) {
 
 interface SongRowProps {
   song: Song;
-  isAdmin: boolean;
   isAdminView?: boolean;
   playlists?: Playlist[];
   onDelete?: (id: string) => void;
@@ -77,7 +77,6 @@ interface SongRowProps {
 export const SongRow = memo(
   ({
     song,
-    isAdmin,
     isAdminView,
     playlists,
     onDelete,
@@ -88,12 +87,18 @@ export const SongRow = memo(
     onAddToQueue,
   }: SongRowProps) => {
     const { openSongId, setOpenSongId } = useSongEdit();
+    const { hasPermission } = usePermissions();
     const [isRowHovered, setIsRowHovered] = useState(false);
     const isOpen = openSongId === song.id;
     const sourceKey = useMemo(() => getSourceKey(song.sourceUrl), [song.sourceUrl]);
+
+    const canEdit = isAdminView || hasPermission('songs.edit');
+    const canDelete = isAdminView || hasPermission('songs.delete');
+
     const { menuOpen, setMenuOpen, triggerRef, menuItems } = useSongActions({
       song,
-      isAdmin,
+      canEdit,
+      canDelete,
       playlists: playlists ?? [],
       onAddToQueue,
       ...(onDelete ? { onDelete: () => onDelete(song.id) } : {}),
@@ -109,16 +114,16 @@ export const SongRow = memo(
       >
         <div
           className="flex items-center gap-1.5 md:gap-2 px-3 md:px-4 py-3"
-          onClick={() => isAdmin && setOpenSongId(isOpen ? null : song.id)}
+          onClick={() => canEdit && setOpenSongId(isOpen ? null : song.id)}
           onKeyDown={(e) => {
-            if (isAdmin && (e.key === 'Enter' || e.key === ' ')) {
+            if (canEdit && (e.key === 'Enter' || e.key === ' ')) {
               e.preventDefault();
               setOpenSongId(isOpen ? null : song.id);
             }
           }}
           role="button"
           tabIndex={0}
-          style={isAdmin ? { cursor: 'pointer' } : undefined}
+          style={canEdit ? { cursor: 'pointer' } : undefined}
           onMouseEnter={() => setIsRowHovered(true)}
           onMouseLeave={() => setIsRowHovered(false)}
         >

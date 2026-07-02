@@ -39,6 +39,7 @@ import LoadPlaylistModal from '../components/queue/LoadPlaylistModal';
 import OverrideModal from '../components/queue/OverrideModal';
 import QuickAddModal from '../components/queue/QuickAddModal';
 import { useAdminView } from '../context/AdminViewContext';
+import { usePermissions } from '../context/PermissionsContext';
 import { usePlayer } from '../context/PlayerContext';
 import { Button } from './ui/Button';
 
@@ -71,6 +72,7 @@ export default function QueuePanel({
 }) {
   const { state, loading, elapsed, registerProgress, clear } = usePlayer();
   const { isAdminView } = useAdminView();
+  const { hasPermission } = usePermissions();
   const [showQuickAdd, setShowQuickAdd] = useState(false);
   const [showLoadPlaylist, setShowLoadPlaylist] = useState(false);
   const [showOverride, setShowOverride] = useState(false);
@@ -136,14 +138,16 @@ export default function QueuePanel({
         icon: <ListIcon size={14} weight="duotone" />,
         onClick: () => setShowLoadPlaylist(true),
       },
-      {
+    ];
+    if (isAdminView || hasPermission('queue.quickadd')) {
+      items.push({
         id: 'quick-add',
         label: 'Quick Add',
         icon: <PlusCircleIcon size={14} weight="duotone" />,
         onClick: () => setShowQuickAdd(true),
-      },
-    ];
-    if (isAdminView) {
+      });
+    }
+    if (isAdminView || hasPermission('queue.manage')) {
       items.push({
         id: 'override',
         label: 'Override',
@@ -151,6 +155,8 @@ export default function QueuePanel({
         danger: true,
         onClick: () => setShowOverride(true),
       });
+    }
+    if (isAdminView || hasPermission('queue.clear')) {
       items.push({
         id: 'clear-queue',
         label: 'Clear Queue',
@@ -161,7 +167,7 @@ export default function QueuePanel({
       });
     }
     return items;
-  }, [isAdminView, clearBusy, isQueueEmpty]);
+  }, [isAdminView, hasPermission, clearBusy, isQueueEmpty]);
 
   if (loading) {
     return (

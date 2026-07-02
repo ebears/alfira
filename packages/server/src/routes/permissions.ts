@@ -1,4 +1,4 @@
-import { eq } from 'drizzle-orm';
+import { eq, inArray } from 'drizzle-orm';
 import type { RouteContext } from '../index';
 import { getGuildId } from '../lib/config';
 import { json } from '../lib/json';
@@ -137,9 +137,40 @@ async function handlePatchPermissions(ctx: RouteContext, request: Request): Prom
 }
 
 // ---------------------------------------------------------------------------
+// GET /api/permissions/me — returns permissions for the current user
+// ---------------------------------------------------------------------------
+async function handleGetMyPermissions(ctx: RouteContext): Promise<Response> {
+  const user = ctx.user;
+  if (!user) {
+    return json({ error: 'Not authenticated.' }, 401);
+  }
+
+  const userRoles = user.roles ?? [];
+  if (userRoles.length === 0) {
+    return json({ permissions: [] });
+  }
+
+  const rows = await db
+    .select({ action: tables.rolePermission.action })
+    .from(tables.rolePermission)
+    .where(inArray(tables.rolePermission.roleId, userRoles));
+
+  const permissions = [...new Set(rows.map((r) => r.action))];
+  return json({ permissions });
+}
+
+// ---------------------------------------------------------------------------
 // Dispatcher
 // ---------------------------------------------------------------------------
 export async function handlePermissions(ctx: RouteContext, request: Request): Promise<Response> {
+  const url = new URL(request.url);
+  const pathname = url.pathname;
+
+  // GET /api/permissions/me
+  if (request.method === 'GET' && pathname === '/api/permissions/me') {
+    return await handleGetMyPermissions(ctx);
+  }
+
   if (request.method === 'GET') return await handleGetPermissions(ctx);
   if (request.method === 'PATCH') return await handlePatchPermissions(ctx, request);
   return json({ error: 'Not Found' }, 404);

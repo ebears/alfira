@@ -424,3 +424,11 @@ export function updatePermission(
 ): Promise<{ action: string; roleIds: string[] }> {
   return patch('/api/permissions', { action, roleIds });
 }
+
+export interface MyPermissionsResponse {
+  permissions: string[];
+}
+
+export function fetchMyPermissions(): Promise<MyPermissionsResponse> {
+  return get('/api/permissions/me');
+}
