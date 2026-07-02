@@ -1,7 +1,7 @@
 import { eq, inArray, or, sql } from 'drizzle-orm';
 import type { RouteContext } from '../index';
 import { GUILD_ID } from '../lib/config';
-import { resolveDisplayNames } from '../lib/displayName';
+import { getUserDisplayName, resolveDisplayNames } from '../lib/displayName';
 import { json } from '../lib/json';
 import { parsePagination } from '../lib/pagination';
 import { checkGuards } from '../lib/routeGuards';
@@ -149,9 +149,11 @@ async function handlePostSong(ctx: RouteContext, request: Request): Promise<Resp
   }
 
   const formatted = formatSong(song);
-  emitSongAdded(formatted);
+  const displayName = await getUserDisplayName(user.discordId);
+  const enriched = { ...formatted, addedByDisplayName: displayName };
+  emitSongAdded(enriched);
 
-  return json(formatted, 201);
+  return json(enriched, 201);
 }
 
 // ---------------------------------------------------------------------------
@@ -242,8 +244,13 @@ async function handleImportPlaylist(ctx: RouteContext, request: Request): Promis
   });
 
   // Emit socket events for each new song
+  const nameMap = await resolveDisplayNames(createdSongs);
   for (const song of createdSongs) {
-    emitSongAdded(formatSong(song));
+    const formatted = formatSong(song);
+    emitSongAdded({
+      ...formatted,
+      addedByDisplayName: nameMap.get(song.addedBy) ?? song.addedBy,
+    });
   }
 
   return json(
