@@ -4,6 +4,7 @@ import jwt from 'jsonwebtoken';
 import type { RouteContext } from '../index';
 import { getGuildId } from '../lib/config';
 import { json } from '../lib/json';
+import { getClientIp } from '../lib/rateLimit';
 import { db, tables } from '../shared/db';
 import { logger } from '../shared/logger';
 
@@ -339,14 +340,6 @@ async function generateAndStoreTokens(
 // ---------------------------------------------------------------------------
 // Route handlers
 // ---------------------------------------------------------------------------
-
-function getClientIp(request: Request): string {
-  return (
-    request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ??
-    request.headers.get('x-real-ip') ??
-    'unknown'
-  );
-}
 
 export async function handleAuth(ctx: RouteContext, request: Request): Promise<Response> {
   const url = new URL(request.url);
