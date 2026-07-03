@@ -54,15 +54,21 @@ function redirectToLogin(): void {
   }
 }
 
-async function refreshToken(): Promise<boolean> {
+type RefreshResult = { ok: true } | { ok: false; retryable: boolean };
+
+async function refreshToken(): Promise<RefreshResult> {
   try {
     const res = await fetchWithTimeout('/auth/refresh', {
       method: 'POST',
       credentials: 'include',
     });
-    return res.ok;
+    if (res.ok) return { ok: true };
+    // 503 = Discord temporarily unreachable, old token still valid → retryable.
+    // 401 = token permanently invalid (expired / revoked).
+    return { ok: false, retryable: res.status === 503 };
   } catch {
-    return false;
+    // Network errors are retryable.
+    return { ok: false, retryable: true };
   }
 }
 
@@ -84,15 +90,22 @@ export async function trySilentRefresh(): Promise<boolean> {
   isSilentRefreshing = true;
   // Set isRefreshing so wrappedFetch queues instead of starting concurrent refresh
   isRefreshing = true;
-  const ok = await refreshToken();
-  if (ok) {
+
+  // Retry up to 3 times total for transient failures (Discord 429/503, network).
+  let result = await refreshToken();
+  for (let attempt = 0; attempt < 2 && !result.ok && result.retryable; attempt++) {
+    await new Promise((r) => setTimeout(r, 1500));
+    result = await refreshToken();
+  }
+
+  if (result.ok) {
     processQueue(null);
   } else {
     processQueue(new Error('Token refresh failed'));
   }
   isRefreshing = false;
   isSilentRefreshing = false;
-  return ok;
+  return result.ok;
 }
 
 // Custom error class to carry API error details
@@ -140,15 +153,21 @@ async function wrappedFetch(
     // Start refreshing
     isRefreshing = true;
 
-    const ok = await refreshToken();
+    const result = await refreshToken();
 
-    if (ok) {
+    if (result.ok) {
       // Refresh succeeded, process queue and retry
       processQueue(null);
       isRefreshing = false;
       response = await makeRequest();
+    } else if (result.retryable) {
+      // Discord temporarily unreachable — reject queue gently, don't redirect.
+      // The next API request will trigger another refresh attempt.
+      processQueue(new Error('Token refresh deferred'));
+      isRefreshing = false;
+      throw new ApiError('Authentication temporarily unavailable. Please try again.', 503);
     } else {
-      // Refresh failed, reject queue and redirect
+      // Refresh failed permanently, reject queue and redirect
       processQueue(new Error('Token refresh failed'));
       isRefreshing = false;
       redirectToLogin();

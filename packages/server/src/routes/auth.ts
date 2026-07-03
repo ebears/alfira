@@ -487,6 +487,22 @@ async function handleCallback(request: Request, url: URL): Promise<Response> {
   return new Response(null, { status: 302, headers });
 }
 
+/** Retry an async operation up to `attempts` times with exponential backoff. */
+async function withRetry<T>(fn: () => Promise<T>, attempts = 3, baseDelayMs = 500): Promise<T> {
+  let lastErr: unknown;
+  for (let i = 0; i < attempts; i++) {
+    try {
+      return await fn();
+    } catch (err) {
+      lastErr = err;
+      if (i < attempts - 1) {
+        await new Promise((r) => setTimeout(r, baseDelayMs * 2 ** i));
+      }
+    }
+  }
+  throw lastErr;
+}
+
 async function handleRefresh(ctx: RouteContext): Promise<Response> {
   const refreshToken = ctx.cookies[REFRESH_COOKIE_NAME];
   if (!refreshToken) {
@@ -521,10 +537,7 @@ async function handleRefresh(ctx: RouteContext): Promise<Response> {
     return json({ error: 'Refresh token has expired.' }, 401);
   }
 
-  // 4. Delete the used refresh token (single-use for security).
-  await db.delete(refreshTokenTable).where(eq(refreshTokenTable.id, storedToken.id));
-
-  // 5. Clean up expired tokens for this user (lazy cleanup).
+  // 4. Clean up expired tokens for this user (lazy cleanup).
   await db
     .delete(refreshTokenTable)
     .where(
@@ -534,7 +547,9 @@ async function handleRefresh(ctx: RouteContext): Promise<Response> {
       )
     );
 
-  // 6. Re-fetch user info from Discord (including admin status).
+  // 5. Re-fetch user info from Discord (including admin status).
+  //    This runs BEFORE we burn the old refresh token — if Discord is
+  //    unreachable, the client can retry with the same token.
   //    During setup mode, skip guild membership check.
   const setupDone = await isSetupCompleted();
   let username: string;
@@ -545,27 +560,36 @@ async function handleRefresh(ctx: RouteContext): Promise<Response> {
 
   if (!setupDone) {
     // Setup not complete — fetch basic profile, grant admin.
-    const profile = await fetchDiscordUserProfile(decoded.discordId);
-    if (!profile) {
-      await db.delete(refreshTokenTable).where(eq(refreshTokenTable.discordId, decoded.discordId));
-      return json({ error: 'Unable to verify user identity. Please log in again.' }, 401);
+    try {
+      const profile = await withRetry(() => fetchDiscordUserProfile(decoded.discordId));
+      if (!profile) {
+        return json({ error: 'Unable to verify user identity. Please try again.' }, 503);
+      }
+      username = profile.username;
+      avatar = profile.avatar;
+      isAdmin = true;
+      isSetupAdmin = true;
+    } catch {
+      return json({ error: 'Discord is temporarily unreachable. Please try again.' }, 503);
     }
-    username = profile.username;
-    avatar = profile.avatar;
-    isAdmin = true;
-    isSetupAdmin = true;
   } else {
     // Normal flow — verify guild membership and roles.
-    const userInfo = await fetchUserAdminStatus(decoded.discordId);
-    if (!userInfo) {
-      await db.delete(refreshTokenTable).where(eq(refreshTokenTable.discordId, decoded.discordId));
-      return json({ error: 'Unable to verify user membership. Please log in again.' }, 401);
+    try {
+      const userInfo = await withRetry(() => fetchUserAdminStatus(decoded.discordId));
+      if (!userInfo) {
+        return json({ error: 'Unable to verify user membership. Please try again.' }, 503);
+      }
+      username = userInfo.username;
+      avatar = userInfo.avatar;
+      isAdmin = userInfo.isAdmin;
+      roles = userInfo.roles;
+    } catch {
+      return json({ error: 'Discord is temporarily unreachable. Please try again.' }, 503);
     }
-    username = userInfo.username;
-    avatar = userInfo.avatar;
-    isAdmin = userInfo.isAdmin;
-    roles = userInfo.roles;
   }
+
+  // 6. Burn the old refresh token now that Discord verification succeeded.
+  await db.delete(refreshTokenTable).where(eq(refreshTokenTable.id, storedToken.id));
 
   // 7. Generate new tokens.
   const payload: {
