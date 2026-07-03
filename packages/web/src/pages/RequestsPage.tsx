@@ -82,7 +82,9 @@ export default function RequestsPage() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6 md:mb-8">
         <div>
           <h1 className="font-display text-3xl md:text-4xl text-fg tracking-wider">Requests</h1>
-          <p className="font-mono text-xs text-muted mt-1">{countLabel}</p>
+          <p className="font-mono text-xs text-muted mt-2">
+            Submit & review requests{isLoading ? '' : ` • ${countLabel}`}
+          </p>
         </div>
         <Button
           variant="primary"
