@@ -1,7 +1,9 @@
 import { deleteTag, fetchTagSongs, fetchTags, updateTag } from '@alfira-bot/server/shared/api';
 import type { Song } from '@alfira-bot/server/shared/types';
+import { MagnifyingGlassIcon, TrashIcon } from '@phosphor-icons/react';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import ConfirmModal from '../components/ConfirmModal';
+import { Button } from '../components/ui/Button';
 import { useTagColors } from '../context/TagsContext';
 
 const TAG_COLORS = [
@@ -139,9 +141,9 @@ export default function TagsPage() {
   }, [selected, refreshTags]);
 
   return (
-    <div className="p-4 md:p-8">
+    <div className="p-4 md:p-8 flex flex-col h-full">
       {/* Page header */}
-      <div className="mb-6 md:mb-8">
+      <div className="mb-6 md:mb-8 shrink-0">
         <h1 className="font-display text-3xl md:text-4xl text-fg tracking-wider">Tags</h1>
         <p className="font-mono text-xs text-muted mt-2">
           Manage tags & colors
@@ -149,17 +151,23 @@ export default function TagsPage() {
         </p>
       </div>
 
-      <div className="flex gap-4 h-105">
+      <div className="flex gap-4 flex-1 min-h-0">
         {/* Left pane: tag list */}
-        <div className="flex-1 flex flex-col min-w-0 border border-border rounded-md overflow-hidden bg-elevated">
-          <div className="px-3 py-2 border-b border-border">
-            <input
-              type="text"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search tags..."
-              className="w-full bg-transparent text-sm text-fg placeholder:text-muted outline-none caret-current"
-            />
+        <div className="flex-1 flex flex-col min-w-0 bg-elevated clay-resting rounded-lg overflow-hidden">
+          <div className="px-3 pt-3 pb-2">
+            <div className="relative">
+              <MagnifyingGlassIcon
+                className="absolute left-3 top-1/2 -translate-y-1/2 text-faint w-3.5 h-3.5"
+                weight="duotone"
+              />
+              <input
+                type="text"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Search tags..."
+                className="input text-sm pl-9"
+              />
+            </div>
           </div>
 
           <div className="flex-1 overflow-y-auto">
@@ -180,14 +188,14 @@ export default function TagsPage() {
                     type="button"
                     key={tag.nameLower}
                     onClick={() => selectTag(tag)}
-                    className={`w-full flex items-center gap-2 px-3 py-2 text-left text-sm transition-colors ${
+                    className={`w-full flex items-center gap-2 px-3 py-2 text-left text-sm rounded transition-colors cursor-pointer ${
                       isActive
                         ? 'bg-accent/25 text-accent-foreground'
-                        : 'hover:bg-secondary text-foreground'
+                        : 'hover:bg-accent/10 text-fg'
                     }`}
                   >
                     <span
-                      className={`inline-flex items-center px-1.5 py-0.5 rounded text-[11px] font-medium whitespace-nowrap ${colors.bg} ${colors.text}`}
+                      className={`inline-flex items-center px-1.5 py-0.5 rounded text-[13px] font-medium whitespace-nowrap ${colors.bg} ${colors.text}`}
                     >
                       {tag.canonicalName}
                     </span>
@@ -199,7 +207,7 @@ export default function TagsPage() {
         </div>
 
         {/* Right pane: tag detail */}
-        <div className="flex-1 flex flex-col min-w-0 border border-border rounded-md overflow-hidden bg-elevated">
+        <div className="flex-1 flex flex-col min-w-0 bg-elevated clay-resting rounded-lg overflow-hidden">
           {!selected ? (
             <div className="flex-1 flex items-center justify-center text-muted text-sm">
               Select a tag to view and edit its details.
@@ -207,22 +215,33 @@ export default function TagsPage() {
           ) : (
             <>
               {/* Header */}
-              <div className="px-4 py-3 border-b border-border space-y-1">
-                <p className="text-xs font-medium text-fg uppercase tracking-wider">
-                  Canonical Name
-                </p>
-                <input
-                  type="text"
-                  value={editingName}
-                  onChange={(e) => setEditingName(e.target.value)}
-                  onBlur={() => editingName !== selected.canonicalName && saveName(editingName)}
-                  onKeyDown={(e) =>
-                    e.key === 'Enter' &&
-                    editingName !== selected.canonicalName &&
-                    saveName(editingName)
-                  }
-                  className="w-full px-2 py-1 text-sm text-fg bg-secondary rounded border border-border outline-none focus:border-accent transition-colors"
-                />
+              <div className="px-4 py-3 border-b border-border">
+                <div className="flex items-center gap-2">
+                  <p className="text-xs font-medium text-fg uppercase tracking-wider shrink-0">
+                    Tag Name
+                  </p>
+                  <input
+                    type="text"
+                    value={editingName}
+                    onChange={(e) => setEditingName(e.target.value)}
+                    onBlur={() => editingName !== selected.canonicalName && saveName(editingName)}
+                    onKeyDown={(e) =>
+                      e.key === 'Enter' &&
+                      editingName !== selected.canonicalName &&
+                      saveName(editingName)
+                    }
+                    className="input text-sm flex-1"
+                  />
+                  <Button
+                    variant="danger"
+                    size="icon"
+                    onClick={() => setShowDeleteConfirm(true)}
+                    title={`Delete "${selected.canonicalName}"`}
+                    className="shrink-0 -mr-1"
+                  >
+                    <TrashIcon size={16} weight="duotone" />
+                  </Button>
+                </div>
               </div>
 
               {/* Color picker */}
@@ -239,9 +258,9 @@ export default function TagsPage() {
                         key={colorName}
                         onClick={() => pickColor(colorName)}
                         title={colorName}
-                        className={`w-6 h-6 rounded-full flex items-center justify-center transition-opacity ${
+                        className={`w-6 h-6 rounded-full flex items-center justify-center transition-opacity cursor-pointer ${
                           isSelected
-                            ? 'opacity-100 ring-2 ring-offset-1 ring-offset-background ring-foreground'
+                            ? 'opacity-100 ring-2 ring-offset-1 ring-offset-surface ring-fg'
                             : 'opacity-60 hover:opacity-80'
                         } ${colorClasses.bg} ${colorClasses.text}`}
                       >
@@ -262,49 +281,99 @@ export default function TagsPage() {
               </div>
 
               {/* Song list */}
-              <div className="flex-1 overflow-y-auto px-4 py-3 space-y-2">
-                <p className="text-xs font-medium text-fg uppercase tracking-wider">
+              <div className="flex-1 overflow-y-auto px-4 py-3">
+                <p className="text-xs font-medium text-fg uppercase tracking-wider mb-3">
                   {loadingSongs
                     ? 'Loading…'
                     : `${tagSongs.length} song${tagSongs.length !== 1 ? 's' : ''}`}
                 </p>
-                <div className="space-y-2">
-                  {tagSongs.map((song) => (
-                    <div
-                      key={song.id}
-                      className="flex items-center gap-2 py-1 px-2 rounded bg-secondary hover:bg-tertiary transition-colors"
-                    >
-                      <span className="flex-1 truncate text-sm text-fg">{song.title}</span>
-                      <button
-                        type="button"
-                        onClick={() => removeSong(song)}
-                        className="text-muted hover:text-destructive transition-colors"
-                        title="Remove from this tag"
-                        aria-label="Remove from this tag"
-                      >
-                        <svg className="w-4 h-4" fill="none" viewBox="0 0 16 16" aria-hidden="true">
-                          <path
-                            d="M4 4l8 8M12 4l-8 8"
-                            stroke="currentColor"
-                            strokeWidth="1.5"
-                            strokeLinecap="round"
-                          />
-                        </svg>
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* Delete */}
-              <div className="px-4 py-3 border-t border-border">
-                <button
-                  type="button"
-                  onClick={() => setShowDeleteConfirm(true)}
-                  className="w-full py-1.5 text-sm rounded text-red-500 hover:text-fg hover:bg-red-500 transition-colors"
-                >
-                  Delete "{selected.canonicalName}"
-                </button>
+                {tagSongs.length === 0 && !loadingSongs ? (
+                  <p className="text-sm text-muted text-center py-8">No songs with this tag yet.</p>
+                ) : (
+                  <div className="space-y-1">
+                    {tagSongs.map((song) => {
+                      const allTags = song.tags ?? [];
+                      return (
+                        <div
+                          key={song.id}
+                          className="flex items-center gap-3 py-2 px-2 rounded-lg hover:bg-surface/80 transition-colors group"
+                        >
+                          <div className="w-12 h-12 rounded border border-border shrink-0 overflow-hidden bg-base">
+                            {(song.artwork ?? song.thumbnailUrl) ? (
+                              <img
+                                src={song.artwork ?? song.thumbnailUrl}
+                                alt=""
+                                className="w-full h-full object-cover"
+                                loading="lazy"
+                              />
+                            ) : (
+                              <div className="w-full h-full flex items-center justify-center text-faint text-[10px]" />
+                            )}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="font-body text-sm text-fg truncate leading-snug">
+                              {song.nickname || song.title}
+                            </p>
+                            <div className="flex items-center gap-2 flex-wrap">
+                              {song.artist && (
+                                <span className="font-mono text-[11px] text-muted truncate">
+                                  {song.artist}
+                                </span>
+                              )}
+                              {song.album && (
+                                <span className="font-mono text-[11px] text-faint truncate">
+                                  {song.album}
+                                </span>
+                              )}
+                            </div>
+                            {allTags.length > 0 && (
+                              <div className="flex items-center gap-1 mt-0.5 flex-wrap">
+                                {allTags.slice(0, 3).map((tag) => {
+                                  const c = getTagColor(tag);
+                                  return (
+                                    <span
+                                      key={tag}
+                                      className={`inline-flex items-center px-1 py-px rounded text-[10px] font-mono ${c.bg} ${c.text}`}
+                                    >
+                                      {tag}
+                                    </span>
+                                  );
+                                })}
+                                {allTags.length > 3 && (
+                                  <span className="text-[10px] text-faint font-mono">
+                                    +{allTags.length - 3}
+                                  </span>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                          <Button
+                            variant="inherit"
+                            size="icon"
+                            surface="base"
+                            onClick={() => removeSong(song)}
+                            title="Remove from this tag"
+                            className="shrink-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                          >
+                            <svg
+                              className="w-3.5 h-3.5"
+                              fill="none"
+                              viewBox="0 0 16 16"
+                              aria-hidden="true"
+                            >
+                              <path
+                                d="M4 4l8 8M12 4l-8 8"
+                                stroke="currentColor"
+                                strokeWidth="1.5"
+                                strokeLinecap="round"
+                              />
+                            </svg>
+                          </Button>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
             </>
           )}
