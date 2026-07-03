@@ -10,9 +10,23 @@ interface PlaylistRowProps {
   'data-playlist-id'?: string;
 }
 
+/** Fill an array of artwork URLs to exactly 4 slots, repeating as needed. */
+function spreadUrls(urls: string[]): (string | null)[] {
+  if (urls.length === 0) return [null, null, null, null];
+  const result: (string | null)[] = [];
+  for (let i = 0; i < 4; i++) {
+    result.push(urls[i % urls.length] ?? null);
+  }
+  return result;
+}
+
 export const PlaylistRow = memo(
   ({ playlist, animationDelay, onClick, 'data-playlist-id': dataPlaylistId }: PlaylistRowProps) => {
     const count = playlist._count?.songs ?? 0;
+    const coverUrls = playlist.coverUrls ?? [];
+    const cells = spreadUrls(coverUrls);
+    const hasArtwork = coverUrls.length > 0;
+
     return (
       <Card
         hoverable
@@ -30,10 +44,30 @@ export const PlaylistRow = memo(
         role="button"
         tabIndex={0}
       >
-        {/* Icon */}
-        <div className="w-11 h-11 md:w-10 md:h-10 rounded-xl bg-accent/10 border border-accent/20 shrink-0 flex items-center justify-center">
-          <PlaylistIcon size={18} weight="duotone" className="text-accent md:w-4 md:h-4" />
+        {/* Cover art grid or fallback icon */}
+        <div className="w-16 h-16 md:w-20 md:h-20 rounded-xl overflow-hidden clay-flat shrink-0">
+          {hasArtwork ? (
+            <div className="grid grid-cols-2 grid-rows-2 w-full h-full">
+              {cells.map((url, i) => (
+                // biome-ignore lint/suspicious/noArrayIndexKey: cells are always exactly 4, never reorder
+                <div key={i} className="overflow-hidden bg-elevated">
+                  <img
+                    src={url ?? undefined}
+                    alt=""
+                    className="w-full h-full object-cover"
+                    loading="lazy"
+                    decoding="async"
+                  />
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="w-full h-full bg-elevated flex items-center justify-center">
+              <PlaylistIcon size={32} weight="duotone" className="text-accent" />
+            </div>
+          )}
         </div>
+
         {/* Info */}
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2">

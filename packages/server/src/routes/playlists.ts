@@ -108,11 +108,37 @@ async function handleGetPlaylists(ctx: RouteContext, request: Request): Promise<
     (pl) => canAccessPlaylist(pl, user, adminView).ok
   );
 
+  // Batch-fetch cover artwork URLs (up to 4 per playlist)
+  const playlistIds = filteredPlaylists.map((pl) => pl.id);
+  const coverMap = new Map<string, string[]>();
+  if (playlistIds.length > 0) {
+    const songRows = await db
+      .select({
+        playlistId: playlistSongTable.playlistId,
+        artwork: tables.song.artwork,
+        thumbnailUrl: tables.song.thumbnailUrl,
+      })
+      .from(playlistSongTable)
+      .innerJoin(tables.song, eq(playlistSongTable.songId, tables.song.id))
+      .where(inArray(playlistSongTable.playlistId, playlistIds))
+      .orderBy(playlistSongTable.playlistId, playlistSongTable.position);
+
+    for (const row of songRows) {
+      const urls = coverMap.get(row.playlistId);
+      if (!urls) {
+        coverMap.set(row.playlistId, [row.artwork ?? row.thumbnailUrl]);
+      } else if (urls.length < 4) {
+        urls.push(row.artwork ?? row.thumbnailUrl);
+      }
+    }
+  }
+
   // Fetch creator display names for each playlist
   const playlistsWithCreator = await Promise.all(
     filteredPlaylists.map(async (pl) => ({
       ...pl,
       createdByDisplayName: await getUserDisplayName(pl.createdBy),
+      coverUrls: coverMap.get(pl.id),
     }))
   );
 
