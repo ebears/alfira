@@ -1,5 +1,5 @@
 import type { SongRequest } from '@alfira-bot/server/shared';
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { approveRequest, cancelRequest, denyRequest, fetchRequests } from '../api/api';
 import AddSongModal from '../components/AddSongModal';
 import { Button } from '../components/ui/Button';
@@ -20,6 +20,7 @@ export default function RequestsPage() {
   const [mineOnly, setMineOnly] = useState(false);
   const [showAddModal, setShowAddModal] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
+  const autoRedirected = useRef(false);
 
   const { items, isLoading, isFetching, isError, total, removeItem, retry, sentinelRef } =
     useVirtualizedInfiniteScroll<SongRequest, [string, boolean]>({
@@ -73,6 +74,15 @@ export default function RequestsPage() {
     (requestedBy: string) => requestedBy === user?.discordId,
     [user?.discordId]
   );
+
+  // If pending tab is empty on initial load, switch to history
+  useEffect(() => {
+    if (autoRedirected.current) return;
+    if (!isLoading && tab === 'pending' && total === 0) {
+      autoRedirected.current = true;
+      setTab('closed');
+    }
+  }, [isLoading, tab, total]);
 
   const countLabel = isLoading ? '—' : `${total} request${total !== 1 ? 's' : ''}`;
 
