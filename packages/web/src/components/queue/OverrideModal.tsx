@@ -4,6 +4,7 @@ import { overridePlay } from '../../api/api';
 import { apiErrorMessage } from '../../utils/api';
 import { Backdrop } from '../Backdrop';
 import { Button } from '../ui/Button';
+import { Spinner } from '../ui/Spinner';
 
 export default function OverrideModal({
   onClose,
@@ -66,7 +67,7 @@ export default function OverrideModal({
 
         {submitting && (
           <p className="font-mono text-xs text-muted mb-4 flex items-center gap-2">
-            <span className="w-3 h-3 border border-accent border-t-transparent rounded-full animate-spin inline-block" />
+            <Spinner />
             Overriding...
           </p>
         )}

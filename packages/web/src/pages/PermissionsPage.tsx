@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { fetchPermissions, type PermissionsResponse, updatePermission } from '../api/api';
+import { ErrorBanner } from '../components/ui/ErrorBanner';
 
 export default function PermissionsPage() {
   const [data, setData] = useState<PermissionsResponse | null>(null);
@@ -58,13 +59,7 @@ export default function PermissionsPage() {
         <div className="mb-6 md:mb-8">
           <h1 className="font-display text-3xl md:text-4xl text-fg tracking-wider">Permissions</h1>
         </div>
-        {error ? (
-          <div className="p-3 rounded-lg bg-danger/10 border border-danger/20 text-danger text-sm">
-            {error}
-          </div>
-        ) : (
-          <p className="text-sm text-muted">Loading…</p>
-        )}
+        {error ? <ErrorBanner message={error} /> : <p className="text-sm text-muted">Loading…</p>}
       </div>
     );
   }
@@ -81,11 +76,7 @@ export default function PermissionsPage() {
         </p>
       </div>
 
-      {error && (
-        <div className="mb-4 p-3 rounded-lg bg-danger/10 border border-danger/20 text-danger text-sm">
-          {error}
-        </div>
-      )}
+      {error && <ErrorBanner message={error} className="mb-4" />}
 
       {successMsg && (
         <div className="mb-4 p-3 rounded-lg bg-accent/10 border border-accent/20 text-accent text-sm">

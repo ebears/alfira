@@ -22,6 +22,8 @@ import {
   type SetupRole,
 } from '../api/api';
 import { SourceIcon } from '../components/SourceIcons';
+import { ErrorBanner } from '../components/ui/ErrorBanner';
+import { Spinner } from '../components/ui/Spinner';
 import { useAuth } from '../context/AuthContext';
 
 type Step =
@@ -139,7 +141,7 @@ export default function SetupWizard() {
   if (loading) {
     return (
       <div className="h-full flex items-center justify-center bg-elevated">
-        <div className="w-8 h-8 border-2 border-accent border-t-transparent rounded-full animate-spin" />
+        <Spinner size="lg" />
       </div>
     );
   }
@@ -248,12 +250,7 @@ export default function SetupWizard() {
           ))}
         </div>
 
-        {/* Error banner */}
-        {error && (
-          <div className="mb-6 p-3 rounded-lg bg-danger/10 border border-danger/20 text-danger text-sm">
-            {error}
-          </div>
-        )}
+        {error && <ErrorBanner message={error} className="mb-6" />}
 
         {/* Step content */}
         <div className="bg-elevated border border-border rounded-xl p-6 md:p-8">
@@ -303,9 +300,7 @@ export default function SetupWizard() {
                     </a>
                   )}
                   <p className="text-xs text-warning/70">Checking for servers every few seconds…</p>
-                  {refreshingGuilds && (
-                    <div className="w-4 h-4 border-2 border-accent border-t-transparent rounded-full animate-spin mx-auto" />
-                  )}
+                  {refreshingGuilds && <Spinner size="md" />}
                 </div>
               ) : (
                 <div className="space-y-2">
