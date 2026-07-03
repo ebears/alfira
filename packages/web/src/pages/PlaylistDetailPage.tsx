@@ -524,7 +524,7 @@ export default function PlaylistDetailPage() {
                 );
               })()}
           </div>
-          <p className="font-mono text-xs text-muted mt-1">
+          <p className="font-mono text-xs text-muted mt-2">
             {songItems.length} {songItems.length === 1 ? 'track' : 'tracks'}
             {playlistDetail.tagNameLower ? (
               <span className="text-accent"> • auto-tracked</span>

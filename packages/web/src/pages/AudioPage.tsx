@@ -14,6 +14,7 @@ export default function AudioPage() {
       {/* Page header */}
       <div className="mb-6 md:mb-8">
         <h1 className="font-display text-3xl md:text-4xl text-fg tracking-wider">Audio</h1>
+        <p className="font-mono text-xs text-muted mt-2">Equalizer and compressor settings</p>
       </div>
 
       <div className="space-y-2">

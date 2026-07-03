@@ -142,7 +142,11 @@ export default function TagsPage() {
     <div className="p-4 md:p-8">
       {/* Page header */}
       <div className="mb-6 md:mb-8">
-        <h1 className="font-display text-3xl md:text-4xl text-fg tracking-wider">Tag Editor</h1>
+        <h1 className="font-display text-3xl md:text-4xl text-fg tracking-wider">Tags</h1>
+        <p className="font-mono text-xs text-muted mt-2">
+          Manage tags & colors
+          {loadingTags ? '' : ` • ${allTags.length} tag${allTags.length !== 1 ? 's' : ''}`}
+        </p>
       </div>
 
       <div className="flex gap-4 h-105">

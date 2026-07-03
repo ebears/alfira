@@ -71,7 +71,7 @@ export default function PermissionsPage() {
       {/* Page header */}
       <div className="mb-6 md:mb-8">
         <h1 className="font-display text-3xl md:text-4xl text-fg tracking-wider">Permissions</h1>
-        <p className="text-xs text-muted mt-1">
+        <p className="font-mono text-xs text-muted mt-2">
           Grant specific abilities to non-admin roles. Super-admins always have full access.
         </p>
       </div>
