@@ -579,7 +579,12 @@ export default function SetupWizard() {
                   max={120}
                   value={timeoutMinutes}
                   onChange={(e) => setTimeoutMinutes(Number(e.target.value))}
-                  className="flex-1 accent-accent"
+                  className="flex-1 range-input range-input-h"
+                  style={
+                    {
+                      ['--range-pct' as string]: `${((timeoutMinutes - 1) / (120 - 1)) * 100}%`,
+                    } as React.CSSProperties
+                  }
                 />
                 <span className="font-mono text-lg text-fg w-20 text-right whitespace-nowrap">
                   {timeoutMinutes} min

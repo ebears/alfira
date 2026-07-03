@@ -97,8 +97,17 @@ export default function EqualizerSection() {
               step={1}
               value={value}
               onChange={(e) => updateBand(i, parseInt(e.target.value, 10))}
-              className="accent-accent"
-              style={{ writingMode: 'vertical-lr', direction: 'rtl', height: '120px' }}
+              className="range-input"
+              style={
+                {
+                  writingMode: 'vertical-lr',
+                  direction: 'rtl',
+                  width: '8px',
+                  height: '120px',
+                  borderRadius: '4px',
+                  background: `linear-gradient(to top, var(--color-accent) 0%, var(--color-accent) ${(value / 100) * 100}%, var(--color-border) ${(value / 100) * 100}%, var(--color-border) 100%)`,
+                } as React.CSSProperties
+              }
             />
             <span className="font-mono text-[10px] text-fg min-w-[2em] text-right">
               {gainDisplay(value)}

@@ -1092,6 +1092,43 @@
     cursor: pointer;
 }
 
+/* Range input — base: strips native appearance, custom thumb */
+.range-input {
+    appearance: none;
+    -webkit-appearance: none;
+    cursor: pointer;
+}
+.range-input::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: var(--color-accent);
+    border: 2px solid var(--color-surface);
+    cursor: pointer;
+}
+.range-input::-moz-range-thumb {
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: var(--color-accent);
+    border: 2px solid var(--color-surface);
+    cursor: pointer;
+}
+
+/* Horizontal range input — accent fill up to thumb, theme border for rest */
+.range-input-h {
+    height: 6px;
+    border-radius: 3px;
+    background: linear-gradient(
+        to right,
+        var(--color-accent) 0%,
+        var(--color-accent) var(--range-pct, 50%),
+        var(--color-border) var(--range-pct, 50%),
+        var(--color-border) 100%
+    );
+}
+
 .scrubber-range-input {
     appearance: none;
     -webkit-appearance: none;

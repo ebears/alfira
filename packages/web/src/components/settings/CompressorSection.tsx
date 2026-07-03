@@ -108,7 +108,12 @@ export default function CompressorSection() {
               step={step}
               value={values[key]}
               onChange={(e) => updateValue(key, parseFloat(e.target.value))}
-              className="flex-1 accent-accent"
+              className="flex-1 range-input range-input-h"
+              style={
+                {
+                  ['--range-pct' as string]: `${((values[key] - min) / (max - min)) * 100}%`,
+                } as React.CSSProperties
+              }
             />
           </div>
         ))}
