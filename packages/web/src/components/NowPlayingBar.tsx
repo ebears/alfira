@@ -211,13 +211,6 @@ const Scrubber = memo(function Scrubber({
   // Last known slider value during drag (used to commit seek on pointer up)
   const lastDragValueRef = useRef<number>(0);
 
-  // Register the thumb div with the rAF loop so it glides at display-native rate.
-  useEffect(() => {
-    if (thumbRef.current) {
-      registerThumb(thumbRef.current);
-    }
-  }, [registerThumb]);
-
   // Position both fill bar and thumb directly in the DOM during drag.
   // Bypasses React + rAF entirely — immediate, jank-free visual feedback.
   const seekElements = useCallback((trackPct: number) => {
@@ -298,7 +291,10 @@ const Scrubber = memo(function Scrubber({
       {/* Fill & thumb — positioned entirely by useProgressBar (rAF + effect).
            No React style props. */}
       <div
-        ref={thumbRef}
+        ref={(ref) => {
+          thumbRef.current = ref;
+          if (ref) registerThumb(ref);
+        }}
         className="scrubber-thumb absolute top-1/2 -translate-y-1/2 w-3.5 h-3.5 rounded-full bg-surface border-2 border-accent opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity"
       />
       {/* Invisible hit area for hovering */}
