@@ -231,10 +231,9 @@ export type PermissionAction =
   | 'songs.delete'
   | 'songs.import'
   | 'requests.autoapprove'
-  | 'queue.clear'
-  | 'queue.shuffle'
   | 'queue.quickadd'
   | 'queue.manage'
+  | 'queue.override'
   | 'tags.manage'
   | 'audio.manage';
 
@@ -244,10 +243,9 @@ export const PERMISSION_LABELS: Record<PermissionAction, string> = {
   'songs.delete': 'Delete songs',
   'songs.import': 'Import external playlists',
   'requests.autoapprove': 'Auto-approved song requests',
-  'queue.clear': 'Clear the queue',
-  'queue.shuffle': 'Shuffle / unshuffle queue',
   'queue.quickadd': 'Quick-add external URLs',
-  'queue.manage': 'Add to Up Next / override',
+  'queue.manage': 'Manage queue (reorder, promote, remove, shuffle, clear)',
+  'queue.override': 'Override playback',
   'tags.manage': 'Manage tags',
   'audio.manage': 'Audio settings (EQ & compressor)',
 };
@@ -260,7 +258,7 @@ export const PERMISSION_CATEGORIES: { label: string; actions: PermissionAction[]
   },
   {
     label: 'Playback',
-    actions: ['queue.clear', 'queue.shuffle', 'queue.quickadd', 'queue.manage'],
+    actions: ['queue.quickadd', 'queue.manage', 'queue.override'],
   },
   {
     label: 'Management',

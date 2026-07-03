@@ -146,11 +146,98 @@ export class PlaybackCursor<T> {
   }
 
   /**
+   * Insert an item at the front of the unplayed portion (at readIndex),
+   * so it plays before all currently-remaining items. Unshuffles.
+   */
+  insertAtFront(item: T): void {
+    this.buffer.splice(this.readIndex, 0, item);
+    // Manual insertion supersedes any shuffle order
+    this.playbackOrder = null;
+  }
+
+  /**
    * Clear all items from the buffer.
    */
   clear(): void {
     this.buffer = [];
     this.readIndex = 0;
+    this.playbackOrder = null;
+  }
+
+  /**
+   * Remove all items matching the predicate from the buffer.
+   * Correctly adjusts readIndex and playbackOrder so the queue
+   * remains consistent after removal, preserving shuffle state.
+   * Returns the removed items.
+   */
+  removeWhere(predicate: (item: T) => boolean): T[] {
+    const removed: T[] = [];
+    const newBuffer: T[] = [];
+    const oldToNewIndex = new Map<number, number>();
+
+    for (let i = 0; i < this.buffer.length; i++) {
+      const item = this.buffer[i];
+      if (item === undefined) continue;
+      if (predicate(item)) {
+        removed.push(item);
+      } else {
+        oldToNewIndex.set(i, newBuffer.length);
+        newBuffer.push(item);
+      }
+    }
+
+    if (removed.length === 0) return [];
+
+    // Adjust readIndex: count removed items before it
+    let removedBefore = 0;
+    for (let i = 0; i < this.readIndex; i++) {
+      if (!oldToNewIndex.has(i)) removedBefore++;
+    }
+    this.readIndex = Math.max(0, this.readIndex - removedBefore);
+
+    // Remap playbackOrder indices to the compacted buffer
+    if (this.playbackOrder !== null) {
+      const newPlaybackOrder: number[] = [];
+      for (const oldIdx of this.playbackOrder) {
+        const newIdx = oldToNewIndex.get(oldIdx);
+        if (newIdx !== undefined) {
+          newPlaybackOrder.push(newIdx);
+        }
+      }
+      this.playbackOrder = newPlaybackOrder;
+      // If the order array is now empty (all items removed), clean up
+      if (this.playbackOrder.length === 0) {
+        this.playbackOrder = null;
+      }
+    }
+
+    this.buffer = newBuffer;
+    return removed;
+  }
+
+  /**
+   * Replace the unplayed portion of the buffer with the given items
+   * in the new order. Unshuffles (manual reorder supersedes shuffle).
+   * The orderedItems array must contain exactly the same elements as
+   * the current remaining items, matched by the provided equality function.
+   */
+  reorderRemaining(orderedItems: T[], matchFn: (a: T, b: T) => boolean): void {
+    const remaining = this.toRemaining();
+
+    if (orderedItems.length !== remaining.length) {
+      throw new Error('Reorder must preserve all items');
+    }
+
+    // Verify all items are present
+    for (const item of orderedItems) {
+      if (!remaining.some((r) => matchFn(r, item))) {
+        throw new Error('Reorder contains unknown item');
+      }
+    }
+
+    // Replace the unplayed portion
+    const played = this.buffer.slice(0, this.readIndex);
+    this.buffer = [...played, ...orderedItems];
     this.playbackOrder = null;
   }
 
