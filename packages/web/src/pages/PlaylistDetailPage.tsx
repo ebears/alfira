@@ -11,6 +11,7 @@ import {
   PlayCircleIcon,
   PlayIcon,
   PlusCircleIcon,
+  ShuffleIcon,
   TagIcon,
 } from '@phosphor-icons/react';
 import { useCallback, useEffect, useRef, useState } from 'react';
@@ -29,7 +30,7 @@ import type { MenuItem } from '../components/ContextMenu';
 import { ContextMenu, ContextMenuTrigger } from '../components/ContextMenu';
 import EmptyState from '../components/EmptyState';
 import NotificationToast from '../components/NotificationToast';
-import PlayModal from '../components/PlayModal';
+
 import { Button } from '../components/ui/Button';
 import { VirtualSongList } from '../components/VirtualSongList';
 import { useAdminView } from '../context/AdminViewContext';
@@ -69,7 +70,7 @@ export default function PlaylistDetailPage() {
   const [renameValue, setRenameValue] = useState('');
   const [renameSaving, setRenameSaving] = useState(false);
   const [showAddSongs, setShowAddSongs] = useState(false);
-  const [showPlay, setShowPlay] = useState(false);
+
   const [removeId, setRemoveId] = useState<string | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState(false);
   const [playingSongId, setPlayingSongId] = useState<string | null>(null);
@@ -541,9 +542,22 @@ export default function PlaylistDetailPage() {
 
         <div className="flex gap-2 shrink-0 items-center">
           <Button
+            variant="secondary"
+            className="!rounded-full"
+            onClick={() => {
+              void handlePlayFromSong(songs[0]?.songId, 'random');
+            }}
+            disabled={songItems.length === 0}
+            title="Shuffle"
+          >
+            <ShuffleIcon size={18} weight="duotone" />
+          </Button>
+          <Button
             variant="primary"
-            className={`text-xs flex items-center gap-1.5 ${showPlay ? 'pressed' : ''}`}
-            onClick={() => setShowPlay(true)}
+            className="text-xs flex items-center gap-1.5"
+            onClick={() => {
+              void handlePlayFromSong(songs[0]?.songId, 'sequential');
+            }}
             disabled={songItems.length === 0}
           >
             <PlayIcon size={14} weight="duotone" /> Play
@@ -552,6 +566,9 @@ export default function PlaylistDetailPage() {
             ref={menuTriggerRef}
             onToggle={() => setMenuOpen((v) => !v)}
             isOpen={menuOpen}
+            surface="surface"
+            size="default"
+            className="!rounded-full"
           />
           {menuOpen && (
             <ContextMenu
@@ -641,13 +658,6 @@ export default function PlaylistDetailPage() {
           }}
         />
       )}
-      {showPlay && (
-        <PlayModal
-          onClose={() => setShowPlay(false)}
-          onPlay={(mode) => handlePlayFromSong(songs[0]?.songId, mode, { throwErrors: true })}
-        />
-      )}
-
       {/* Notification Toast */}
       {notification && <NotificationToast notification={notification} />}
       {removeId && (
