@@ -599,39 +599,55 @@
            disabled:cursor-not-allowed min-h-11 md:min-h-0;
         border-radius: var(--clay-radius-lg);
         color: var(--color-fg);
-        background: linear-gradient(
-            180deg,
-            color-mix(in srgb, var(--color-accent) 75%, white) 0%,
-            var(--color-accent) 100%
-        );
+        background: color-mix(in srgb, var(--color-accent) 95%, white);
         box-shadow:
-            0 3px 0 0
-                color-mix(in srgb, var(--color-accent) 100%, black 35%),
-            0 4px 8px -2px rgba(0, 0, 0, 0.3),
-            inset 0 1px 1px 0 rgba(255, 255, 255, 0.08);
+            0 2px 0 0 color-mix(in srgb, var(--color-accent) 100%, black 35%),
+            inset 0 2px 3px 0 rgba(0, 0, 0, 0.15),
+            inset 0 1px 1px 0 rgba(255, 255, 255, 0.04);
     }
     .btn-primary:hover {
         transform: var(--btn-transform-hover);
-        background: linear-gradient(
-            180deg,
-            color-mix(in srgb, var(--color-accent) 65%, white) 0%,
-            var(--color-accent) 100%
-        );
+        background: color-mix(in srgb, var(--color-accent) 88%, white);
         box-shadow:
-            0 4px 0 0
-                color-mix(in srgb, var(--color-accent) 100%, black 35%),
-            0 6px 12px -2px rgba(0, 0, 0, 0.35),
-            inset 0 1px 1px 0 rgba(255, 255, 255, 0.08);
+            0 4px 0 0 color-mix(in srgb, var(--color-accent) 100%, black 35%),
+            inset 0 2px 3px 0 rgba(0, 0, 0, 0.15),
+            inset 0 1px 1px 0 rgba(255, 255, 255, 0.04);
     }
     .btn-primary:active {
-        transform: var(--btn-transform-active);
+        transform: var(--btn-transform-active-md);
         scale: var(--btn-scale-active);
+        background: var(--color-accent);
         box-shadow: var(--clay-shadow-flat);
     }
     .btn-primary.pressed {
-        transform: var(--btn-transform-active);
+        transform: var(--btn-transform-active-md);
         scale: var(--btn-scale-active);
-        box-shadow: inset 0 2px 4px 0 rgba(0, 0, 0, 0.25);
+        background: color-mix(in srgb, var(--color-accent) 75%, black);
+        box-shadow: inset 0 2px 3px 0 rgba(0, 0, 0, 0.2);
+    }
+
+    /* Light mode: solid bottom shadow for visible depth on light backgrounds */
+    [data-mode="light"] .btn-primary {
+        background: color-mix(in srgb, var(--color-accent) 85%, white);
+        box-shadow:
+            0 2px 0 0 color-mix(in srgb, var(--color-accent) 100%, black 25%),
+            0 2px 4px rgba(0, 0, 0, 0.08),
+            0 0 0 1px rgba(0, 0, 0, 0.04);
+    }
+    [data-mode="light"] .btn-primary:hover {
+        background: color-mix(in srgb, var(--color-accent) 75%, white);
+        box-shadow:
+            0 3px 0 0 color-mix(in srgb, var(--color-accent) 100%, black 25%),
+            0 3px 6px rgba(0, 0, 0, 0.1),
+            0 0 0 1px rgba(0, 0, 0, 0.06);
+    }
+    [data-mode="light"] .btn-primary:active {
+        background: var(--color-accent);
+        box-shadow: inset 0 2px 3px 0 rgba(0, 0, 0, 0.1);
+    }
+    [data-mode="light"] .btn-primary.pressed {
+        background: color-mix(in srgb, var(--color-accent) 80%, black);
+        box-shadow: inset 0 2px 3px 0 rgba(0, 0, 0, 0.15);
     }
 
     .btn-primary-secondary {
@@ -640,36 +656,92 @@
            disabled:cursor-not-allowed min-h-11 md:min-h-0;
         border-radius: var(--clay-radius-lg);
         color: var(--color-fg);
-        background: linear-gradient(
-            180deg,
-            color-mix(in srgb, var(--color-accent-secondary) 75%, white) 0%,
-            var(--color-accent-secondary) 100%
-        );
+        background: color-mix(in srgb, var(--color-accent-secondary) 95%, white);
         box-shadow:
-            0 3px 0 0
-                color-mix(in srgb, var(--color-accent-secondary) 100%, black 35%),
-            0 4px 8px -2px rgba(0, 0, 0, 0.3),
-            inset 0 1px 1px 0 rgba(255, 255, 255, 0.08);
+            0 2px 0 0 color-mix(in srgb, var(--color-accent-secondary) 100%, black 35%),
+            inset 0 2px 3px 0 rgba(0, 0, 0, 0.15),
+            inset 0 1px 1px 0 rgba(255, 255, 255, 0.04);
     }
     .btn-primary-secondary:hover {
         transform: var(--btn-transform-hover);
+        background: color-mix(in srgb, var(--color-accent-secondary) 88%, white);
+        box-shadow:
+            0 4px 0 0 color-mix(in srgb, var(--color-accent-secondary) 100%, black 35%),
+            inset 0 2px 3px 0 rgba(0, 0, 0, 0.15),
+            inset 0 1px 1px 0 rgba(255, 255, 255, 0.04);
+    }
+    .btn-primary-secondary:active {
+        transform: var(--btn-transform-active-md);
+        scale: var(--btn-scale-active);
+        background: var(--color-accent-secondary);
+        box-shadow: var(--clay-shadow-flat);
+    }
+    .btn-primary-secondary.pressed {
+        transform: var(--btn-transform-active-md);
+        scale: var(--btn-scale-active);
+        background: color-mix(in srgb, var(--color-accent-secondary) 75%, black);
+        box-shadow: inset 0 2px 3px 0 rgba(0, 0, 0, 0.2);
+    }
+
+    [data-mode="light"] .btn-primary-secondary {
+        background: color-mix(in srgb, var(--color-accent-secondary) 85%, white);
+        box-shadow:
+            0 2px 0 0 color-mix(in srgb, var(--color-accent-secondary) 100%, black 25%),
+            0 2px 4px rgba(0, 0, 0, 0.08),
+            0 0 0 1px rgba(0, 0, 0, 0.04);
+    }
+    [data-mode="light"] .btn-primary-secondary:hover {
+        background: color-mix(in srgb, var(--color-accent-secondary) 75%, white);
+        box-shadow:
+            0 3px 0 0 color-mix(in srgb, var(--color-accent-secondary) 100%, black 25%),
+            0 3px 6px rgba(0, 0, 0, 0.1),
+            0 0 0 1px rgba(0, 0, 0, 0.06);
+    }
+    [data-mode="light"] .btn-primary-secondary:active {
+        background: var(--color-accent-secondary);
+        box-shadow: inset 0 2px 3px 0 rgba(0, 0, 0, 0.1);
+    }
+    [data-mode="light"] .btn-primary-secondary.pressed {
+        background: color-mix(in srgb, var(--color-accent-secondary) 80%, black);
+        box-shadow: inset 0 2px 3px 0 rgba(0, 0, 0, 0.15);
+    }
+
+    .btn-primary-surface {
+        @apply font-body text-sm px-4 py-2.5 md:py-2
+           transition-all duration-150 cursor-pointer disabled:opacity-40
+           disabled:cursor-not-allowed min-h-11 md:min-h-0;
+        border-radius: var(--clay-radius-lg);
+        color: var(--color-fg);
         background: linear-gradient(
             180deg,
-            color-mix(in srgb, var(--color-accent-secondary) 65%, white) 0%,
-            var(--color-accent-secondary) 100%
+            color-mix(in srgb, var(--color-surface) 85%, white) 0%,
+            var(--color-surface) 100%
+        );
+        box-shadow:
+            0 3px 0 0
+                color-mix(in srgb, var(--color-surface) 60%, black),
+            0 4px 8px -2px rgba(0, 0, 0, 0.3),
+            inset 0 1px 1px 0 rgba(255, 255, 255, 0.08);
+    }
+    .btn-primary-surface:hover {
+        transform: var(--btn-transform-hover);
+        background: linear-gradient(
+            180deg,
+            color-mix(in srgb, var(--color-surface) 70%, white) 0%,
+            var(--color-surface) 100%
         );
         box-shadow:
             0 4px 0 0
-                color-mix(in srgb, var(--color-accent-secondary) 100%, black 35%),
+                color-mix(in srgb, var(--color-surface) 60%, black),
             0 6px 12px -2px rgba(0, 0, 0, 0.35),
             inset 0 1px 1px 0 rgba(255, 255, 255, 0.08);
     }
-    .btn-primary-secondary:active {
+    .btn-primary-surface:active {
         transform: var(--btn-transform-active);
         scale: var(--btn-scale-active);
         box-shadow: var(--clay-shadow-flat);
     }
-    .btn-primary-secondary.pressed {
+    .btn-primary-surface.pressed {
         transform: var(--btn-transform-active);
         scale: var(--btn-scale-active);
         box-shadow: inset 0 2px 4px 0 rgba(0, 0, 0, 0.25);
@@ -683,15 +755,23 @@
         color: var(--color-fg);
     }
 
-    /* Dark mode: lighten surface with white mix */
+    /* Dark mode: inherit uses 3px/5px bottom shadow (vs primary's 2px/4px)
+       to compensate for surface-colored shadows being less visually
+       prominent than accent-colored shadows on dark backgrounds. */
     .btn-inherit {
         background: color-mix(in srgb, var(--btn-surface) 95%, white);
-        box-shadow: var(--clay-shadow-resting);
+        box-shadow:
+            0 3px 0 0 color-mix(in srgb, var(--btn-surface) 100%, black 35%),
+            inset 0 2px 3px 0 rgba(0, 0, 0, 0.15),
+            inset 0 1px 1px 0 rgba(255, 255, 255, 0.04);
     }
     .btn-inherit:hover {
         transform: var(--btn-transform-hover);
         background: color-mix(in srgb, var(--btn-surface) 88%, white);
-        box-shadow: var(--clay-shadow-raised);
+        box-shadow:
+            0 5px 0 0 color-mix(in srgb, var(--btn-surface) 100%, black 35%),
+            inset 0 2px 3px 0 rgba(0, 0, 0, 0.15),
+            inset 0 1px 1px 0 rgba(255, 255, 255, 0.04);
     }
     .btn-inherit:active {
         transform: var(--btn-transform-active-md);
@@ -707,27 +787,28 @@
         color: var(--color-accent);
     }
 
-    /* Light mode: distinguish via shadow + border */
-    .light .btn-inherit {
+    /* Light mode: solid bottom shadow for visible depth on light backgrounds */
+    [data-mode="light"] .btn-inherit {
         background: var(--btn-surface);
-        border: 1px solid color-mix(in srgb, var(--btn-surface) 80%, white);
         box-shadow:
-            0 3px 6px -2px rgba(0, 0, 0, 0.12),
-            0 -4px 8px -4px rgba(0, 0, 0, 0.15);
+            0 2px 0 0 color-mix(in srgb, var(--btn-surface) 80%, black),
+            0 2px 4px rgba(0, 0, 0, 0.08),
+            0 0 0 1px rgba(0, 0, 0, 0.04);
     }
-    .light .btn-inherit:hover {
-        border-color: color-mix(in srgb, var(--btn-surface) 70%, white);
+    [data-mode="light"] .btn-inherit:hover {
+        background: color-mix(in srgb, var(--btn-surface) 92%, white);
         box-shadow:
-            0 4px 8px -2px rgba(0, 0, 0, 0.14),
-            0 -5px 10px -4px rgba(0, 0, 0, 0.18);
+            0 3px 0 0 color-mix(in srgb, var(--btn-surface) 80%, black),
+            0 3px 6px rgba(0, 0, 0, 0.1),
+            0 0 0 1px rgba(0, 0, 0, 0.06);
     }
-    .light .btn-inherit:active {
-        border-color: transparent;
-        box-shadow: var(--clay-shadow-flat);
+    [data-mode="light"] .btn-inherit:active {
+        background: color-mix(in srgb, var(--btn-surface) 95%, black);
+        box-shadow: inset 0 2px 3px 0 rgba(0, 0, 0, 0.1);
     }
-    .light .btn-inherit.pressed {
-        border-color: transparent;
-        box-shadow: inset 0 2px 3px 0 rgba(0, 0, 0, 0.2);
+    [data-mode="light"] .btn-inherit.pressed {
+        background: color-mix(in srgb, var(--btn-surface) 90%, black);
+        box-shadow: inset 0 2px 3px 0 rgba(0, 0, 0, 0.15);
         color: var(--color-accent);
     }
 
@@ -863,6 +944,118 @@
            transition-all duration-150 cursor-pointer disabled:opacity-40
            disabled:cursor-not-allowed;
         border-radius: var(--clay-radius-md);
+        color: var(--color-fg);
+        background: color-mix(in srgb, var(--color-accent) 92%, white);
+        box-shadow:
+            0 1px 0 0 color-mix(in srgb, var(--color-accent) 100%, black 35%),
+            0 2px 4px -1px rgba(0, 0, 0, 0.2),
+            inset 0 1px 1px 0 rgba(0, 0, 0, 0.15),
+            inset 0 1px 1px 0 rgba(255, 255, 255, 0.04);
+    }
+    .btn-icon-primary:hover {
+        transform: var(--btn-transform-hover);
+        background: color-mix(in srgb, var(--color-accent) 88%, white);
+        box-shadow:
+            0 2px 0 0 color-mix(in srgb, var(--color-accent) 100%, black 35%),
+            0 3px 6px -1px rgba(0, 0, 0, 0.25),
+            inset 0 1px 1px 0 rgba(255, 255, 255, 0.04);
+    }
+    .btn-icon-primary:active {
+        transform: var(--btn-transform-active-sm);
+        scale: var(--btn-scale-active);
+        background: var(--color-accent);
+        box-shadow: inset 0 2px 3px 0 rgba(0, 0, 0, 0.2);
+    }
+    .btn-icon-primary.pressed {
+        transform: var(--btn-transform-active-sm);
+        background: color-mix(in srgb, var(--color-accent) 80%, black);
+        box-shadow: inset 0 2px 3px 0 rgba(0, 0, 0, 0.2);
+    }
+
+    [data-mode="light"] .btn-icon-primary {
+        background: color-mix(in srgb, var(--color-accent) 85%, white);
+        box-shadow:
+            0 1px 0 0 color-mix(in srgb, var(--color-accent) 100%, black 25%),
+            0 1px 3px rgba(0, 0, 0, 0.08),
+            0 0 0 1px rgba(0, 0, 0, 0.04);
+    }
+    [data-mode="light"] .btn-icon-primary:hover {
+        background: color-mix(in srgb, var(--color-accent) 75%, white);
+        box-shadow:
+            0 2px 0 0 color-mix(in srgb, var(--color-accent) 100%, black 25%),
+            0 2px 4px rgba(0, 0, 0, 0.1),
+            0 0 0 1px rgba(0, 0, 0, 0.06);
+    }
+    [data-mode="light"] .btn-icon-primary:active {
+        background: var(--color-accent);
+        box-shadow: inset 0 2px 3px 0 rgba(0, 0, 0, 0.1);
+    }
+    [data-mode="light"] .btn-icon-primary.pressed {
+        background: color-mix(in srgb, var(--color-accent) 80%, black);
+        box-shadow: inset 0 2px 3px 0 rgba(0, 0, 0, 0.15);
+    }
+
+    .btn-icon-primary-secondary {
+        @apply w-11 h-11 md:w-10 md:h-10 flex items-center justify-center
+           transition-all duration-150 cursor-pointer disabled:opacity-40
+           disabled:cursor-not-allowed;
+        border-radius: var(--clay-radius-md);
+        color: var(--color-fg);
+        background: color-mix(in srgb, var(--color-accent-secondary) 92%, white);
+        box-shadow:
+            0 1px 0 0 color-mix(in srgb, var(--color-accent-secondary) 100%, black 35%),
+            0 2px 4px -1px rgba(0, 0, 0, 0.2),
+            inset 0 1px 1px 0 rgba(0, 0, 0, 0.15),
+            inset 0 1px 1px 0 rgba(255, 255, 255, 0.04);
+    }
+    .btn-icon-primary-secondary:hover {
+        transform: var(--btn-transform-hover);
+        background: color-mix(in srgb, var(--color-accent-secondary) 88%, white);
+        box-shadow:
+            0 2px 0 0 color-mix(in srgb, var(--color-accent-secondary) 100%, black 35%),
+            0 3px 6px -1px rgba(0, 0, 0, 0.25),
+            inset 0 1px 1px 0 rgba(255, 255, 255, 0.04);
+    }
+    .btn-icon-primary-secondary:active {
+        transform: var(--btn-transform-active-sm);
+        scale: var(--btn-scale-active);
+        background: var(--color-accent-secondary);
+        box-shadow: inset 0 2px 3px 0 rgba(0, 0, 0, 0.2);
+    }
+    .btn-icon-primary-secondary.pressed {
+        transform: var(--btn-transform-active-sm);
+        background: color-mix(in srgb, var(--color-accent-secondary) 80%, black);
+        box-shadow: inset 0 2px 3px 0 rgba(0, 0, 0, 0.2);
+    }
+
+    [data-mode="light"] .btn-icon-primary-secondary {
+        background: color-mix(in srgb, var(--color-accent-secondary) 85%, white);
+        box-shadow:
+            0 1px 0 0 color-mix(in srgb, var(--color-accent-secondary) 100%, black 25%),
+            0 1px 3px rgba(0, 0, 0, 0.08),
+            0 0 0 1px rgba(0, 0, 0, 0.04);
+    }
+    [data-mode="light"] .btn-icon-primary-secondary:hover {
+        background: color-mix(in srgb, var(--color-accent-secondary) 75%, white);
+        box-shadow:
+            0 2px 0 0 color-mix(in srgb, var(--color-accent-secondary) 100%, black 25%),
+            0 2px 4px rgba(0, 0, 0, 0.1),
+            0 0 0 1px rgba(0, 0, 0, 0.06);
+    }
+    [data-mode="light"] .btn-icon-primary-secondary:active {
+        background: var(--color-accent-secondary);
+        box-shadow: inset 0 2px 3px 0 rgba(0, 0, 0, 0.1);
+    }
+    [data-mode="light"] .btn-icon-primary-secondary.pressed {
+        background: color-mix(in srgb, var(--color-accent-secondary) 80%, black);
+        box-shadow: inset 0 2px 3px 0 rgba(0, 0, 0, 0.15);
+    }
+
+    .btn-icon-primary-surface {
+        @apply w-11 h-11 md:w-10 md:h-10 flex items-center justify-center
+           transition-all duration-150 cursor-pointer disabled:opacity-40
+           disabled:cursor-not-allowed;
+        border-radius: var(--clay-radius-md);
         background: linear-gradient(
             180deg,
             color-mix(in srgb, var(--icon-btn-accent) 75%, white) 0%,
@@ -872,14 +1065,14 @@
             0 1px 0 0 var(--icon-btn-shadow),
             0 2px 4px -1px rgba(0, 0, 0, 0.2),
             inset 0 1px 1px 0 rgba(255, 255, 255, 0.08);
-        --icon-btn-accent: var(--color-accent);
+        --icon-btn-accent: var(--color-surface);
         --icon-btn-shadow: color-mix(
             in srgb,
-            var(--color-accent) 100%,
+            var(--color-surface) 100%,
             black 35%
         );
     }
-    .btn-icon-primary:hover {
+    .btn-icon-primary-surface:hover {
         transform: var(--btn-transform-hover);
         background: linear-gradient(
             180deg,
@@ -891,12 +1084,12 @@
             0 3px 6px -1px rgba(0, 0, 0, 0.25),
             inset 0 1px 1px 0 rgba(255, 255, 255, 0.08);
     }
-    .btn-icon-primary:active {
+    .btn-icon-primary-surface:active {
         transform: var(--btn-transform-active-sm);
         scale: var(--btn-scale-active);
         box-shadow: inset 0 2px 3px 0 rgba(0, 0, 0, 0.2);
     }
-    .btn-icon-primary.pressed {
+    .btn-icon-primary-surface.pressed {
         transform: var(--btn-transform-active-sm);
         background: linear-gradient(
             180deg,
@@ -947,25 +1140,25 @@
     /* Light mode: distinguish via shadow + border */
     [data-mode="light"] .btn-icon-inherit {
         background: var(--btn-surface);
-        border: 1px solid color-mix(in srgb, var(--btn-surface) 80%, white);
         box-shadow:
-            0 2px 4px -1px rgba(0, 0, 0, 0.2),
-            0 -3px 6px -2px rgba(0, 0, 0, 0.15);
+            0 1px 0 0 color-mix(in srgb, var(--btn-surface) 80%, black),
+            0 1px 3px rgba(0, 0, 0, 0.08),
+            0 0 0 1px rgba(0, 0, 0, 0.04);
     }
     [data-mode="light"] .btn-icon-inherit:hover {
-        border-color: color-mix(in srgb, var(--btn-surface) 70%, white);
+        background: color-mix(in srgb, var(--btn-surface) 92%, white);
         box-shadow:
-            0 3px 6px -1px rgba(0, 0, 0, 0.25),
-            0 -4px 8px -2px rgba(0, 0, 0, 0.18);
+            0 2px 0 0 color-mix(in srgb, var(--btn-surface) 80%, black),
+            0 2px 4px rgba(0, 0, 0, 0.1),
+            0 0 0 1px rgba(0, 0, 0, 0.06);
     }
     [data-mode="light"] .btn-icon-inherit:active {
-        border-color: transparent;
-        box-shadow: inset 0 2px 3px 0 rgba(0, 0, 0, 0.2);
+        background: color-mix(in srgb, var(--btn-surface) 95%, black);
+        box-shadow: inset 0 2px 3px 0 rgba(0, 0, 0, 0.1);
     }
     [data-mode="light"] .btn-icon-inherit.pressed {
-        background: color-mix(in srgb, var(--btn-surface) 85%, black);
-        border-color: transparent;
-        box-shadow: inset 0 2px 3px 0 rgba(0, 0, 0, 0.2);
+        background: color-mix(in srgb, var(--btn-surface) 90%, black);
+        box-shadow: inset 0 2px 3px 0 rgba(0, 0, 0, 0.15);
     }
 
     .btn-icon-danger {

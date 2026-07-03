@@ -1,7 +1,7 @@
 import type React from 'react';
 import { forwardRef } from 'react';
 
-type ButtonVariant = 'primary' | 'inherit' | 'danger';
+type ButtonVariant = 'primary' | 'secondary' | 'surface' | 'inherit' | 'danger';
 type ButtonSize = 'default' | 'icon';
 type ButtonSurface = 'base' | 'surface' | 'elevated';
 
@@ -13,12 +13,16 @@ interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
 
 const defaultClasses: Record<ButtonVariant, string> = {
   primary: 'btn-primary',
+  secondary: 'btn-primary-secondary',
+  surface: 'btn-primary-surface',
   inherit: 'btn-inherit',
   danger: 'btn-danger',
 };
 
 const iconClasses: Record<ButtonVariant, string> = {
   primary: 'btn-icon-primary',
+  secondary: 'btn-icon-primary-secondary',
+  surface: 'btn-icon-primary-surface',
   inherit: 'btn-icon-inherit',
   danger: 'btn-icon-danger',
 };

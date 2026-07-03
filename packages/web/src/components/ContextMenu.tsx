@@ -59,6 +59,9 @@ export function ContextMenuTrigger({
   ref,
   className,
   surface,
+  size,
+  style,
+  variant,
   onMouseDown,
 }: {
   onToggle: () => void;
@@ -66,17 +69,21 @@ export function ContextMenuTrigger({
   ref: RefObject<HTMLButtonElement | null>;
   className?: string;
   surface?: 'base' | 'surface' | 'elevated';
+  size?: 'default' | 'icon';
+  style?: React.CSSProperties;
+  variant?: 'inherit' | 'surface';
   onMouseDown?: (e: React.MouseEvent) => void;
 }) {
   return (
     <Button
       ref={ref}
-      variant="inherit"
-      size="icon"
+      variant={variant ?? 'inherit'}
+      size={size ?? 'icon'}
       aria-haspopup="true"
       aria-expanded={isOpen}
       title="More actions"
       surface={surface ?? 'elevated'}
+      style={style}
       onMouseDown={onMouseDown}
       onClick={(e) => {
         e.stopPropagation();
