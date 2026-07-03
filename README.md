@@ -65,11 +65,14 @@
 
 ## Features
 
-- **Import songs** — Paste a link from YouTube, SoundCloud, Spotify, Apple Music, Tidal, or Google Drive to save it to your library. Configure which sources are enabled in settings.
-- **Playback** — Play, pause, seek, skip, loop, and shuffle. Optional server-wide equalizer and compressor.
-- **Metadata editing** — Customize title, artist, album, cover art, tags, and per-song volume.
-- **Playlists** — Create and manage private or public playlists from your library.
-- **Search & filter** — Find songs by title, artist, album, or tags.
+- **Import songs** — Paste a link from YouTube, SoundCloud, Spotify, Apple Music, Tidal, or Google Drive. Metadata auto-fills from the source, and admins pick which sources to enable.
+- **Playback** — Play, pause, seek, skip, loop, and shuffle. Reorder the queue, promote songs to play next, or remove them. Optional server-wide 15-band equalizer and compressor.
+- **Metadata editing** — Customize title, artist, album, cover art, tags (with colors), and per-song volume boost — all from the web UI.
+- **Playlists** — Create private or public playlists. Smart playlists auto-populate from tags: tag a song and it joins that tag's playlist.
+- **Song requests** — Users request songs, reviewers approve or deny in the web UI with optional DM notifications.
+- **Permissions** — Role-based access: control who can play, manage the queue, review requests, or administer settings.
+- **Setup wizard** — Guided first-run setup picks your server, admin roles, and sources so you're ready to go.
+- **Web UI** — Real-time player and queue updates over WebSocket, custom themes, responsive layout, and Discord avatar menu.
 
 ## Quick Start
 
