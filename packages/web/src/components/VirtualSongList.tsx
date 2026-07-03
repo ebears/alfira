@@ -1,7 +1,6 @@
 import type { Playlist, Song } from '@alfira-bot/server/shared';
 import { memo } from 'react';
 import SongCard from './SongCard';
-import SongRow from './SongRow';
 
 interface VirtualSongListProps {
   items: Song[];
@@ -88,61 +87,22 @@ export const VirtualSongList = memo(function VirtualSongList({
     return null;
   }
 
-  if (viewMode === 'grid') {
-    return (
-      <div className="relative">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-[repeat(auto-fill,minmax(270px,1fr))] gap-3 md:gap-4 items-start">
-          {items.map((song) => (
-            <SongCard
-              key={song.id}
-              song={song}
-              isAdminView={isAdminView}
-              playlists={playlists}
-              onDelete={onDelete}
-              onPlay={onPlay}
-              isPlaying={playingId === song.id}
-              onAddToQueue={onAddToQueue}
-            />
-          ))}
-        </div>
-        {/* Sentinel at bottom to trigger load more */}
-        <div ref={sentinelRef}>
-          {isError && (
-            <div className="flex justify-center py-4">
-              <button
-                type="button"
-                onClick={onRetry}
-                className="font-mono text-xs text-muted hover:text-fg transition-colors underline"
-              >
-                Failed to load more. Retry
-              </button>
-            </div>
-          )}
-          {isFetching && !isError && (
-            <div className="flex justify-center py-4 gap-2">
-              {Array.from({ length: 3 }).map((_, i) => (
-                <div
-                  // biome-ignore lint/suspicious/noArrayIndexKey: static loading indicator, order never changes
-                  key={`loading-dot-${i}`}
-                  className="skeleton h-3 w-3 rounded-full animate-pulse"
-                />
-              ))}
-            </div>
-          )}
-          {!isFetching && !isError && !hasMore && items.length > 0 && <div className="h-4" />}
-        </div>
-      </div>
-    );
-  }
+  const isGrid = viewMode === 'grid';
 
-  // List view — flex column with page scroll. Sentinel at bottom.
   return (
     <div className="relative">
-      <div className="flex flex-col gap-1">
+      <div
+        className={
+          isGrid
+            ? 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-[repeat(auto-fill,minmax(270px,1fr))] gap-3 md:gap-4 items-start'
+            : 'flex flex-col gap-1'
+        }
+      >
         {items.map((song) => (
-          <SongRow
+          <SongCard
             key={song.id}
             song={song}
+            variant={viewMode === 'grid' ? 'grid' : 'list'}
             isAdminView={isAdminView}
             playlists={playlists}
             onDelete={onDelete}
