@@ -179,6 +179,8 @@ export interface Playlist {
   createdAt: string; // ISO 8601 string (JSON wire format)
   songs?: { id: string; playlistId: string; songId: string; position: number; song?: Song }[];
   _count?: { songs: number };
+  /** Up to 4 artwork URLs from the playlist's songs, for the cover grid. Only present in list responses. */
+  coverUrls?: string[];
 }
 
 // ---------------------------------------------------------------------------
