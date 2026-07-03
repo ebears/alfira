@@ -1,8 +1,12 @@
 import type { LoopMode, QueueState } from '@alfira-bot/server/shared';
 import {
   clearQueue,
+  demoteQueueSong,
   fetchQueueState,
   leaveVoice,
+  promoteQueueSong,
+  removeQueueSong,
+  reorderQueueSongs,
   seek as seekTrack,
   setLoopMode,
   shuffleQueue,
@@ -53,6 +57,10 @@ interface PlayerContextValue {
   shuffle: () => Promise<void>;
   unshuffle: () => Promise<void>;
   seek: (positionMs: number) => Promise<void>;
+  removeSong: (songId: string) => Promise<void>;
+  promoteSong: (songId: string) => Promise<void>;
+  demoteSong: (songId: string) => Promise<void>;
+  reorderQueue: (songIds: string[], target?: 'queue' | 'priority') => Promise<void>;
   // Force an immediate REST refetch (e.g. after starting playback from QueuePage).
   refetch: () => Promise<void>;
 }
@@ -186,6 +194,22 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     await seekTrack(positionMs);
   }, []);
 
+  const removeSong = useCallback(async (songId: string) => {
+    await removeQueueSong(songId);
+  }, []);
+
+  const promoteSong = useCallback(async (songId: string) => {
+    await promoteQueueSong(songId);
+  }, []);
+
+  const demoteSong = useCallback(async (songId: string) => {
+    await demoteQueueSong(songId);
+  }, []);
+
+  const reorderQueue = useCallback(async (songIds: string[], target?: 'queue' | 'priority') => {
+    await reorderQueueSongs(songIds, target);
+  }, []);
+
   const stateValue: Omit<PlayerContextValue, 'elapsed' | 'registerProgress' | 'registerThumb'> =
     useMemo(
       () => ({
@@ -199,10 +223,30 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
         shuffle,
         unshuffle,
         seek,
+        removeSong,
+        promoteSong,
+        demoteSong,
+        reorderQueue,
         refetch,
         setOverrideElapsed,
       }),
-      [state, loading, skip, leave, pause, clear, setLoop, shuffle, unshuffle, seek, refetch]
+      [
+        state,
+        loading,
+        skip,
+        leave,
+        pause,
+        clear,
+        setLoop,
+        shuffle,
+        unshuffle,
+        seek,
+        removeSong,
+        promoteSong,
+        demoteSong,
+        reorderQueue,
+        refetch,
+      ]
     );
 
   return (

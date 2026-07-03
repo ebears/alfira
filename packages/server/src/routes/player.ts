@@ -196,7 +196,7 @@ async function handleLoop(ctx: RouteContext, request: Request): Promise<Response
 // POST /api/player/shuffle — shuffle queue (admin only)
 // ---------------------------------------------------------------------------
 async function handleShuffle(ctx: RouteContext): Promise<Response> {
-  const guards = await checkGuards(ctx, { admin: true, voice: true, permission: 'queue.shuffle' });
+  const guards = await checkGuards(ctx, { admin: true, voice: true, permission: 'queue.manage' });
   if (guards instanceof Response) return guards;
 
   const player = getPlayer(getGuildId());
@@ -213,7 +213,7 @@ async function handleShuffle(ctx: RouteContext): Promise<Response> {
 // POST /api/player/unshuffle — restore original queue order (admin only)
 // ---------------------------------------------------------------------------
 async function handleUnshuffle(ctx: RouteContext): Promise<Response> {
-  const guards = await checkGuards(ctx, { admin: true, voice: true, permission: 'queue.shuffle' });
+  const guards = await checkGuards(ctx, { admin: true, voice: true, permission: 'queue.manage' });
   if (guards instanceof Response) return guards;
 
   const playerResult = requirePlayer();
@@ -234,7 +234,7 @@ type UrlTempSongResult =
 async function resolveUrlTempSong(
   ctx: RouteContext,
   request: Request,
-  permission: 'queue.quickadd' | 'queue.manage'
+  permission: 'queue.quickadd' | 'queue.manage' | 'queue.override'
 ): Promise<UrlTempSongResult> {
   const guards = await checkGuards(ctx, { admin: true, voice: true, permission });
   if (guards instanceof Response) return { ok: false, response: guards };
@@ -385,7 +385,7 @@ async function handleSeek(ctx: RouteContext, request: Request): Promise<Response
 // POST /api/player/clear — clear queue (admin only)
 // ---------------------------------------------------------------------------
 async function handleClear(ctx: RouteContext): Promise<Response> {
-  const guards = await checkGuards(ctx, { admin: true, voice: true, permission: 'queue.clear' });
+  const guards = await checkGuards(ctx, { admin: true, voice: true, permission: 'queue.manage' });
   if (guards instanceof Response) return guards;
 
   const playerResult = requirePlayer();
@@ -448,13 +448,122 @@ async function handleAddToPriority(ctx: RouteContext, request: Request): Promise
 // POST /api/player/override — immediately play YouTube URL (admin only)
 // ---------------------------------------------------------------------------
 async function handleOverride(ctx: RouteContext, request: Request): Promise<Response> {
-  const result = await resolveUrlTempSong(ctx, request, 'queue.manage');
+  const result = await resolveUrlTempSong(ctx, request, 'queue.override');
   if (!result.ok) return result.response;
   await result.player.replaceQueueAndPlay([result.queuedSong]);
   return json({
     message: `Now playing "${result.metadataTitle}".`,
     song: result.queuedSong,
   });
+}
+
+// ---------------------------------------------------------------------------
+// DELETE /api/player/queue/:songId — remove a specific song from the queue
+// ---------------------------------------------------------------------------
+async function handleRemoveFromQueue(
+  ctx: RouteContext,
+  _request: Request,
+  songId: string
+): Promise<Response> {
+  const guards = await checkGuards(ctx, { admin: true, voice: true, permission: 'queue.manage' });
+  if (guards instanceof Response) return guards;
+
+  const playerResult = requirePlayer();
+  if (!playerResult.ok) return playerResult.response;
+
+  const removed = playerResult.player.removeSongById(songId);
+
+  if (!removed) {
+    return json({ error: 'Song not found in queue.' }, 404);
+  }
+
+  return json({ message: 'Song removed from queue.' });
+}
+
+// ---------------------------------------------------------------------------
+// POST /api/player/queue/:songId/promote — move song to priority queue
+// ---------------------------------------------------------------------------
+async function handlePromoteSong(
+  ctx: RouteContext,
+  _request: Request,
+  songId: string
+): Promise<Response> {
+  const guards = await checkGuards(ctx, { admin: true, voice: true, permission: 'queue.manage' });
+  if (guards instanceof Response) return guards;
+
+  const playerResult = requirePlayer();
+  if (!playerResult.ok) return playerResult.response;
+
+  const promoted = playerResult.player.promoteSong(songId);
+
+  if (!promoted) {
+    return json({ error: 'Song not found in queue.' }, 404);
+  }
+
+  return json({ message: 'Song promoted to Up Next.' });
+}
+
+// ---------------------------------------------------------------------------
+// POST /api/player/queue/:songId/demote — move song from priority to regular queue
+// ---------------------------------------------------------------------------
+async function handleDemoteSong(
+  ctx: RouteContext,
+  _request: Request,
+  songId: string
+): Promise<Response> {
+  const guards = await checkGuards(ctx, { admin: true, voice: true, permission: 'queue.manage' });
+  if (guards instanceof Response) return guards;
+
+  const playerResult = requirePlayer();
+  if (!playerResult.ok) return playerResult.response;
+
+  const demoted = playerResult.player.demoteSong(songId);
+
+  if (!demoted) {
+    return json({ error: 'Song not found in Up Next.' }, 404);
+  }
+
+  return json({ message: 'Song moved to queue.' });
+}
+
+// ---------------------------------------------------------------------------
+// PATCH /api/player/queue/reorder — reorder remaining queue or priority items
+// ---------------------------------------------------------------------------
+async function handleReorderQueue(ctx: RouteContext, request: Request): Promise<Response> {
+  const guards = await checkGuards(ctx, { admin: true, voice: true, permission: 'queue.manage' });
+  if (guards instanceof Response) return guards;
+
+  let body: { songIds?: unknown; target?: unknown };
+  try {
+    body = (await request.json()) as typeof body;
+  } catch {
+    return json({ error: 'Invalid JSON body.' }, 400);
+  }
+
+  const { songIds, target } = body;
+
+  if (!Array.isArray(songIds) || !songIds.every((id): id is string => typeof id === 'string')) {
+    return json({ error: 'songIds must be an array of strings.' }, 400);
+  }
+
+  if (target !== undefined && target !== 'queue' && target !== 'priority') {
+    return json({ error: 'target must be "queue" or "priority".' }, 400);
+  }
+
+  const playerResult = requirePlayer();
+  if (!playerResult.ok) return playerResult.response;
+
+  try {
+    if (target === 'priority') {
+      playerResult.player.reorderPriorityQueue(songIds);
+    } else {
+      playerResult.player.reorderQueue(songIds);
+    }
+  } catch (err) {
+    return json({ error: err instanceof Error ? err.message : 'Invalid reorder.' }, 422);
+  }
+
+  return json({ message: 'Queue reordered.' });
 }
 
 // ---------------------------------------------------------------------------
@@ -478,6 +587,24 @@ export async function handlePlayer(ctx: RouteContext, request: Request): Promise
   }
 
   if (path === '/queue' && request.method === 'GET') return await handleGetQueue(ctx);
+  // Static paths checked before dynamic /queue/:songId
+  if (path === '/queue/reorder' && request.method === 'PATCH')
+    return await handleReorderQueue(ctx, request);
+  // Dynamic: /queue/:songId/promote
+  if (path.startsWith('/queue/') && path.endsWith('/promote') && request.method === 'POST') {
+    const songId = path.slice('/queue/'.length, -'/promote'.length);
+    if (songId.length > 0) return await handlePromoteSong(ctx, request, songId);
+  }
+  // Dynamic: /queue/:songId/demote
+  if (path.startsWith('/queue/') && path.endsWith('/demote') && request.method === 'POST') {
+    const songId = path.slice('/queue/'.length, -'/demote'.length);
+    if (songId.length > 0) return await handleDemoteSong(ctx, request, songId);
+  }
+  // Dynamic: /queue/:songId
+  if (path.startsWith('/queue/') && request.method === 'DELETE') {
+    const songId = path.slice('/queue/'.length);
+    if (songId.length > 0) return await handleRemoveFromQueue(ctx, request, songId);
+  }
   if (path === '/play' && request.method === 'POST') return await handlePlay(ctx, request);
   if (path === '/skip' && request.method === 'POST') return await handleSkip(ctx);
   if (path === '/leave' && request.method === 'POST') return await handleLeave(ctx);

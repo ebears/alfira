@@ -394,6 +394,22 @@ export function overridePlay(url: string): Promise<{
   return post('/api/player/override', { url });
 }
 
+export function removeQueueSong(songId: string): Promise<void> {
+  return remove(`/api/player/queue/${encodeURIComponent(songId)}`);
+}
+
+export function promoteQueueSong(songId: string): Promise<void> {
+  return post(`/api/player/queue/${encodeURIComponent(songId)}/promote`);
+}
+
+export function demoteQueueSong(songId: string): Promise<void> {
+  return post(`/api/player/queue/${encodeURIComponent(songId)}/demote`);
+}
+
+export function reorderQueueSongs(songIds: string[], target?: 'queue' | 'priority'): Promise<void> {
+  return patch('/api/player/queue/reorder', { songIds, target });
+}
+
 // ---------------------------------------------------------------------------
 // Setup API Functions
 // ---------------------------------------------------------------------------

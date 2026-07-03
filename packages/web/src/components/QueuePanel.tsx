@@ -2,6 +2,10 @@ import type { QueuedSong } from '@alfira-bot/server/shared';
 import { formatDuration } from '@alfira-bot/server/shared';
 import {
   AlienIcon,
+  ArrowDownIcon,
+  ArrowLineDownIcon,
+  ArrowLineUpIcon,
+  ArrowUpIcon,
   BombIcon,
   CakeIcon,
   CatIcon,
@@ -28,6 +32,7 @@ import {
   SockIcon,
   SwordIcon,
   ToiletPaperIcon,
+  TrashIcon,
   YinYangIcon,
 } from '@phosphor-icons/react';
 import { useVirtualizer } from '@tanstack/react-virtual';
@@ -70,7 +75,17 @@ export default function QueuePanel({
 }: {
   mobileQuickControls?: MobileQuickControls;
 }) {
-  const { state, loading, elapsed, registerProgress, clear } = usePlayer();
+  const {
+    state,
+    loading,
+    elapsed,
+    registerProgress,
+    clear,
+    removeSong,
+    promoteSong,
+    demoteSong,
+    reorderQueue,
+  } = usePlayer();
   const { isAdminView } = useAdminView();
   const { hasPermission } = usePermissions();
   const [showQuickAdd, setShowQuickAdd] = useState(false);
@@ -83,6 +98,8 @@ export default function QueuePanel({
   const scrollRef = useRef<HTMLDivElement>(null);
 
   const { currentSong, queue, priorityQueue, isPlaying } = state;
+
+  const canManage = isAdminView || hasPermission('queue.manage');
 
   const virtualItems: VirtualQueueItem[] = useMemo(() => {
     const items: VirtualQueueItem[] = [];
@@ -130,6 +147,95 @@ export default function QueuePanel({
     }
   }, [clear]);
 
+  const handleRemove = useCallback(
+    async (songId: string) => {
+      await removeSong(songId);
+    },
+    [removeSong]
+  );
+
+  const handlePromote = useCallback(
+    async (songId: string) => {
+      await promoteSong(songId);
+    },
+    [promoteSong]
+  );
+
+  const handleDemote = useCallback(
+    async (songId: string) => {
+      await demoteSong(songId);
+    },
+    [demoteSong]
+  );
+
+  const handleMoveUp = useCallback(
+    (targetQueue: QueuedSong[], songId: string, target: 'queue' | 'priority') => {
+      const idx = targetQueue.findIndex((s) => s.id === songId);
+      if (idx <= 0) return;
+      const newOrder = [...targetQueue];
+      const a = newOrder[idx];
+      const b = newOrder[idx - 1];
+      if (a && b) {
+        newOrder[idx - 1] = a;
+        newOrder[idx] = b;
+      }
+      reorderQueue(
+        newOrder.map((s) => s.id),
+        target
+      );
+    },
+    [reorderQueue]
+  );
+
+  const handleMoveDown = useCallback(
+    (targetQueue: QueuedSong[], songId: string, target: 'queue' | 'priority') => {
+      const idx = targetQueue.findIndex((s) => s.id === songId);
+      if (idx < 0 || idx >= targetQueue.length - 1) return;
+      const newOrder = [...targetQueue];
+      const a = newOrder[idx];
+      const b = newOrder[idx + 1];
+      if (a && b) {
+        newOrder[idx] = b;
+        newOrder[idx + 1] = a;
+      }
+      reorderQueue(
+        newOrder.map((s) => s.id),
+        target
+      );
+    },
+    [reorderQueue]
+  );
+
+  const handleMoveToTop = useCallback(
+    (targetQueue: QueuedSong[], songId: string, target: 'queue' | 'priority') => {
+      const idx = targetQueue.findIndex((s) => s.id === songId);
+      if (idx <= 0) return;
+      const newOrder = [...targetQueue];
+      const [item] = newOrder.splice(idx, 1);
+      if (item) newOrder.unshift(item);
+      reorderQueue(
+        newOrder.map((s) => s.id),
+        target
+      );
+    },
+    [reorderQueue]
+  );
+
+  const handleMoveToBottom = useCallback(
+    (targetQueue: QueuedSong[], songId: string, target: 'queue' | 'priority') => {
+      const idx = targetQueue.findIndex((s) => s.id === songId);
+      if (idx < 0 || idx >= targetQueue.length - 1) return;
+      const newOrder = [...targetQueue];
+      const [item] = newOrder.splice(idx, 1);
+      if (item) newOrder.push(item);
+      reorderQueue(
+        newOrder.map((s) => s.id),
+        target
+      );
+    },
+    [reorderQueue]
+  );
+
   const menuItems: MenuItem[] = useMemo(() => {
     const items: MenuItem[] = [
       {
@@ -147,7 +253,7 @@ export default function QueuePanel({
         onClick: () => setShowQuickAdd(true),
       });
     }
-    if (isAdminView || hasPermission('queue.manage')) {
+    if (isAdminView || hasPermission('queue.override')) {
       items.push({
         id: 'override',
         label: 'Override',
@@ -156,7 +262,7 @@ export default function QueuePanel({
         onClick: () => setShowOverride(true),
       });
     }
-    if (isAdminView || hasPermission('queue.clear')) {
+    if (isAdminView || hasPermission('queue.manage')) {
       items.push({
         id: 'clear-queue',
         label: 'Clear Queue',
@@ -288,7 +394,16 @@ export default function QueuePanel({
                   <QueueSongItem
                     song={item.song}
                     index={item.listIndex}
-                    accent={item.variant === 'priority'}
+                    variant={item.variant}
+                    canManage={canManage}
+                    targetQueue={item.variant === 'priority' ? priorityQueue : queue}
+                    onRemove={handleRemove}
+                    onPromote={handlePromote}
+                    onDemote={handleDemote}
+                    onMoveUp={handleMoveUp}
+                    onMoveDown={handleMoveDown}
+                    onMoveToTop={handleMoveToTop}
+                    onMoveToBottom={handleMoveToBottom}
                   />
                 </div>
               );
@@ -359,14 +474,122 @@ export default function QueuePanel({
 const QueueSongItem = memo(function QueueSongItem({
   song,
   index,
-  accent,
+  variant,
+  canManage,
+  targetQueue,
+  onRemove,
+  onPromote,
+  onDemote,
+  onMoveUp,
+  onMoveDown,
+  onMoveToTop,
+  onMoveToBottom,
 }: {
   song: QueuedSong;
   index: number;
-  accent?: boolean;
+  variant: 'priority' | 'regular';
+  canManage: boolean;
+  targetQueue: QueuedSong[];
+  onRemove: (songId: string) => Promise<void>;
+  onPromote: (songId: string) => Promise<void>;
+  onDemote: (songId: string) => Promise<void>;
+  onMoveUp: (targetQueue: QueuedSong[], songId: string, target: 'queue' | 'priority') => void;
+  onMoveDown: (targetQueue: QueuedSong[], songId: string, target: 'queue' | 'priority') => void;
+  onMoveToTop: (targetQueue: QueuedSong[], songId: string, target: 'queue' | 'priority') => void;
+  onMoveToBottom: (targetQueue: QueuedSong[], songId: string, target: 'queue' | 'priority') => void;
 }) {
+  const [menuOpen, setMenuOpen] = useState(false);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const isPriority = variant === 'priority';
+  const isFirst = index === 0;
+  const isLast = index >= targetQueue.length - 1;
+
+  const menuItems: MenuItem[] = useMemo(() => {
+    if (!canManage) return [];
+    const items: MenuItem[] = [];
+
+    // Remove — always available
+    items.push({
+      id: 'remove',
+      label: 'Remove',
+      icon: <TrashIcon size={14} weight="duotone" />,
+      danger: true,
+      onClick: () => onRemove(song.id),
+    });
+
+    // Promote — only for regular queue items
+    if (!isPriority) {
+      items.push({
+        id: 'promote',
+        label: 'Promote to Up Next',
+        icon: <LightningIcon size={14} weight="duotone" />,
+        onClick: () => onPromote(song.id),
+      });
+    }
+
+    // Demote — only for priority queue items
+    if (isPriority) {
+      items.push({
+        id: 'demote',
+        label: 'Demote to Queue',
+        icon: <ListIcon size={14} weight="duotone" />,
+        onClick: () => onDemote(song.id),
+      });
+    }
+
+    // Reorder controls — for both queues
+    if (targetQueue.length > 1) {
+      items.push({
+        id: 'move-up',
+        label: 'Move Up',
+        icon: <ArrowUpIcon size={14} weight="duotone" />,
+        disabled: isFirst,
+        onClick: () => onMoveUp(targetQueue, song.id, isPriority ? 'priority' : 'queue'),
+      });
+      items.push({
+        id: 'move-down',
+        label: 'Move Down',
+        icon: <ArrowDownIcon size={14} weight="duotone" />,
+        disabled: isLast,
+        onClick: () => onMoveDown(targetQueue, song.id, isPriority ? 'priority' : 'queue'),
+      });
+      items.push({
+        id: 'move-top',
+        label: 'Move to Top',
+        icon: <ArrowLineUpIcon size={14} weight="duotone" />,
+        disabled: isFirst,
+        onClick: () => onMoveToTop(targetQueue, song.id, isPriority ? 'priority' : 'queue'),
+      });
+      items.push({
+        id: 'move-bottom',
+        label: 'Move to Bottom',
+        icon: <ArrowLineDownIcon size={14} weight="duotone" />,
+        disabled: isLast,
+        onClick: () => onMoveToBottom(targetQueue, song.id, isPriority ? 'priority' : 'queue'),
+      });
+    }
+
+    return items;
+  }, [
+    canManage,
+    isPriority,
+    isFirst,
+    isLast,
+    targetQueue,
+    song.id,
+    onRemove,
+    onPromote,
+    onDemote,
+    onMoveUp,
+    onMoveDown,
+    onMoveToTop,
+    onMoveToBottom,
+  ]);
+
+  const accent = isPriority;
+
   return (
-    <div className="flex items-center gap-2 px-3 py-2.5">
+    <div className="flex items-center gap-2 px-3 py-2.5 group">
       <span
         className={`font-mono text-[10px] w-4 text-right shrink-0 ${accent ? 'text-accent' : 'text-faint'}`}
       >
@@ -390,6 +613,33 @@ const QueueSongItem = memo(function QueueSongItem({
       <span className="font-mono text-[10px] text-muted shrink-0">
         {formatDuration(song.duration)}
       </span>
+      {canManage && (
+        <Button
+          ref={triggerRef}
+          variant="inherit"
+          surface="base"
+          size="icon"
+          aria-haspopup="true"
+          aria-expanded={menuOpen}
+          aria-label="Song actions"
+          className={`opacity-0 group-hover:opacity-100 transition-opacity shrink-0 w-6 h-6 ${menuOpen ? 'pressed text-accent opacity-100' : 'text-muted hover:text-fg'}`}
+          onClick={(e) => {
+            e.stopPropagation();
+            setMenuOpen((prev) => !prev);
+          }}
+        >
+          <DotsThreeOutlineVerticalIcon size={14} weight="duotone" />
+        </Button>
+      )}
+      {menuOpen && (
+        <ContextMenu
+          items={menuItems}
+          isOpen={menuOpen}
+          onClose={() => setMenuOpen(false)}
+          triggerRef={triggerRef}
+          align="right"
+        />
+      )}
     </div>
   );
 });

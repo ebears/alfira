@@ -328,6 +328,117 @@ export class GuildPlayer {
     this.broadcast();
   }
 
+  /**
+   * Remove a song from either the priority queue or the regular queue
+   * by its unique queue-entry id. Returns true if a song was found and removed.
+   */
+  removeSongById(songId: string): boolean {
+    // Check priority queue first
+    const prioIdx = this.priorityQueue.findIndex((s) => s.id === songId);
+    if (prioIdx !== -1) {
+      this.priorityQueue.splice(prioIdx, 1);
+      this.broadcast();
+      return true;
+    }
+
+    // Check regular queue
+    const removed = this.queue.removeWhere((s) => s.id === songId);
+    if (removed.length > 0) {
+      this.broadcast();
+      return true;
+    }
+
+    return false;
+  }
+
+  /**
+   * Promote a song from the regular queue to the priority queue
+   * ("Promote to Up Next"). Songs are appended in promotion order so the
+   * first-promoted song plays first. Returns true if found and promoted.
+   */
+  promoteSong(songId: string): boolean {
+    const removed = this.queue.removeWhere((s) => s.id === songId);
+    if (removed.length === 0) return false;
+
+    // Push to the end of priority — earlier promotions play first
+    this.priorityQueue.push(...removed);
+
+    this.broadcast();
+    return true;
+  }
+
+  /**
+   * Demote a song from the priority queue back to the front of the regular
+   * queue. Returns true if the song was found and demoted.
+   */
+  demoteSong(songId: string): boolean {
+    const prioIdx = this.priorityQueue.findIndex((s) => s.id === songId);
+    if (prioIdx === -1) return false;
+
+    // Remove from priority and insert at the front of the regular queue
+    // so it plays first among unplayed regular songs.
+    const [song] = this.priorityQueue.splice(prioIdx, 1);
+    if (song) {
+      this.queue.insertAtFront(song);
+    }
+
+    this.broadcast();
+    return true;
+  }
+
+  /**
+   * Reorder the remaining regular-queue items to match the given songId order.
+   * The array must contain exactly the IDs of all currently-remaining queue
+   * items (no more, no less). Unshuffles the queue.
+   */
+  reorderQueue(songIds: string[]): void {
+    const remaining = this.queue.toRemaining();
+
+    // Build reordered array by looking up each songId in remaining
+    const remainingById = new Map(remaining.map((s) => [s.id, s]));
+    const reordered: QueuedSong[] = [];
+
+    for (const id of songIds) {
+      const song = remainingById.get(id);
+      if (!song) {
+        throw new Error(`Reorder references unknown song id: ${id}`);
+      }
+      reordered.push(song);
+    }
+
+    if (reordered.length !== remaining.length) {
+      throw new Error('Reorder must include all queue items');
+    }
+
+    this.queue.reorderRemaining(reordered, (a, b) => a.id === b.id);
+    this.broadcast();
+  }
+
+  /**
+   * Reorder the priority queue to match the given songId order.
+   * The array must contain exactly the IDs of all current priority queue
+   * items (no more, no less).
+   */
+  reorderPriorityQueue(songIds: string[]): void {
+    const byId = new Map(this.priorityQueue.map((s) => [s.id, s]));
+    const reordered: QueuedSong[] = [];
+
+    for (const id of songIds) {
+      const song = byId.get(id);
+      if (!song) {
+        throw new Error(`Reorder references unknown song id: ${id}`);
+      }
+      reordered.push(song);
+    }
+
+    if (reordered.length !== this.priorityQueue.length) {
+      throw new Error('Reorder must include all Up Next items');
+    }
+
+    this.priorityQueue = reordered;
+    this.broadcast();
+  }
+
   setLoopMode(mode: LoopMode): void {
     this.loopMode = mode;
     // Loop is tracked client-side — NodeLink has no loop opcode.
