@@ -47,7 +47,7 @@ description: React 19 + Tailwind CSS 4 web UI, component and page structure, API
 | Component | Purpose |
 |-----------|---------|
 | `QueuePanel.tsx` | Now playing + upcoming queue |
-| `SongRow.tsx` | Single song display row (thumbnail, title, actions) |
+| `SongCard.tsx` | Song display — grid card or list row via `variant` prop |
 | `SongEditPanel.tsx` | Song metadata editor (tags, volume boost, etc.) |
 | `VirtualSongList.tsx` | Virtualized song list for performance |
 | `SourceIcons.tsx` | Source platform icons (YouTube, SoundCloud, etc.) |

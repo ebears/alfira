@@ -1,6 +1,7 @@
 import type { Playlist } from '@alfira-bot/server/shared';
 import { CaretRightIcon, GhostIcon, PlaylistIcon, TagIcon } from '@phosphor-icons/react';
 import { memo } from 'react';
+import { Card } from './ui/Card';
 
 interface PlaylistRowProps {
   playlist: Playlist;
@@ -13,8 +14,10 @@ export const PlaylistRow = memo(
   ({ playlist, animationDelay, onClick, 'data-playlist-id': dataPlaylistId }: PlaylistRowProps) => {
     const count = playlist._count?.songs ?? 0;
     return (
-      <div
-        className="flex items-center gap-3 md:gap-4 px-4 md:px-5 py-3.5 md:py-4 cursor-pointer group animate-fade-up opacity-0 bg-elevated rounded-xl clay-resting hover:clay-raised hover:-translate-y-px active:clay-flat active:translate-y-0 transition-all duration-100"
+      <Card
+        hoverable
+        animate
+        className="rounded-xl flex items-center gap-3 md:gap-4 px-4 md:px-5 py-3.5 md:py-4 cursor-pointer group"
         style={{ animationDelay }}
         data-playlist-id={dataPlaylistId}
         onClick={onClick}
@@ -61,7 +64,7 @@ export const PlaylistRow = memo(
           weight="duotone"
           className="text-faint group-hover:text-muted transition-colors duration-150 md:w-4 md:h-4"
         />
-      </div>
+      </Card>
     );
   }
 );
