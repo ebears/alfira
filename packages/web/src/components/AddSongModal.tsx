@@ -231,16 +231,14 @@ export default function AddSongModal({
                 Cancel
               </Button>
               {isPlaylist && (
-                <Button
-                  variant="primary"
+                <button
+                  type="button"
+                  className="btn-primary-secondary"
                   onClick={handleImportPlaylist}
                   disabled={loading || !url.trim()}
-                  style={{
-                    background: `linear-gradient(180deg, color-mix(in srgb, var(--color-accent) 65%, white) 0%, color-mix(in srgb, var(--color-accent) 90%, black) 100%)`,
-                  }}
                 >
                   Import Playlist
-                </Button>
+                </button>
               )}
               <Button variant="primary" onClick={handleFetch} disabled={loading || !url.trim()}>
                 Fetch
