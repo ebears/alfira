@@ -1,8 +1,6 @@
-import type { Song, SongPreview } from '@alfira-bot/server/shared';
+import type { RequestPreview, Song } from '@alfira-bot/server/shared';
 import { useEffect, useRef, useState } from 'react';
-import { addSong, importPlaylist, previewSong } from '../api/api';
-import { useAdminView } from '../context/AdminViewContext';
-import { usePermissions } from '../context/PermissionsContext';
+import { createRequest, previewRequest } from '../api/api';
 import { useTagColors } from '../context/TagsContext';
 import { apiErrorMessage } from '../utils/api';
 import { getTagColorClasses } from '../utils/tagColors';
@@ -18,8 +16,6 @@ export default function AddSongModal({
   onClose: () => void;
   onAdded: (song: Song) => void;
 }) {
-  const { isAdminView } = useAdminView();
-  const { hasPermission } = usePermissions();
   const { tagColorMap } = useTagColors();
 
   const [step, setStep] = useState<Step>('url');
@@ -28,13 +24,11 @@ export default function AddSongModal({
   const [error, setError] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
 
-  // Playlist import
+  // Playlist detection
   const isPlaylist = url.includes('list=');
-  const canImport = isAdminView || hasPermission('songs.import');
-  const [importFullPlaylist, setImportFullPlaylist] = useState(false);
 
   // Preview data from server
-  const [preview, setPreview] = useState<SongPreview | null>(null);
+  const [preview, setPreview] = useState<RequestPreview | null>(null);
 
   // Editable metadata fields
   const [nickname, setNickname] = useState('');
@@ -44,6 +38,7 @@ export default function AddSongModal({
   const [tags, setTags] = useState<string[]>([]);
   const [tagInput, setTagInput] = useState('');
   const [volumeBoost, setVolumeBoost] = useState('');
+  const [notifyDm, setNotifyDm] = useState(false);
 
   const urlInputRef = useRef<HTMLInputElement>(null);
 
@@ -51,7 +46,7 @@ export default function AddSongModal({
     urlInputRef.current?.focus();
   }, []);
 
-  // Auto-close after successful playlist import
+  // Auto-close after successful submission
   useEffect(() => {
     if (successMsg) {
       const id = setTimeout(() => onClose(), 1500);
@@ -65,10 +60,10 @@ export default function AddSongModal({
     setError('');
 
     try {
-      const result = await previewSong(url.trim());
+      const result = await previewRequest(url.trim());
       setPreview(result);
 
-      // Pre-fill fields from NodeLink metadata
+      // Pre-fill fields from metadata
       setNickname('');
       setArtist(result.artist ?? '');
       setAlbum('');
@@ -78,12 +73,37 @@ export default function AddSongModal({
       setVolumeBoost('0');
 
       if (result.alreadyExists) {
-        setError('This song is already in your library.');
+        setError('This song is already in your library or has been requested.');
       }
 
       setStep('metadata');
     } catch (err: unknown) {
       setError(apiErrorMessage(err, 'Could not fetch track info. Try again.'));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleImportPlaylist = async () => {
+    if (!url.trim()) return;
+    setLoading(true);
+    setError('');
+    setSuccessMsg('');
+
+    try {
+      const result = await createRequest({
+        sourceUrl: url.trim(),
+      });
+
+      if (result.autoApproved) {
+        setSuccessMsg(
+          `Imported ${result.importedCount ?? result.songs?.length ?? 0} songs from "${result.playlistTitle ?? 'playlist'}".`
+        );
+      } else {
+        setSuccessMsg('Playlist request submitted! An admin will review it.');
+      }
+    } catch (err: unknown) {
+      setError(apiErrorMessage(err, 'Could not import playlist. Try again.'));
     } finally {
       setLoading(false);
     }
@@ -96,21 +116,28 @@ export default function AddSongModal({
     setSuccessMsg('');
 
     try {
-      if (importFullPlaylist) {
-        const result = await importPlaylist(url.trim());
-        setSuccessMsg(result.message);
+      const parsedBoost = volumeBoost.trim() === '' ? null : parseInt(volumeBoost.trim(), 10);
+
+      const result = await createRequest({
+        sourceUrl: url.trim(),
+        notifyDm,
+        nickname: nickname.trim() || null,
+        artist: artist.trim() || null,
+        album: album.trim() || null,
+        artwork: artwork.trim() || null,
+        tags: tags.length > 0 ? tags : undefined,
+        volumeBoost: parsedBoost != null && !Number.isNaN(parsedBoost) ? parsedBoost : null,
+      });
+
+      if (result.autoApproved) {
+        if (result.song) {
+          onAdded(result.song);
+        } else if (result.songs) {
+          // Playlist auto-import
+          setSuccessMsg(`Imported ${result.importedCount} songs from "${result.playlistTitle}".`);
+        }
       } else {
-        const parsedBoost = volumeBoost.trim() === '' ? null : parseInt(volumeBoost.trim(), 10);
-        const song = await addSong({
-          url: url.trim(),
-          nickname: nickname.trim() || null,
-          artist: artist.trim() || null,
-          album: album.trim() || null,
-          artwork: artwork.trim() || null,
-          tags: tags.length > 0 ? tags : undefined,
-          volumeBoost: parsedBoost != null && !Number.isNaN(parsedBoost) ? parsedBoost : null,
-        });
-        onAdded(song);
+        setSuccessMsg('Request submitted! An admin will review it.');
       }
     } catch (err: unknown) {
       setError(apiErrorMessage(err, 'Something went wrong. Try again.'));
@@ -121,11 +148,7 @@ export default function AddSongModal({
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && step === 'url') {
-      if (importFullPlaylist) {
-        handleSubmit();
-      } else {
-        handleFetch();
-      }
+      handleFetch();
     }
     if (e.key === 'Escape') {
       if (step === 'metadata') setStep('url');
@@ -159,14 +182,16 @@ export default function AddSongModal({
     setError('');
   };
 
-  const canAdd = (step === 'metadata' || importFullPlaylist) && !loading && !preview?.alreadyExists;
+  const canSubmit = step === 'metadata' && !loading && !preview?.alreadyExists;
 
   return (
     <Backdrop onClose={onClose}>
       <div className="bg-surface rounded-xl p-5 md:p-6 w-full max-w-md mx-4 modal-clay animate-fade-up">
-        <h2 className="font-display text-2xl md:text-3xl text-fg tracking-wider mb-1">Add Song</h2>
+        <h2 className="font-display text-2xl md:text-3xl text-fg tracking-wider mb-1">
+          Request Song
+        </h2>
         <p className="font-mono text-xs text-muted mb-4 md:mb-6">
-          {step === 'url' ? 'paste a url' : (preview?.title ?? 'edit metadata')}
+          {step === 'url' ? 'paste a url' : (preview?.title ?? 'review details')}
         </p>
 
         {/* Step 1: URL input */}
@@ -186,17 +211,10 @@ export default function AddSongModal({
               disabled={loading}
             />
 
-            {isPlaylist && canImport && (
-              <label className="flex items-center gap-2 mb-3 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={importFullPlaylist}
-                  onChange={(e) => setImportFullPlaylist(e.target.checked)}
-                  disabled={loading}
-                  className="w-4 h-4 rounded border-border bg-surface accent-accent"
-                />
-                <span className="font-mono text-xs text-fg">Import full playlist</span>
-              </label>
+            {isPlaylist && (
+              <p className="font-mono text-[10px] text-muted mb-3">
+                Playlist detected — Fetch to add a single track, or import the full playlist.
+              </p>
             )}
 
             {error && <p className="font-mono text-xs text-danger mb-3">{error}</p>}
@@ -204,7 +222,7 @@ export default function AddSongModal({
             {loading && (
               <p className="font-mono text-xs text-muted mb-3 flex items-center gap-2">
                 <span className="w-3 h-3 border border-accent border-t-transparent rounded-full animate-spin inline-block" />
-                fetching metadata...
+                loading...
               </p>
             )}
 
@@ -212,15 +230,19 @@ export default function AddSongModal({
               <Button variant="inherit" onClick={onClose} disabled={loading} surface="surface">
                 Cancel
               </Button>
-              {importFullPlaylist ? (
-                <Button variant="primary" onClick={handleSubmit} disabled={loading || !url.trim()}>
-                  Import
-                </Button>
-              ) : (
-                <Button variant="primary" onClick={handleFetch} disabled={loading || !url.trim()}>
-                  Fetch
-                </Button>
+              {isPlaylist && (
+                <button
+                  type="button"
+                  className="btn-primary-secondary"
+                  onClick={handleImportPlaylist}
+                  disabled={loading || !url.trim()}
+                >
+                  Import Playlist
+                </button>
               )}
+              <Button variant="primary" onClick={handleFetch} disabled={loading || !url.trim()}>
+                Fetch
+              </Button>
             </div>
           </>
         )}
@@ -228,7 +250,7 @@ export default function AddSongModal({
         {/* Step 2: Metadata fields */}
         {step === 'metadata' && preview && (
           <div className="flex flex-col gap-3">
-            {/* Thumbnail + title + duration + source (informational, above the fields) */}
+            {/* Thumbnail + title + duration + source */}
             <div className="flex items-center gap-3 -mb-1">
               {(preview.artworkUrl || preview.thumbnailUrl) && (
                 <img
@@ -248,11 +270,16 @@ export default function AddSongModal({
                       {preview.sourceName}
                     </span>
                   )}
+                  {preview.isPlaylist && (
+                    <span className="font-mono text-[10px] text-accent uppercase">
+                      Playlist ({preview.playlistMeta?.videoCount ?? '?'} tracks)
+                    </span>
+                  )}
                 </div>
               </div>
             </div>
 
-            {/* Title / Nickname — merged: shows NodeLink title as placeholder, editing sets nickname */}
+            {/* Title / Nickname */}
             <Field
               id="add-title"
               label="Title"
@@ -293,7 +320,7 @@ export default function AddSongModal({
               >
                 Tags
               </label>
-              {/* biome-ignore lint/a11y/useKeyWithClickEvents: container click focuses inner input; keyboard users tab directly to the input */}
+              {/* biome-ignore lint/a11y/useKeyWithClickEvents: container click focuses inner input */}
               {/* biome-ignore lint/a11y/noStaticElementInteractions: container click focuses inner input */}
               <div
                 className="input text-sm flex flex-wrap gap-1.5 items-center min-h-9.5 cursor-text"
@@ -382,12 +409,23 @@ export default function AddSongModal({
               </div>
             </div>
 
+            {/* Notify DM */}
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={notifyDm}
+                onChange={(e) => setNotifyDm(e.target.checked)}
+                className="w-4 h-4 rounded border-border bg-surface accent-accent"
+              />
+              <span className="font-mono text-xs text-fg">DM me when this request is reviewed</span>
+            </label>
+
             {error && <p className="font-mono text-xs text-danger">{error}</p>}
 
             {loading && (
               <p className="font-mono text-xs text-muted flex items-center gap-2">
                 <span className="w-3 h-3 border border-accent border-t-transparent rounded-full animate-spin inline-block" />
-                adding song...
+                submitting request...
               </p>
             )}
 
@@ -400,8 +438,8 @@ export default function AddSongModal({
               >
                 Back
               </Button>
-              <Button variant="primary" onClick={handleSubmit} disabled={!canAdd}>
-                Add
+              <Button variant="primary" onClick={handleSubmit} disabled={!canSubmit}>
+                Submit Request
               </Button>
             </div>
           </div>
@@ -419,14 +457,12 @@ function Field({
   value,
   onChange,
   placeholder,
-  readOnly,
 }: {
   id: string;
   label: string;
   value: string;
-  onChange?: (v: string) => void;
+  onChange: (v: string) => void;
   placeholder?: string;
-  readOnly?: boolean;
 }) {
   return (
     <div>
@@ -435,11 +471,10 @@ function Field({
       </label>
       <input
         id={id}
-        className={`input text-sm ${readOnly ? 'opacity-60 cursor-default' : ''}`}
+        className="input text-sm"
         value={value}
-        onChange={onChange ? (e) => onChange(e.target.value) : undefined}
+        onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
-        readOnly={readOnly}
       />
     </div>
   );

@@ -36,9 +36,17 @@ Common issues and solutions for Alfira.
    - Your `.env` file
 2. Ensure you're using `https://` in production.
 
-### "Add Song" button not visible / Admin features missing
+### "Request Song" button not visible
 
-**Symptoms:** Logged in but no "Add Song" button, can't use quick-add, can't manage playlists.
+**Symptoms:** Logged in but the "+ Request Song" button is missing from the Songs page.
+
+**Solutions:**
+1. **Re-login** — The button is visible to all authenticated users. If you can't see it, your session may be expired. Log out and back in.
+2. **Check your internet connection** — The UI relies on the API being reachable.
+
+### Admin features missing (approve/deny requests, manage playlists)
+
+**Symptoms:** Logged in but can't approve/deny requests, can't edit/delete songs, can't access admin settings.
 
 **Solutions:**
 1. **Check admin role configuration** — Go to **Settings → Admin** and verify the correct roles are selected under "Admin Roles". Save changes if needed.

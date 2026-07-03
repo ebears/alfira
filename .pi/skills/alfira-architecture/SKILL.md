@@ -17,7 +17,7 @@ packages/
 │       ├── PlaybackCursor.ts # Queue cursor logic
 │       ├── lib/              # Utilities (socket, voice, lavalink, config, etc.)
 │       ├── middleware/        # Auth middleware
-│       ├── routes/           # API route handlers (10 files)
+│       ├── routes/           # API route handlers (11 files)
 │       ├── shared/           # Types, DB schema, logger, format, API service
 │       └── utils/            # NodeLink subprocess helpers
 └── web/        # React 19 + Tailwind CSS 4 web UI
@@ -79,7 +79,7 @@ Guild ID, admin roles, idle timeout, and notification channel are configured via
 **Utilities:** `formatDuration(seconds)`, `fisherYatesShuffle(array)`
 **DB:** Schema in `packages/server/src/shared/db/schema.ts`
 **Logger:** `logger` from `@alfira-bot/server/shared/logger`
-**API Service:** `@alfira-bot/server/shared/api` — centralized API functions (`fetchSongs`, `createSong`, `importPlaylist`, etc.)
+**API Service:** `@alfira-bot/server/shared/api` — centralized API functions (`fetchSongs`, `createRequest`, `fetchRequests`, etc.)
 
 Always use the shared API service for API calls rather than raw `fetch`.
 

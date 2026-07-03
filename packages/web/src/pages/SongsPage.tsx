@@ -1,14 +1,17 @@
 import type { Playlist, Song } from '@alfira-bot/server/shared';
-import { ListIcon, MagnifyingGlassIcon, SquaresFourIcon } from '@phosphor-icons/react';
+import {
+  ListIcon,
+  MagnifyingGlassIcon,
+  QuestionIcon,
+  SquaresFourIcon,
+} from '@phosphor-icons/react';
 import { useCallback, useEffect, useState } from 'react';
 import { deleteSong, getPlaylistsPage, getSongsPage, startPlayback } from '../api/api';
-import AddSongModal from '../components/AddSongModal';
 import ConfirmModal from '../components/ConfirmModal';
 import NotificationToast from '../components/NotificationToast';
 import { Button } from '../components/ui/Button';
 import { VirtualSongList } from '../components/VirtualSongList';
 import { useAdminView } from '../context/AdminViewContext';
-import { usePermissions } from '../context/PermissionsContext';
 import { usePlayerState } from '../context/PlayerContext';
 import { useAddToQueue } from '../hooks/useAddToQueue';
 import { useNotification } from '../hooks/useNotification';
@@ -20,14 +23,12 @@ const ITEMS_PER_PAGE = 24;
 
 export default function SongsPage() {
   const { isAdminView } = useAdminView();
-  const { hasPermission } = usePermissions();
   const { state: queueState } = usePlayerState();
   const [search, setSearch] = useState('');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>(() => {
     const saved = localStorage.getItem('alfira-library-view');
     return saved === 'grid' ? 'grid' : 'list';
   });
-  const [showAddModal, setShowAddModal] = useState(false);
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [playingId, setPlayingId] = useState<string | null>(null);
   const { handleAddToQueue, notification } = useAddToQueue();
@@ -141,15 +142,14 @@ export default function SongsPage() {
             {isLoading ? '—' : `${total} track${total !== 1 ? 's' : ''}`}
           </p>
         </div>
-        {(isAdminView || hasPermission('songs.add')) && (
-          <Button
-            variant="primary"
-            onClick={() => setShowAddModal(true)}
-            className={showAddModal ? 'pressed' : ''}
-          >
-            + Add Song
-          </Button>
-        )}
+        <span className="relative group">
+          <QuestionIcon size={20} weight="duotone" className="text-muted cursor-help" />
+          <span className="absolute right-0 top-full mt-2 w-64 p-3 rounded-lg bg-elevated border border-border text-xs text-muted opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity z-10 leading-relaxed">
+            Songs are added through the <span className="text-accent">Requests</span> page. Submit a
+            URL there — admins review and approve it, or it&rsquo;s added instantly if you have
+            permission.
+          </span>
+        </span>
       </div>
 
       {/* Search and view toggle */}
@@ -218,15 +218,6 @@ export default function SongsPage() {
       />
 
       {/* Modals */}
-      {showAddModal && (
-        <AddSongModal
-          onClose={() => setShowAddModal(false)}
-          onAdded={(song) => {
-            prepend(song);
-            setShowAddModal(false);
-          }}
-        />
-      )}
 
       {deleteId && (
         <DeleteConfirmDialog

@@ -34,6 +34,7 @@ export const tables = {
   tag: schema.tag,
   guildSettings: schema.guildSettings,
   rolePermission: schema.rolePermission,
+  songRequest: schema.songRequest,
 };
 
 // ---------------------------------------------------------------------------

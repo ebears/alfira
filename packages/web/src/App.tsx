@@ -15,6 +15,7 @@ import LoginPage from './pages/LoginPage';
 import PermissionsPage from './pages/PermissionsPage';
 import PlaylistDetailPage from './pages/PlaylistDetailPage';
 import PlaylistsPage from './pages/PlaylistsPage';
+import RequestsPage from './pages/RequestsPage';
 import SetupWizard from './pages/SetupWizard';
 import SongsPage from './pages/SongsPage';
 import TagsPage from './pages/TagsPage';
@@ -57,6 +58,7 @@ export default function App() {
                       <Route path="audio" element={<AudioPage />} />
                       <Route path="tags" element={<TagsPage />} />
                       <Route path="permissions" element={<PermissionsPage />} />
+                      <Route path="requests" element={<RequestsPage />} />
                     </Route>
                     <Route path="*" element={<Navigate to="/" replace />} />
                   </Routes>

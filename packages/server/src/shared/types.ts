@@ -85,7 +85,10 @@ export interface GeneralSettings {
   setupCompleted: boolean;
   adminRoleIds: string;
   voiceIdleTimeoutMinutes: number;
-  notificationChannelId: string | null;
+  afkNotificationChannelId: string | null;
+  requestNotificationChannelId: string | null;
+  notifyOnApproved: boolean;
+  notifyOnDenied: boolean;
   publicUrl: string | null;
   enabledSources: string;
   availableSources: {
@@ -224,10 +227,10 @@ export interface User {
 
 /** Granular permission actions that can be delegated to non-admin roles. */
 export type PermissionAction =
-  | 'songs.add'
   | 'songs.edit'
   | 'songs.delete'
   | 'songs.import'
+  | 'requests.autoapprove'
   | 'queue.clear'
   | 'queue.shuffle'
   | 'queue.quickadd'
@@ -237,10 +240,10 @@ export type PermissionAction =
 
 /** Human-readable labels for each permission action. */
 export const PERMISSION_LABELS: Record<PermissionAction, string> = {
-  'songs.add': 'Add songs to library',
   'songs.edit': 'Edit song metadata',
   'songs.delete': 'Delete songs',
   'songs.import': 'Import external playlists',
+  'requests.autoapprove': 'Auto-approved song requests',
   'queue.clear': 'Clear the queue',
   'queue.shuffle': 'Shuffle / unshuffle queue',
   'queue.quickadd': 'Quick-add external URLs',
@@ -253,7 +256,7 @@ export const PERMISSION_LABELS: Record<PermissionAction, string> = {
 export const PERMISSION_CATEGORIES: { label: string; actions: PermissionAction[] }[] = [
   {
     label: 'Library',
-    actions: ['songs.add', 'songs.edit', 'songs.delete', 'songs.import'],
+    actions: ['songs.edit', 'songs.delete', 'songs.import', 'requests.autoapprove'],
   },
   {
     label: 'Playback',
@@ -264,3 +267,81 @@ export const PERMISSION_CATEGORIES: { label: string; actions: PermissionAction[]
     actions: ['tags.manage', 'audio.manage'],
   },
 ];
+
+// ---------------------------------------------------------------------------
+// Song Requests
+// ---------------------------------------------------------------------------
+
+export interface SongRequestTrack {
+  id: string;
+  sourceUrl: string;
+  sourceId: string;
+  title: string;
+  duration: number;
+  thumbnailUrl: string;
+  artist: string | null;
+  artworkUrl: string | null;
+  sourceName: string | null;
+  requestedBy: string;
+  requestedByDisplayName?: string;
+  notifyDm: boolean;
+  type: 'track';
+  playlistData: null;
+  status: 'pending' | 'approved' | 'denied';
+  reviewedBy: string | null;
+  createdAt: string;
+  closedAt: string | null;
+}
+
+export interface SongRequestPlaylist {
+  id: string;
+  sourceUrl: string;
+  sourceId: string;
+  title: string;
+  duration: number;
+  thumbnailUrl: string;
+  artist: string | null;
+  artworkUrl: string | null;
+  sourceName: string | null;
+  requestedBy: string;
+  requestedByDisplayName?: string;
+  notifyDm: boolean;
+  type: 'playlist';
+  playlistData: {
+    name: string;
+    videoCount: number;
+    thumbnailUrl?: string | null;
+    videos?: Array<{
+      id: string;
+      title: string;
+      duration: number;
+      thumbnailUrl?: string | null;
+      artist?: string | null;
+      artworkUrl?: string | null;
+    }>;
+  } | null;
+  status: 'pending' | 'approved' | 'denied';
+  reviewedBy: string | null;
+  createdAt: string;
+  closedAt: string | null;
+}
+
+export type SongRequest = SongRequestTrack | SongRequestPlaylist;
+
+export interface RequestPreview {
+  title: string;
+  sourceId: string;
+  duration: number;
+  thumbnailUrl: string;
+  sourceName: string | null;
+  artist: string | null;
+  artworkUrl: string | null;
+  alreadyExists: boolean;
+  existingSong?: unknown;
+  isPlaylist: boolean;
+  playlistMeta?: {
+    name: string;
+    videoCount: number;
+    thumbnailUrl?: string | null;
+  };
+}

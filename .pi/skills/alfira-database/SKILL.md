@@ -53,7 +53,16 @@ Single-row table (always `id = 1`). Holds:
 - **Equalizer:** 15 columns (`eqBand0` through `eqBand14`, range 0-100)
 - **Admin:** `guildId`, `adminRoleIds` (comma-separated string), `setupCompleted`, `voiceIdleTimeoutMinutes`
 - **Sources:** `enabledSources` (comma-separated string, default `"youtube,soundcloud"`)
-- **Misc:** `notificationChannelId`, `publicUrl`
+- **Misc:** `afkNotificationChannelId`, `requestNotificationChannelId`, `publicUrl`
+
+### `songRequest` table
+Tracks pending/approved/denied song requests. Key columns:
+- `sourceUrl` + `sourceId` — identifies the source track
+- `type` — `'track'` or `'playlist'`
+- `playlistData` — JSON blob with playlist metadata and embedded track list
+- `status` — `'pending'`, `'approved'`, or `'denied'`
+- `notifyDm` — whether to DM the requester on review
+- `requestedBy` / `reviewedBy` — Discord IDs
 
 ### `RefreshToken` table
 OAuth2 refresh tokens: `tokenHash` (unique), `discordId`, `expiresAt`. Index on `discordId`.

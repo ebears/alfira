@@ -6,11 +6,13 @@ import type {
   Playlist,
   PlaylistDetail,
   QueueState,
+  RequestPreview,
   SetupChannel,
   SetupGuild,
   SetupRole,
   SetupStatus,
   Song,
+  SongRequest,
   User,
 } from './types';
 
@@ -121,8 +123,13 @@ export function fetchSongsPage(
   return get(`/api/songs?${params}`);
 }
 
-export interface SongCreateData {
-  url: string;
+// ---------------------------------------------------------------------------
+// Requests API Functions
+// ---------------------------------------------------------------------------
+
+export interface RequestCreateData {
+  sourceUrl: string;
+  notifyDm?: boolean;
   nickname?: string | null;
   artist?: string | null;
   album?: string | null;
@@ -131,9 +138,20 @@ export interface SongCreateData {
   volumeBoost?: number | null;
 }
 
-export function createSong(data: SongCreateData): Promise<Song> {
-  return post('/api/songs', {
-    url: data.url,
+export interface CreateRequestResult {
+  request?: SongRequest;
+  song?: Song;
+  songs?: Song[];
+  autoApproved: boolean;
+  importedCount?: number;
+  skippedCount?: number;
+  playlistTitle?: string;
+}
+
+export function createRequest(data: RequestCreateData): Promise<CreateRequestResult> {
+  return post('/api/requests', {
+    sourceUrl: data.sourceUrl,
+    notifyDm: data.notifyDm ?? false,
     ...(data.nickname != null && { nickname: data.nickname }),
     ...(data.artist != null && { artist: data.artist }),
     ...(data.album != null && { album: data.album }),
@@ -141,6 +159,38 @@ export function createSong(data: SongCreateData): Promise<Song> {
     ...(data.tags != null && { tags: data.tags }),
     ...(data.volumeBoost !== undefined && { volumeBoost: data.volumeBoost }),
   });
+}
+
+export function previewRequest(url: string): Promise<RequestPreview> {
+  return post('/api/requests/preview', { url });
+}
+
+export interface FetchRequestsResult {
+  items: SongRequest[];
+  pagination: PaginationMeta;
+}
+
+export function fetchRequests(
+  page: number,
+  limit = 30,
+  opts?: { status?: string; mine?: boolean }
+): Promise<FetchRequestsResult> {
+  const params = new URLSearchParams({ page: String(page), limit: String(limit) });
+  if (opts?.status) params.set('status', opts.status);
+  if (opts?.mine) params.set('mine', 'true');
+  return get(`/api/requests?${params}`);
+}
+
+export function approveRequest(id: string): Promise<{ request: SongRequest; songs?: Song[] }> {
+  return patch(`/api/requests/${id}`, { status: 'approved' });
+}
+
+export function denyRequest(id: string): Promise<{ request: SongRequest }> {
+  return patch(`/api/requests/${id}`, { status: 'denied' });
+}
+
+export function cancelRequest(id: string): Promise<void> {
+  return remove(`/api/requests/${id}`);
 }
 
 export function deleteSong(id: string): Promise<void> {
@@ -345,39 +395,6 @@ export function overridePlay(url: string): Promise<{
 }
 
 // ---------------------------------------------------------------------------
-// Import Playlist API Functions
-// ---------------------------------------------------------------------------
-
-export interface SongPreview {
-  title: string;
-  sourceId: string;
-  duration: number;
-  thumbnailUrl: string;
-  sourceName: string | null;
-  artist: string | null;
-  artworkUrl: string | null;
-  alreadyExists: boolean;
-  existingSong: Song | null;
-}
-
-export function previewSong(url: string): Promise<SongPreview> {
-  return post('/api/songs/preview', { url });
-}
-
-export interface ImportPlaylistResult {
-  message: string;
-  playlistTitle: string;
-  totalVideos: number;
-  importedCount: number;
-  skippedCount: number;
-  songs: Song[];
-}
-
-export function importPlaylist(url: string, maxVideos?: number): Promise<ImportPlaylistResult> {
-  return post('/api/songs/import-playlist', { url, ...(maxVideos && { maxVideos }) });
-}
-
-// ---------------------------------------------------------------------------
 // Setup API Functions
 // ---------------------------------------------------------------------------
 
@@ -401,7 +418,8 @@ export interface CompleteSetupPayload {
   guildId: string;
   adminRoleIds: string;
   voiceIdleTimeoutMinutes: number;
-  notificationChannelId?: string | null;
+  afkNotificationChannelId?: string | null;
+  requestNotificationChannelId?: string | null;
   publicUrl?: string | null;
   enabledSources?: string;
 }
@@ -423,7 +441,10 @@ export type GeneralSettingsUpdate = Partial<
     GeneralSettings,
     | 'adminRoleIds'
     | 'voiceIdleTimeoutMinutes'
-    | 'notificationChannelId'
+    | 'afkNotificationChannelId'
+    | 'requestNotificationChannelId'
+    | 'notifyOnApproved'
+    | 'notifyOnDenied'
     | 'publicUrl'
     | 'enabledSources'
   >

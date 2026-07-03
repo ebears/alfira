@@ -115,7 +115,10 @@ export const guildSettings = sqliteTable('guildSettings', {
   setupCompleted: integer('setupCompleted', { mode: 'boolean' }).notNull().default(false),
   adminRoleIds: text('adminRoleIds').notNull().default(''),
   voiceIdleTimeoutMinutes: integer('voiceIdleTimeoutMinutes').notNull().default(5),
-  notificationChannelId: text('notificationChannelId'),
+  afkNotificationChannelId: text('afkNotificationChannelId'),
+  requestNotificationChannelId: text('requestNotificationChannelId'),
+  notifyOnApproved: integer('notifyOnApproved', { mode: 'boolean' }).notNull().default(true),
+  notifyOnDenied: integer('notifyOnDenied', { mode: 'boolean' }).notNull().default(true),
   publicUrl: text('publicUrl'),
   enabledSources: text('enabledSources').notNull().default('youtube,soundcloud'),
 });
@@ -128,3 +131,39 @@ export const rolePermission = sqliteTable(
   },
   (t) => [primaryKey({ columns: [t.action, t.roleId] })]
 );
+
+export const songRequest = sqliteTable('SongRequest', {
+  id: text('id')
+    .primaryKey()
+    .$defaultFn(() => crypto.randomUUID()),
+  sourceUrl: text('sourceUrl').notNull(),
+  sourceId: text('sourceId').notNull(),
+  title: text('title').notNull(),
+  duration: integer('duration').notNull(),
+  thumbnailUrl: text('thumbnailUrl').notNull(),
+  artist: text('artist'),
+  artworkUrl: text('artworkUrl'),
+  sourceName: text('sourceName'),
+  requestedBy: text('requestedBy').notNull(),
+  notifyDm: integer('notifyDm', { mode: 'boolean' }).notNull().default(false),
+  type: text('type').notNull().default('track'), // 'track' | 'playlist'
+  playlistData: text('playlistData', { mode: 'json' }).$type<{
+    name: string;
+    videoCount: number;
+    thumbnailUrl?: string | null;
+    videos?: Array<{
+      id: string;
+      title: string;
+      duration: number;
+      thumbnailUrl?: string | null;
+      artist?: string | null;
+      artworkUrl?: string | null;
+    }>;
+  }>(),
+  status: text('status').notNull().default('pending'), // 'pending' | 'approved' | 'denied'
+  reviewedBy: text('reviewedBy'),
+  createdAt: integer('createdAt', { mode: 'timestamp_ms' })
+    .notNull()
+    .$defaultFn(() => new Date()),
+  closedAt: integer('closedAt', { mode: 'timestamp_ms' }),
+});

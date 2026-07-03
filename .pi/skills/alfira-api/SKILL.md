@@ -18,7 +18,8 @@ Bun native HTTP server on port 3001. Serves three concerns:
 | Prefix | Handler file | Purpose |
 |--------|-------------|---------|
 | `/api/tags` | `routes/tags.ts` | CRUD for tags |
-| `/api/songs` | `routes/songs.ts` | Song library, search, import |
+| `/api/songs` | `routes/songs.ts` | Song library, search, edit, delete |
+| `/api/requests` | `routes/requests.ts` | Song request CRUD, preview, approve/deny |
 | `/api/playlists` | `routes/playlists.ts` | Playlist CRUD, reorder, import |
 | `/api/player` | `routes/player.ts` | Playback control (play, pause, skip, seek, volume, queue) |
 | `/api/settings/compressor` | `routes/compressor.ts` | Compressor settings |

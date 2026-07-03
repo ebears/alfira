@@ -13,11 +13,15 @@ export type {
   PlaylistDetail,
   QueuedSong,
   QueueState,
+  RequestPreview,
   SetupChannel,
   SetupGuild,
   SetupRole,
   SetupStatus,
   Song,
+  SongRequest,
+  SongRequestPlaylist,
+  SongRequestTrack,
   User,
 } from './types';
 export {
