@@ -16,6 +16,7 @@ import {
   updateGeneralSettings,
 } from '../../api/api';
 import { SourceIcon } from '../SourceIcons';
+import { ErrorBanner } from '../ui/ErrorBanner';
 import SettingsToggle from './SettingsToggle';
 
 export default function AdminTab() {
@@ -152,11 +153,7 @@ export default function AdminTab() {
 
   return (
     <div className="space-y-6">
-      {error && (
-        <div className="p-3 rounded-lg bg-danger/10 border border-danger/20 text-danger text-sm">
-          {error}
-        </div>
-      )}
+      {error && <ErrorBanner message={error} />}
 
       {successMsg && (
         <div className="p-3 rounded-lg bg-accent/10 border border-accent/20 text-accent text-sm">

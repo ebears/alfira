@@ -1,6 +1,7 @@
 import type { Playlist, Song } from '@alfira-bot/server/shared';
 import { memo } from 'react';
 import SongCard from './SongCard';
+import { VirtualListFooter } from './ui/VirtualListFooter';
 
 interface VirtualSongListProps {
   items: Song[];
@@ -112,32 +113,13 @@ export const VirtualSongList = memo(function VirtualSongList({
           />
         ))}
       </div>
-      {/* Sentinel at bottom to trigger load more */}
-      <div ref={sentinelRef}>
-        {isError && (
-          <div className="flex justify-center py-4">
-            <button
-              type="button"
-              onClick={onRetry}
-              className="font-mono text-xs text-muted hover:text-fg transition-colors underline"
-            >
-              Failed to load more. Retry
-            </button>
-          </div>
-        )}
-        {isFetching && !isError && (
-          <div className="flex justify-center py-4 gap-2">
-            {Array.from({ length: 3 }).map((_, i) => (
-              <div
-                // biome-ignore lint/suspicious/noArrayIndexKey: static loading indicator, order never changes
-                key={`loading-dot-${i}`}
-                className="skeleton h-3 w-3 rounded-full animate-pulse"
-              />
-            ))}
-          </div>
-        )}
-        {!isFetching && !isError && !hasMore && items.length > 0 && <div className="h-4" />}
-      </div>
+      <VirtualListFooter
+        sentinelRef={sentinelRef}
+        isFetching={isFetching}
+        isError={isError}
+        onRetry={onRetry}
+      />
+      {!isFetching && !isError && !hasMore && items.length > 0 && <div className="h-4" />}
     </div>
   );
 });

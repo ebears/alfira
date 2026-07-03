@@ -3,6 +3,7 @@ import { quickAddPlaylistToQueue, quickAddToQueue } from '../../api/api';
 import { apiErrorMessage } from '../../utils/api';
 import { Backdrop } from '../Backdrop';
 import { Button } from '../ui/Button';
+import { Spinner } from '../ui/Spinner';
 
 export default function QuickAddModal({
   onClose,
@@ -90,7 +91,7 @@ export default function QuickAddModal({
 
         {submitting && (
           <p className="font-mono text-xs text-muted mb-4 flex items-center gap-2">
-            <span className="w-3 h-3 border border-accent border-t-transparent rounded-full animate-spin inline-block" />
+            <Spinner />
             {importFullPlaylist ? 'Adding playlist...' : 'Adding...'}
           </p>
         )}

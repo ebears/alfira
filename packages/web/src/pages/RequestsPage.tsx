@@ -3,6 +3,7 @@ import { useCallback, useState } from 'react';
 import { approveRequest, cancelRequest, denyRequest, fetchRequests } from '../api/api';
 import AddSongModal from '../components/AddSongModal';
 import { Button } from '../components/ui/Button';
+import { ErrorBanner } from '../components/ui/ErrorBanner';
 import VirtualRequestList from '../components/VirtualRequestList';
 import { useAdminView } from '../context/AdminViewContext';
 import { useAuth } from '../context/AuthContext';
@@ -133,12 +134,7 @@ export default function RequestsPage() {
         )}
       </div>
 
-      {/* Errors */}
-      {actionError && (
-        <div className="mb-4 p-3 rounded-lg bg-danger/10 border border-danger/20 text-danger text-sm font-mono">
-          {actionError}
-        </div>
-      )}
+      {actionError && <ErrorBanner message={actionError} className="mb-4 font-mono" />}
 
       {/* Virtualized request list */}
       <VirtualRequestList
