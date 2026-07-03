@@ -6,6 +6,7 @@ import { apiErrorMessage } from '../utils/api';
 import { getTagColorClasses } from '../utils/tagColors';
 import { Backdrop } from './Backdrop';
 import { Button } from './ui/Button';
+import Checkbox from './ui/Checkbox';
 import { Spinner } from './ui/Spinner';
 
 type Step = 'url' | 'metadata';
@@ -412,12 +413,7 @@ export default function AddSongModal({
 
             {/* Notify DM */}
             <label className="flex items-center gap-2 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={notifyDm}
-                onChange={(e) => setNotifyDm(e.target.checked)}
-                className="w-4 h-4 rounded border-border bg-surface accent-accent"
-              />
+              <Checkbox checked={notifyDm} onChange={setNotifyDm} />
               <span className="font-mono text-xs text-fg">DM me when this request is reviewed</span>
             </label>
 
