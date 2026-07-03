@@ -617,7 +617,9 @@
         transform: var(--btn-transform-active-md);
         scale: var(--btn-scale-active);
         background: var(--color-accent);
-        box-shadow: var(--clay-shadow-flat);
+        box-shadow:
+            0 1px 0 0 color-mix(in srgb, var(--color-accent) 100%, black 20%),
+            inset 0 2px 3px 0 rgba(0, 0, 0, 0.15);
     }
     .btn-primary.pressed {
         transform: var(--btn-transform-active-md);
@@ -643,7 +645,9 @@
     }
     [data-mode="light"] .btn-primary:active {
         background: var(--color-accent);
-        box-shadow: inset 0 2px 3px 0 rgba(0, 0, 0, 0.1);
+        box-shadow:
+            0 1px 0 0 color-mix(in srgb, var(--color-accent) 100%, black 15%),
+            inset 0 2px 3px 0 rgba(0, 0, 0, 0.08);
     }
     [data-mode="light"] .btn-primary.pressed {
         background: color-mix(in srgb, var(--color-accent) 80%, black);
@@ -674,7 +678,9 @@
         transform: var(--btn-transform-active-md);
         scale: var(--btn-scale-active);
         background: var(--color-accent-secondary);
-        box-shadow: var(--clay-shadow-flat);
+        box-shadow:
+            0 1px 0 0 color-mix(in srgb, var(--color-accent-secondary) 100%, black 20%),
+            inset 0 2px 3px 0 rgba(0, 0, 0, 0.15);
     }
     .btn-primary-secondary.pressed {
         transform: var(--btn-transform-active-md);
@@ -699,7 +705,9 @@
     }
     [data-mode="light"] .btn-primary-secondary:active {
         background: var(--color-accent-secondary);
-        box-shadow: inset 0 2px 3px 0 rgba(0, 0, 0, 0.1);
+        box-shadow:
+            0 1px 0 0 color-mix(in srgb, var(--color-accent-secondary) 100%, black 15%),
+            inset 0 2px 3px 0 rgba(0, 0, 0, 0.08);
     }
     [data-mode="light"] .btn-primary-secondary.pressed {
         background: color-mix(in srgb, var(--color-accent-secondary) 80%, black);
@@ -739,7 +747,9 @@
     .btn-primary-surface:active {
         transform: var(--btn-transform-active);
         scale: var(--btn-scale-active);
-        box-shadow: var(--clay-shadow-flat);
+        box-shadow:
+            0 1px 0 0 color-mix(in srgb, var(--color-surface) 60%, black),
+            inset 0 2px 3px 0 rgba(0, 0, 0, 0.15);
     }
     .btn-primary-surface.pressed {
         transform: var(--btn-transform-active);
@@ -777,7 +787,9 @@
         transform: var(--btn-transform-active-md);
         scale: var(--btn-scale-active);
         background: var(--btn-surface);
-        box-shadow: var(--clay-shadow-flat);
+        box-shadow:
+            0 1px 0 0 color-mix(in srgb, var(--btn-surface) 100%, black 20%),
+            inset 0 2px 3px 0 rgba(0, 0, 0, 0.15);
     }
     .btn-inherit.pressed {
         transform: var(--btn-transform-active-md);
@@ -804,7 +816,9 @@
     }
     [data-mode="light"] .btn-inherit:active {
         background: color-mix(in srgb, var(--btn-surface) 95%, black);
-        box-shadow: inset 0 2px 3px 0 rgba(0, 0, 0, 0.1);
+        box-shadow:
+            0 1px 0 0 color-mix(in srgb, var(--btn-surface) 100%, black 15%),
+            inset 0 2px 3px 0 rgba(0, 0, 0, 0.08);
     }
     [data-mode="light"] .btn-inherit.pressed {
         background: color-mix(in srgb, var(--btn-surface) 90%, black);
@@ -843,7 +857,9 @@
     .btn-danger:active {
         transform: var(--btn-transform-active);
         scale: var(--btn-scale-active);
-        box-shadow: var(--clay-shadow-flat);
+        box-shadow:
+            0 1px 0 0 color-mix(in srgb, var(--color-danger) 100%, black 20%),
+            inset 0 2px 3px 0 rgba(0, 0, 0, 0.15);
     }
     .btn-danger.pressed {
         transform: var(--btn-transform-active);
@@ -858,41 +874,59 @@
         @apply font-body text-sm px-4 py-2.5 md:py-2 transition-all duration-150 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed min-h-11 md:min-h-0;
         border-radius: var(--clay-radius-lg);
         color: #fff;
-        background: linear-gradient(
-            180deg,
-            color-mix(in srgb, var(--color-discord) 75%, white) 0%,
-            var(--color-discord) 100%
-        );
+        background: color-mix(in srgb, var(--color-discord) 95%, white);
         box-shadow:
-            0 3px 0 0
-                color-mix(in srgb, var(--color-discord) 100%, black 35%),
-            0 4px 8px -2px rgba(0, 0, 0, 0.3),
-            inset 0 1px 1px 0 rgba(255, 255, 255, 0.08);
+            0 2px 0 0 color-mix(in srgb, var(--color-discord) 100%, black 35%),
+            inset 0 2px 3px 0 rgba(0, 0, 0, 0.15),
+            inset 0 1px 1px 0 rgba(255, 255, 255, 0.04);
     }
-
     .btn-discord:hover {
         transform: var(--btn-transform-hover);
-        background: linear-gradient(
-            180deg,
-            color-mix(in srgb, var(--color-discord) 65%, white) 0%,
-            var(--color-discord) 100%
-        );
+        background: color-mix(in srgb, var(--color-discord) 88%, white);
         box-shadow:
-            0 4px 0 0
-                color-mix(in srgb, var(--color-discord) 100%, black 35%),
-            0 6px 12px -2px rgba(0, 0, 0, 0.35),
-            inset 0 1px 1px 0 rgba(255, 255, 255, 0.08);
+            0 4px 0 0 color-mix(in srgb, var(--color-discord) 100%, black 35%),
+            inset 0 2px 3px 0 rgba(0, 0, 0, 0.15),
+            inset 0 1px 1px 0 rgba(255, 255, 255, 0.04);
     }
-
     .btn-discord:active {
-        transform: var(--btn-transform-active);
+        transform: var(--btn-transform-active-md);
         scale: var(--btn-scale-active);
-        box-shadow: var(--clay-shadow-flat);
+        background: var(--color-discord);
+        box-shadow:
+            0 1px 0 0 color-mix(in srgb, var(--color-discord) 100%, black 20%),
+            inset 0 2px 3px 0 rgba(0, 0, 0, 0.15);
     }
     .btn-discord.pressed {
-        transform: var(--btn-transform-active);
+        transform: var(--btn-transform-active-md);
         scale: var(--btn-scale-active);
-        box-shadow: inset 0 2px 4px 0 rgba(0, 0, 0, 0.25);
+        background: color-mix(in srgb, var(--color-discord) 75%, black);
+        box-shadow: inset 0 2px 3px 0 rgba(0, 0, 0, 0.2);
+    }
+
+    /* Light mode: solid bottom shadow for visible depth on light backgrounds */
+    [data-mode="light"] .btn-discord {
+        background: color-mix(in srgb, var(--color-discord) 85%, white);
+        box-shadow:
+            0 2px 0 0 color-mix(in srgb, var(--color-discord) 100%, black 25%),
+            0 2px 4px rgba(0, 0, 0, 0.08),
+            0 0 0 1px rgba(0, 0, 0, 0.04);
+    }
+    [data-mode="light"] .btn-discord:hover {
+        background: color-mix(in srgb, var(--color-discord) 75%, white);
+        box-shadow:
+            0 3px 0 0 color-mix(in srgb, var(--color-discord) 100%, black 25%),
+            0 3px 6px rgba(0, 0, 0, 0.1),
+            0 0 0 1px rgba(0, 0, 0, 0.06);
+    }
+    [data-mode="light"] .btn-discord:active {
+        background: var(--color-discord);
+        box-shadow:
+            0 1px 0 0 color-mix(in srgb, var(--color-discord) 100%, black 15%),
+            inset 0 2px 3px 0 rgba(0, 0, 0, 0.08);
+    }
+    [data-mode="light"] .btn-discord.pressed {
+        background: color-mix(in srgb, var(--color-discord) 80%, black);
+        box-shadow: inset 0 2px 3px 0 rgba(0, 0, 0, 0.15);
     }
     .input {
         @apply text-fg font-mono text-sm px-3 py-3 md:py-2 outline-none focus:border-accent/60 transition-all duration-200 placeholder:text-faint w-full;
