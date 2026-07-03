@@ -36,7 +36,6 @@ export {
   fetchPermissions,
   fetchPlaylistPage as getPlaylistPage,
   // Playlists
-  fetchPlaylists as getPlaylists,
   fetchPlaylistsPage as getPlaylistsPage,
   // Requests
   fetchRequests,

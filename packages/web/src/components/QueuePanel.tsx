@@ -40,7 +40,6 @@ import { memo, useCallback, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import ConfirmModal from '../components/ConfirmModal';
 import { ContextMenu, type MenuItem } from '../components/ContextMenu';
-import LoadPlaylistModal from '../components/queue/LoadPlaylistModal';
 import OverrideModal from '../components/queue/OverrideModal';
 import QuickAddModal from '../components/queue/QuickAddModal';
 import { useAdminView } from '../context/AdminViewContext';
@@ -89,7 +88,6 @@ export default function QueuePanel({
   const { isAdminView } = useAdminView();
   const { hasPermission } = usePermissions();
   const [showQuickAdd, setShowQuickAdd] = useState(false);
-  const [showLoadPlaylist, setShowLoadPlaylist] = useState(false);
   const [showOverride, setShowOverride] = useState(false);
   const [clearBusy, setClearBusy] = useState(false);
   const [clearConfirm, setClearConfirm] = useState(false);
@@ -237,14 +235,7 @@ export default function QueuePanel({
   );
 
   const menuItems: MenuItem[] = useMemo(() => {
-    const items: MenuItem[] = [
-      {
-        id: 'load-playlist',
-        label: 'Load Playlist',
-        icon: <ListIcon size={14} weight="duotone" />,
-        onClick: () => setShowLoadPlaylist(true),
-      },
-    ];
+    const items: MenuItem[] = [];
     if (isAdminView || hasPermission('queue.quickadd')) {
       items.push({
         id: 'quick-add',
@@ -318,15 +309,8 @@ export default function QueuePanel({
 
         {/* Empty state */}
         {virtualItems.length === 0 && (
-          <div className="py-8 text-center space-y-2">
+          <div className="py-8 text-center">
             <p className="font-mono text-[11px] text-faint">queue is empty</p>
-            <button
-              type="button"
-              onClick={() => setShowLoadPlaylist(true)}
-              className="cursor-pointer font-mono text-[11px] text-accent hover:underline"
-            >
-              load a playlist to get started
-            </button>
           </div>
         )}
       </div>
@@ -423,16 +407,6 @@ export default function QueuePanel({
       )}
 
       {/* Modals rendered via portal to escape slideout stacking context */}
-      {showLoadPlaylist &&
-        createPortal(
-          <LoadPlaylistModal
-            onClose={() => setShowLoadPlaylist(false)}
-            onLoaded={() => {
-              setShowLoadPlaylist(false);
-            }}
-          />,
-          document.body
-        )}
       {showQuickAdd &&
         createPortal(
           <QuickAddModal

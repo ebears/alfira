@@ -245,13 +245,6 @@ export function deleteTag(nameLower: string): Promise<{ success: boolean }> {
 // Playlists API Functions
 // ---------------------------------------------------------------------------
 
-export function fetchPlaylists(adminView = false): Promise<Playlist[]> {
-  const params = adminView ? '?adminView=true' : '';
-  return get<PaginatedResult<Playlist>>(`/api/playlists${params}`).then(
-    (r) => r.items as Playlist[]
-  );
-}
-
 export function createPlaylist(name: string, tagNameLower?: string): Promise<Playlist> {
   return post('/api/playlists', { name, ...(tagNameLower && { tagNameLower }) });
 }
