@@ -3,6 +3,7 @@ import { useCallback, useState } from 'react';
 import { approveRequest, cancelRequest, denyRequest, fetchRequests } from '../api/api';
 import AddSongModal from '../components/AddSongModal';
 import { Button } from '../components/ui/Button';
+import Checkbox from '../components/ui/Checkbox';
 import { ErrorBanner } from '../components/ui/ErrorBanner';
 import VirtualRequestList from '../components/VirtualRequestList';
 import { useAdminView } from '../context/AdminViewContext';
@@ -125,12 +126,7 @@ export default function RequestsPage() {
 
         {tab === 'pending' && (
           <label className="flex items-center gap-2 cursor-pointer ml-auto">
-            <input
-              type="checkbox"
-              checked={mineOnly}
-              onChange={(e) => setMineOnly(e.target.checked)}
-              className="w-4 h-4 rounded border-border bg-surface accent-accent"
-            />
+            <Checkbox checked={mineOnly} onChange={setMineOnly} />
             <span className="font-mono text-xs text-muted">Only show my requests</span>
           </label>
         )}

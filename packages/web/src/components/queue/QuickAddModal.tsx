@@ -3,6 +3,7 @@ import { quickAddPlaylistToQueue, quickAddToQueue } from '../../api/api';
 import { apiErrorMessage } from '../../utils/api';
 import { Backdrop } from '../Backdrop';
 import { Button } from '../ui/Button';
+import Checkbox from '../ui/Checkbox';
 import { Spinner } from '../ui/Spinner';
 
 export default function QuickAddModal({
@@ -73,12 +74,10 @@ export default function QuickAddModal({
             />
             {isPlaylist && (
               <label className="flex items-center gap-2 cursor-pointer mt-2">
-                <input
-                  type="checkbox"
+                <Checkbox
                   checked={importFullPlaylist}
-                  onChange={(e) => setImportFullPlaylist(e.target.checked)}
+                  onChange={setImportFullPlaylist}
                   disabled={submitting}
-                  className="w-4 h-4 rounded border-border bg-surface accent-accent"
                 />
                 <span className="font-mono text-xs text-fg">Add all songs from playlist</span>
               </label>

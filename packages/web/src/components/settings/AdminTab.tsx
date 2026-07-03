@@ -16,6 +16,7 @@ import {
   updateGeneralSettings,
 } from '../../api/api';
 import { SourceIcon } from '../SourceIcons';
+import Checkbox from '../ui/Checkbox';
 import { ErrorBanner } from '../ui/ErrorBanner';
 import SettingsToggle from './SettingsToggle';
 
@@ -180,12 +181,7 @@ export default function AdminTab() {
                     : 'border-border hover:border-muted'
                 }`}
               >
-                <input
-                  type="checkbox"
-                  checked={selectedRoleIdSet.has(r.id)}
-                  onChange={() => toggleRole(r.id)}
-                  className="accent-accent"
-                />
+                <Checkbox checked={selectedRoleIdSet.has(r.id)} onChange={() => toggleRole(r.id)} />
                 <span
                   className="w-2.5 h-2.5 rounded-full shrink-0"
                   style={{
@@ -231,11 +227,9 @@ export default function AdminTab() {
                       : 'border-border hover:border-muted'
                   }`}
                 >
-                  <input
-                    type="checkbox"
+                  <Checkbox
                     checked={selectedSourceKeySet.has(source.key)}
                     onChange={() => toggleSource(source.key)}
-                    className="accent-accent"
                   />
                   <SourceIcon sourceKey={source.key} className="shrink-0" />
                   <span className="text-sm text-fg">{source.displayName}</span>

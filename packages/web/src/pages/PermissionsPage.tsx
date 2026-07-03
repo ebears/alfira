@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { fetchPermissions, type PermissionsResponse, updatePermission } from '../api/api';
+import Checkbox from '../components/ui/Checkbox';
 import { ErrorBanner } from '../components/ui/ErrorBanner';
 
 export default function PermissionsPage() {
@@ -109,11 +110,9 @@ export default function PermissionsPage() {
                                 : 'border-border hover:border-muted'
                             }`}
                           >
-                            <input
-                              type="checkbox"
+                            <Checkbox
                               checked={isSelected}
                               onChange={() => toggleRole(action, role.id)}
-                              className="accent-accent"
                             />
                             <span
                               className="w-2 h-2 rounded-full shrink-0"

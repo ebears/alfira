@@ -22,6 +22,7 @@ import {
   type SetupRole,
 } from '../api/api';
 import { SourceIcon } from '../components/SourceIcons';
+import Checkbox from '../components/ui/Checkbox';
 import { ErrorBanner } from '../components/ui/ErrorBanner';
 import { Spinner } from '../components/ui/Spinner';
 import { useAuth } from '../context/AuthContext';
@@ -372,11 +373,9 @@ export default function SetupWizard() {
                           : 'border-border hover:border-muted'
                       }`}
                     >
-                      <input
-                        type="checkbox"
+                      <Checkbox
                         checked={selectedSourceKeys.has(source.key)}
                         onChange={() => toggleSource(source.key)}
-                        className="accent-accent"
                       />
                       <SourceIcon sourceKey={source.key} className="shrink-0" />
                       <span className="text-sm text-fg">{source.displayName}</span>
@@ -454,11 +453,9 @@ export default function SetupWizard() {
                           : 'border-border hover:border-muted'
                       }`}
                     >
-                      <input
-                        type="checkbox"
+                      <Checkbox
                         checked={selectedRoleIds.has(r.id)}
                         onChange={() => toggleRole(r.id)}
-                        className="accent-accent"
                       />
                       <span
                         className="w-3 h-3 rounded-full shrink-0"
