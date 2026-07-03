@@ -192,7 +192,7 @@ export default function SetupWizard() {
         guildId: selectedGuildId,
         adminRoleIds: [...selectedRoleIds].join(','),
         voiceIdleTimeoutMinutes: timeoutMinutes,
-        notificationChannelId: selectedChannelId || null,
+        afkNotificationChannelId: selectedChannelId || null,
         publicUrl: publicUrl.trim() || null,
         enabledSources: [...selectedSourceKeys].join(','),
       });

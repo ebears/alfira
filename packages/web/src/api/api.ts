@@ -18,11 +18,16 @@ export type { MyPermissionsResponse, PermissionsResponse } from '@alfira-bot/ser
 export {
   addSongToPlaylist,
   addToPriorityQueue,
+  approveRequest,
+  type CreateRequestResult,
+  cancelRequest,
   completeSetup,
   createPlaylist,
-  createSong as addSong,
+  createRequest,
   deletePlaylist,
   deleteSong,
+  denyRequest,
+  type FetchRequestsResult,
   fetchGeneralSettings,
   fetchLogout as logout,
   // Auth
@@ -33,6 +38,8 @@ export {
   // Playlists
   fetchPlaylists as getPlaylists,
   fetchPlaylistsPage as getPlaylistsPage,
+  // Requests
+  fetchRequests,
   // Setup
   fetchSetupChannels,
   fetchSetupGuilds,
@@ -42,15 +49,13 @@ export {
   fetchSongsPage as getSongsPage,
   // Version
   fetchVersion,
-  importPlaylist,
   overridePlay,
-  previewSong,
+  previewRequest,
   quickAddPlaylistToQueue,
   quickAddToQueue,
+  type RequestCreateData,
   removeSongFromPlaylist,
   renamePlaylist,
-  type SongCreateData,
-  type SongPreview,
   startPlayback,
   togglePlaylistVisibility,
   updateGeneralSettings,

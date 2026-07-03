@@ -30,6 +30,7 @@ description: React 19 + Tailwind CSS 4 web UI, component and page structure, API
 | `TagsPage.tsx` | `/tags` | Tag management |
 | `AudioPage.tsx` | `/audio` | Compressor + equalizer settings |
 | `PermissionsPage.tsx` | `/permissions` | Role-based permission config |
+| `RequestsPage.tsx` | `/requests` | Song request queue (pending/history, approve/deny) |
 
 ## Component Map
 
@@ -64,8 +65,9 @@ description: React 19 + Tailwind CSS 4 web UI, component and page structure, API
 ## API Client (`packages/web/src/utils/api.ts`)
 
 Centralized API client. All frontend API calls go through this file. Provides typed functions for:
-- Song CRUD: `fetchSongs()`, `createSong()`, `updateSong()`, `deleteSong()`
-- Playlist operations: `fetchPlaylists()`, `createPlaylist()`, `updatePlaylist()`, `importPlaylist()`, etc.
+- Song CRUD: `fetchSongs()`, `updateSong()`, `deleteSong()`
+- Song requests: `createRequest()`, `previewRequest()`, `fetchRequests()`, `approveRequest()`, `denyRequest()`, `cancelRequest()`
+- Playlist operations: `fetchPlaylists()`, `createPlaylist()`, `updatePlaylist()`, etc.
 - Player control: `play()`, `pause()`, `skip()`, `seek()`, `setVolume()`, etc.
 - Settings: compressor, equalizer, general, permissions
 - Authentication: login, logout, session check

@@ -1,33 +1,22 @@
-import { and, eq, inArray, or, sql } from 'drizzle-orm';
+import { and, eq, inArray, sql } from 'drizzle-orm';
 import type { RouteContext } from '../index';
 import { getGuildId } from '../lib/config';
-import { getUserDisplayName, resolveDisplayNames } from '../lib/displayName';
+import { resolveDisplayNames } from '../lib/displayName';
 import { json } from '../lib/json';
 import { parsePagination } from '../lib/pagination';
 import { checkRateLimit, getClientIp, rateLimitResponse } from '../lib/rateLimit';
 import { checkGuards } from '../lib/routeGuards';
 import { buildSongSearchClause } from '../lib/search';
 import { formatSong } from '../lib/serialization';
-import {
-  emitPlaylistUpdated,
-  emitSongAdded,
-  emitSongDeleted,
-  emitSongUpdated,
-} from '../lib/socket';
+import { emitPlaylistUpdated, emitSongDeleted, emitSongUpdated } from '../lib/socket';
 import { syncPlaylistToTag } from '../lib/syncPlaylistToTag';
 import { canonicalizeTags } from '../lib/tagCanonicalization';
 import {
-  clampMaxVideos,
-  fetchPlaylistMetadata,
-  fetchSourceMetadata,
   validateArtworkUrl,
   validateNickname,
   validateOptionalString,
-  validatePlaylistUrl,
-  validateSourceUrl,
   validateTags,
   validateVolumeBoost,
-  youTubeUrl,
 } from '../lib/validation';
 import { db, tables } from '../shared/db';
 import { getPlayer } from '../startDiscord';
@@ -76,276 +65,6 @@ async function handleGetSongs(ctx: RouteContext, request: Request): Promise<Resp
       totalPages: Math.ceil(total / limit),
     },
   });
-}
-
-// ---------------------------------------------------------------------------
-// POST /api/songs — add a song by source URL. Admin only.
-// ---------------------------------------------------------------------------
-async function handlePostSong(ctx: RouteContext, request: Request): Promise<Response> {
-  const guards = await checkGuards(ctx, { admin: true, permission: 'songs.add' });
-  if (guards instanceof Response) return guards;
-  const { user } = guards;
-
-  let body: {
-    url?: unknown;
-    nickname?: unknown;
-    artist?: unknown;
-    album?: unknown;
-    artwork?: unknown;
-    tags?: unknown;
-    volumeBoost?: unknown;
-  };
-  try {
-    body = (await request.json()) as typeof body;
-  } catch {
-    return json({ error: 'Invalid JSON body.' }, 400);
-  }
-
-  const nicknameResult = validateNickname(body.nickname);
-  if (!nicknameResult.ok) return nicknameResult.response;
-
-  const artist = validateOptionalString(body.artist);
-  const album = validateOptionalString(body.album);
-
-  const artworkResult = validateArtworkUrl(body.artwork);
-  if (!artworkResult.ok) return artworkResult.response;
-
-  const tagsResult = validateTags(body.tags);
-  if (!tagsResult.ok) return tagsResult.response;
-
-  const volumeBoostResult = validateVolumeBoost(body.volumeBoost);
-  if (!volumeBoostResult.ok) return volumeBoostResult.response;
-  // Only use the user-supplied volume boost if explicitly provided (not undefined).
-  // undefined means "don't set", null means "clear to 0".
-  const volumeBoost = volumeBoostResult.value !== undefined ? volumeBoostResult.value : null;
-
-  const urlResult = validateSourceUrl(body.url);
-  if (!urlResult.ok) return urlResult.response;
-  let url = urlResult.value;
-
-  // Strip any ?list=... query param so a plain song URL always adds a single track.
-  try {
-    const parsed = new URL(url);
-    parsed.searchParams.delete('list');
-    url = parsed.toString();
-  } catch {
-    // leave URL unchanged
-  }
-
-  const metadataResult = await fetchSourceMetadata(url);
-  if (!metadataResult.ok) return metadataResult.response;
-  const metadata = metadataResult.value;
-
-  // Check for duplicate by sourceId.
-  const [existing] = await db
-    .select()
-    .from(songTable)
-    .where(eq(songTable.sourceId, metadata.sourceId))
-    .limit(1);
-
-  if (existing) {
-    return json(
-      {
-        error: 'This song is already in your library.',
-        song: formatSong(existing),
-      },
-      409
-    );
-  }
-
-  const [song] = await db
-    .insert(songTable)
-    .values({
-      title: metadata.title,
-      sourceUrl: url,
-      sourceId: metadata.sourceId,
-      duration: metadata.duration,
-      thumbnailUrl: metadata.thumbnailUrl ?? '',
-      addedBy: user.discordId,
-      nickname: nicknameResult.value,
-      artist: artist ?? metadata.artist ?? null,
-      album: album ?? null,
-      artwork: artworkResult.value ?? metadata.artworkUrl ?? null,
-      tags: tagsResult.value.length > 0 ? await canonicalizeTags(tagsResult.value) : [],
-      volumeBoost,
-    })
-    .returning();
-
-  if (!song) {
-    return json({ error: 'Failed to create song.' }, 500);
-  }
-
-  const formatted = formatSong(song);
-  const displayName = await getUserDisplayName(user.discordId);
-  const enriched = { ...formatted, addedByDisplayName: displayName };
-  emitSongAdded(enriched);
-
-  return json(enriched, 201);
-}
-
-// ---------------------------------------------------------------------------
-// POST /api/songs/preview — resolve URL metadata without creating a song.
-// Admin only (same guard as adding).
-// ---------------------------------------------------------------------------
-async function handlePreviewSong(ctx: RouteContext, request: Request): Promise<Response> {
-  const guards = await checkGuards(ctx, { admin: true, permission: 'songs.add' });
-  if (guards instanceof Response) return guards;
-
-  let body: { url?: unknown };
-  try {
-    body = (await request.json()) as typeof body;
-  } catch {
-    return json({ error: 'Invalid JSON body.' }, 400);
-  }
-
-  const urlResult = validateSourceUrl(body.url);
-  if (!urlResult.ok) return urlResult.response;
-  let url = urlResult.value;
-
-  // Strip any ?list=... query param so a playlist-tagged URL can still
-  // be previewed as a single track.
-  try {
-    const parsed = new URL(url);
-    parsed.searchParams.delete('list');
-    url = parsed.toString();
-  } catch {
-    // leave URL unchanged
-  }
-
-  const metadataResult = await fetchSourceMetadata(url);
-  if (!metadataResult.ok) return metadataResult.response;
-  const metadata = metadataResult.value;
-
-  // Check for duplicate by sourceId.
-  const [existing] = await db
-    .select()
-    .from(songTable)
-    .where(eq(songTable.sourceId, metadata.sourceId))
-    .limit(1);
-
-  return json({
-    title: metadata.title,
-    sourceId: metadata.sourceId,
-    duration: metadata.duration,
-    thumbnailUrl: metadata.thumbnailUrl ?? '',
-    sourceName: metadata.sourceName ?? null,
-    artist: metadata.artist ?? null,
-    artworkUrl: metadata.artworkUrl ?? null,
-    alreadyExists: !!existing,
-    existingSong: existing ? formatSong(existing) : null,
-  });
-}
-
-// ---------------------------------------------------------------------------
-// POST /api/songs/import-playlist — import playlist. Admin only.
-// ---------------------------------------------------------------------------
-async function handleImportPlaylist(ctx: RouteContext, request: Request): Promise<Response> {
-  const guards = await checkGuards(ctx, { admin: true, permission: 'songs.import' });
-  if (guards instanceof Response) return guards;
-  const { user } = guards;
-
-  let body: { url?: unknown; maxVideos?: number };
-  try {
-    body = (await request.json()) as typeof body;
-  } catch {
-    return json({ error: 'Invalid JSON body.' }, 400);
-  }
-
-  const maxVideos = clampMaxVideos(body.maxVideos);
-  const urlResult = validatePlaylistUrl(body.url);
-  if (!urlResult.ok) return urlResult.response;
-  const url = urlResult.value;
-
-  const playlistResult = await fetchPlaylistMetadata(url, maxVideos);
-  if (!playlistResult.ok) return playlistResult.response;
-  const playlistMetadata = playlistResult.value;
-
-  // Build the canonical URL format for each video
-  const videosWithUrls = playlistMetadata.videos.map((v) => ({
-    ...v,
-    canonicalUrl: youTubeUrl(v.id),
-  }));
-
-  let existingSongs: { sourceId: string; sourceUrl: string }[] = [];
-  if (videosWithUrls.length > 0) {
-    existingSongs = await db
-      .select({ sourceId: songTable.sourceId, sourceUrl: songTable.sourceUrl })
-      .from(songTable)
-      .where(
-        or(
-          inArray(
-            songTable.sourceId,
-            videosWithUrls.map((v) => v.id)
-          ),
-          inArray(
-            songTable.sourceUrl,
-            videosWithUrls.map((v) => v.canonicalUrl)
-          )
-        )
-      );
-  }
-
-  // Create sets for quick lookup
-  const existingSourceIds = new Set(existingSongs.map((s) => s.sourceId));
-  const existingSourceUrls = new Set(existingSongs.map((s) => s.sourceUrl));
-
-  // Filter out duplicates (check both sourceId and sourceUrl)
-  const newVideos = videosWithUrls.filter(
-    (v) => !existingSourceIds.has(v.id) && !existingSourceUrls.has(v.canonicalUrl)
-  );
-
-  if (newVideos.length === 0) {
-    return json({
-      message: 'All songs from this playlist are already in your library.',
-      playlistTitle: playlistMetadata.title,
-      totalVideos: playlistMetadata.videoCount,
-      importedCount: 0,
-      skippedCount: playlistMetadata.videos.length,
-    });
-  }
-
-  const addedByDiscordId = user.discordId;
-
-  // Create songs in a transaction
-  const createdSongs = await db.transaction((tx) => {
-    return tx
-      .insert(songTable)
-      .values(
-        newVideos.map((video) => ({
-          title: video.title,
-          sourceUrl: video.canonicalUrl,
-          sourceId: video.id,
-          duration: video.duration,
-          thumbnailUrl: video.thumbnailUrl ?? '',
-          addedBy: addedByDiscordId,
-          artist: video.artist ?? null,
-          artwork: video.artworkUrl ?? null,
-        }))
-      )
-      .returning();
-  });
-
-  // Emit socket events for each new song
-  const nameMap = await resolveDisplayNames(createdSongs);
-  for (const song of createdSongs) {
-    const formatted = formatSong(song);
-    emitSongAdded({
-      ...formatted,
-      addedByDisplayName: nameMap.get(song.addedBy) ?? song.addedBy,
-    });
-  }
-
-  return json(
-    {
-      message: `Successfully imported ${createdSongs.length} song(s) from "${playlistMetadata.title}".`,
-      playlistTitle: playlistMetadata.title,
-      totalVideos: playlistMetadata.videoCount,
-      importedCount: createdSongs.length,
-      skippedCount: playlistMetadata.videos.length - newVideos.length,
-      songs: createdSongs.map(formatSong),
-    },
-    201
-  );
 }
 
 // ---------------------------------------------------------------------------
@@ -519,24 +238,9 @@ export async function handleSongs(ctx: RouteContext, request: Request): Promise<
     }
   }
 
-  // POST /api/songs/preview
-  if (request.method === 'POST' && pathname === '/api/songs/preview') {
-    return await handlePreviewSong(ctx, request);
-  }
-
-  // POST /api/songs/import-playlist
-  if (request.method === 'POST' && pathname === '/api/songs/import-playlist') {
-    return await handleImportPlaylist(ctx, request);
-  }
-
   // GET /api/songs
   if (request.method === 'GET' && pathname === '/api/songs') {
     return await handleGetSongs(ctx, request);
-  }
-
-  // POST /api/songs
-  if (request.method === 'POST' && pathname === '/api/songs') {
-    return await handlePostSong(ctx, request);
   }
 
   // DELETE /api/songs/:id

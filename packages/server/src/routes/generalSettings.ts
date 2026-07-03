@@ -22,7 +22,10 @@ const SETTINGS_COLUMNS = {
   setupCompleted: tables.guildSettings.setupCompleted,
   adminRoleIds: tables.guildSettings.adminRoleIds,
   voiceIdleTimeoutMinutes: tables.guildSettings.voiceIdleTimeoutMinutes,
-  notificationChannelId: tables.guildSettings.notificationChannelId,
+  afkNotificationChannelId: tables.guildSettings.afkNotificationChannelId,
+  requestNotificationChannelId: tables.guildSettings.requestNotificationChannelId,
+  notifyOnApproved: tables.guildSettings.notifyOnApproved,
+  notifyOnDenied: tables.guildSettings.notifyOnDenied,
   publicUrl: tables.guildSettings.publicUrl,
   enabledSources: tables.guildSettings.enabledSources,
 };
@@ -47,7 +50,10 @@ async function handleGetGeneral(ctx: RouteContext): Promise<Response> {
         setupCompleted: false,
         adminRoleIds: '',
         voiceIdleTimeoutMinutes: 5,
-        notificationChannelId: null,
+        afkNotificationChannelId: null,
+        requestNotificationChannelId: null,
+        notifyOnApproved: true,
+        notifyOnDenied: true,
         publicUrl: null,
         enabledSources: 'youtube,soundcloud',
       })
@@ -63,7 +69,10 @@ async function handleGetGeneral(ctx: RouteContext): Promise<Response> {
 interface GeneralSettingsPatch {
   adminRoleIds?: string;
   voiceIdleTimeoutMinutes?: number;
-  notificationChannelId?: string | null;
+  afkNotificationChannelId?: string | null;
+  requestNotificationChannelId?: string | null;
+  notifyOnApproved?: boolean;
+  notifyOnDenied?: boolean;
   publicUrl?: string | null;
   enabledSources?: string;
 }
@@ -99,11 +108,38 @@ async function handlePatchGeneral(ctx: RouteContext, request: Request): Promise<
     updates.voiceIdleTimeoutMinutes = v;
   }
 
-  if (body.notificationChannelId !== undefined) {
-    if (body.notificationChannelId !== null && typeof body.notificationChannelId !== 'string') {
-      return json({ error: 'notificationChannelId must be a string or null' }, 400);
+  if (body.afkNotificationChannelId !== undefined) {
+    if (
+      body.afkNotificationChannelId !== null &&
+      typeof body.afkNotificationChannelId !== 'string'
+    ) {
+      return json({ error: 'afkNotificationChannelId must be a string or null' }, 400);
     }
-    updates.notificationChannelId = body.notificationChannelId;
+    updates.afkNotificationChannelId = body.afkNotificationChannelId;
+  }
+
+  if (body.requestNotificationChannelId !== undefined) {
+    if (
+      body.requestNotificationChannelId !== null &&
+      typeof body.requestNotificationChannelId !== 'string'
+    ) {
+      return json({ error: 'requestNotificationChannelId must be a string or null' }, 400);
+    }
+    updates.requestNotificationChannelId = body.requestNotificationChannelId;
+  }
+
+  if (body.notifyOnApproved !== undefined) {
+    if (typeof body.notifyOnApproved !== 'boolean') {
+      return json({ error: 'notifyOnApproved must be a boolean' }, 400);
+    }
+    updates.notifyOnApproved = body.notifyOnApproved;
+  }
+
+  if (body.notifyOnDenied !== undefined) {
+    if (typeof body.notifyOnDenied !== 'boolean') {
+      return json({ error: 'notifyOnDenied must be a boolean' }, 400);
+    }
+    updates.notifyOnDenied = body.notifyOnDenied;
   }
 
   if (body.publicUrl !== undefined) {

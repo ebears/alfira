@@ -16,12 +16,18 @@ import {
   updateGeneralSettings,
 } from '../../api/api';
 import { SourceIcon } from '../SourceIcons';
+import SettingsToggle from './SettingsToggle';
 
 export default function AdminTab() {
   const [saved, setSaved] = useState<GeneralSettings | null>(null);
   const [adminRoleIds, setAdminRoleIds] = useState('');
   const [timeoutMinutes, setTimeoutMinutes] = useState(5);
-  const [notificationChannelId, setNotificationChannelId] = useState<string | null>(null);
+  const [afkNotificationChannelId, setAfkNotificationChannelId] = useState<string | null>(null);
+  const [requestNotificationChannelId, setRequestNotificationChannelId] = useState<string | null>(
+    null
+  );
+  const [notifyOnApproved, setNotifyOnApproved] = useState(true);
+  const [notifyOnDenied, setNotifyOnDenied] = useState(true);
   const [publicUrl, setPublicUrl] = useState<string | null>(null);
   const [enabledSources, setEnabledSources] = useState('youtube,soundcloud');
   const [availableSources, setAvailableSources] = useState<
@@ -49,7 +55,10 @@ export default function AdminTab() {
         setSaved(settings);
         setAdminRoleIds(settings.adminRoleIds);
         setTimeoutMinutes(settings.voiceIdleTimeoutMinutes);
-        setNotificationChannelId(settings.notificationChannelId);
+        setAfkNotificationChannelId(settings.afkNotificationChannelId);
+        setRequestNotificationChannelId(settings.requestNotificationChannelId);
+        setNotifyOnApproved(settings.notifyOnApproved);
+        setNotifyOnDenied(settings.notifyOnDenied);
         setPublicUrl(settings.publicUrl);
         setEnabledSources(settings.enabledSources);
         setAvailableSources(settings.availableSources);
@@ -73,7 +82,10 @@ export default function AdminTab() {
   const hasChanges = saved
     ? adminRoleIds !== saved.adminRoleIds ||
       timeoutMinutes !== saved.voiceIdleTimeoutMinutes ||
-      notificationChannelId !== saved.notificationChannelId ||
+      afkNotificationChannelId !== saved.afkNotificationChannelId ||
+      requestNotificationChannelId !== saved.requestNotificationChannelId ||
+      notifyOnApproved !== saved.notifyOnApproved ||
+      notifyOnDenied !== saved.notifyOnDenied ||
       publicUrl !== saved.publicUrl ||
       enabledSources !== saved.enabledSources
     : false;
@@ -86,7 +98,10 @@ export default function AdminTab() {
       const updated = await updateGeneralSettings({
         adminRoleIds,
         voiceIdleTimeoutMinutes: timeoutMinutes,
-        notificationChannelId,
+        afkNotificationChannelId,
+        requestNotificationChannelId,
+        notifyOnApproved,
+        notifyOnDenied,
         publicUrl,
         enabledSources,
       });
@@ -253,12 +268,12 @@ export default function AdminTab() {
 
       <div className="border-t border-muted/20" />
 
-      {/* Notification Channel */}
+      {/* AFK Notification Channel */}
       <div className="space-y-2">
         <div className="flex items-center gap-2">
           <MegaphoneIcon size={14} weight="duotone" className="text-muted" />
           <h3 className="font-mono text-[11px] text-muted uppercase tracking-wider">
-            Notification Channel
+            AFK Notification Channel
           </h3>
         </div>
         <p className="text-xs text-muted">
@@ -266,8 +281,8 @@ export default function AdminTab() {
         </p>
         {channels.length > 0 ? (
           <select
-            value={notificationChannelId ?? ''}
-            onChange={(e) => setNotificationChannelId(e.target.value || null)}
+            value={afkNotificationChannelId ?? ''}
+            onChange={(e) => setAfkNotificationChannelId(e.target.value || null)}
             className="w-full px-3 py-2 rounded-lg bg-base border border-border text-fg text-sm focus:outline-none focus:border-accent transition-colors"
           >
             <option value="">— Disabled —</option>
@@ -280,6 +295,77 @@ export default function AdminTab() {
         ) : (
           <p className="text-xs text-muted italic">No channels loaded.</p>
         )}
+      </div>
+
+      <div className="border-t border-muted/20" />
+
+      {/* Request Notification Channel */}
+      <div className="space-y-2">
+        <div className="flex items-center gap-2">
+          <MegaphoneIcon size={14} weight="duotone" className="text-muted" />
+          <h3 className="font-mono text-[11px] text-muted uppercase tracking-wider">
+            Song Request Notifications
+          </h3>
+        </div>
+        <p className="text-xs text-muted">
+          Alfira posts here when new song requests are submitted.
+        </p>
+        {channels.length > 0 ? (
+          <select
+            value={requestNotificationChannelId ?? ''}
+            onChange={(e) => setRequestNotificationChannelId(e.target.value || null)}
+            className="w-full px-3 py-2 rounded-lg bg-base border border-border text-fg text-sm focus:outline-none focus:border-accent transition-colors"
+          >
+            <option value="">— Disabled —</option>
+            {channels.map((c) => (
+              <option key={c.id} value={c.id}>
+                # {c.name}
+              </option>
+            ))}
+          </select>
+        ) : (
+          <p className="text-xs text-muted italic">No channels loaded.</p>
+        )}
+
+        <div className="mt-3 space-y-3">
+          <div className="flex items-start gap-4">
+            <div className="flex-1 min-w-0">
+              <p className="font-body text-sm font-medium text-fg flex items-center gap-1.5">
+                Notify on approved
+                <span className="relative group">
+                  <QuestionIcon size={14} weight="duotone" className="text-muted cursor-help" />
+                  <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-56 p-2 rounded-lg bg-elevated border border-border text-xs text-muted opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity z-10">
+                    Requesters can also opt into a personal DM when they submit a request.
+                  </span>
+                </span>
+              </p>
+              <p className="font-mono text-[11px] text-muted mt-0.5">
+                Post a message when a request is approved.
+              </p>
+            </div>
+            <button
+              type="button"
+              role="switch"
+              aria-checked={notifyOnApproved}
+              onClick={() => setNotifyOnApproved(!notifyOnApproved)}
+              className={`relative shrink-0 w-11 h-6 rounded-full transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-accent/50 focus:ring-offset-2 focus:ring-offset-surface cursor-pointer ${
+                notifyOnApproved ? 'bg-accent' : 'bg-elevated'
+              }`}
+            >
+              <span
+                className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full transition-transform duration-200 ${
+                  notifyOnApproved ? 'translate-x-5 bg-elevated' : 'translate-x-0 bg-muted'
+                }`}
+              />
+            </button>
+          </div>
+          <SettingsToggle
+            label="Notify on denied"
+            description="Post a message when a request is denied."
+            checked={notifyOnDenied}
+            onChange={setNotifyOnDenied}
+          />
+        </div>
       </div>
 
       <div className="border-t border-muted/20" />

@@ -115,7 +115,7 @@ export class GuildPlayer {
     // Send notification to the configured channel, if any.
     try {
       const row = await db
-        .select({ channelId: tables.guildSettings.notificationChannelId })
+        .select({ channelId: tables.guildSettings.afkNotificationChannelId })
         .from(tables.guildSettings)
         .where(eq(tables.guildSettings.id, 1))
         .get();

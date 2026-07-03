@@ -206,7 +206,8 @@ async function handlePostComplete(ctx: RouteContext, request: Request): Promise<
     guildId?: unknown;
     adminRoleIds?: unknown;
     voiceIdleTimeoutMinutes?: unknown;
-    notificationChannelId?: unknown;
+    afkNotificationChannelId?: unknown;
+    requestNotificationChannelId?: unknown;
     publicUrl?: unknown;
     enabledSources?: unknown;
   };
@@ -238,10 +239,16 @@ async function handlePostComplete(ctx: RouteContext, request: Request): Promise<
     return json({ error: 'voiceIdleTimeoutMinutes must be an integer between 1 and 120.' }, 400);
   }
 
-  // Validate notificationChannelId (optional)
-  const notificationChannelId =
-    body.notificationChannelId && typeof body.notificationChannelId === 'string'
-      ? body.notificationChannelId
+  // Validate afkNotificationChannelId (optional)
+  const afkNotificationChannelId =
+    body.afkNotificationChannelId && typeof body.afkNotificationChannelId === 'string'
+      ? body.afkNotificationChannelId
+      : null;
+
+  // Validate requestNotificationChannelId (optional)
+  const requestNotificationChannelId =
+    body.requestNotificationChannelId && typeof body.requestNotificationChannelId === 'string'
+      ? body.requestNotificationChannelId
       : null;
 
   // Validate publicUrl (optional)
@@ -263,7 +270,8 @@ async function handlePostComplete(ctx: RouteContext, request: Request): Promise<
         setupCompleted: true,
         adminRoleIds: body.adminRoleIds,
         voiceIdleTimeoutMinutes: timeout,
-        notificationChannelId,
+        afkNotificationChannelId,
+        requestNotificationChannelId,
         publicUrl,
         enabledSources,
       })
@@ -274,7 +282,8 @@ async function handlePostComplete(ctx: RouteContext, request: Request): Promise<
           setupCompleted: true,
           adminRoleIds: body.adminRoleIds,
           voiceIdleTimeoutMinutes: timeout,
-          notificationChannelId,
+          afkNotificationChannelId,
+          requestNotificationChannelId,
           publicUrl,
           enabledSources,
         },

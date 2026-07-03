@@ -34,6 +34,7 @@ import { handleGeneralSettings } from './routes/generalSettings';
 import { handlePermissions } from './routes/permissions';
 import { handlePlayer } from './routes/player';
 import { handlePlaylists } from './routes/playlists';
+import { handleRequests } from './routes/requests';
 import { handleSetup } from './routes/setup';
 import { handleSongs } from './routes/songs';
 import { handleTags } from './routes/tags';
@@ -235,6 +236,9 @@ function startServer(): void {
       if (url.pathname.startsWith('/api/tags')) {
         return setSecurityHeaders(await handleTags(ctx, request));
       }
+      if (url.pathname.startsWith('/api/requests')) {
+        return setSecurityHeaders(await handleRequests(ctx, request));
+      }
       if (url.pathname.startsWith('/api/songs')) {
         return setSecurityHeaders(await handleSongs(ctx, request));
       }
@@ -329,11 +333,16 @@ function runMigrations(): void {
       try {
         $client.run(trimmed);
       } catch (err) {
-        // Skip "already exists" errors — the table/index is already there
-        if ((err as Error).message.includes('already exists')) {
+        // Skip errors that indicate the schema change was already applied
+        // in a previous partial run (RENAME, ADD COLUMN, CREATE TABLE retries).
+        if (
+          (err as Error).message.includes('already exists') ||
+          (err as Error).message.includes('no such column') ||
+          (err as Error).message.includes('duplicate column name')
+        ) {
           logger.info(
             { file, stmt: trimmed.substring(0, 50) },
-            'Skipping already-exists statement'
+            'Skipping already-applied statement'
           );
           continue;
         }
