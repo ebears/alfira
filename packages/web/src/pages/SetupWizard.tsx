@@ -22,6 +22,7 @@ import {
   type SetupRole,
 } from '../api/api';
 import { SourceIcon } from '../components/SourceIcons';
+import { Button } from '../components/ui/Button';
 import Checkbox from '../components/ui/Checkbox';
 import { ErrorBanner } from '../components/ui/ErrorBanner';
 import { Spinner } from '../components/ui/Spinner';
@@ -254,7 +255,7 @@ export default function SetupWizard() {
         {error && <ErrorBanner message={error} className="mb-6" />}
 
         {/* Step content */}
-        <div className="bg-elevated border border-border rounded-xl p-6 md:p-8">
+        <div className="modal-clay p-6 md:p-8">
           {step === 'welcome' && (
             <div className="text-center space-y-6">
               <div className="flex justify-center">
@@ -271,13 +272,9 @@ export default function SetupWizard() {
                   admin roles, and set a few preferences.
                 </p>
               </div>
-              <button
-                type="button"
-                onClick={loadGuilds}
-                className="btn-primary px-6 py-2.5 rounded-xl font-body text-sm cursor-pointer"
-              >
+              <Button variant="primary" onClick={loadGuilds}>
                 Get Started
-              </button>
+              </Button>
             </div>
           )}
 
@@ -336,18 +333,13 @@ export default function SetupWizard() {
                   <CaretLeftIcon size={14} />
                   Back
                 </button>
-                <button
-                  type="button"
+                <Button
+                  variant="primary"
                   onClick={() => setStep('sources')}
                   disabled={!selectedGuildId}
-                  className={`px-5 py-2 rounded-xl font-body text-sm transition-colors ${
-                    selectedGuildId
-                      ? 'btn-primary cursor-pointer'
-                      : 'bg-elevated text-muted cursor-not-allowed'
-                  }`}
                 >
                   Next
-                </button>
+                </Button>
               </div>
             </div>
           )}
@@ -416,18 +408,13 @@ export default function SetupWizard() {
                   <CaretLeftIcon size={14} />
                   Back
                 </button>
-                <button
-                  type="button"
+                <Button
+                  variant="primary"
                   onClick={loadRoles}
                   disabled={selectedSourceKeys.size === 0}
-                  className={`px-5 py-2 rounded-xl font-body text-sm transition-colors ${
-                    selectedSourceKeys.size > 0
-                      ? 'btn-primary cursor-pointer'
-                      : 'bg-elevated text-muted cursor-not-allowed'
-                  }`}
                 >
                   Next
-                </button>
+                </Button>
               </div>
             </div>
           )}
@@ -479,18 +466,13 @@ export default function SetupWizard() {
                   <CaretLeftIcon size={14} />
                   Back
                 </button>
-                <button
-                  type="button"
+                <Button
+                  variant="primary"
                   onClick={loadChannels}
                   disabled={selectedRoleIds.size === 0}
-                  className={`px-5 py-2 rounded-xl font-body text-sm transition-colors ${
-                    selectedRoleIds.size > 0
-                      ? 'btn-primary cursor-pointer'
-                      : 'bg-elevated text-muted cursor-not-allowed'
-                  }`}
                 >
                   Next
-                </button>
+                </Button>
               </div>
             </div>
           )}
@@ -541,23 +523,19 @@ export default function SetupWizard() {
                   Back
                 </button>
                 <div className="flex gap-2">
-                  <button
-                    type="button"
+                  <Button
+                    variant="inherit"
                     onClick={() => {
                       setSelectedChannelId('');
                       setStep('timeout');
                     }}
-                    className="px-4 py-2 rounded-xl font-body text-sm text-muted hover:text-fg transition-colors cursor-pointer"
+                    surface="surface"
                   >
                     Skip
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setStep('timeout')}
-                    className="px-5 py-2 rounded-xl btn-primary font-body text-sm cursor-pointer"
-                  >
+                  </Button>
+                  <Button variant="primary" onClick={() => setStep('timeout')}>
                     Next
-                  </button>
+                  </Button>
                 </div>
               </div>
             </div>
@@ -599,13 +577,9 @@ export default function SetupWizard() {
                   <CaretLeftIcon size={14} />
                   Back
                 </button>
-                <button
-                  type="button"
-                  onClick={() => setStep('publicUrl')}
-                  className="px-5 py-2 rounded-xl btn-primary font-body text-sm cursor-pointer"
-                >
+                <Button variant="primary" onClick={() => setStep('publicUrl')}>
                   Next
-                </button>
+                </Button>
               </div>
             </div>
           )}
@@ -625,7 +599,7 @@ export default function SetupWizard() {
                 value={publicUrl}
                 onChange={(e) => setPublicUrl(e.target.value)}
                 placeholder="https://music.yourserver.com"
-                className="w-full px-4 py-2.5 rounded-lg bg-base border border-border text-fg text-sm font-mono placeholder:text-muted/50 focus:outline-none focus:border-accent transition-colors"
+                className="input font-mono"
               />
               <div className="flex justify-between pt-2">
                 <button
@@ -636,13 +610,9 @@ export default function SetupWizard() {
                   <CaretLeftIcon size={14} />
                   Back
                 </button>
-                <button
-                  type="button"
-                  onClick={() => setStep('confirm')}
-                  className="px-5 py-2 rounded-xl btn-primary font-body text-sm cursor-pointer"
-                >
+                <Button variant="primary" onClick={() => setStep('confirm')}>
                   Review
-                </button>
+                </Button>
               </div>
             </div>
           )}
@@ -706,19 +676,10 @@ export default function SetupWizard() {
                   <CaretLeftIcon size={14} />
                   Back
                 </button>
-                <button
-                  type="button"
-                  onClick={handleSubmit}
-                  disabled={saving}
-                  className={`flex items-center gap-2 px-5 py-2 rounded-xl font-body text-sm transition-colors ${
-                    saving
-                      ? 'bg-elevated text-muted cursor-not-allowed'
-                      : 'btn-primary cursor-pointer'
-                  }`}
-                >
+                <Button variant="primary" onClick={handleSubmit} disabled={saving}>
                   <CheckIcon size={16} weight="bold" />
                   {saving ? 'Saving…' : 'Finish Setup'}
-                </button>
+                </Button>
               </div>
             </div>
           )}
