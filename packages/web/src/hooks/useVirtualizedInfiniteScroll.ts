@@ -41,6 +41,7 @@ export function useVirtualizedInfiniteScroll<T, A extends unknown[]>({
   const hasMoreRef = useRef(true);
   const isFetchingRef = useRef(false);
   const isMountedRef = useRef(true);
+  const hasEverLoadedRef = useRef(false);
 
   hasMoreRef.current = hasMore;
   isFetchingRef.current = isFetching;
@@ -61,7 +62,12 @@ export function useVirtualizedInfiniteScroll<T, A extends unknown[]>({
       if (!isInitial && !hasMoreRef.current) return;
 
       if (isInitial) {
-        setIsLoading(true);
+        // Only show a full skeleton on the very first load.
+        // On subsequent deps changes (tab switch, filter change), keep
+        // stale items visible to avoid flickering.
+        if (!hasEverLoadedRef.current) {
+          setIsLoading(true);
+        }
       } else {
         setIsFetching(true);
       }
@@ -72,6 +78,8 @@ export function useVirtualizedInfiniteScroll<T, A extends unknown[]>({
       try {
         const result = await fetchPageRef.current(page, limit, ...searchArgs);
         if (!isMountedRef.current) return;
+
+        hasEverLoadedRef.current = true;
 
         if (isInitial) {
           setItems(result.items);

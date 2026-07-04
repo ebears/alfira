@@ -94,6 +94,8 @@ export default function PlaylistsPage() {
         onRetry={retry}
         sentinelRef={sentinelRef}
         onRowClick={handleRowClick}
+        emptyTitle="No Playlists Yet"
+        emptyMessage="Create one to get started"
       />
 
       {showCreate && <CreatePlaylistModal onClose={() => setShowCreate(false)} />}

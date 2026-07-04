@@ -483,6 +483,16 @@ export default function SongsPage() {
         onDelete={handleSetDeleteId}
         onPlay={handlePlayFromSong}
         onAddToQueue={handleAddToQueue}
+        emptyTitle={
+          search || filterTags.length > 0 || filterSources.length > 0
+            ? 'No Matches'
+            : 'No Songs Yet'
+        }
+        emptyMessage={
+          search || filterTags.length > 0 || filterSources.length > 0
+            ? 'Try adjusting your search or filters'
+            : 'Submit a request to add songs'
+        }
       />
 
       {/* ── Add Filter popover ────────────────────────────────── */}

@@ -907,15 +907,10 @@ export default function PlaylistDetailPage() {
       {/* Song list */}
       {songItems.length === 0 && !isLoading ? (
         isSmart ? (
-          <div className="text-center py-24">
-            <p className="font-display text-4xl text-faint tracking-wider mb-2">No Songs Yet</p>
-            <p className="font-mono text-xs text-faint">
-              This playlist tracks the "
-              {tags.find((t) => t.nameLower === playlistDetail.tagNameLower)?.canonicalName ??
-                playlistDetail.tagNameLower}
-              " tag. Tag some songs to populate it.
-            </p>
-          </div>
+          <EmptyState
+            title="No Songs Yet"
+            message={`This playlist tracks the "${tags.find((t) => t.nameLower === playlistDetail.tagNameLower)?.canonicalName ?? playlistDetail.tagNameLower}" tag. Tag some songs to populate it.`}
+          />
         ) : (
           <EmptyState
             title="Empty Playlist"
@@ -943,6 +938,8 @@ export default function PlaylistDetailPage() {
           }}
           onPlay={handlePlayFromSong}
           onAddToQueue={handleAddToQueue}
+          emptyTitle="No Songs"
+          emptyMessage="Add songs to this playlist"
         />
       )}
 

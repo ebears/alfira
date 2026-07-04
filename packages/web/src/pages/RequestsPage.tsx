@@ -157,6 +157,10 @@ export default function RequestsPage() {
         onApprove={handleApprove}
         onDeny={handleDeny}
         onCancel={handleCancel}
+        emptyTitle={tab === 'pending' ? 'No Pending Requests' : 'No Request History'}
+        emptyMessage={
+          tab === 'pending' ? 'Nothing to review right now' : 'Submit a request to get started'
+        }
       />
 
       {/* Modals */}
