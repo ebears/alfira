@@ -113,13 +113,25 @@ export function fetchLogout(): Promise<void> {
 // Songs API Functions
 // ---------------------------------------------------------------------------
 
+export interface FetchSongsOptions {
+  search?: string;
+  sort?: string;
+  order?: string;
+  tags?: string;
+  source?: string;
+}
+
 export function fetchSongsPage(
   page: number,
   limit = 30,
-  search?: string
+  opts?: FetchSongsOptions
 ): Promise<PaginatedResult<Song>> {
   const params = new URLSearchParams({ page: String(page), limit: String(limit) });
-  if (search) params.set('search', search);
+  if (opts?.search) params.set('search', opts.search);
+  if (opts?.sort) params.set('sort', opts.sort);
+  if (opts?.order) params.set('order', opts.order);
+  if (opts?.tags) params.set('tags', opts.tags);
+  if (opts?.source) params.set('source', opts.source);
   return get(`/api/songs?${params}`);
 }
 
@@ -264,11 +276,15 @@ export function fetchPlaylistPage(
   adminView = false,
   page: number,
   limit = 30,
-  search?: string
+  opts?: FetchSongsOptions
 ): Promise<PlaylistDetail & { pagination: PaginationMeta }> {
   const params = new URLSearchParams({ page: String(page), limit: String(limit) });
   if (adminView) params.set('adminView', 'true');
-  if (search) params.set('search', search);
+  if (opts?.search) params.set('search', opts.search);
+  if (opts?.sort) params.set('sort', opts.sort);
+  if (opts?.order) params.set('order', opts.order);
+  if (opts?.tags) params.set('tags', opts.tags);
+  if (opts?.source) params.set('source', opts.source);
   return get(`/api/playlists/${id}?${params}`);
 }
 

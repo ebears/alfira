@@ -47,7 +47,7 @@ export default function AddSongsModal({
     setHasMore(true);
     setLoading(true);
     debouncedSearchRef.current = debouncedSearch;
-    getSongsPage(1, PAGE_SIZE, debouncedSearch || undefined).then((result) => {
+    getSongsPage(1, PAGE_SIZE, { search: debouncedSearch || undefined }).then((result) => {
       setSongs(result.items);
       setHasMore(result.items.length >= PAGE_SIZE);
       hasMoreRef.current = result.items.length >= PAGE_SIZE;
@@ -69,15 +69,17 @@ export default function AddSongsModal({
     loadingMoreRef.current = true;
     setLoadingMore(true);
     const nextPage = pageRef.current + 1;
-    getSongsPage(nextPage, PAGE_SIZE, debouncedSearchRef.current || undefined).then((result) => {
-      setSongs((prev) => [...prev, ...result.items]);
-      setPage(nextPage);
-      pageRef.current = nextPage;
-      setHasMore(result.items.length >= PAGE_SIZE);
-      hasMoreRef.current = result.items.length >= PAGE_SIZE;
-      loadingMoreRef.current = false;
-      setLoadingMore(false);
-    });
+    getSongsPage(nextPage, PAGE_SIZE, { search: debouncedSearchRef.current || undefined }).then(
+      (result) => {
+        setSongs((prev) => [...prev, ...result.items]);
+        setPage(nextPage);
+        pageRef.current = nextPage;
+        setHasMore(result.items.length >= PAGE_SIZE);
+        hasMoreRef.current = result.items.length >= PAGE_SIZE;
+        loadingMoreRef.current = false;
+        setLoadingMore(false);
+      }
+    );
   }, []);
 
   // Check near-bottom on scroll

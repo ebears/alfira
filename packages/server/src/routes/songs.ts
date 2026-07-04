@@ -24,7 +24,79 @@ import { getPlayer } from '../startDiscord';
 const { song: songTable, playlist: playlistTable, playlistSong: playlistSongTable } = tables;
 
 // ---------------------------------------------------------------------------
-// GET /api/songs — paginated list of songs, newest first.
+// Source URL → LIKE patterns for server-side source filtering.
+// Must mirror the web's HOST_TO_SOURCE map in packages/web/src/utils/source.ts.
+// ---------------------------------------------------------------------------
+const SOURCE_LIKE_PATTERNS: Record<string, string[]> = {
+  youtube: ['%youtube.com%', '%youtu.be%'],
+  soundcloud: ['%soundcloud.com%'],
+  spotify: ['%spotify.com%'],
+  applemusic: ['%music.apple.com%'],
+  tidal: ['%tidal.com%'],
+  googledrive: ['%drive.google.com%'],
+};
+
+const ALLOWED_SORTS = ['createdAt', 'title', 'artist', 'album', 'duration'] as const;
+type SortField = (typeof ALLOWED_SORTS)[number];
+
+// ---------------------------------------------------------------------------
+// Build a dynamic ORDER BY clause from sort field + direction.
+// ---------------------------------------------------------------------------
+function buildOrderByClause(
+  sortField: SortField,
+  sortOrder: 'ASC' | 'DESC'
+): ReturnType<typeof sql> {
+  switch (sortField) {
+    case 'title':
+      return sql`lower(title) ${sql.raw(sortOrder)}`;
+    case 'artist':
+      return sql`artist IS NULL, lower(artist) ${sql.raw(sortOrder)}`;
+    case 'album':
+      return sql`album IS NULL, lower(album) ${sql.raw(sortOrder)}`;
+    case 'duration':
+      return sql`duration ${sql.raw(sortOrder)}`;
+    default:
+      return sql`"createdAt" ${sql.raw(sortOrder)}`;
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Build additional filter clauses for tags (AND) and sources (OR).
+// Returns a SQL fragment that can be AND-ed with the search clause, or
+// undefined when no filters are active.
+// ---------------------------------------------------------------------------
+function buildFilterClause(tags: string[], sources: string[]): ReturnType<typeof sql> | undefined {
+  const clauses: ReturnType<typeof sql>[] = [];
+
+  // Tags: AND — song must have every requested tag
+  for (const tag of tags) {
+    // Match JSON-quoted tag name for precision (avoids partial matches like
+    // "rock" matching "bedrock").
+    clauses.push(sql`lower(tags) LIKE lower(${`%"${tag}"%`})`);
+  }
+
+  // Sources: OR — song URL can match any of the requested sources
+  if (sources.length > 0) {
+    const sourceOrs: ReturnType<typeof sql>[] = [];
+    for (const source of sources) {
+      const patterns = SOURCE_LIKE_PATTERNS[source];
+      if (patterns) {
+        for (const pattern of patterns) {
+          sourceOrs.push(sql`"sourceUrl" LIKE ${pattern}`);
+        }
+      }
+    }
+    if (sourceOrs.length > 0) {
+      clauses.push(sql`(${sql.join(sourceOrs, sql` OR `)})`);
+    }
+  }
+
+  if (clauses.length === 0) return undefined;
+  return sql.join(clauses, sql` AND `);
+}
+
+// ---------------------------------------------------------------------------
+// GET /api/songs — paginated list of songs with sort & filter.
 // ---------------------------------------------------------------------------
 async function handleGetSongs(ctx: RouteContext, request: Request): Promise<Response> {
   const guards = await checkGuards(ctx);
@@ -34,16 +106,46 @@ async function handleGetSongs(ctx: RouteContext, request: Request): Promise<Resp
   const { page, limit, skip } = parsePagination(url);
   const search = url.searchParams.get('search')?.trim() ?? '';
 
-  const where = buildSongSearchClause(search || undefined);
+  // Sort
+  const sortRaw = url.searchParams.get('sort') ?? 'createdAt';
+  const sortField: SortField = (ALLOWED_SORTS as readonly string[]).includes(sortRaw)
+    ? (sortRaw as SortField)
+    : 'createdAt';
+  const sortOrder = url.searchParams.get('order') === 'asc' ? 'ASC' : 'DESC';
+
+  // Filters
+  const tagsParam = url.searchParams.get('tags')?.trim();
+  const sourcesParam = url.searchParams.get('source')?.trim();
+  const filterTags = tagsParam
+    ? tagsParam
+        .split(',')
+        .map((t) => t.trim())
+        .filter(Boolean)
+    : [];
+  const filterSources = sourcesParam
+    ? sourcesParam
+        .split(',')
+        .map((s) => s.trim().toLowerCase())
+        .filter(Boolean)
+    : [];
+
+  // Build WHERE clause — search text + tag/source filters
+  const searchClause = buildSongSearchClause(search || undefined);
+  const filterClause = buildFilterClause(filterTags, filterSources);
+
+  let where: ReturnType<typeof sql> | undefined;
+  if (searchClause && filterClause) {
+    where = sql`(${searchClause} AND ${filterClause})`;
+  } else if (searchClause) {
+    where = searchClause;
+  } else if (filterClause) {
+    where = filterClause;
+  }
+
+  const orderBy = buildOrderByClause(sortField, sortOrder);
 
   const [songs, countResult] = await Promise.all([
-    db
-      .select()
-      .from(songTable)
-      .where(where)
-      .orderBy(sql`"createdAt" DESC`)
-      .offset(skip)
-      .limit(limit),
+    db.select().from(songTable).where(where).orderBy(orderBy).offset(skip).limit(limit),
     db.select({ count: sql<number>`count(*)` }).from(songTable).where(where),
   ]);
   const total = parseInt(String(countResult[0]?.count ?? 0), 10);

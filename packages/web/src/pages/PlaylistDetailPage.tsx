@@ -1,8 +1,13 @@
 import type { Playlist, PlaylistDetail, Song, TagItem } from '@alfira-bot/server/shared';
+import type { FetchSongsOptions } from '@alfira-bot/server/shared/api';
 import { fetchTags, updatePlaylistTag } from '@alfira-bot/server/shared/api';
 import {
+  ArrowDownIcon,
+  ArrowUpIcon,
   BombIcon,
+  CaretDownIcon,
   CaretLeftIcon,
+  FunnelIcon,
   GhostIcon,
   ListIcon,
   LockIcon,
@@ -13,10 +18,11 @@ import {
   PlayIcon,
   PlusCircleIcon,
   ShuffleIcon,
+  SortAscendingIcon,
   SquaresFourIcon,
   TagIcon,
 } from '@phosphor-icons/react';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import {
   deletePlaylist,
@@ -26,11 +32,13 @@ import {
   startPlayback,
   togglePlaylistVisibility,
 } from '../api/api';
+import AddFilterPopover from '../components/AddFilterPopover';
 import AddSongsModal from '../components/AddSongsModal';
 import ConfirmModal from '../components/ConfirmModal';
 import type { MenuItem } from '../components/ContextMenu';
 import { ContextMenu, ContextMenuTrigger } from '../components/ContextMenu';
 import EmptyState from '../components/EmptyState';
+import FilterChips from '../components/FilterChips';
 import NotificationToast from '../components/NotificationToast';
 
 import { Button } from '../components/ui/Button';
@@ -81,6 +89,15 @@ export default function PlaylistDetailPage() {
   const { handleAddToQueue, notification } = useAddToQueue();
   const { notify } = useNotification();
 
+  const SORT_OPTIONS = [
+    { value: 'position', label: 'Playlist Order' },
+    { value: 'createdAt', label: 'Date Added' },
+    { value: 'title', label: 'Title' },
+    { value: 'artist', label: 'Artist' },
+    { value: 'album', label: 'Album' },
+    { value: 'duration', label: 'Duration' },
+  ] as const;
+
   const isOwner = user?.discordId === playlistDetail?.createdBy;
   const canEdit = isAdminView || isOwner || hasPermission('songs.edit');
   const isSmart = !!playlistDetail?.tagNameLower;
@@ -119,6 +136,58 @@ export default function PlaylistDetailPage() {
   });
   const searchRef = useRef(search);
 
+  // Sort & filter state
+  const [sort, setSort] = useState('position');
+  const [order, setOrder] = useState('desc');
+  const [filterTags, setFilterTags] = useState<string[]>([]);
+  const [filterSources, setFilterSources] = useState<string[]>([]);
+  const [sortOpen, setSortOpen] = useState(false);
+  const [filterPopoverOpen, setFilterPopoverOpen] = useState(false);
+  const sortRefEl = useRef<HTMLDivElement>(null);
+  const sortRef = useRef(sort);
+  const orderRef = useRef(order);
+  const filterTagsRef = useRef(filterTags);
+  const filterSourcesRef = useRef(filterSources);
+
+  // Keep refs in sync
+  useEffect(() => {
+    sortRef.current = sort;
+  }, [sort]);
+  useEffect(() => {
+    orderRef.current = order;
+  }, [order]);
+  useEffect(() => {
+    filterTagsRef.current = filterTags;
+  }, [filterTags]);
+  useEffect(() => {
+    filterSourcesRef.current = filterSources;
+  }, [filterSources]);
+
+  // Build stable fetch options for loadPage
+  const songsOpts = useMemo<FetchSongsOptions>(() => {
+    const opts: FetchSongsOptions = {};
+    if (search) opts.search = search;
+    if (sort !== 'position') opts.sort = sort;
+    if (order !== 'desc') opts.order = order;
+    const t = filterTags.join(',');
+    const s = filterSources.join(',');
+    if (t) opts.tags = t;
+    if (s) opts.source = s;
+    return opts;
+  }, [search, sort, order, filterTags, filterSources]);
+
+  // Close sort dropdown on outside click
+  useEffect(() => {
+    if (!sortOpen) return;
+    const handler = (e: MouseEvent) => {
+      if (sortRefEl.current && !sortRefEl.current.contains(e.target as Node)) {
+        setSortOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [sortOpen]);
+
   // Keep searchRef in sync with search state
   useEffect(() => {
     searchRef.current = search;
@@ -143,12 +212,27 @@ export default function PlaylistDetailPage() {
       setIsError(false);
 
       try {
+        const opts: FetchSongsOptions = searchQuery
+          ? {
+              search: searchQuery,
+              sort: sortRef.current,
+              order: orderRef.current,
+            }
+          : {
+              sort: sortRef.current,
+              order: orderRef.current,
+            };
+        const tags = filterTagsRef.current.join(',');
+        const sources = filterSourcesRef.current.join(',');
+        if (tags) opts.tags = tags;
+        if (sources) opts.source = sources;
+
         const pl = await getPlaylistPage(
           idRef.current,
           isAdminViewRef.current,
           page,
           ITEMS_PER_PAGE,
-          searchQuery
+          opts
         );
 
         if (isInitial) {
@@ -174,6 +258,75 @@ export default function PlaylistDetailPage() {
       }
     },
     []
+  );
+
+  const handleOrderToggle = useCallback(() => {
+    setOrder((o) => (o === 'asc' ? 'desc' : 'asc'));
+    setCurrentPage(1);
+    setSongs([]);
+    setIsError(false);
+    void loadPage(1, false, false, searchRef.current);
+  }, [loadPage]);
+
+  const handleSortChange = useCallback(
+    (newSort: string) => {
+      if (newSort === sort) {
+        handleOrderToggle();
+      } else {
+        setSort(newSort);
+        setSortOpen(false);
+        setCurrentPage(1);
+        setSongs([]);
+        setIsError(false);
+        void loadPage(1, false, false, searchRef.current);
+      }
+    },
+    [sort, loadPage, handleOrderToggle]
+  );
+
+  const handleRemoveTag = useCallback(
+    (tag: string) => {
+      setFilterTags((prev) => prev.filter((t) => t !== tag));
+      setCurrentPage(1);
+      setSongs([]);
+      setIsError(false);
+      void loadPage(1, false, false, searchRef.current);
+    },
+    [loadPage]
+  );
+
+  const handleRemoveSource = useCallback(
+    (source: string) => {
+      setFilterSources((prev) => prev.filter((s) => s !== source));
+      setCurrentPage(1);
+      setSongs([]);
+      setIsError(false);
+      void loadPage(1, false, false, searchRef.current);
+    },
+    [loadPage]
+  );
+
+  const handleAddTag = useCallback(
+    (tag: string) => {
+      const normalized = tag.toLowerCase();
+      setFilterTags((prev) => (prev.includes(normalized) ? prev : [...prev, normalized]));
+      setCurrentPage(1);
+      setSongs([]);
+      setIsError(false);
+      void loadPage(1, false, false, searchRef.current);
+    },
+    [loadPage]
+  );
+
+  const handleAddSource = useCallback(
+    (source: string) => {
+      setFilterSources((prev) => (prev.includes(source) ? prev : [...prev, source]));
+      setCurrentPage(1);
+      setSongs([]);
+      setIsError(false);
+      void loadPage(1, false, false, searchRef.current);
+    },
+    [loadPage]
   );
 
   // Initial load
@@ -238,7 +391,8 @@ export default function PlaylistDetailPage() {
           idRef.current,
           isAdminViewRef.current,
           currentPage + 1,
-          ITEMS_PER_PAGE
+          ITEMS_PER_PAGE,
+          songsOpts
         ).then((pl) => {
           setSongs((prev) => [...prev, ...pl.songs].slice(0, ITEMS_PER_PAGE * currentPage));
         });
@@ -587,8 +741,8 @@ export default function PlaylistDetailPage() {
         </div>
       </div>
 
-      {/* Search and view toggle */}
-      <div className="flex items-center gap-2 mb-4 md:mb-6">
+      {/* Search, sort, filter, and view toggle */}
+      <div className="flex items-center gap-2 mb-3">
         <div className="relative flex-1">
           <MagnifyingGlassIcon
             className="absolute left-3 top-1/2 -translate-y-1/2 text-faint w-4 h-4 md:w-3.5 md:h-3.5"
@@ -609,6 +763,76 @@ export default function PlaylistDetailPage() {
             }}
           />
         </div>
+
+        {/* Filter button */}
+        <button
+          type="button"
+          onClick={() => setFilterPopoverOpen(true)}
+          className={`px-2 py-1.5 rounded-md text-sm transition-colors cursor-pointer ${
+            filterTags.length > 0 || filterSources.length > 0
+              ? 'bg-accent text-elevated'
+              : 'text-muted hover:text-fg'
+          }`}
+          title="Add filter"
+        >
+          <FunnelIcon size={16} weight="duotone" />
+        </button>
+
+        {/* Sort dropdown */}
+        <div className="relative" ref={sortRefEl}>
+          <Button
+            variant="inherit"
+            surface="surface"
+            onClick={() => setSortOpen((v) => !v)}
+            className={`flex items-center gap-1.5 px-2.5 ${
+              sortOpen || sort !== 'position' || order !== 'desc' ? 'pressed text-accent' : ''
+            }`}
+            title={`Sort by ${SORT_OPTIONS.find((o) => o.value === sort)?.label ?? 'Playlist Order'} (${order === 'asc' ? 'ascending' : 'descending'})`}
+          >
+            <SortAscendingIcon size={16} weight="duotone" />
+            <CaretDownIcon size={10} weight="fill" className="text-faint" />
+          </Button>
+
+          {sortOpen && (
+            <div className="absolute right-0 top-full mt-1.5 w-48 bg-elevated border border-border rounded-lg shadow-lg z-20 py-1 animate-fade-up origin-top-right">
+              {SORT_OPTIONS.map((opt) => {
+                const isActive = sort === opt.value;
+                return (
+                  <button
+                    key={opt.value}
+                    type="button"
+                    className={`w-full flex items-center justify-between px-3 py-2 text-sm font-body transition-colors ${
+                      isActive
+                        ? 'text-accent bg-accent/5'
+                        : 'text-fg hover:bg-surface active:bg-surface/80'
+                    }`}
+                    onClick={() => handleSortChange(opt.value)}
+                  >
+                    <span>{opt.label}</span>
+                    {isActive && (
+                      <button
+                        type="button"
+                        className="cursor-pointer p-0.5 rounded hover:bg-black/10 dark:hover:bg-white/10 transition-colors"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleOrderToggle();
+                        }}
+                        title={order === 'asc' ? 'Switch to descending' : 'Switch to ascending'}
+                      >
+                        {order === 'asc' ? (
+                          <ArrowUpIcon size={14} weight="bold" />
+                        ) : (
+                          <ArrowDownIcon size={14} weight="bold" />
+                        )}
+                      </button>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+          )}
+        </div>
+
         {/* View toggle */}
         <div className="flex gap-1 bg-elevated rounded-lg p-1 shrink-0">
           <button
@@ -639,6 +863,18 @@ export default function PlaylistDetailPage() {
           </button>
         </div>
       </div>
+
+      {/* Active filter chips */}
+      {(filterTags.length > 0 || filterSources.length > 0) && (
+        <div className="mb-2">
+          <FilterChips
+            tags={filterTags}
+            sources={filterSources}
+            onRemoveTag={handleRemoveTag}
+            onRemoveSource={handleRemoveSource}
+          />
+        </div>
+      )}
 
       {/* Song list */}
       {songItems.length === 0 && !isLoading ? (
@@ -740,6 +976,19 @@ export default function PlaylistDetailPage() {
           confirmLabel="Convert"
           onConfirm={() => handleMakeSmart(tagSmartConfirm)}
           onCancel={() => setTagSmartConfirm(null)}
+        />
+      )}
+
+      {/* Add Filter popover */}
+      {filterPopoverOpen && (
+        <AddFilterPopover
+          activeTags={filterTags}
+          activeSources={filterSources}
+          onAddTag={handleAddTag}
+          onRemoveTag={handleRemoveTag}
+          onAddSource={handleAddSource}
+          onRemoveSource={handleRemoveSource}
+          onClose={() => setFilterPopoverOpen(false)}
         />
       )}
     </div>
