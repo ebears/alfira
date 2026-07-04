@@ -144,7 +144,7 @@ export default function UserMenu({ user, collapsed, onLogout }: UserMenuProps) {
             onKeyDown={(e) => e.stopPropagation()}
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="bg-base rounded-2xl clay-floating overflow-hidden animate-fade-up">
+            <div className="bg-base rounded-2xl clay-floating overflow-hidden animate-fade-up border border-accent/30 outline-2 outline-accent/20">
               {/* Username header — mirrors ContextMenu InfoRow */}
               <div className="px-3 py-1.5 text-xs font-mono text-muted flex items-center gap-2">
                 <UserIcon size={14} weight="duotone" className="shrink-0" />
