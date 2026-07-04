@@ -31,7 +31,7 @@ export function useVirtualizedInfiniteScroll<T, A extends unknown[]>({
   deps = [] as unknown as A,
 }: UseInfiniteScrollOptions<T, A>): UseInfiniteScrollReturn<T> {
   const [items, setItems] = useState<T[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
   const [isFetching, setIsFetching] = useState(false);
   const [isError, setIsError] = useState(false);
   const [hasMore, setHasMore] = useState(true);
@@ -42,6 +42,7 @@ export function useVirtualizedInfiniteScroll<T, A extends unknown[]>({
   const isFetchingRef = useRef(false);
   const isMountedRef = useRef(true);
   const hasEverLoadedRef = useRef(false);
+  const loadingTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
   hasMoreRef.current = hasMore;
   isFetchingRef.current = isFetching;
@@ -62,11 +63,16 @@ export function useVirtualizedInfiniteScroll<T, A extends unknown[]>({
       if (!isInitial && !hasMoreRef.current) return;
 
       if (isInitial) {
-        // Only show a full skeleton on the very first load.
+        // Delay the skeleton by 200ms — if the fetch completes faster,
+        // the skeleton is never rendered, avoiding a flash.
         // On subsequent deps changes (tab switch, filter change), keep
-        // stale items visible to avoid flickering.
+        // stale items visible instead.
         if (!hasEverLoadedRef.current) {
-          setIsLoading(true);
+          loadingTimerRef.current = setTimeout(() => {
+            if (isMountedRef.current) {
+              setIsLoading(true);
+            }
+          }, 200);
         }
       } else {
         setIsFetching(true);
@@ -95,6 +101,10 @@ export function useVirtualizedInfiniteScroll<T, A extends unknown[]>({
         if (!isMountedRef.current) return;
         setIsError(true);
       } finally {
+        if (loadingTimerRef.current) {
+          clearTimeout(loadingTimerRef.current);
+          loadingTimerRef.current = undefined;
+        }
         if (isMountedRef.current) {
           setIsLoading(false);
           setIsFetching(false);
@@ -154,6 +164,10 @@ export function useVirtualizedInfiniteScroll<T, A extends unknown[]>({
 
     return () => {
       isMountedRef.current = false;
+      if (loadingTimerRef.current) {
+        clearTimeout(loadingTimerRef.current);
+        loadingTimerRef.current = undefined;
+      }
     };
   }, [...deps, loadPage]);
 
