@@ -131,7 +131,7 @@
         "packages/web/src/components/AddSongModal.tsx",
         "packages/web/src/components/queue/QuickAddModal.tsx",
         "packages/web/src/pages/RequestsPage.tsx",
-        "packages/web/src/components/settings/AdminTab.tsx",
+        "packages/web/src/components/settings/AdminSection.tsx",
         "packages/web/src/pages/SetupWizard.tsx",
         "packages/web/src/pages/PermissionsPage.tsx"
       ],

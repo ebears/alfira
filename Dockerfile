@@ -12,6 +12,8 @@ WORKDIR /app
 # Development stage
 # ---------------------------------------------------------------------------
 FROM build AS dev
+ARG GIT_HASH
+ENV GIT_HASH=${GIT_HASH}
 RUN apk add --no-cache git
 WORKDIR /usr/local/nodelink
 ARG NODELINK_VERSION=v3.7.0

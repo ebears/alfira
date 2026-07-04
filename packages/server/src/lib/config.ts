@@ -1,20 +1,23 @@
-import { execSync } from 'node:child_process';
+import { readFileSync } from 'node:fs';
 
 function resolveVersion(): string {
   const envVersion = process.env.ALFIRA_VERSION;
   // Explicit non-dev version — use as-is (e.g., v0.1.0 from Docker build arg).
   if (envVersion && envVersion !== 'dev') return envVersion;
 
-  // Dev — try to resolve the current commit hash for traceability.
+  // Dev — check for explicit git hash override (e.g., from Docker build arg).
+  if (process.env.GIT_HASH) return `dev (${process.env.GIT_HASH})`;
+
+  // Dev — try to read the commit hash from the mounted .git directory.
   try {
-    const hash = execSync('git rev-parse --short HEAD', {
-      encoding: 'utf-8',
-      stdio: ['ignore', 'pipe', 'ignore'],
-      timeout: 2000,
-    }).trim();
+    const head = readFileSync('/app/.git/HEAD', 'utf-8').trim();
+    const match = head.match(/^ref: (.+)$/);
+    const hash = match
+      ? readFileSync(`/app/.git/${match[1]}`, 'utf-8').trim().slice(0, 7)
+      : head.slice(0, 7);
     if (hash) return `dev (${hash})`;
   } catch {
-    // git not available or not a repo — fall through to plain 'dev'.
+    // No .git available — fall through to plain 'dev'.
   }
 
   return 'dev';
