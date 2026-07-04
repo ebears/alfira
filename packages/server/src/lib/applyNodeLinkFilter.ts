@@ -1,5 +1,6 @@
 import { logger } from '../shared/logger';
 import { updateNodeLinkPlayer } from '../utils/nodelink';
+import { getGuildId } from './config';
 import { lavalink } from './lavalink';
 
 interface CompressorFilterParams {
@@ -34,7 +35,7 @@ export async function applyNodeLinkFilter(
   filters: Record<string, unknown>,
   label: string
 ): Promise<void> {
-  const guildId = process.env.GUILD_ID ?? '';
+  const guildId = getGuildId();
   if (!guildId) {
     logger.warn(`GUILD_ID not set, skipping NodeLink ${label} filter update`);
     return;
