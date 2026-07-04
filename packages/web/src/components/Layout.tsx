@@ -1,4 +1,4 @@
-import { CaretLeftIcon, CraneTowerIcon, GuitarIcon } from '@phosphor-icons/react';
+import { CaretLeftIcon, CraneTowerIcon, GuitarIcon, LinkBreakIcon } from '@phosphor-icons/react';
 import { useEffect, useState } from 'react';
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
 import { ADMIN_NAV_ITEMS, NAV_ITEMS } from '../constants';
@@ -171,30 +171,23 @@ function LayoutContent() {
 
         {/* Connection status */}
         {connectionStatus !== 'connected' && (
-          <div className="px-3 pb-2">
+          <div className={collapsed ? 'flex justify-center px-2 pb-2' : 'px-3 pb-2'}>
             <div
-              className={`flex items-center gap-2 text-sm font-mono px-2 py-1.5 rounded-lg ${
-                collapsed
-                  ? 'bg-warning/10 text-warning'
-                  : connectionStatus === 'reconnecting'
-                    ? 'bg-warning/10 text-warning'
-                    : 'bg-danger/10 text-danger'
-              }`}
+              title={connectionStatus === 'reconnecting' ? 'Reconnecting...' : 'Disconnected'}
+              className={`flex items-center rounded-xl font-body w-full select-none ${
+                collapsed ? 'justify-center px-0 py-3' : 'px-3 py-3 gap-3'
+              } ${connectionStatus === 'reconnecting' ? 'text-warning' : 'text-danger'}`}
             >
-              <span
-                className={`w-1.5 h-1.5 rounded-full ${
-                  collapsed
-                    ? 'bg-warning animate-pulse'
-                    : connectionStatus === 'reconnecting'
-                      ? 'bg-warning animate-pulse'
-                      : 'bg-danger'
-                }`}
+              {!collapsed && (
+                <span className="mr-auto text-sm text-fg/80">
+                  {connectionStatus === 'reconnecting' ? 'Reconnecting...' : 'Disconnected'}
+                </span>
+              )}
+              <LinkBreakIcon
+                size={22}
+                weight="duotone"
+                className={connectionStatus === 'reconnecting' ? 'animate-pulse' : ''}
               />
-              {collapsed
-                ? null
-                : connectionStatus === 'reconnecting'
-                  ? 'Reconnecting...'
-                  : 'Disconnected'}
             </div>
           </div>
         )}
