@@ -506,6 +506,7 @@ async function withRetry<T>(fn: () => Promise<T>, attempts = 3, baseDelayMs = 50
 async function handleRefresh(ctx: RouteContext): Promise<Response> {
   const refreshToken = ctx.cookies[REFRESH_COOKIE_NAME];
   if (!refreshToken) {
+    logger.warn('Auth refresh failed: no refresh token cookie present');
     return json({ error: 'No refresh token provided.' }, 401);
   }
 
@@ -514,9 +515,11 @@ async function handleRefresh(ctx: RouteContext): Promise<Response> {
   try {
     decoded = jwt.verify(refreshToken, JWT_SECRET_) as { discordId: string; type: string };
     if (decoded.type !== 'refresh') {
+      logger.warn({ decodedType: decoded.type }, 'Auth refresh failed: invalid token type');
       return json({ error: 'Invalid token type.' }, 401);
     }
-  } catch {
+  } catch (err) {
+    logger.warn({ err: (err as Error).message }, 'Auth refresh failed: JWT verification');
     return json({ error: 'Invalid or expired refresh token.' }, 401);
   }
 
@@ -528,11 +531,19 @@ async function handleRefresh(ctx: RouteContext): Promise<Response> {
     .where(eq(refreshTokenTable.tokenHash, tokenHash))
     .limit(1);
   if (!storedToken) {
+    logger.warn(
+      { discordId: decoded.discordId },
+      'Auth refresh failed: token hash not found in DB (revoked or already burned)'
+    );
     return json({ error: 'Refresh token has been revoked.' }, 401);
   }
 
   // 3. Check if the refresh token has expired.
   if (storedToken.expiresAt < new Date()) {
+    logger.warn(
+      { discordId: decoded.discordId, expiresAt: storedToken.expiresAt, now: new Date() },
+      'Auth refresh failed: DB expiresAt has passed'
+    );
     await db.delete(refreshTokenTable).where(eq(refreshTokenTable.id, storedToken.id));
     return json({ error: 'Refresh token has expired.' }, 401);
   }
@@ -563,13 +574,21 @@ async function handleRefresh(ctx: RouteContext): Promise<Response> {
     try {
       const profile = await withRetry(() => fetchDiscordUserProfile(decoded.discordId));
       if (!profile) {
+        logger.warn(
+          { discordId: decoded.discordId },
+          'Auth refresh failed: fetchDiscordUserProfile returned null (setup mode)'
+        );
         return json({ error: 'Unable to verify user identity. Please try again.' }, 503);
       }
       username = profile.username;
       avatar = profile.avatar;
       isAdmin = true;
       isSetupAdmin = true;
-    } catch {
+    } catch (err) {
+      logger.warn(
+        { discordId: decoded.discordId, err: (err as Error).message },
+        'Auth refresh failed: Discord unreachable (setup mode)'
+      );
       return json({ error: 'Discord is temporarily unreachable. Please try again.' }, 503);
     }
   } else {
@@ -577,18 +596,27 @@ async function handleRefresh(ctx: RouteContext): Promise<Response> {
     try {
       const userInfo = await withRetry(() => fetchUserAdminStatus(decoded.discordId));
       if (!userInfo) {
+        logger.warn(
+          { discordId: decoded.discordId },
+          'Auth refresh failed: fetchUserAdminStatus returned null (not in guild or Discord error)'
+        );
         return json({ error: 'Unable to verify user membership. Please try again.' }, 503);
       }
       username = userInfo.username;
       avatar = userInfo.avatar;
       isAdmin = userInfo.isAdmin;
       roles = userInfo.roles;
-    } catch {
+    } catch (err) {
+      logger.warn(
+        { discordId: decoded.discordId, err: (err as Error).message },
+        'Auth refresh failed: Discord unreachable'
+      );
       return json({ error: 'Discord is temporarily unreachable. Please try again.' }, 503);
     }
   }
 
   // 6. Burn the old refresh token now that Discord verification succeeded.
+  logger.info({ discordId: decoded.discordId }, 'Auth refresh succeeded — issuing new tokens');
   await db.delete(refreshTokenTable).where(eq(refreshTokenTable.id, storedToken.id));
 
   // 7. Generate new tokens.
