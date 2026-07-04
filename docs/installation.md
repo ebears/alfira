@@ -96,11 +96,11 @@ docker compose up -d
 
 For use with a reverse proxy, change `DISCORD_REDIRECT_URI` to point to your custom domain:
 
-| Variable | Local | Reverse Proxy |
+| Variable | Local (Docker) | Reverse Proxy |
 |----------|-------------|---------|
-| `DISCORD_REDIRECT_URI` | `http://localhost:3001/auth/callback` | `https://your-domain.com/auth/callback` |
+| `DISCORD_REDIRECT_URI` | `http://localhost:8180/auth/callback` | `https://your-domain.com/auth/callback` |
 
-> **Important:** Ensure your redirect URL in the Discord Developer Portal also uses the custom domain.
+> **Important:** Ensure your redirect URL in the Discord Developer Portal matches exactly. For local Docker setups, use the exposed port (8180), not the internal server port (3001).
 
 ### Discord Application Setup
 
@@ -127,7 +127,7 @@ For use with a reverse proxy, change `DISCORD_REDIRECT_URI` to point to your cus
 1. Navigate to **OAuth2** → **General**.
 2. Copy the **Client secret** — this is your `DISCORD_CLIENT_SECRET`.
 3. Add your redirect URL:
-   - Local: `http://localhost:3001/auth/callback`
+   - Local (Docker): `http://localhost:8180/auth/callback`
    - Reverse Proxy: `https://your-domain.com/auth/callback`
 4. Click **"Save Changes"**.
 

@@ -17,7 +17,7 @@ Biome is already installed as a dev dependency in the project root:
 bun install
 ```
 
-This installs `@biomejs/biome` version 2.4.7 or later.
+This installs `@biomejs/biome` version 2.5.2 or later.
 
 ## Bun Scripts
 
@@ -75,10 +75,10 @@ The project includes Zed editor configuration in `.zed/settings.json`:
 
 ## CI Integration
 
-Biome is integrated into the GitHub Actions workflow (`.github/workflows/typecheck.yml`):
+Biome is integrated into the GitHub Actions workflow (`.github/workflows/ci.yml`):
 
 ```yaml
-- name: Lint with Biome
+- name: Lint (Biome)
   run: bun run lint
 ```
 
@@ -107,10 +107,10 @@ bun run format
 
 ```bash
 # Check a specific file
-bunx biome lint packages/api/src/index.ts
+bunx biome lint packages/server/src/index.ts
 
 # Format a specific file
-bunx biome format packages/api/src/index.ts
+bunx biome format packages/server/src/index.ts
 ```
 
 ## Resources

@@ -10,7 +10,7 @@
 | **Audio** | NodeLink (Lavalink v4) — direct WebSocket + REST |
 | **API** | Bun native HTTP + WebSocket |
 | **Database** | SQLite + Drizzle ORM |
-| **Frontend** | React + Bun + Tailwind |
+| **Frontend** | React 19 + Tailwind CSS 4 |
 | **Logging** | Custom (shared/logger) |
 
 ## Architecture
@@ -109,6 +109,7 @@ Three GitHub Actions workflows run on the repository:
 
 | Workflow | Trigger | Purpose |
 |----------|---------|---------|
-| **ci.yml** | All PRs, pushes to `main` and `dev` | Lint with Biome + typecheck all packages |
+| **ci.yml** | All PRs, pushes to `main` and `dev` | Lint with Biome + typecheck all packages + Trivy vuln scan |
 | **codeql.yml** | All PRs, pushes to `main` and `dev`, weekly schedule | CodeQL security analysis |
 | **docker-build.yml** | All PRs, pushes to `main` and `dev` (ignores `docs/`) | Build Docker images; publish to GHCR on `main` |
+| **release.yml** | Pushes of `v*` tags | Build multi-arch Docker image, push to GHCR, draft GitHub release |
