@@ -32,6 +32,12 @@
     }
 }
 
+@keyframes skeleton-appear {
+    to {
+        opacity: 1;
+    }
+}
+
 @keyframes shimmer {
     0% {
         background-position: -400px 0;
@@ -595,6 +601,7 @@
 
 @layer components {
     .skeleton {
+        opacity: 0;
         background: linear-gradient(
             90deg,
             var(--color-elevated) 25%,
@@ -602,7 +609,9 @@
             var(--color-elevated) 75%
         );
         background-size: 400px 100%;
-        animation: shimmer 1.4s infinite linear;
+        animation:
+            skeleton-appear 0s 0.2s forwards,
+            shimmer 1.4s 0.2s infinite linear;
         border-radius: 4px;
     }
 
