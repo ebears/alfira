@@ -332,18 +332,17 @@ export default function SongsPage() {
         </div>
 
         {/* Add filter button */}
-        <button
-          type="button"
+        <Button
+          variant="inherit"
+          surface="surface"
           onClick={() => setFilterPopoverOpen(true)}
-          className={`px-2 py-1.5 rounded-md text-sm transition-colors cursor-pointer ${
-            filterTags.length > 0 || filterSources.length > 0
-              ? 'bg-accent text-elevated'
-              : 'text-muted hover:text-fg'
+          className={`flex items-center gap-1.5 px-2.5 ${
+            filterTags.length > 0 || filterSources.length > 0 ? 'pressed text-accent' : ''
           }`}
-          title="Add filter"
+          title={`Filter${filterTags.length > 0 || filterSources.length > 0 ? ` (${filterTags.length + filterSources.length} active)` : ''}`}
         >
           <FunnelIcon size={16} weight="duotone" />
-        </button>
+        </Button>
 
         {/* Sort dropdown */}
         <div className="relative" ref={sortRef}>
