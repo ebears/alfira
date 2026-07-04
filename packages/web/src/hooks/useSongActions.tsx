@@ -9,6 +9,7 @@ import {
 import { useCallback, useMemo, useOptimistic, useRef, useState } from 'react';
 import { addSongToPlaylist } from '../api/api';
 import type { MenuItem } from '../components/ContextMenu';
+import { useSongMenu } from '../context/SongMenuContext';
 import { useNotification } from './useNotification';
 
 interface UseSongActionsOptions {
@@ -32,7 +33,15 @@ export function useSongActions({
   onRemove,
   removeLabel,
 }: UseSongActionsOptions) {
-  const [menuOpen, setMenuOpen] = useState(false);
+  const { activeMenuSongId, setActiveMenuSongId } = useSongMenu();
+  const menuOpen = activeMenuSongId === song.id;
+  const setMenuOpen = useCallback(
+    (open: boolean | ((prev: boolean) => boolean)) => {
+      const next = typeof open === 'function' ? open(menuOpen) : open;
+      setActiveMenuSongId(next ? song.id : null);
+    },
+    [menuOpen, song.id, setActiveMenuSongId]
+  );
   const [addedTo, setAddedTo] = useState<Set<string>>(new Set());
   const triggerRef = useRef<HTMLButtonElement>(null);
 

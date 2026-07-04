@@ -486,7 +486,7 @@
         inset 0 2px 3px 0 rgba(0, 0, 0, 0.15),
         inset 0 1px 1px 0 rgba(255, 255, 255, 0.04);
     --clay-shadow-floating:
-        0 7px 0 0 color-mix(in srgb, var(--color-surface) 60%, black),
+        0 2px 0 0 color-mix(in srgb, var(--color-surface) 60%, black),
         inset 0 2px 3px 0 rgba(0, 0, 0, 0.15),
         inset 0 1px 1px 0 rgba(255, 255, 255, 0.04);
     --clay-shadow-flat:
@@ -515,7 +515,7 @@
         0 5px 12px -2px rgba(0, 0, 0, 0.16),
         0 -6px 14px -4px rgba(0, 0, 0, 0.18);
     --clay-shadow-floating:
-        0 7px 0 0 color-mix(in srgb, var(--color-surface) 60%, black),
+        0 2px 0 0 color-mix(in srgb, var(--color-surface) 60%, black),
         0 8px 16px -4px rgba(0, 0, 0, 0.2),
         0 -9px 18px -6px rgba(0, 0, 0, 0.20);
     --clay-shadow-sidebar: 4px 0 16px -4px rgba(0, 0, 0, 0.2);

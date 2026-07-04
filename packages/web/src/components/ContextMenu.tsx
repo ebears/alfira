@@ -271,7 +271,7 @@ export function ContextMenu({
       onKeyDown={activeEditItemId ? undefined : handleKeyDown}
       onClick={(e) => e.stopPropagation()}
     >
-      <div className="bg-base rounded-2xl clay-floating overflow-hidden animate-fade-up">
+      <div className="bg-base rounded-2xl clay-floating overflow-hidden animate-fade-up border border-accent/30 outline-2 outline-accent/20">
         {activeSubmenu ? (
           <SubmenuPanel
             config={activeSubmenu}
