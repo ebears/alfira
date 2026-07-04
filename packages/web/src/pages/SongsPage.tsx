@@ -134,11 +134,31 @@ export default function SongsPage() {
       if (newSort === sort) {
         handleOrderToggle();
       } else {
-        updateParam('sort', newSort === 'createdAt' ? null : newSort);
+        // When switching to a text field, default to ascending (A-Z).
+        // Update both params atomically — React Router's setSearchParams
+        // sees the same URL for each callback, so two calls would race.
+        const newOrder = newSort === 'createdAt' || newSort === 'duration' ? 'desc' : 'asc';
+        setSearchParams(
+          (prev) => {
+            const next = new URLSearchParams(prev);
+            if (newSort === 'createdAt') {
+              next.delete('sort');
+            } else {
+              next.set('sort', newSort);
+            }
+            if (newOrder === 'asc') {
+              next.set('order', 'asc');
+            } else {
+              next.delete('order');
+            }
+            return next;
+          },
+          { replace: true }
+        );
       }
       setSortOpen(false);
     },
-    [sort, updateParam, handleOrderToggle]
+    [sort, setSearchParams, handleOrderToggle]
   );
 
   // Close sort dropdown on outside click
@@ -385,11 +405,16 @@ export default function SongsPage() {
                         }}
                         title={order === 'asc' ? 'Switch to descending' : 'Switch to ascending'}
                       >
-                        {order === 'asc' ? (
-                          <ArrowUpIcon size={14} weight="bold" />
-                        ) : (
-                          <ArrowDownIcon size={14} weight="bold" />
-                        )}
+                        {(() => {
+                          const isTextField =
+                            sort === 'title' || sort === 'artist' || sort === 'album';
+                          const showDown = isTextField ? order === 'asc' : order !== 'asc';
+                          return showDown ? (
+                            <ArrowDownIcon size={14} weight="bold" />
+                          ) : (
+                            <ArrowUpIcon size={14} weight="bold" />
+                          );
+                        })()}
                       </button>
                     )}
                   </button>
