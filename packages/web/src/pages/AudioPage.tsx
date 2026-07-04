@@ -1,3 +1,4 @@
+import { ArrowsDownUp, SlidersHorizontal } from '@phosphor-icons/react';
 import CompressorSection from '../components/settings/CompressorSection';
 import EqualizerSection from '../components/settings/EqualizerSection';
 import { useAdminView } from '../context/AdminViewContext';
@@ -17,15 +18,39 @@ export default function AudioPage() {
         <p className="font-mono text-xs text-muted mt-2">Equalizer and compressor settings</p>
       </div>
 
-      <div className="space-y-2">
-        {canManage && <EqualizerSection />}
-        {canManage && (
-          <>
-            <div className="border-t border-muted/20 my-4" />
-            <CompressorSection />
-          </>
-        )}
-      </div>
+      {!canManage ? (
+        <div className="flex flex-col items-center justify-center py-20 text-center">
+          <p className="text-sm text-muted mb-1">No access to audio settings</p>
+          <p className="text-xs text-muted">
+            You need the <span className="text-fg font-medium">audio.manage</span> permission or an
+            admin role to manage equalizer and compressor settings.
+          </p>
+        </div>
+      ) : (
+        <div className="lg:grid lg:grid-cols-2 lg:gap-8">
+          {/* Equalizer */}
+          <section className="mb-8 lg:mb-0">
+            <h2 className="font-mono text-xs text-muted uppercase tracking-wider mb-4 flex items-center gap-2">
+              <SlidersHorizontal size={14} weight="duotone" />
+              Equalizer
+            </h2>
+            <div className="bg-elevated clay-resting rounded-lg p-5">
+              <EqualizerSection />
+            </div>
+          </section>
+
+          {/* Compressor */}
+          <section>
+            <h2 className="font-mono text-xs text-muted uppercase tracking-wider mb-4 flex items-center gap-2">
+              <ArrowsDownUp size={14} weight="duotone" />
+              Compressor
+            </h2>
+            <div className="bg-elevated clay-resting rounded-lg p-5">
+              <CompressorSection />
+            </div>
+          </section>
+        </div>
+      )}
     </div>
   );
 }

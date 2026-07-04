@@ -1,8 +1,8 @@
+import { ArrowCounterClockwise, FloppyDisk } from '@phosphor-icons/react';
 import { useEffect, useState } from 'react';
 import { useAdminView } from '../../context/AdminViewContext';
 import { usePermissions } from '../../context/PermissionsContext';
 import { Button } from '../ui/Button';
-import SettingsToggle from './SettingsToggle';
 
 const DEFAULTS = { enabled: false, threshold: -6, ratio: 4.0, attack: 5, release: 50, gain: 3 };
 
@@ -82,16 +82,26 @@ export default function CompressorSection() {
 
   return (
     <div className={`space-y-3 ${dimmed ? 'opacity-40 pointer-events-none' : ''}`}>
-      <div className="flex items-center justify-between">
-        <h4 className="font-mono text-[11px] text-muted uppercase tracking-wider">Compressor</h4>
-        <SettingsToggle
-          label=""
-          checked={values.enabled}
-          onChange={(enabled) => setValues((v) => ({ ...v, enabled }))}
-        />
+      <div className="flex items-center gap-3">
+        <span className="font-mono text-[11px] text-muted w-20 shrink-0">Enabled</span>
+        <button
+          type="button"
+          role="switch"
+          aria-checked={values.enabled}
+          onClick={() => setValues((v) => ({ ...v, enabled: !v.enabled }))}
+          className={`relative shrink-0 w-9 h-5 rounded-full transition-colors cursor-pointer focus:outline-none focus:ring-2 focus:ring-accent/50 focus:ring-offset-2 focus:ring-offset-surface ${
+            values.enabled ? 'bg-accent' : 'bg-border'
+          }`}
+        >
+          <span
+            className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full transition-transform bg-elevated ${
+              values.enabled ? 'translate-x-4' : 'translate-x-0'
+            }`}
+          />
+        </button>
       </div>
 
-      <div className="space-y-2">
+      <div className={`space-y-2 ${!values.enabled ? 'opacity-40' : ''}`}>
         {SLIDERS.map(({ key, label, min, max, step, unit }) => (
           <div key={key} className="flex items-center gap-3">
             <span className="font-mono text-[11px] text-muted w-20 shrink-0">{label}</span>
@@ -120,12 +130,24 @@ export default function CompressorSection() {
         ))}
       </div>
 
-      <div className="flex gap-3 pt-1 justify-end">
-        <Button variant="primary" onClick={handleSave} disabled={!hasChanges || saving}>
-          {saving ? 'Saving…' : 'Save Changes'}
+      <div className="flex gap-2 pt-1 justify-end">
+        <Button
+          variant="primary"
+          size="icon"
+          onClick={handleSave}
+          disabled={!hasChanges || saving}
+          title={saving ? 'Saving…' : 'Save Changes'}
+        >
+          <FloppyDisk size={16} weight="duotone" />
         </Button>
-        <Button variant="inherit" surface="elevated" onClick={handleReset}>
-          Reset to Defaults
+        <Button
+          variant="inherit"
+          size="icon"
+          surface="elevated"
+          onClick={handleReset}
+          title="Reset to Defaults"
+        >
+          <ArrowCounterClockwise size={16} weight="duotone" />
         </Button>
       </div>
     </div>
