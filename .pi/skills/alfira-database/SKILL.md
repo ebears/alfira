@@ -35,6 +35,7 @@ Primary music entity. Key columns:
 ### `Playlist` table
 - `name`, `createdBy`, `isPrivate` (boolean, default false)
 - `tagNameLower` — links to `Tag.nameLower` for auto-generated playlists
+- `createdAt` — timestamp_ms, auto-set to `new Date()`
 
 ### `PlaylistSong` join table
 - Links songs to playlists at a specific `position`
@@ -53,16 +54,18 @@ Single-row table (always `id = 1`). Holds:
 - **Equalizer:** 15 columns (`eqBand0` through `eqBand14`, range 0-100)
 - **Admin:** `guildId`, `adminRoleIds` (comma-separated string), `setupCompleted`, `voiceIdleTimeoutMinutes`
 - **Sources:** `enabledSources` (comma-separated string, default `"youtube,soundcloud"`)
-- **Misc:** `afkNotificationChannelId`, `requestNotificationChannelId`, `publicUrl`
+- **Misc:** `afkNotificationChannelId`, `requestNotificationChannelId`, `notifyOnApproved`, `notifyOnDenied`, `publicUrl`
 
 ### `songRequest` table
 Tracks pending/approved/denied song requests. Key columns:
 - `sourceUrl` + `sourceId` — identifies the source track
+- `title`, `thumbnailUrl`, `artist`, `artworkUrl`, `sourceName` — track metadata
 - `type` — `'track'` or `'playlist'`
 - `playlistData` — JSON blob with playlist metadata and embedded track list
 - `status` — `'pending'`, `'approved'`, or `'denied'`
 - `notifyDm` — whether to DM the requester on review
 - `requestedBy` / `reviewedBy` — Discord IDs
+- `createdAt` / `closedAt` — timestamps
 
 ### `RefreshToken` table
 OAuth2 refresh tokens: `tokenHash` (unique), `discordId`, `expiresAt`. Index on `discordId`.

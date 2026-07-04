@@ -67,7 +67,7 @@ Key facts:
 
 ## Environment Configuration
 
-Single `.env` file at project root. Required: `DISCORD_BOT_TOKEN`, `DISCORD_CLIENT_ID`, `DISCORD_CLIENT_SECRET`, `DISCORD_REDIRECT_URI`, `JWT_SECRET`, `DATABASE_URL`.
+Single `.env` file at project root. Required: `DISCORD_BOT_TOKEN`, `DISCORD_CLIENT_ID`, `DISCORD_CLIENT_SECRET`, `DISCORD_REDIRECT_URI`, `JWT_SECRET`. `DATABASE_URL` is auto-set in Docker; only needed when running the server directly without Docker.
 
 Guild ID, admin roles, idle timeout, and notification channel are configured via the in-app setup wizard. Can optionally pre-configure via `GUILD_ID` / `ADMIN_ROLE_IDS` env vars.
 
