@@ -102,6 +102,8 @@ export default function TagsPage() {
   const pickColor = useCallback(
     async (color: string) => {
       if (!selected) return;
+      const effectiveColor = getTagColor(selected.canonicalName, selected.color).name;
+      if (effectiveColor === color) return; // already the effective color
       // Optimistic update
       setAllTags((prev) =>
         prev.map((t) => (t.nameLower === selected.nameLower ? { ...t, color } : t))
@@ -251,7 +253,8 @@ export default function TagsPage() {
                   {TAG_COLOR_NAMES.map((colorName) => {
                     const colorClasses =
                       TAG_COLORS.find((c) => c.name === colorName) ?? TAG_COLORS[0];
-                    const isSelected = selected.color != null && selected.color === colorName;
+                    const isSelected =
+                      getTagColor(selected.canonicalName, selected.color).name === colorName;
                     return (
                       <button
                         type="button"
