@@ -1,41 +1,25 @@
 import type { QueuedSong } from '@alfira-bot/server/shared';
 import { formatDuration } from '@alfira-bot/server/shared';
 import {
-  AlienIcon,
   ArrowDownIcon,
   ArrowLineDownIcon,
   ArrowLineUpIcon,
   ArrowUpIcon,
   BombIcon,
-  CakeIcon,
-  CatIcon,
   CircleNotchIcon,
-  CookieIcon,
   DotsThreeOutlineVerticalIcon,
-  GhostIcon,
   LightningIcon,
   ListIcon,
-  MoonIcon,
   MusicNoteIcon,
-  OnigiriIcon,
-  PizzaIcon,
-  PlanetIcon,
   PlayIcon,
   PlusCircleIcon,
   RepeatIcon,
   RepeatOnceIcon,
-  RocketLaunchIcon,
   ShuffleIcon,
   SkipForwardIcon,
-  SkullIcon,
-  SmileyAngryIcon,
-  SockIcon,
-  SwordIcon,
-  ToiletPaperIcon,
   TrashIcon,
   UserCircleIcon,
   UserIcon,
-  YinYangIcon,
 } from '@phosphor-icons/react';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { memo, useCallback, useMemo, useRef, useState } from 'react';
@@ -49,6 +33,7 @@ import { useAdminView } from '../context/AdminViewContext';
 import { usePermissions } from '../context/PermissionsContext';
 import { usePlayer } from '../context/PlayerContext';
 import { getSourceKey } from '../utils/source';
+import { getRandomIdleIcon } from './EmptyState';
 import { Button } from './ui/Button';
 import { DurationBadge } from './ui/DurationBadge';
 import { VolumeBoostBadge } from './ui/VolumeBoostBadge';
@@ -844,36 +829,6 @@ const NowPlayingCard = memo(function NowPlayingCard({
     </div>
   );
 });
-
-const IdleIcons = [
-  AlienIcon,
-  BombIcon,
-  CakeIcon,
-  CatIcon,
-  CookieIcon,
-  GhostIcon,
-  MoonIcon,
-  OnigiriIcon,
-  PizzaIcon,
-  PlanetIcon,
-  RocketLaunchIcon,
-  SkullIcon,
-  SmileyAngryIcon,
-  SockIcon,
-  SwordIcon,
-  ToiletPaperIcon,
-  YinYangIcon,
-];
-
-let lastIndex = -1;
-function getRandomIdleIcon() {
-  let idx: number;
-  do {
-    idx = Math.floor(Math.random() * IdleIcons.length);
-  } while (IdleIcons.length > 1 && idx === lastIndex);
-  lastIndex = idx;
-  return IdleIcons[idx] ?? IdleIcons[0];
-}
 
 const IdleCard = memo(function IdleCard() {
   const [Icon] = useState(getRandomIdleIcon);

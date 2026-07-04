@@ -2,6 +2,7 @@ import { TrashIcon } from '@phosphor-icons/react';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { fetchPermissions, type PermissionsResponse, updatePermission } from '../api/api';
 import ConfirmModal from '../components/ConfirmModal';
+import EmptyState from '../components/EmptyState';
 import { Button } from '../components/ui/Button';
 import Checkbox from '../components/ui/Checkbox';
 import { ErrorBanner } from '../components/ui/ErrorBanner';
@@ -222,12 +223,10 @@ export default function PermissionsPage() {
 
       {/* Managed role cards */}
       {managedRoles.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-16 text-center">
-          <p className="text-sm text-muted mb-1">No managed roles yet</p>
-          <p className="text-xs text-muted">
-            Add a role above to start configuring granular permissions.
-          </p>
-        </div>
+        <EmptyState
+          title="No Managed Roles"
+          message="Add a role above to start configuring granular permissions"
+        />
       ) : (
         <div className="space-y-4">
           {managedRoles.map((role) => (

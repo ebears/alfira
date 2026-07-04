@@ -1,5 +1,6 @@
 import type { SongRequest } from '@alfira-bot/server/shared';
 import { memo } from 'react';
+import EmptyState from './EmptyState';
 import RequestCard from './RequestCard';
 import { VirtualListFooter } from './ui/VirtualListFooter';
 
@@ -15,6 +16,8 @@ export interface VirtualRequestListProps {
   onApprove: (id: string) => void;
   onDeny: (id: string) => void;
   onCancel: (id: string) => void;
+  emptyTitle: string;
+  emptyMessage?: string;
 }
 
 function SkeletonList() {
@@ -50,13 +53,15 @@ export const VirtualRequestList = memo(function VirtualRequestList({
   onApprove,
   onDeny,
   onCancel,
+  emptyTitle,
+  emptyMessage,
 }: VirtualRequestListProps) {
   if (isLoading) {
     return <SkeletonList />;
   }
 
   if (items.length === 0) {
-    return null;
+    return <EmptyState title={emptyTitle} message={emptyMessage} />;
   }
 
   return (

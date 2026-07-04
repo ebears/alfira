@@ -1,5 +1,6 @@
 import type { Playlist } from '@alfira-bot/server/shared';
 import { memo } from 'react';
+import EmptyState from './EmptyState';
 import PlaylistRow from './PlaylistRow';
 import { VirtualListFooter } from './ui/VirtualListFooter';
 
@@ -11,6 +12,8 @@ interface VirtualPlaylistListProps {
   onRetry: () => void;
   sentinelRef: (el: HTMLDivElement | null) => void;
   onRowClick: (e: React.MouseEvent) => void;
+  emptyTitle: string;
+  emptyMessage?: string;
 }
 
 function SkeletonList() {
@@ -38,13 +41,15 @@ export const VirtualPlaylistList = memo(function VirtualPlaylistList({
   onRetry,
   sentinelRef,
   onRowClick,
+  emptyTitle,
+  emptyMessage,
 }: VirtualPlaylistListProps) {
   if (isLoading) {
     return <SkeletonList />;
   }
 
   if (items.length === 0) {
-    return null;
+    return <EmptyState title={emptyTitle} message={emptyMessage} />;
   }
 
   return (

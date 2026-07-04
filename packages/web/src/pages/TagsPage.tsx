@@ -3,6 +3,7 @@ import type { Song } from '@alfira-bot/server/shared/types';
 import { MagnifyingGlassIcon, TrashIcon } from '@phosphor-icons/react';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import ConfirmModal from '../components/ConfirmModal';
+import EmptyState from '../components/EmptyState';
 import TagTicker from '../components/TagTicker';
 import { Button } from '../components/ui/Button';
 import { useTagColors } from '../context/TagsContext';
@@ -179,9 +180,13 @@ export default function TagsPage() {
                 Loading…
               </div>
             ) : filtered.length === 0 ? (
-              <div className="flex items-center justify-center h-20 text-muted text-sm">
-                {search ? 'No tags match your search.' : 'No tags yet.'}
-              </div>
+              <EmptyState
+                compact
+                title={search ? 'No Matches' : 'No Tags Yet'}
+                message={
+                  search ? 'No tags match your search' : 'Tags are created when you tag songs'
+                }
+              />
             ) : (
               filtered.map((tag) => {
                 const colors = getTagColor(tag.canonicalName, tag.color);

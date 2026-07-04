@@ -1,5 +1,6 @@
 import type { Playlist, Song } from '@alfira-bot/server/shared';
 import { memo } from 'react';
+import EmptyState from './EmptyState';
 import SongCard from './SongCard';
 import { VirtualListFooter } from './ui/VirtualListFooter';
 
@@ -18,6 +19,8 @@ interface VirtualSongListProps {
   onDelete: (id: string) => void;
   onPlay: (id: string) => void;
   onAddToQueue: (id: string) => void;
+  emptyTitle: string;
+  emptyMessage?: string;
 }
 
 function SkeletonGrid() {
@@ -93,13 +96,15 @@ export const VirtualSongList = memo(function VirtualSongList({
   onDelete,
   onPlay,
   onAddToQueue,
+  emptyTitle,
+  emptyMessage,
 }: VirtualSongListProps) {
   if (isLoading) {
     return viewMode === 'grid' ? <SkeletonGrid /> : <SkeletonList />;
   }
 
   if (items.length === 0) {
-    return null;
+    return <EmptyState title={emptyTitle} message={emptyMessage} />;
   }
 
   const isGrid = viewMode === 'grid';
