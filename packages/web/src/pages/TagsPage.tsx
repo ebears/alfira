@@ -3,6 +3,7 @@ import type { Song } from '@alfira-bot/server/shared/types';
 import { MagnifyingGlassIcon, TrashIcon } from '@phosphor-icons/react';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import ConfirmModal from '../components/ConfirmModal';
+import TagTicker from '../components/TagTicker';
 import { Button } from '../components/ui/Button';
 import { useTagColors } from '../context/TagsContext';
 
@@ -329,26 +330,7 @@ export default function TagsPage() {
                                 </span>
                               )}
                             </div>
-                            {allTags.length > 0 && (
-                              <div className="flex items-center gap-1 mt-0.5 flex-wrap">
-                                {allTags.slice(0, 3).map((tag) => {
-                                  const c = getTagColor(tag);
-                                  return (
-                                    <span
-                                      key={tag}
-                                      className={`inline-flex items-center px-1 py-px rounded text-[10px] font-mono ${c.bg} ${c.text}`}
-                                    >
-                                      {tag}
-                                    </span>
-                                  );
-                                })}
-                                {allTags.length > 3 && (
-                                  <span className="text-[10px] text-faint font-mono">
-                                    +{allTags.length - 3}
-                                  </span>
-                                )}
-                              </div>
-                            )}
+                            {allTags.length > 0 && <TagTicker tags={allTags} />}
                           </div>
                           <Button
                             variant="inherit"
