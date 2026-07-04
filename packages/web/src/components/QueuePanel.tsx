@@ -16,10 +16,10 @@ import {
   LightningIcon,
   ListIcon,
   MoonIcon,
+  MusicNoteIcon,
   OnigiriIcon,
   PizzaIcon,
   PlanetIcon,
-  PlayCircleIcon,
   PlayIcon,
   PlusCircleIcon,
   RepeatIcon,
@@ -33,6 +33,8 @@ import {
   SwordIcon,
   ToiletPaperIcon,
   TrashIcon,
+  UserCircleIcon,
+  UserIcon,
   YinYangIcon,
 } from '@phosphor-icons/react';
 import { useVirtualizer } from '@tanstack/react-virtual';
@@ -42,10 +44,14 @@ import ConfirmModal from '../components/ConfirmModal';
 import { ContextMenu, type MenuItem } from '../components/ContextMenu';
 import OverrideModal from '../components/queue/OverrideModal';
 import QuickAddModal from '../components/queue/QuickAddModal';
+import { SourceIcon } from '../components/SourceIcons';
 import { useAdminView } from '../context/AdminViewContext';
 import { usePermissions } from '../context/PermissionsContext';
 import { usePlayer } from '../context/PlayerContext';
+import { getSourceKey } from '../utils/source';
 import { Button } from './ui/Button';
+import { DurationBadge } from './ui/DurationBadge';
+import { VolumeBoostBadge } from './ui/VolumeBoostBadge';
 
 export interface MobileQuickControls {
   currentSong: QueuedSong | null;
@@ -95,7 +101,7 @@ export default function QueuePanel({
   const triggerRef = useRef<HTMLButtonElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
 
-  const { currentSong, queue, priorityQueue, isPlaying } = state;
+  const { currentSong, queue, priorityQueue } = state;
 
   const canManage = isAdminView || hasPermission('queue.manage');
 
@@ -131,7 +137,7 @@ export default function QueuePanel({
   const virtualizer = useVirtualizer({
     count: virtualItems.length,
     getScrollElement: () => scrollRef.current,
-    estimateSize: (i) => (virtualItems[i]?.type === 'header' ? 36 : 56),
+    estimateSize: (i) => (virtualItems[i]?.type === 'header' ? 36 : 92),
     overscan: 5,
   });
   const isQueueEmpty = queue.length === 0 && priorityQueue.length === 0 && !currentSong;
@@ -299,7 +305,6 @@ export default function QueuePanel({
         {currentSong ? (
           <NowPlayingCard
             song={currentSong}
-            isPlaying={isPlaying}
             elapsed={elapsed}
             registerProgress={registerProgress}
           />
@@ -317,7 +322,16 @@ export default function QueuePanel({
 
       {/* Virtualized scroll container */}
       {virtualItems.length > 0 && (
-        <div ref={scrollRef} className="flex-1 overflow-y-auto px-4 pb-4 min-h-0">
+        <div
+          ref={scrollRef}
+          className="flex-1 overflow-y-auto px-4 pb-4 min-h-0"
+          style={{
+            WebkitMaskImage:
+              'linear-gradient(to bottom, black 0%, black calc(100% - 40px), transparent 100%)',
+            maskImage:
+              'linear-gradient(to bottom, black 0%, black calc(100% - 40px), transparent 100%)',
+          }}
+        >
           <div
             style={{
               height: `${virtualizer.getTotalSize()}px`,
@@ -367,6 +381,7 @@ export default function QueuePanel({
                   key={item.key}
                   data-index={virtualRow.index}
                   ref={virtualizer.measureElement}
+                  className="pb-1"
                   style={{
                     position: 'absolute',
                     top: 0,
@@ -561,50 +576,82 @@ const QueueSongItem = memo(function QueueSongItem({
   ]);
 
   const accent = isPriority;
+  const sourceKey = useMemo(() => getSourceKey(song.sourceUrl), [song.sourceUrl]);
 
   return (
-    <div className="flex items-center gap-2 px-3 py-2.5 group">
-      <span
-        className={`font-mono text-[10px] w-4 text-right shrink-0 ${accent ? 'text-accent' : 'text-faint'}`}
-      >
-        {index + 1}
-      </span>
-      <div className="overflow-hidden w-8 h-8 rounded border border-border shrink-0">
-        <img
-          src={song.artwork ?? song.thumbnailUrl}
-          alt={song.nickname || song.title}
-          className="w-full h-full object-cover scale-[1.33]"
-          loading="lazy"
-          decoding="async"
-        />
-      </div>
-      <div className="flex-1 min-w-0">
-        <p className="font-body text-xs font-medium text-fg truncate">
-          {song.nickname || song.title}
-        </p>
-        <p className="font-mono text-[9px] text-muted hidden sm:block">req. {song.requestedBy}</p>
-      </div>
-      <span className="font-mono text-[10px] text-muted shrink-0">
-        {formatDuration(song.duration)}
-      </span>
-      {canManage && (
-        <Button
-          ref={triggerRef}
-          variant="inherit"
-          surface="base"
-          size="icon"
-          aria-haspopup="true"
-          aria-expanded={menuOpen}
-          aria-label="Song actions"
-          className={`opacity-0 group-hover:opacity-100 transition-opacity shrink-0 w-6 h-6 ${menuOpen ? 'pressed text-accent opacity-100' : 'text-muted hover:text-fg'}`}
-          onClick={(e) => {
-            e.stopPropagation();
-            setMenuOpen((prev) => !prev);
-          }}
+    <div className="rounded-lg overflow-hidden" style={{ background: 'var(--color-base)' }}>
+      <div className="flex items-center gap-3 px-3 py-2 group">
+        {/* Index */}
+        <span
+          className={`font-mono text-[10px] w-4 text-right shrink-0 ${accent ? 'text-accent' : 'text-faint'}`}
         >
-          <DotsThreeOutlineVerticalIcon size={14} weight="duotone" />
-        </Button>
-      )}
+          {index + 1}
+        </span>
+
+        {/* Thumbnail */}
+        <div className="overflow-hidden w-10 h-10 rounded border border-border shrink-0">
+          <img
+            src={song.artwork ?? song.thumbnailUrl}
+            alt={song.nickname || song.title}
+            className="w-full h-full object-cover scale-[1.33]"
+            loading="lazy"
+            decoding="async"
+          />
+        </div>
+
+        {/* Info */}
+        <div className="flex-1 min-w-0 flex flex-col justify-center gap-0.5">
+          <p className="text-xs font-semibold text-fg leading-tight flex items-center gap-1.5 min-w-0">
+            <MusicNoteIcon size={13} weight="fill" className="shrink-0 text-muted" />
+            <span className="truncate">{song.nickname || song.title}</span>
+          </p>
+          <div className="flex items-center gap-2 text-[11px] text-muted min-w-0">
+            {song.artist && (
+              <span className="max-w-[16ch] flex items-center gap-1 min-w-0">
+                <UserIcon size={12} weight="fill" className="shrink-0" />
+                <span className="truncate">{song.artist}</span>
+              </span>
+            )}
+            <DurationBadge seconds={song.duration} className="text-[11px]" />
+          </div>
+          <div className="flex items-center gap-2 text-[11px] text-muted min-w-0">
+            {sourceKey && (
+              <span className="flex items-center shrink-0 [&_svg]:w-3.5 [&_svg]:h-3.5">
+                <SourceIcon sourceKey={sourceKey} />
+              </span>
+            )}
+            <span className="max-w-[16ch] flex items-center gap-1 min-w-0">
+              <UserCircleIcon size={12} weight="fill" className="shrink-0" />
+              <span className="truncate">{song.requestedBy}</span>
+            </span>
+          </div>
+        </div>
+
+        {/* Badges */}
+        <div className="flex items-center gap-2 shrink-0">
+          <VolumeBoostBadge volumeBoost={song.volumeBoost} />
+        </div>
+
+        {/* Actions */}
+        {canManage && (
+          <Button
+            ref={triggerRef}
+            variant="inherit"
+            surface="base"
+            size="icon"
+            aria-haspopup="true"
+            aria-expanded={menuOpen}
+            aria-label="Song actions"
+            className={`opacity-0 group-hover:opacity-100 transition-opacity shrink-0 w-6 h-6 ${menuOpen ? 'pressed text-accent opacity-100' : 'text-muted hover:text-fg'}`}
+            onClick={(e) => {
+              e.stopPropagation();
+              setMenuOpen((prev) => !prev);
+            }}
+          >
+            <DotsThreeOutlineVerticalIcon size={14} weight="duotone" />
+          </Button>
+        )}
+      </div>
       {menuOpen && (
         <ContextMenu
           items={menuItems}
@@ -724,18 +771,19 @@ const PanelHeader = memo(function PanelHeader({
 
 const NowPlayingCard = memo(function NowPlayingCard({
   song,
-  isPlaying,
   elapsed,
   registerProgress,
 }: {
   song: QueuedSong;
-  isPlaying: boolean;
   elapsed: number;
   registerProgress: (ref: HTMLDivElement | null) => void;
 }) {
+  const sourceKey = useMemo(() => getSourceKey(song.sourceUrl), [song.sourceUrl]);
+
   return (
     <div className="card overflow-hidden" style={{ background: 'var(--color-base)' }}>
-      <div className="flex gap-3 p-3">
+      <div className="flex gap-4 p-4">
+        {/* Artwork */}
         <div className="relative shrink-0 overflow-hidden rounded-xl">
           <img
             src={song.artwork ?? song.thumbnailUrl}
@@ -743,23 +791,40 @@ const NowPlayingCard = memo(function NowPlayingCard({
             className="w-20 h-20 rounded-xl border border-border object-cover scale-[1.33]"
             decoding="async"
           />
-          {isPlaying && (
-            <div className="absolute -bottom-1.5 -right-1.5 w-6 h-6 rounded-full bg-accent flex items-center justify-center">
-              <PlayCircleIcon size={10} weight="duotone" className="text-white" />
-            </div>
-          )}
         </div>
-        <div className="flex-1 flex flex-col justify-center min-w-0">
+
+        {/* Info */}
+        <div className="flex-1 flex flex-col justify-center min-w-0 gap-1.5">
           <a
             href={song.sourceUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className="font-body text-sm text-fg hover:text-accent line-clamp-2"
+            className="text-xs font-semibold text-fg hover:text-accent leading-tight flex items-center gap-1.5 min-w-0"
           >
-            {song.nickname || song.title}
+            <MusicNoteIcon size={13} weight="fill" className="shrink-0 text-muted" />
+            <span className="truncate">{song.nickname || song.title}</span>
           </a>
-          <p className="font-mono text-[10px] text-muted mt-0.5">requested by {song.requestedBy}</p>
-          <div className="mt-2">
+          <div className="flex items-center gap-2 text-[11px] text-muted min-w-0">
+            {song.artist && (
+              <span className="max-w-[16ch] flex items-center gap-1 min-w-0">
+                <UserIcon size={12} weight="fill" className="shrink-0" />
+                <span className="truncate">{song.artist}</span>
+              </span>
+            )}
+            <span className="max-w-[16ch] flex items-center gap-1 min-w-0">
+              <UserCircleIcon size={12} weight="fill" className="shrink-0" />
+              <span className="truncate">{song.requestedBy}</span>
+            </span>
+            {sourceKey && (
+              <span className="flex items-center shrink-0 [&_svg]:w-3.5 [&_svg]:h-3.5">
+                <SourceIcon sourceKey={sourceKey} />
+              </span>
+            )}
+            <VolumeBoostBadge volumeBoost={song.volumeBoost} />
+          </div>
+
+          {/* Progress */}
+          <div className="mt-1">
             <div className="relative h-1.5 w-full bg-elevated rounded-full overflow-hidden">
               <div
                 ref={registerProgress}
@@ -768,8 +833,8 @@ const NowPlayingCard = memo(function NowPlayingCard({
               />
             </div>
             <div className="flex justify-between mt-1">
-              <span className="font-mono text-[9px] text-muted">{formatDuration(elapsed)}</span>
-              <span className="font-mono text-[9px] text-muted">
+              <span className="font-mono text-[10px] text-muted">{formatDuration(elapsed)}</span>
+              <span className="font-mono text-[10px] text-muted">
                 {formatDuration(song.duration)}
               </span>
             </div>
