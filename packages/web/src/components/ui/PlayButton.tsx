@@ -19,7 +19,10 @@ export const PlayButton = memo(function PlayButton({
     <Button
       variant="primary"
       size="icon"
-      onMouseDown={(e) => e.preventDefault()}
+      onMouseDown={(e) => {
+        e.preventDefault();
+        e.stopPropagation();
+      }}
       onClick={(e) => {
         e.stopPropagation();
         onClick();

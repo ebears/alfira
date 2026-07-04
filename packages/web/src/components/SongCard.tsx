@@ -107,7 +107,10 @@ const SongCardInner = ({
               ref={triggerRef}
               onToggle={() => setMenuOpen((v) => !v)}
               isOpen={menuOpen}
-              onMouseDown={(e) => e.preventDefault()}
+              onMouseDown={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+              }}
             />
           </div>
 
@@ -219,7 +222,10 @@ const SongCardInner = ({
           ref={triggerRef}
           onToggle={() => setMenuOpen((v) => !v)}
           isOpen={menuOpen}
-          onMouseDown={(e) => e.preventDefault()}
+          onMouseDown={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+          }}
           className="w-12 h-12"
         />
         {menuOpen && (
