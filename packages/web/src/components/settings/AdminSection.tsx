@@ -345,6 +345,10 @@ export default function AdminSection() {
               Idle Timeout
             </h3>
           </div>
+          <p className="text-xs text-muted">
+            Alfira leaves the voice channel after this many minutes of inactivity (no music
+            playing).
+          </p>
           <div className="flex items-center gap-4 mt-4">
             <input
               type="range"
@@ -373,6 +377,10 @@ export default function AdminSection() {
               Public URL
             </h3>
           </div>
+          <p className="text-xs text-muted">
+            The external URL where this Alfira instance is reachable. Used for OAuth redirects and
+            other features.
+          </p>
           <input
             type="text"
             value={publicUrl ?? ''}
