@@ -11,7 +11,11 @@ export type {
   SetupRole,
 } from '@alfira-bot/server/shared';
 
-export type { MyPermissionsResponse, PermissionsResponse } from '@alfira-bot/server/shared/api';
+export type {
+  FetchSongsOptions,
+  MyPermissionsResponse,
+  PermissionsResponse,
+} from '@alfira-bot/server/shared/api';
 // ---------------------------------------------------------------------------
 // Re-export everything from shared API with web-compatible names
 // ---------------------------------------------------------------------------
