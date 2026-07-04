@@ -25,16 +25,30 @@ function SkeletonGrid() {
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-[repeat(auto-fill,minmax(270px,1fr))] gap-3 md:gap-4">
       {Array.from({ length: 12 }).map((_, i) => (
         // biome-ignore lint/suspicious/noArrayIndexKey: skeleton items are static placeholders
-        <div key={`skeleton-${i}`} className="flex flex-col bg-elevated rounded-xl clay-resting">
-          <div className="relative aspect-square bg-elevated overflow-hidden rounded-xl clay-flat m-3 mb-0">
+        <div key={`skeleton-${i}`} className="flex flex-col bg-elevated clay-resting rounded-lg">
+          <div className="relative aspect-square overflow-hidden rounded-lg border border-border m-3 mb-0">
             <div className="skeleton w-full h-full" />
-            <div className="absolute bottom-2 right-2 z-20">
+          </div>
+          <div className="p-4 flex-1 flex flex-col gap-2">
+            <div className="flex justify-between">
+              <div className="skeleton h-3.5 w-3/4" />
+              <div className="skeleton h-3.5 w-3.5 rounded-full" />
+            </div>
+            <div className="flex justify-between">
+              <div className="skeleton h-3 w-2/5" />
+              <div className="skeleton h-3 w-10" />
+            </div>
+            <div className="flex justify-between">
+              <div className="skeleton h-3 w-1/2" />
               <div className="skeleton h-3 w-8" />
             </div>
-          </div>
-          <div className="p-4 flex-1">
-            <div className="skeleton h-3 w-3/4 mb-2" />
-            <div className="skeleton h-2 w-1/2" />
+            <div className="flex justify-between pt-1">
+              <div className="skeleton h-3 w-16" />
+              <span className="flex gap-1">
+                <div className="skeleton h-8 w-8 rounded-full" />
+                <div className="skeleton h-8 w-8 rounded-full" />
+              </span>
+            </div>
           </div>
         </div>
       ))}
