@@ -76,21 +76,19 @@ const SongCardInner = ({
   // ── Grid variant ──────────────────────────────────────────────────────
 
   if (variant === 'grid') {
+    const tags = song.tags ?? [];
+
     return (
       <Card
         hoverable={!!isAdminView}
         animate
-        className={`rounded-xl flex flex-col${isAdminView ? ' group cursor-pointer' : ''}`}
+        className={`rounded-lg flex flex-col${isAdminView ? ' group cursor-pointer' : ''}`}
         style={gridStyle}
         data-song-edit-container
         onClick={() => canEdit && setOpenSongId(isOpen ? null : song.id)}
       >
-        {/* Thumbnail with play overlay */}
-        <div
-          role="img"
-          aria-label={song.nickname || song.title}
-          className="relative aspect-square bg-elevated overflow-hidden rounded-xl clay-flat m-3 mb-0"
-        >
+        {/* Clean thumbnail */}
+        <div className="relative aspect-square overflow-hidden rounded-lg border border-border m-3 mb-0">
           <img
             src={song.artwork ?? song.thumbnailUrl}
             alt=""
@@ -98,26 +96,63 @@ const SongCardInner = ({
             loading="lazy"
             decoding="async"
           />
-          <div className="absolute inset-0 bg-linear-to-t from-black/60 to-transparent" />
+        </div>
 
-          {/* Action buttons — bottom left */}
-          <div className="absolute bottom-2 left-2 z-20 flex items-center gap-1">
-            <PlayButton onClick={onPlay} isPlaying={!!isPlaying} />
-            <ContextMenuTrigger
-              ref={triggerRef}
-              onToggle={() => setMenuOpen((v) => !v)}
-              isOpen={menuOpen}
-              onMouseDown={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-              }}
-            />
+        {/* Info */}
+        <div className="p-4 flex-1 flex flex-col gap-1.5">
+          {/* Title + Source */}
+          <div className="flex items-center justify-between gap-2">
+            <p className="text-sm font-semibold text-fg leading-tight flex items-center gap-1.5 min-w-0">
+              <MusicNoteIcon size={13} weight="fill" className="shrink-0 text-muted" />
+              <span className="line-clamp-2">{song.nickname || song.title}</span>
+            </p>
+            {sourceKey && (
+              <span className="flex items-center shrink-0 [&_svg]:w-3.5 [&_svg]:h-3.5">
+                <SourceIcon sourceKey={sourceKey} />
+              </span>
+            )}
+          </div>
+          {/* Artist + Duration */}
+          <div className="flex items-center justify-between gap-2 text-xs text-muted">
+            {song.artist ? (
+              <span className="flex items-center gap-1 min-w-0">
+                <UserIcon size={12} weight="fill" className="shrink-0" />
+                <span className="truncate">{song.artist}</span>
+              </span>
+            ) : (
+              <span />
+            )}
+            <DurationBadge seconds={song.duration} />
           </div>
 
-          {/* Duration badge + volume indicator — bottom right */}
-          <div className="absolute bottom-2 right-2 z-20 flex flex-col items-end gap-px">
-            <DurationBadge seconds={song.duration} variant="overlay" />
-            <VolumeBoostBadge volumeBoost={song.volumeBoost} className="text-[10px]" />
+          {/* Album + VolumeBoost */}
+          <div className="flex items-center justify-between gap-2 text-xs text-muted">
+            {song.album ? (
+              <span className="flex items-center gap-1 min-w-0">
+                <DiscIcon size={12} weight="fill" className="shrink-0" />
+                <span className="truncate">{song.album}</span>
+              </span>
+            ) : (
+              <span />
+            )}
+            <VolumeBoostBadge volumeBoost={song.volumeBoost} />
+          </div>
+
+          {/* Tags + Actions */}
+          <div className="flex items-center justify-between gap-2 pt-1">
+            <div className="min-w-0">{tags.length > 0 && <TagTicker tags={tags} />}</div>
+            <div className="flex items-center gap-1 shrink-0">
+              <PlayButton onClick={onPlay} isPlaying={!!isPlaying} />
+              <ContextMenuTrigger
+                ref={triggerRef}
+                onToggle={() => setMenuOpen((v) => !v)}
+                isOpen={menuOpen}
+                onMouseDown={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                }}
+              />
+            </div>
           </div>
 
           {menuOpen && (
@@ -128,16 +163,6 @@ const SongCardInner = ({
               triggerRef={triggerRef}
             />
           )}
-        </div>
-
-        {/* Info */}
-        <div className="p-4 flex-1">
-          <div className="flex items-center gap-2">
-            <p className="font-body font-semibold text-sm text-fg leading-tight line-clamp-2 min-w-0">
-              {song.nickname || song.title}
-            </p>
-          </div>
-          {song.nickname && <p className="text-[11px] text-faint truncate">{song.title}</p>}
         </div>
 
         {/* Inline edit panel */}
