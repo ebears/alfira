@@ -44,7 +44,7 @@ export default function SongEditPanel({ song, isOpen, onClose }: SongEditPanelPr
   const [tags, setTags] = useState<string[]>(songExtended.tags ?? []);
   const [tagInput, setTagInput] = useState('');
   const [volumeBoost, setVolumeBoost] = useState(
-    songExtended.volumeBoost != null ? String(songExtended.volumeBoost) : ''
+    songExtended.volumeBoost != null ? String(songExtended.volumeBoost) : '0'
   );
   const [showTagDropdown, setShowTagDropdown] = useState(false);
   const [availableTags, setAvailableTags] = useState<TagItem[]>([]);
@@ -144,7 +144,9 @@ export default function SongEditPanel({ song, isOpen, onClose }: SongEditPanelPr
         tags: t,
         volumeBoost: vo,
       } = fieldsRef.current();
-      const parsedBoost = vo.trim() === '' ? null : parseInt(vo.trim(), 10);
+      const parsedRaw = vo.trim() === '' ? null : parseInt(vo.trim(), 10);
+      const parsedBoost =
+        parsedRaw != null && !Number.isNaN(parsedRaw) && parsedRaw !== 0 ? parsedRaw : null;
 
       // Build a partial update — only include fields that actually changed.
       // This prevents concurrent edits from clobbering each other (last-write-wins).
@@ -154,8 +156,7 @@ export default function SongEditPanel({ song, isOpen, onClose }: SongEditPanelPr
       if (al !== (originalAlbumRef.current ?? '')) data.album = al.trim() || null;
       if (aw !== (originalArtworkRef.current ?? '')) data.artwork = aw.trim() || null;
       if (JSON.stringify(t) !== JSON.stringify(originalTagsRef.current)) data.tags = t;
-      if (parsedBoost !== originalVolumeBoostRef.current)
-        data.volumeBoost = Number.isNaN(parsedBoost) ? null : parsedBoost;
+      if (parsedBoost !== originalVolumeBoostRef.current) data.volumeBoost = parsedBoost;
 
       // Skip if nothing changed
       if (Object.keys(data).length === 0) {
@@ -181,7 +182,9 @@ export default function SongEditPanel({ song, isOpen, onClose }: SongEditPanelPr
         tags: t,
         volumeBoost: vo,
       } = fieldsRef.current();
-      const parsedBoost = vo.trim() === '' ? null : parseInt(vo.trim(), 10);
+      const parsedRaw = vo.trim() === '' ? null : parseInt(vo.trim(), 10);
+      const parsedBoost =
+        parsedRaw != null && !Number.isNaN(parsedRaw) && parsedRaw !== 0 ? parsedRaw : null;
 
       const data: SongUpdateData = {};
       if (nk !== (originalNicknameRef.current ?? '')) data.nickname = nk.trim() || null;
@@ -189,8 +192,7 @@ export default function SongEditPanel({ song, isOpen, onClose }: SongEditPanelPr
       if (al !== (originalAlbumRef.current ?? '')) data.album = al.trim() || null;
       if (aw !== (originalArtworkRef.current ?? '')) data.artwork = aw.trim() || null;
       if (JSON.stringify(t) !== JSON.stringify(originalTagsRef.current)) data.tags = t;
-      if (parsedBoost !== originalVolumeBoostRef.current)
-        data.volumeBoost = Number.isNaN(parsedBoost) ? null : parsedBoost;
+      if (parsedBoost !== originalVolumeBoostRef.current) data.volumeBoost = parsedBoost;
 
       if (Object.keys(data).length > 0) {
         void doSave();
@@ -210,12 +212,12 @@ export default function SongEditPanel({ song, isOpen, onClose }: SongEditPanelPr
       <div className="px-3 md:px-4 pt-4 pb-4 border-t border-border">
         <div className="flex flex-col gap-3">
           <Field
-            id="panel-nickname"
-            label="Nickname"
+            id="panel-name"
+            label="Name"
             value={nickname}
             onChange={setNickname}
             inputRef={inputRef}
-            placeholder="Display name"
+            placeholder={song.title}
             onKeyDown={(e) => {
               if (e.key === 'Enter') void doSave();
             }}
@@ -245,7 +247,7 @@ export default function SongEditPanel({ song, isOpen, onClose }: SongEditPanelPr
             label="Artwork URL"
             value={artwork}
             onChange={setArtwork}
-            placeholder="https://example.com/artwork.jpg"
+            placeholder={song.thumbnailUrl}
             onKeyDown={(e) => {
               if (e.key === 'Enter') void doSave();
             }}
