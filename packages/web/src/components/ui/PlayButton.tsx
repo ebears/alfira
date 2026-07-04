@@ -29,9 +29,9 @@ export const PlayButton = memo(function PlayButton({
       title={title}
     >
       {isPlaying ? (
-        <CircleNotchIcon size={18} weight="bold" className="animate-spin" />
+        <CircleNotchIcon size={22} weight="bold" className="animate-spin" />
       ) : (
-        <PlayIcon size={18} weight="duotone" />
+        <PlayIcon size={22} weight="duotone" />
       )}
     </Button>
   );

@@ -1,4 +1,4 @@
-import { memo, useCallback, useEffect, useRef, useState } from 'react';
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTagColors } from '../context/TagsContext';
 import { getTagColorClasses } from '../utils/tagColors';
 
@@ -15,12 +15,15 @@ const TagTicker = memo(({ tags, isHovered: externalHovered }: TagTickerProps) =>
   const [duration, setDuration] = useState(15);
   const { tagColorMap } = useTagColors();
 
+  const dedupedTags = useMemo(() => [...new Set(tags)], [tags]);
+
+  // biome-ignore lint/correctness/useExhaustiveDependencies: re-run when tags change to remeasure overflow
   useEffect(() => {
     if (outerRef.current && innerRef.current && outerRef.current.clientWidth > 0) {
       const overflow = innerRef.current.scrollWidth > outerRef.current.clientWidth;
-      setShouldScroll(overflow || tags.length > 3);
+      setShouldScroll(overflow);
 
-      if (overflow || tags.length > 3) {
+      if (overflow) {
         const contentWidth = innerRef.current.scrollWidth;
         setDuration(Math.max(10, contentWidth * 0.02));
       }
@@ -29,7 +32,7 @@ const TagTicker = memo(({ tags, isHovered: externalHovered }: TagTickerProps) =>
 
   const renderTags = useCallback(
     (prefix: string) =>
-      tags.map((tag) => {
+      dedupedTags.map((tag) => {
         const tagKey = tag.toLowerCase();
         const explicitColor = tagColorMap[tagKey];
         const colors = getTagColorClasses(tag, explicitColor);
@@ -42,10 +45,10 @@ const TagTicker = memo(({ tags, isHovered: externalHovered }: TagTickerProps) =>
           </span>
         );
       }),
-    [tags, tagColorMap]
+    [dedupedTags, tagColorMap]
   );
 
-  if (tags.length === 0) return null;
+  if (dedupedTags.length === 0) return null;
 
   const effectiveHovered = externalHovered ?? isHovered;
 
@@ -70,7 +73,6 @@ const TagTicker = memo(({ tags, isHovered: externalHovered }: TagTickerProps) =>
           WebkitMaskImage:
             'linear-gradient(to right, transparent, black 8%, black 80%, transparent)',
         }),
-        cursor: 'default',
       }}
       onMouseEnter={() => {
         if (externalHovered === undefined) setIsHovered(true);

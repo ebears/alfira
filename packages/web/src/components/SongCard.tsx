@@ -1,6 +1,5 @@
 import type { Playlist, Song } from '@alfira-bot/server/shared';
-import { formatDuration } from '@alfira-bot/server/shared';
-import { ClockIcon, DiscIcon, MusicNoteIcon, TagIcon, UserIcon } from '@phosphor-icons/react';
+import { DiscIcon, MusicNoteIcon, UserIcon } from '@phosphor-icons/react';
 import React, { useMemo, useState } from 'react';
 import { usePermissions } from '../context/PermissionsContext';
 import { useSongEdit } from '../context/SongEditContext';
@@ -31,36 +30,6 @@ interface SongCardProps {
   onPlay: () => void;
   isPlaying?: boolean;
   onAddToQueue: () => void;
-}
-
-// ---------------------------------------------------------------------------
-// List-variant metadata bar
-// ---------------------------------------------------------------------------
-interface MetaInfoProps {
-  song: Song;
-  isHovered?: boolean;
-  sourceKey: string | null;
-}
-
-function MetaInfo({ song, isHovered, sourceKey }: MetaInfoProps) {
-  const tags = song.tags ?? [];
-  return (
-    <>
-      {sourceKey && (
-        <span className="flex items-center shrink-0 grayscale opacity-50 [&_svg]:w-3 [&_svg]:h-3">
-          <SourceIcon sourceKey={sourceKey} />
-        </span>
-      )}
-      <DurationBadge seconds={song.duration} />
-      <VolumeBoostBadge volumeBoost={song.volumeBoost} />
-      {tags.length > 0 && (
-        <div className="flex items-center gap-1 text-xs text-muted max-w-[20rem] justify-end">
-          <TagTicker tags={tags} isHovered={isHovered} />
-          <TagIcon size={11} weight="fill" className="shrink-0" />
-        </div>
-      )}
-    </>
-  );
 }
 
 // ---------------------------------------------------------------------------
@@ -178,6 +147,8 @@ const SongCardInner = ({
 
   // ── List variant ──────────────────────────────────────────────────────
 
+  const tags = song.tags ?? [];
+
   return (
     <Card
       hoverable={!!isAdminView}
@@ -186,7 +157,7 @@ const SongCardInner = ({
       data-song-edit-container
     >
       <div
-        className="flex items-center gap-1.5 md:gap-2 px-3 md:px-4 py-3"
+        className="flex items-center gap-3 md:gap-4 px-4 py-4"
         onClick={() => canEdit && setOpenSongId(isOpen ? null : song.id)}
         onKeyDown={(e) => {
           if (canEdit && (e.key === 'Enter' || e.key === ' ')) {
@@ -200,7 +171,7 @@ const SongCardInner = ({
         onMouseEnter={() => setIsRowHovered(true)}
         onMouseLeave={() => setIsRowHovered(false)}
       >
-        <div className="overflow-hidden w-14 h-14 md:w-12 md:h-12 rounded border border-border shrink-0">
+        <div className="overflow-hidden w-16 h-16 rounded border border-border shrink-0">
           <img
             src={song.artwork ?? song.thumbnailUrl}
             alt={song.nickname || song.title}
@@ -209,58 +180,47 @@ const SongCardInner = ({
             decoding="async"
           />
         </div>
-        <div className="flex-1 min-w-0 flex flex-col gap-px">
-          <p
-            className={`flex items-center gap-1 truncate${song.nickname ? ' text-xs font-mono text-muted' : ' text-fg font-sm'}`}
-          >
-            {song.nickname && (
-              <MusicNoteIcon size={11} weight="fill" className="shrink-0 text-muted" />
-            )}
-            <span className="truncate">{song.nickname || song.title}</span>
+        <div className="flex-1 min-w-0 flex flex-col justify-center gap-1.5">
+          <p className="text-sm font-semibold text-fg truncate leading-tight flex items-center gap-1.5">
+            <MusicNoteIcon size={13} weight="fill" className="shrink-0 text-muted" />
+            {song.nickname || song.title}
           </p>
-          {song.artist && (
-            <p className="flex items-center gap-1 text-xs font-mono text-muted truncate">
-              <UserIcon size={11} weight="fill" className="shrink-0 text-muted" />
-              <span className="truncate">{song.artist}</span>
-            </p>
-          )}
-          {song.album && (
-            <p className="flex items-center gap-1 text-xs font-mono text-muted truncate">
-              <DiscIcon size={11} weight="fill" className="shrink-0 text-muted" />
-              <span className="truncate">{song.album}</span>
-            </p>
-          )}
-          {(() => {
-            const tags = song.tags ?? [];
-            return (
-              <>
-                <span className="flex items-center gap-1 text-xs text-muted md:hidden">
-                  <ClockIcon size={11} weight="fill" className="shrink-0" />
-                  {formatDuration(song.duration)}
-                </span>
-                {tags.length > 0 && (
-                  <div className="flex items-center gap-1 text-sm text-muted mt-1 md:hidden">
-                    <TagIcon size={11} weight="fill" className="shrink-0" />
-                    <TagTicker tags={tags} />
-                  </div>
-                )}
-              </>
-            );
-          })()}
-        </div>
-        <div className="hidden md:flex flex-col items-end gap-px shrink-0 mr-2">
-          <MetaInfo song={song} isHovered={isRowHovered} sourceKey={sourceKey} />
+          <div className="flex items-center gap-2.5 flex-wrap text-xs text-muted min-w-0">
+            {song.artist && (
+              <span className="truncate max-w-[16ch] flex items-center gap-1">
+                <UserIcon size={12} weight="fill" className="shrink-0" />
+                {song.artist}
+              </span>
+            )}
+            {song.album && (
+              <span className="truncate max-w-[20ch] flex items-center gap-1">
+                <DiscIcon size={12} weight="fill" className="shrink-0" />
+                {song.album}
+              </span>
+            )}
+            {tags.length > 0 && <TagTicker tags={tags} isHovered={isRowHovered} />}
+          </div>
+          <div className="flex items-center gap-2.5 flex-wrap text-xs text-muted min-w-0">
+            {sourceKey && (
+              <span className="flex items-center shrink-0 [&_svg]:w-3.5 [&_svg]:h-3.5">
+                <SourceIcon sourceKey={sourceKey} />
+              </span>
+            )}
+            <DurationBadge seconds={song.duration} />
+            <VolumeBoostBadge volumeBoost={song.volumeBoost} />
+          </div>
         </div>
         <PlayButton
           onClick={onPlay}
           isPlaying={!!isPlaying}
-          className="p-2.5 md:p-1 disabled:opacity-50"
+          className="w-12 h-12 disabled:opacity-50"
         />
         <ContextMenuTrigger
           ref={triggerRef}
           onToggle={() => setMenuOpen((v) => !v)}
           isOpen={menuOpen}
           onMouseDown={(e) => e.preventDefault()}
+          className="w-12 h-12"
         />
         {menuOpen && (
           <ContextMenu
