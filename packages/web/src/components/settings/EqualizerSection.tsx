@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useAdminView } from '../../context/AdminViewContext';
 import { usePermissions } from '../../context/PermissionsContext';
+import { Button } from '../ui/Button';
 
 const FREQ_LABELS = [
   '25',
@@ -116,25 +117,12 @@ export default function EqualizerSection() {
         ))}
       </div>
       <div className="flex gap-3 pt-1 justify-end">
-        <button
-          type="button"
-          onClick={handleSave}
-          disabled={!hasChanges || saving}
-          className={`font-body text-sm px-4 py-1.5 rounded transition-colors ${
-            hasChanges && !saving
-              ? 'bg-accent text-elevated cursor-pointer'
-              : 'bg-elevated text-muted cursor-not-allowed'
-          }`}
-        >
+        <Button variant="primary" onClick={handleSave} disabled={!hasChanges || saving}>
           {saving ? 'Saving…' : 'Save Changes'}
-        </button>
-        <button
-          type="button"
-          onClick={handleReset}
-          className="font-body text-sm px-4 py-1.5 rounded bg-elevated text-muted hover:text-fg transition-colors cursor-pointer"
-        >
+        </Button>
+        <Button variant="inherit" surface="elevated" onClick={handleReset}>
           Reset to Defaults
-        </button>
+        </Button>
       </div>
     </div>
   );

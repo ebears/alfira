@@ -38,6 +38,8 @@ services:
     volumes:
       # Live-mount server source files — restart the service to pick up changes.
       - ./packages/server/src:/app/packages/server/src
+      # Mount .git so resolveVersion() can read the commit hash
+      - ./.git:/app/.git:ro
       # Persistent SQLite database storage
       - alfira-data:/data
     healthcheck:

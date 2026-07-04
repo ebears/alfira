@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react';
 import { fetchVersion } from '../../api/api';
 import { useAuth } from '../../context/AuthContext';
-import AdminTab from './AdminTab';
-import AppearanceTab from './AppearanceTab';
+import AdminSection from './AdminSection';
+import UserSection from './UserSection';
 
 export default function SettingsPage() {
   const { user } = useAuth();
@@ -17,15 +17,16 @@ export default function SettingsPage() {
   return (
     <div className="p-4 md:p-8">
       {/* Page header */}
-      <div className="mb-6 md:mb-8">
+      <div className="mb-6 md:mb-8 flex items-end justify-between">
         <h1 className="font-display text-3xl md:text-4xl text-fg tracking-wider">Settings</h1>
+        {version !== null && <p className="font-mono text-xs text-faint pb-1">{version}</p>}
       </div>
 
       {/* User settings */}
       <section className="mb-8">
         <h2 className="font-mono text-xs text-muted uppercase tracking-wider mb-4">User</h2>
-        <div className="bg-elevated border border-border rounded-xl p-5">
-          <AppearanceTab />
+        <div className="bg-elevated clay-resting rounded-lg p-5">
+          <UserSection />
         </div>
       </section>
 
@@ -33,17 +34,10 @@ export default function SettingsPage() {
       {user?.isAdmin && (
         <section>
           <h2 className="font-mono text-xs text-muted uppercase tracking-wider mb-4">Admin</h2>
-          <div className="bg-elevated border border-border rounded-xl p-5">
-            <AdminTab />
+          <div className="bg-elevated clay-resting rounded-lg p-5">
+            <AdminSection />
           </div>
         </section>
-      )}
-
-      {/* Version */}
-      {version !== null && (
-        <div className="mt-8 pt-6 border-t border-border">
-          <p className="font-mono text-xs text-faint">{version}</p>
-        </div>
       )}
     </div>
   );
