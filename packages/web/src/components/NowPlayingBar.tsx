@@ -59,14 +59,14 @@ const PlaybackControls = memo(function PlaybackControls({
         onClick={onPauseResume}
         busy={pauseBusy}
         disabled={!currentSong || pauseBusy || skipBusy}
-        title={isPaused || isStopped ? 'Resume' : 'Pause'}
+        title={isPaused || isStopped ? 'Pause' : 'Resume'}
         hoverColor="hover:text-fg"
         pulse={isPlaying && !isPaused}
       >
         {isPaused || isStopped ? (
-          <PlayIcon size={24} weight="duotone" className="md:w-5 md:h-5" />
-        ) : (
           <PauseIcon size={24} weight="duotone" className="md:w-5 md:h-5" />
+        ) : (
+          <PlayIcon size={24} weight="duotone" className="md:w-5 md:h-5" />
         )}
       </BarButton>
       <BarButton

@@ -9,7 +9,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { deleteSong, getPlaylistsPage, getSongsPage, startPlayback } from '../api/api';
 import ConfirmModal from '../components/ConfirmModal';
 import NotificationToast from '../components/NotificationToast';
-import { Button } from '../components/ui/Button';
+
 import { VirtualSongList } from '../components/VirtualSongList';
 import { useAdminView } from '../context/AdminViewContext';
 import { usePlayerState } from '../context/PlayerContext';
@@ -169,33 +169,33 @@ export default function SongsPage() {
           />
         </div>
         {/* View toggle */}
-        <div className="flex items-center gap-1">
-          <Button
-            variant="inherit"
-            surface="surface"
-            size="icon"
+        <div className="flex gap-1 bg-elevated rounded-lg p-1">
+          <button
+            type="button"
             onClick={() => {
               setViewMode('list');
               localStorage.setItem('alfira-library-view', 'list');
             }}
-            className={isGrid ? '' : 'pressed text-accent'}
+            className={`px-3 py-1.5 rounded-md text-sm font-body transition-colors cursor-pointer ${
+              !isGrid ? 'bg-accent text-elevated' : 'text-muted hover:text-fg'
+            }`}
             title="List view"
           >
             <ListIcon size={18} weight="duotone" />
-          </Button>
-          <Button
-            variant="inherit"
-            surface="surface"
-            size="icon"
+          </button>
+          <button
+            type="button"
             onClick={() => {
               setViewMode('grid');
               localStorage.setItem('alfira-library-view', 'grid');
             }}
-            className={isGrid ? 'pressed text-accent' : ''}
+            className={`px-2 py-1.5 rounded-md transition-colors cursor-pointer ${
+              isGrid ? 'bg-accent text-elevated' : 'text-muted hover:text-fg'
+            }`}
             title="Grid view"
           >
             <SquaresFourIcon size={18} weight="duotone" />
-          </Button>
+          </button>
         </div>
       </div>
 

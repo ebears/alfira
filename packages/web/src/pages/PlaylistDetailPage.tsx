@@ -4,6 +4,7 @@ import {
   BombIcon,
   CaretLeftIcon,
   GhostIcon,
+  ListIcon,
   LockIcon,
   LockOpenIcon,
   MagnifyingGlassIcon,
@@ -12,6 +13,7 @@ import {
   PlayIcon,
   PlusCircleIcon,
   ShuffleIcon,
+  SquaresFourIcon,
   TagIcon,
 } from '@phosphor-icons/react';
 import { useCallback, useEffect, useRef, useState } from 'react';
@@ -111,6 +113,10 @@ export default function PlaylistDetailPage() {
   const [isFetching, setIsFetching] = useState(false);
   const [isError, setIsError] = useState(false);
   const [search, setSearch] = useState('');
+  const [viewMode, setViewMode] = useState<'grid' | 'list'>(() => {
+    const saved = localStorage.getItem('alfira-playlist-detail-view');
+    return saved === 'grid' ? 'grid' : 'list';
+  });
   const searchRef = useRef(search);
 
   // Keep searchRef in sync with search state
@@ -581,7 +587,7 @@ export default function PlaylistDetailPage() {
         </div>
       </div>
 
-      {/* Search */}
+      {/* Search and view toggle */}
       <div className="flex items-center gap-2 mb-4 md:mb-6">
         <div className="relative flex-1">
           <MagnifyingGlassIcon
@@ -602,6 +608,35 @@ export default function PlaylistDetailPage() {
               void loadPage(1, false, false, value);
             }}
           />
+        </div>
+        {/* View toggle */}
+        <div className="flex gap-1 bg-elevated rounded-lg p-1 shrink-0">
+          <button
+            type="button"
+            onClick={() => {
+              setViewMode('list');
+              localStorage.setItem('alfira-playlist-detail-view', 'list');
+            }}
+            className={`px-2 py-1.5 rounded-md transition-colors cursor-pointer ${
+              viewMode === 'list' ? 'bg-accent text-elevated' : 'text-muted hover:text-fg'
+            }`}
+            title="List view"
+          >
+            <ListIcon size={18} weight="duotone" />
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setViewMode('grid');
+              localStorage.setItem('alfira-playlist-detail-view', 'grid');
+            }}
+            className={`px-2 py-1.5 rounded-md transition-colors cursor-pointer ${
+              viewMode === 'grid' ? 'bg-accent text-elevated' : 'text-muted hover:text-fg'
+            }`}
+            title="Grid view"
+          >
+            <SquaresFourIcon size={18} weight="duotone" />
+          </button>
         </div>
       </div>
 
@@ -628,7 +663,7 @@ export default function PlaylistDetailPage() {
       ) : (
         <VirtualSongList
           items={songItems}
-          viewMode="list"
+          viewMode={viewMode}
           isAdminView={isAdminView}
           playlists={[]}
           isLoading={isLoading}
