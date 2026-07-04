@@ -261,7 +261,9 @@ export default function PlaylistDetailPage() {
   );
 
   const handleOrderToggle = useCallback(() => {
-    setOrder((o) => (o === 'asc' ? 'desc' : 'asc'));
+    const next = orderRef.current === 'asc' ? 'desc' : 'asc';
+    orderRef.current = next;
+    setOrder(next);
     setCurrentPage(1);
     setSongs([]);
     setIsError(false);
@@ -270,10 +272,20 @@ export default function PlaylistDetailPage() {
 
   const handleSortChange = useCallback(
     (newSort: string) => {
-      if (newSort === sort) {
+      if (newSort === sortRef.current) {
         handleOrderToggle();
       } else {
+        // When switching to a text field, default to ascending (A-Z)
+        const newOrder =
+          newSort === 'createdAt' || newSort === 'position' || newSort === 'duration'
+            ? 'desc'
+            : 'asc';
+        sortRef.current = newSort;
         setSort(newSort);
+        if (newOrder !== orderRef.current) {
+          orderRef.current = newOrder;
+          setOrder(newOrder);
+        }
         setSortOpen(false);
         setCurrentPage(1);
         setSongs([]);
@@ -281,12 +293,14 @@ export default function PlaylistDetailPage() {
         void loadPage(1, false, false, searchRef.current);
       }
     },
-    [sort, loadPage, handleOrderToggle]
+    [loadPage, handleOrderToggle]
   );
 
   const handleRemoveTag = useCallback(
     (tag: string) => {
-      setFilterTags((prev) => prev.filter((t) => t !== tag));
+      const next = filterTagsRef.current.filter((t) => t !== tag);
+      filterTagsRef.current = next;
+      setFilterTags(next);
       setCurrentPage(1);
       setSongs([]);
       setIsError(false);
@@ -297,7 +311,9 @@ export default function PlaylistDetailPage() {
 
   const handleRemoveSource = useCallback(
     (source: string) => {
-      setFilterSources((prev) => prev.filter((s) => s !== source));
+      const next = filterSourcesRef.current.filter((s) => s !== source);
+      filterSourcesRef.current = next;
+      setFilterSources(next);
       setCurrentPage(1);
       setSongs([]);
       setIsError(false);
@@ -309,7 +325,11 @@ export default function PlaylistDetailPage() {
   const handleAddTag = useCallback(
     (tag: string) => {
       const normalized = tag.toLowerCase();
-      setFilterTags((prev) => (prev.includes(normalized) ? prev : [...prev, normalized]));
+      const next = filterTagsRef.current.includes(normalized)
+        ? filterTagsRef.current
+        : [...filterTagsRef.current, normalized];
+      filterTagsRef.current = next;
+      setFilterTags(next);
       setCurrentPage(1);
       setSongs([]);
       setIsError(false);
@@ -320,7 +340,11 @@ export default function PlaylistDetailPage() {
 
   const handleAddSource = useCallback(
     (source: string) => {
-      setFilterSources((prev) => (prev.includes(source) ? prev : [...prev, source]));
+      const next = filterSourcesRef.current.includes(source)
+        ? filterSourcesRef.current
+        : [...filterSourcesRef.current, source];
+      filterSourcesRef.current = next;
+      setFilterSources(next);
       setCurrentPage(1);
       setSongs([]);
       setIsError(false);
@@ -764,19 +788,18 @@ export default function PlaylistDetailPage() {
           />
         </div>
 
-        {/* Filter button */}
-        <button
-          type="button"
+        {/* Add filter button */}
+        <Button
+          variant="inherit"
+          surface="surface"
           onClick={() => setFilterPopoverOpen(true)}
-          className={`px-2 py-1.5 rounded-md text-sm transition-colors cursor-pointer ${
-            filterTags.length > 0 || filterSources.length > 0
-              ? 'bg-accent text-elevated'
-              : 'text-muted hover:text-fg'
+          className={`flex items-center gap-1.5 px-2.5 ${
+            filterTags.length > 0 || filterSources.length > 0 ? 'pressed text-accent' : ''
           }`}
-          title="Add filter"
+          title={`Filter${filterTags.length > 0 || filterSources.length > 0 ? ` (${filterTags.length + filterSources.length} active)` : ''}`}
         >
           <FunnelIcon size={16} weight="duotone" />
-        </button>
+        </Button>
 
         {/* Sort dropdown */}
         <div className="relative" ref={sortRefEl}>
@@ -819,11 +842,16 @@ export default function PlaylistDetailPage() {
                         }}
                         title={order === 'asc' ? 'Switch to descending' : 'Switch to ascending'}
                       >
-                        {order === 'asc' ? (
-                          <ArrowUpIcon size={14} weight="bold" />
-                        ) : (
-                          <ArrowDownIcon size={14} weight="bold" />
-                        )}
+                        {(() => {
+                          const isTextField =
+                            sort === 'title' || sort === 'artist' || sort === 'album';
+                          const showDown = isTextField ? order === 'asc' : order !== 'asc';
+                          return showDown ? (
+                            <ArrowDownIcon size={14} weight="bold" />
+                          ) : (
+                            <ArrowUpIcon size={14} weight="bold" />
+                          );
+                        })()}
                       </button>
                     )}
                   </button>
