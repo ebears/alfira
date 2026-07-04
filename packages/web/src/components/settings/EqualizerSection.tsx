@@ -31,27 +31,36 @@ export default function EqualizerSection() {
   const [bands, setBands] = useState<number[]>(DEFAULT_BANDS);
   const [savedBands, setSavedBands] = useState<number[]>(DEFAULT_BANDS);
   const [eqEnabled, setEqEnabled] = useState(true);
+  const [savedEnabled, setSavedEnabled] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
     async function load() {
       try {
         const res = await fetch('/api/settings/equalizer');
         if (res.ok) {
-          const data = (await res.json()) as { bands: number[] };
+          const data = (await res.json()) as { bands: number[]; enabled: boolean };
           setBands(data.bands);
           setSavedBands(data.bands);
+          const enabled = data.enabled ?? true;
+          setEqEnabled(enabled);
+          setSavedEnabled(enabled);
         }
       } catch {
         // silently fail
+      } finally {
+        setLoaded(true);
       }
     }
     if (canManage) load();
+    else setLoaded(true);
   }, [canManage]);
 
   // When off, save sends flat bands; when on, save sends real bands
   const effectiveBands = eqEnabled ? bands : DEFAULT_BANDS;
-  const hasChanges = JSON.stringify(effectiveBands) !== JSON.stringify(savedBands);
+  const hasChanges =
+    JSON.stringify(effectiveBands) !== JSON.stringify(savedBands) || eqEnabled !== savedEnabled;
 
   async function handleSave() {
     setSaving(true);
@@ -59,10 +68,11 @@ export default function EqualizerSection() {
       const res = await fetch('/api/settings/equalizer', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ bands: effectiveBands }),
+        body: JSON.stringify({ bands: effectiveBands, enabled: eqEnabled }),
       });
       if (res.ok) {
         setSavedBands(effectiveBands);
+        setSavedEnabled(eqEnabled);
       } else {
         console.error('Failed to save equalizer settings:', res.status);
       }
@@ -105,6 +115,8 @@ export default function EqualizerSection() {
 
   const dimmed = !canManage;
   const slidersDimmed = !eqEnabled;
+
+  if (!loaded) return null;
 
   return (
     <div className={`space-y-4 ${dimmed ? 'opacity-40 pointer-events-none' : ''}`}>

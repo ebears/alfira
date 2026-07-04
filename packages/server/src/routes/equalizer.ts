@@ -13,6 +13,7 @@ import { db, tables } from '../shared/db';
 
 interface EqualizerPayload {
   bands: number[]; // length 15, each 0-100
+  enabled: boolean;
 }
 
 async function handleEqualizerGet(ctx: RouteContext): Promise<Response> {
@@ -20,14 +21,18 @@ async function handleEqualizerGet(ctx: RouteContext): Promise<Response> {
   if (guards instanceof Response) return guards;
 
   const row = await db
-    .select(EQ_BAND_COLUMNS)
+    .select({
+      ...EQ_BAND_COLUMNS,
+      eqEnabled: tables.guildSettings.eqEnabled,
+    })
     .from(tables.guildSettings)
     .where(eq(tables.guildSettings.id, 1))
     .get();
 
   const bands = eqBandsFromRow(row);
+  const enabled = row?.eqEnabled ?? true;
 
-  return json({ bands });
+  return json({ bands, enabled });
 }
 
 async function handleEqualizerPatch(ctx: RouteContext, request: Request): Promise<Response> {
@@ -41,7 +46,12 @@ async function handleEqualizerPatch(ctx: RouteContext, request: Request): Promis
     return json({ error: 'Invalid JSON' }, 400);
   }
 
-  const { bands } = body;
+  const { bands, enabled } = body;
+
+  // Validate: enabled must be boolean
+  if (typeof enabled !== 'boolean') {
+    return json({ error: 'enabled must be boolean' }, 400);
+  }
 
   // Validate: must be array of 15 integers, each 0-100
   if (!Array.isArray(bands) || bands.length !== 15) {
@@ -57,17 +67,17 @@ async function handleEqualizerPatch(ctx: RouteContext, request: Request): Promis
   // Upsert into DB
   await db
     .insert(tables.guildSettings)
-    .values({ id: 1, ...eqBandValues(bands) })
+    .values({ id: 1, eqEnabled: enabled, ...eqBandValues(bands) })
     .onConflictDoUpdate({
       target: tables.guildSettings.id,
-      set: eqBandValues(bands),
+      set: { eqEnabled: enabled, ...eqBandValues(bands) },
     })
     .run();
 
   // Apply to live NodeLink player if connected
   await applyNodeLinkFilter({ equalizer: buildEqualizerFilter(bands) }, 'equalizer');
 
-  return json({ bands });
+  return json({ bands, enabled });
 }
 
 // ---------------------------------------------------------------------------

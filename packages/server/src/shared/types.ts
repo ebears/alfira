@@ -72,6 +72,7 @@ export interface CompressorSettings {
 // ---------------------------------------------------------------------------
 export interface EqualizerSettings {
   bands: number[]; // length 15, values 0–100, 50 = neutral (0 dB)
+  enabled: boolean;
 }
 
 // ---------------------------------------------------------------------------

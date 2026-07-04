@@ -94,6 +94,7 @@ export const guildSettings = sqliteTable('guildSettings', {
   compressorAttack: integer('compressorAttack').notNull().default(5), // ms, 0 to 100
   compressorRelease: integer('compressorRelease').notNull().default(50), // ms, 10 to 1000
   compressorGain: integer('compressorGain').notNull().default(3), // dB, 0 to 24
+  eqEnabled: integer('eqEnabled', { mode: 'boolean' }).notNull().default(true),
   eqBand0: integer('eqBand0').notNull().default(50),
   eqBand1: integer('eqBand1').notNull().default(50),
   eqBand2: integer('eqBand2').notNull().default(50),
