@@ -26,8 +26,8 @@ export const DurationBadge = memo(function DurationBadge({
 
   return (
     <span className={`flex items-center gap-1.5 font-mono text-xs text-muted ${className}`}>
-      {formatDuration(seconds)}
       <ClockIcon size={11} weight="fill" className="shrink-0" />
+      {formatDuration(seconds)}
     </span>
   );
 });

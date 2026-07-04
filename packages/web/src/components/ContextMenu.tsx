@@ -91,7 +91,7 @@ export function ContextMenuTrigger({
       }}
       className={`${className ?? ''} ${isOpen ? 'pressed text-accent' : ''}`}
     >
-      <DotsThreeOutlineVerticalIcon size={18} weight="duotone" />
+      <DotsThreeOutlineVerticalIcon size={22} weight="duotone" />
     </Button>
   );
 }

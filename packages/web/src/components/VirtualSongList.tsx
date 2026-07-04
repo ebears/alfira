@@ -44,20 +44,20 @@ function SkeletonGrid() {
 
 function SkeletonList() {
   return (
-    <div className="flex flex-col gap-1">
+    <div className="flex flex-col gap-1.5">
       {Array.from({ length: 8 }).map((_, i) => (
         <div
           // biome-ignore lint/suspicious/noArrayIndexKey: skeleton items are static placeholders
           key={`skeleton-${i}`}
-          className="flex items-center gap-2 md:gap-4 px-3 md:px-4 py-3 rounded-lg bg-elevated clay-resting"
+          className="flex items-center gap-3 md:gap-4 px-4 py-4 rounded-lg bg-elevated clay-resting"
         >
-          <div className="skeleton w-14 h-14 md:w-12 md:h-12 rounded border border-border shrink-0" />
-          <div className="flex-1 min-w-0">
-            <div className="skeleton h-3 w-3/4" />
-            <div className="skeleton h-2 w-1/2 mt-1" />
+          <div className="skeleton w-16 h-16 rounded border border-border shrink-0" />
+          <div className="flex-1 min-w-0 flex flex-col gap-2">
+            <div className="skeleton h-3.5 w-2/5" />
+            <div className="skeleton h-3 w-3/5" />
           </div>
-          <div className="skeleton h-3 w-10 shrink-0 hidden md:block" />
           <div className="skeleton h-6 w-6 shrink-0" />
+          <div className="skeleton h-4 w-4 shrink-0" />
         </div>
       ))}
     </div>
@@ -96,7 +96,7 @@ export const VirtualSongList = memo(function VirtualSongList({
         className={
           isGrid
             ? 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-[repeat(auto-fill,minmax(270px,1fr))] gap-3 md:gap-4 items-start'
-            : 'flex flex-col gap-1'
+            : 'flex flex-col gap-1.5'
         }
       >
         {items.map((song) => (
