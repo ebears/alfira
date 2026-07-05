@@ -14,7 +14,10 @@ export default function AudioPage() {
     <div className="p-4 md:p-8">
       {/* Page header */}
       <div className="mb-6 md:mb-8">
-        <h1 className="font-display text-3xl md:text-4xl text-fg tracking-wider">Audio</h1>
+        <h1 className="font-display text-3xl md:text-4xl text-accent tracking-wider flex items-center gap-2">
+          <SlidersHorizontal size={28} weight="duotone" className="shrink-0 relative top-1" />
+          Audio
+        </h1>
         <p className="font-mono text-xs text-muted mt-2">Equalizer and compressor settings</p>
       </div>
 

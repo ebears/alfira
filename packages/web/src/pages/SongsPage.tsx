@@ -8,6 +8,7 @@ import {
   FunnelIcon,
   ListIcon,
   MagnifyingGlassIcon,
+  MusicNotesIcon,
   QuestionIcon,
   SortAscendingIcon,
   SquaresFourIcon,
@@ -398,7 +399,10 @@ export default function SongsPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6 md:mb-8">
         <div>
-          <h1 className="font-display text-3xl md:text-4xl text-fg tracking-wider">Songs</h1>
+          <h1 className="font-display text-3xl md:text-4xl text-accent tracking-wider flex items-center gap-2">
+            <MusicNotesIcon size={28} weight="duotone" className="shrink-0 relative top-1" />
+            Songs
+          </h1>
           <p className="font-mono text-xs text-muted mt-2">
             Music library{hasLoaded ? ` • ${total} track${total !== 1 ? 's' : ''}` : ''}
           </p>
