@@ -6,25 +6,13 @@ import { parsePagination } from '../lib/pagination';
 import { canAccessPlaylist } from '../lib/playlistAccess';
 import { checkRateLimit, getClientIp, rateLimitResponse } from '../lib/rateLimit';
 import { checkGuards } from '../lib/routeGuards';
-import { buildSongSearchClause } from '../lib/search';
+import { buildSongSearchClause, SOURCE_LIKE_PATTERNS } from '../lib/search';
 import { emitPlaylistUpdated } from '../lib/socket';
 import { syncPlaylistToTag } from '../lib/syncPlaylistToTag';
 import { validatePlaylistName } from '../lib/validation';
 import { db, tables } from '../shared/db';
 
 const { playlist: playlistTable, playlistSong: playlistSongTable } = tables;
-
-// ---------------------------------------------------------------------------
-// Source URL → LIKE patterns (mirrors songs.ts)
-// ---------------------------------------------------------------------------
-const SOURCE_LIKE_PATTERNS: Record<string, string[]> = {
-  youtube: ['%youtube.com%', '%youtu.be%'],
-  soundcloud: ['%soundcloud.com%'],
-  spotify: ['%spotify.com%'],
-  applemusic: ['%music.apple.com%'],
-  tidal: ['%tidal.com%'],
-  googledrive: ['%drive.google.com%'],
-};
 
 function buildSongOrderBy(field: string, direction: 'ASC' | 'DESC'): ReturnType<typeof sql> {
   switch (field) {
