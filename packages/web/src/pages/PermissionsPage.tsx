@@ -1,4 +1,4 @@
-import { TrashIcon } from '@phosphor-icons/react';
+import { ShieldCheckIcon, TrashIcon } from '@phosphor-icons/react';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { fetchPermissions, type PermissionsResponse, updatePermission } from '../api/api';
 import ConfirmModal from '../components/ConfirmModal';
@@ -197,7 +197,10 @@ export default function PermissionsPage() {
     return (
       <div className="p-4 md:p-8">
         <div className="mb-6 md:mb-8">
-          <h1 className="font-display text-3xl md:text-4xl text-fg tracking-wider">Permissions</h1>
+          <h1 className="font-display text-3xl md:text-4xl text-accent tracking-wider flex items-center gap-2">
+            <ShieldCheckIcon size={28} weight="duotone" className="shrink-0 relative top-1" />
+            Permissions
+          </h1>
         </div>
         {error ? (
           <ErrorBanner message={error} />
@@ -213,7 +216,10 @@ export default function PermissionsPage() {
     <div className="p-4 md:p-8">
       {/* Page header */}
       <div className="mb-6 md:mb-8">
-        <h1 className="font-display text-3xl md:text-4xl text-fg tracking-wider">Permissions</h1>
+        <h1 className="font-display text-3xl md:text-4xl text-accent tracking-wider flex items-center gap-2">
+          <ShieldCheckIcon size={28} weight="duotone" className="shrink-0 relative top-1" />
+          Permissions
+        </h1>
         <p className="font-mono text-xs text-muted mt-2">
           Grant specific abilities to non-admin roles. Super-admins always have full access.
         </p>

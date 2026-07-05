@@ -1,3 +1,4 @@
+import { WrenchIcon } from '@phosphor-icons/react';
 import { useEffect, useState } from 'react';
 import { fetchVersion } from '../../api/api';
 import { useAuth } from '../../context/AuthContext';
@@ -18,7 +19,10 @@ export default function SettingsPage() {
     <div className="p-4 md:p-8">
       {/* Page header */}
       <div className="mb-6 md:mb-8 flex items-end justify-between">
-        <h1 className="font-display text-3xl md:text-4xl text-fg tracking-wider">Settings</h1>
+        <h1 className="font-display text-3xl md:text-4xl text-accent tracking-wider flex items-center gap-2">
+          <WrenchIcon size={28} weight="duotone" className="shrink-0 relative top-1" />
+          Settings
+        </h1>
         {version !== null && <p className="font-mono text-xs text-faint pb-1">{version}</p>}
       </div>
 

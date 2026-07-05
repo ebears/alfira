@@ -1,6 +1,6 @@
 import { deleteTag, fetchTagSongs, fetchTags, updateTag } from '@alfira-bot/server/shared/api';
 import type { Song } from '@alfira-bot/server/shared/types';
-import { MagnifyingGlassIcon, TrashIcon } from '@phosphor-icons/react';
+import { MagnifyingGlassIcon, TagIcon, TrashIcon } from '@phosphor-icons/react';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import ConfirmModal from '../components/ConfirmModal';
 import EmptyState from '../components/EmptyState';
@@ -155,7 +155,10 @@ export default function TagsPage() {
     <div className="p-4 md:p-8 flex flex-col h-full">
       {/* Page header */}
       <div className="mb-6 md:mb-8 shrink-0">
-        <h1 className="font-display text-3xl md:text-4xl text-fg tracking-wider">Tags</h1>
+        <h1 className="font-display text-3xl md:text-4xl text-accent tracking-wider flex items-center gap-2">
+          <TagIcon size={28} weight="duotone" className="shrink-0 relative top-1" />
+          Tags
+        </h1>
         <p className="font-mono text-xs text-muted mt-2">
           Manage tags & colors
           {loadingTags ? '' : ` • ${allTags.length} tag${allTags.length !== 1 ? 's' : ''}`}

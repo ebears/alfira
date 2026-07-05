@@ -1,4 +1,5 @@
 import type { SongRequest } from '@alfira-bot/server/shared';
+import { TrayIcon } from '@phosphor-icons/react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { approveRequest, cancelRequest, denyRequest, fetchRequests } from '../api/api';
 import AddSongModal from '../components/AddSongModal';
@@ -114,7 +115,10 @@ export default function RequestsPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6 md:mb-8">
         <div>
-          <h1 className="font-display text-3xl md:text-4xl text-fg tracking-wider">Requests</h1>
+          <h1 className="font-display text-3xl md:text-4xl text-accent tracking-wider flex items-center gap-2">
+            <TrayIcon size={28} weight="duotone" className="shrink-0 relative top-1" />
+            Requests
+          </h1>
           <p className="font-mono text-xs text-muted mt-2">
             Submit & review requests{hasLoaded ? ` • ${countLabel}` : ''}
           </p>

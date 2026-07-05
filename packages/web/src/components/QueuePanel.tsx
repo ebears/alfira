@@ -13,6 +13,7 @@ import {
   MusicNoteIcon,
   PlayIcon,
   PlusCircleIcon,
+  QueueIcon,
   RepeatIcon,
   RepeatOnceIcon,
   ShuffleIcon,
@@ -676,7 +677,10 @@ const PanelHeader = memo(function PanelHeader({
 
   return (
     <div className="flex items-center justify-between px-4 py-3 border-b border-border shrink-0">
-      <h1 className="font-display text-3xl text-fg tracking-wider">Queue</h1>
+      <h1 className="font-display text-3xl text-accent tracking-wider flex items-center gap-2">
+        <QueueIcon size={24} weight="duotone" className="shrink-0 relative top-1" />
+        Queue
+      </h1>
       <div className="flex items-center gap-1">
         {mqc && (
           <>
