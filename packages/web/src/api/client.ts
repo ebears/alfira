@@ -48,8 +48,9 @@ function processQueue(error: Error | null): void {
   failedQueue = [];
 }
 
-function redirectToLogin(): void {
+function redirectToLogin(reason: string): void {
   if (window.location.pathname !== '/login') {
+    console.warn(`[auth] redirectToLogin: ${reason}`, new Error().stack);
     window.location.href = '/login';
   }
 }
@@ -75,6 +76,7 @@ async function refreshToken(): Promise<RefreshResult> {
 export async function trySilentRefresh(): Promise<boolean> {
   if (isRefreshing) {
     // wrappedFetch is already doing a refresh — queue and wait for it
+    console.warn('[auth] trySilentRefresh: already refreshing, queuing');
     return new Promise<boolean>((resolve, _reject) => {
       failedQueue.push({
         resolve: () => resolve(true),
@@ -84,9 +86,11 @@ export async function trySilentRefresh(): Promise<boolean> {
   }
 
   if (isSilentRefreshing) {
+    console.warn('[auth] trySilentRefresh: already silent-refreshing, skipping');
     return false;
   }
 
+  console.warn('[auth] trySilentRefresh: starting refresh attempt');
   isSilentRefreshing = true;
   // Set isRefreshing so wrappedFetch queues instead of starting concurrent refresh
   isRefreshing = true;
@@ -94,13 +98,20 @@ export async function trySilentRefresh(): Promise<boolean> {
   // Retry up to 3 times total for transient failures (Discord 429/503, network).
   let result = await refreshToken();
   for (let attempt = 0; attempt < 2 && !result.ok && result.retryable; attempt++) {
+    console.warn(
+      `[auth] trySilentRefresh: retry ${attempt + 1}/2 after ${result.ok ? 'success' : 'retryable failure'}`
+    );
     await new Promise((r) => setTimeout(r, 1500));
     result = await refreshToken();
   }
 
   if (result.ok) {
+    console.warn('[auth] trySilentRefresh: succeeded');
     processQueue(null);
   } else {
+    console.warn(
+      `[auth] trySilentRefresh: failed after retries (ok=${result.ok}, retryable=${result.retryable})`
+    );
     processQueue(new Error('Token refresh failed'));
   }
   isRefreshing = false;
@@ -134,7 +145,7 @@ async function wrappedFetch(
   if (response.status === 401) {
     // Don't retry if this is already a refresh request
     if (url === '/auth/refresh') {
-      redirectToLogin();
+      redirectToLogin('/auth/refresh itself returned 401 — refresh token dead');
       throw new ApiError('Unauthorized', 401);
     }
 
@@ -152,6 +163,7 @@ async function wrappedFetch(
 
     // Start refreshing
     isRefreshing = true;
+    console.warn(`[auth] wrappedFetch: starting refresh after 401 on ${url}`);
 
     const result = await refreshToken();
 
@@ -170,7 +182,7 @@ async function wrappedFetch(
       // Refresh failed permanently, reject queue and redirect
       processQueue(new Error('Token refresh failed'));
       isRefreshing = false;
-      redirectToLogin();
+      redirectToLogin('refreshToken() returned non-retryable failure');
       throw new ApiError('Unauthorized', 401);
     }
   }
