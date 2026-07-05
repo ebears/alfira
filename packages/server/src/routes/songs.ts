@@ -6,7 +6,7 @@ import { json } from '../lib/json';
 import { parsePagination } from '../lib/pagination';
 import { checkRateLimit, getClientIp, rateLimitResponse } from '../lib/rateLimit';
 import { checkGuards } from '../lib/routeGuards';
-import { buildSongSearchClause } from '../lib/search';
+import { buildSongSearchClause, SOURCE_LIKE_PATTERNS } from '../lib/search';
 import { formatSong } from '../lib/serialization';
 import { emitSongDeleted, emitSongUpdated } from '../lib/socket';
 import { reSyncPlaylistsForTags } from '../lib/syncPlaylistToTag';
@@ -22,19 +22,6 @@ import { db, tables } from '../shared/db';
 import { getPlayer } from '../startDiscord';
 
 const { song: songTable } = tables;
-
-// ---------------------------------------------------------------------------
-// Source URL → LIKE patterns for server-side source filtering.
-// Must mirror the web's HOST_TO_SOURCE map in packages/web/src/utils/source.ts.
-// ---------------------------------------------------------------------------
-const SOURCE_LIKE_PATTERNS: Record<string, string[]> = {
-  youtube: ['%youtube.com%', '%youtu.be%'],
-  soundcloud: ['%soundcloud.com%'],
-  spotify: ['%spotify.com%'],
-  applemusic: ['%music.apple.com%'],
-  tidal: ['%tidal.com%'],
-  googledrive: ['%drive.google.com%'],
-};
 
 const ALLOWED_SORTS = ['createdAt', 'title', 'artist', 'album', 'duration'] as const;
 type SortField = (typeof ALLOWED_SORTS)[number];
