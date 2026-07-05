@@ -24,6 +24,8 @@ services:
     #   dockerfile: Dockerfile
     #   target: runtime
     restart: unless-stopped
+    env_file:
+      - .env
     environment:
       NODE_ENV: production
       DATABASE_URL: /data/alfira.db
