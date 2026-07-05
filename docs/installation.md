@@ -40,18 +40,14 @@ No local Node.js installation needed — Docker handles everything.
 Alfira uses pre-built Docker images from the GitHub Container Registry.
 
 ```bash
-# 1. Copy docker-compose.prod.yml and .env.example from this repo to the folder you want the bot to live.
-curl -o docker-compose.prod.yml https://raw.githubusercontent.com/ebears/alfira/main/docker-compose.prod.yml
-curl -o .env.example https://raw.githubusercontent.com/ebears/alfira/main/.env.example
+# 1. Grab the compose file and example env
+curl -o docker-compose.yml https://raw.githubusercontent.com/ebears/alfira/main/docker-compose.yml
+curl -o .env https://raw.githubusercontent.com/ebears/alfira/main/.env.example
 
-# 2. Rename docker-compose.prod.yml to docker-compose.yml and .env.example to .env.
-cp docker-compose.prod.yml docker-compose.yml
-cp .env.example .env
-
-# 3. Configure the .env  with your values
+# 2. Configure .env with your values
 nano .env  # or micro, zed, code, vim, etc.
 
-# 4. Start the stack - web UI at http://localhost:8180
+# 3. Start the stack — web UI at http://localhost:3001
 docker compose up -d
 ```
 
@@ -98,9 +94,9 @@ For use with a reverse proxy, change `DISCORD_REDIRECT_URI` to point to your cus
 
 | Variable | Local (Docker) | Reverse Proxy |
 |----------|-------------|---------|
-| `DISCORD_REDIRECT_URI` | `http://localhost:8180/auth/callback` | `https://your-domain.com/auth/callback` |
+| `DISCORD_REDIRECT_URI` | `http://localhost:3001/auth/callback` | `https://your-domain.com/auth/callback` |
 
-> **Important:** Ensure your redirect URL in the Discord Developer Portal matches exactly. For local Docker setups, use the exposed port (8180), not the internal server port (3001).
+> **Important:** Ensure your redirect URL in the Discord Developer Portal matches exactly. If you changed the exposed port in docker-compose.yml, use that port here.
 
 ### Discord Application Setup
 
@@ -127,7 +123,7 @@ For use with a reverse proxy, change `DISCORD_REDIRECT_URI` to point to your cus
 1. Navigate to **OAuth2** → **General**.
 2. Copy the **Client secret** — this is your `DISCORD_CLIENT_SECRET`.
 3. Add your redirect URL:
-   - Local (Docker): `http://localhost:8180/auth/callback`
+   - Local (Docker): `http://localhost:3001/auth/callback`
    - Reverse Proxy: `https://your-domain.com/auth/callback`
 4. Click **"Save Changes"**.
 
@@ -169,14 +165,14 @@ All of these settings can be changed later from the **Settings → Admin** page.
 Pull the latest images and restart:
 
 ```bash
-docker compose -f docker-compose.prod.yml pull
-docker compose -f docker-compose.prod.yml up -d
+docker compose pull
+docker compose up -d
 ```
 
 Database migrations run automatically on startup. If you encounter issues:
 
 ```bash
-docker compose -f docker-compose.prod.yml logs -f alfira
+docker compose logs -f alfira
 ```
 
 ---
