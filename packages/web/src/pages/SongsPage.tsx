@@ -409,7 +409,7 @@ export default function SongsPage() {
         </div>
         <span className="relative group">
           <QuestionIcon size={20} weight="duotone" className="text-muted cursor-help" />
-          <span className="absolute right-0 top-full mt-2 w-64 p-3 rounded-lg bg-elevated border border-border text-xs text-muted opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity z-10 leading-relaxed">
+          <span className="glass-tooltip absolute right-0 top-full mt-2 w-64 p-3 leading-relaxed">
             Songs are added through the <span className="text-accent">Requests</span> page. Submit a
             URL there — admins review and approve it, or it&rsquo;s added instantly if you have
             permission.
@@ -479,7 +479,7 @@ export default function SongsPage() {
           </Button>
 
           {sortOpen && (
-            <div className="absolute right-0 top-full mt-1.5 w-48 bg-elevated border border-border rounded-lg shadow-lg z-20 py-1 animate-fade-up origin-top-right">
+            <div className="absolute right-0 top-full mt-1.5 w-48 glass-popover z-20 py-1 origin-top-right">
               {SORT_OPTIONS.map((opt) => {
                 const isActive = sort === opt.value;
                 return (

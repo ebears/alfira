@@ -197,7 +197,7 @@ export default function BulkEditModal({ count, onApply, onClose, isApplying }: B
       {/* biome-ignore lint/a11y/useKeyWithClickEvents: modal container, keyboard not applicable */}
       {/* biome-ignore lint/a11y/noStaticElementInteractions: modal container, keyboard not applicable */}
       <div
-        className="bg-elevated rounded-xl border border-border shadow-2xl w-full max-w-md mx-4 p-6 animate-fade-up max-h-[85vh] overflow-y-auto"
+        className="w-full max-w-md mx-4 p-6 glass-modal animate-fade-up max-h-[85vh] overflow-y-auto"
         onClick={(e) => e.stopPropagation()}
       >
         <h2 className="font-display text-lg text-fg mb-1">Edit {count} songs</h2>
@@ -316,7 +316,7 @@ export default function BulkEditModal({ count, onApply, onClose, isApplying }: B
                   <input
                     ref={tagInputRef}
                     id="bulk-edit-tags"
-                    className="bg-transparent outline-none flex-1 min-w-[120px] text-sm placeholder:text-faint py-0.5"
+                    className="bg-transparent outline-none flex-1 min-w-30 text-sm placeholder:text-faint py-0.5"
                     placeholder={
                       tags.length === 0 ? 'Type a tag and press Enter...' : 'Add another...'
                     }
@@ -355,7 +355,7 @@ export default function BulkEditModal({ count, onApply, onClose, isApplying }: B
               <div className="relative">
                 <div
                   ref={tagDropdownRef}
-                  className="absolute top-1 left-0 right-0 bg-elevated border border-border rounded-lg shadow-lg z-30 max-h-40 overflow-y-auto"
+                  className="absolute top-1 left-0 right-0 glass-popover z-30 max-h-40"
                 >
                   {filtered.map((t, i) => {
                     const c = getTagColorClasses(t.canonicalName, t.color);

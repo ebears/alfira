@@ -320,19 +320,11 @@ function RoleCard({
   return (
     <div className="bg-elevated clay-resting rounded-xl overflow-hidden hover:clay-raised hover:-translate-y-px active:clay-flat active:translate-y-0 transition-all duration-100">
       {/* Header row — clickable to toggle expand */}
-      <div
-        className="flex items-center gap-3 px-5 py-3 cursor-pointer"
+      <button
+        type="button"
+        className="flex items-center gap-3 px-5 py-3 cursor-pointer w-full"
         onClick={onToggleExpand}
-        onKeyDown={(e) => {
-          if (e.key === 'Enter' || e.key === ' ') {
-            e.preventDefault();
-            onToggleExpand();
-          }
-        }}
-        role="button"
-        tabIndex={0}
       >
-        {/* Role identity */}
         <span
           className="w-3 h-3 rounded-full shrink-0"
           style={{
@@ -373,7 +365,7 @@ function RoleCard({
         >
           <TrashIcon size={16} weight="duotone" />
         </Button>
-      </div>
+      </button>
 
       {/* Expanded content */}
       {isExpanded && (

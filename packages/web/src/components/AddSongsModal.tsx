@@ -127,10 +127,7 @@ export default function AddSongsModal({
 
   return (
     <Backdrop onClose={onClose}>
-      <div
-        className="bg-surface border border-border rounded-xl w-full max-w-lg modal-clay
-        flex flex-col max-h-[80vh] animate-fade-up"
-      >
+      <div className="w-full max-w-lg glass-modal flex flex-col max-h-[80vh] animate-fade-up">
         <div className="p-4 md:p-5 border-b border-border">
           <h2 className="font-display text-2xl md:text-3xl text-fg tracking-wider">Add Songs</h2>
           <p className="font-mono text-xs text-muted mt-0.5">to "{playlist.name}"</p>
