@@ -141,6 +141,8 @@ export function fetchSongsPage(
 
 export interface RequestCreateData {
   sourceUrl: string;
+  /** Explicitly request a playlist import — skips ?list= stripping. */
+  type?: 'playlist';
   notifyDm?: boolean;
   nickname?: string | null;
   artist?: string | null;
@@ -163,6 +165,7 @@ export interface CreateRequestResult {
 export function createRequest(data: RequestCreateData): Promise<CreateRequestResult> {
   return post('/api/requests', {
     sourceUrl: data.sourceUrl,
+    type: data.type,
     notifyDm: data.notifyDm ?? false,
     ...(data.nickname != null && { nickname: data.nickname }),
     ...(data.artist != null && { artist: data.artist }),

@@ -98,6 +98,7 @@ export default function AddSongModal({
     try {
       const result = await createRequest({
         sourceUrl: url.trim(),
+        type: 'playlist',
       });
 
       onRequestCreated?.();
