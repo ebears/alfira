@@ -1,3 +1,4 @@
+import { CaretRightIcon } from '@phosphor-icons/react';
 import type { ReactNode } from 'react';
 import type { MenuItem, SubmenuConfig } from '../ContextMenu';
 
@@ -31,7 +32,10 @@ export function MenuItemButton({ item, onClick }: MenuItemButtonProps) {
 			`}
     >
       {item.icon && <span className="shrink-0">{item.icon}</span>}
-      <span className="truncate">{item.label}</span>
+      <span className="truncate flex-1">{item.label}</span>
+      {(item.submenu || item.editSubmenu) && (
+        <CaretRightIcon size={12} weight="duotone" className="shrink-0 ml-auto opacity-50" />
+      )}
     </button>
   );
 }
