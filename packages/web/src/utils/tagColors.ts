@@ -1,4 +1,4 @@
-const TAG_COLORS = [
+export const TAG_COLORS = [
   {
     name: 'orange' as const,
     bg: 'light:bg-orange-500/15 bg-orange-500/20',

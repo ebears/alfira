@@ -8,41 +8,9 @@ import TagTicker from '../components/TagTicker';
 import { ArtworkImage } from '../components/ui/ArtworkImage';
 import { Button } from '../components/ui/Button';
 import { useTagColors } from '../context/TagsContext';
+import { getTagColorClasses, TAG_COLORS } from '../utils/tagColors';
 
-const TAG_COLORS = [
-  {
-    name: 'orange',
-    bg: 'light:bg-orange-500/15 bg-orange-500/20',
-    text: 'light:text-orange-600 text-orange-300',
-  },
-  { name: 'sky', bg: 'light:bg-sky-500/15 bg-sky-500/20', text: 'light:text-sky-600 text-sky-300' },
-  {
-    name: 'emerald',
-    bg: 'light:bg-emerald-500/15 bg-emerald-500/20',
-    text: 'light:text-emerald-600 text-emerald-300',
-  },
-  {
-    name: 'amber',
-    bg: 'light:bg-amber-500/15 bg-amber-500/20',
-    text: 'light:text-amber-700 text-amber-300',
-  },
-  {
-    name: 'violet',
-    bg: 'light:bg-violet-500/15 bg-violet-500/20',
-    text: 'light:text-violet-600 text-violet-300',
-  },
-] as const;
 const TAG_COLOR_NAMES = TAG_COLORS.map((c) => c.name);
-
-function getTagColor(tag: string, explicitColor?: string | null) {
-  if (explicitColor) {
-    const found = TAG_COLORS.find((c) => c.name === explicitColor);
-    if (found) return found;
-  }
-  let hash = 5381;
-  for (let i = 0; i < tag.length; i++) hash = (hash * 33) ^ tag.charCodeAt(i);
-  return TAG_COLORS[((hash >>> 0) * 31) % TAG_COLORS.length];
-}
 
 interface TagItem {
   canonicalName: string;
@@ -111,7 +79,7 @@ export default function TagsPage() {
   const pickColor = useCallback(
     async (color: string) => {
       if (!selected) return;
-      const effectiveColor = getTagColor(selected.canonicalName, selected.color).name;
+      const effectiveColor = getTagColorClasses(selected.canonicalName, selected.color).name;
       if (effectiveColor === color) return; // already the effective color
       // Optimistic update
       setAllTags((prev) =>
@@ -201,7 +169,7 @@ export default function TagsPage() {
               />
             ) : (
               filtered.map((tag) => {
-                const colors = getTagColor(tag.canonicalName, tag.color);
+                const colors = getTagColorClasses(tag.canonicalName, tag.color);
                 const isActive = selected?.nameLower === tag.nameLower;
                 return (
                   <button
@@ -272,22 +240,22 @@ export default function TagsPage() {
                     const colorClasses =
                       TAG_COLORS.find((c) => c.name === colorName) ?? TAG_COLORS[0];
                     const isSelected =
-                      getTagColor(selected.canonicalName, selected.color).name === colorName;
+                      getTagColorClasses(selected.canonicalName, selected.color).name === colorName;
                     return (
                       <button
                         type="button"
                         key={colorName}
                         onClick={() => pickColor(colorName)}
                         title={colorName}
-                        className={`w-6 h-6 rounded-full flex items-center justify-center transition-opacity cursor-pointer ${
+                        className={`w-8 h-8 rounded-full flex items-center justify-center transition-all cursor-pointer border border-border/40 ${
                           isSelected
                             ? 'opacity-100 ring-2 ring-offset-1 ring-offset-surface ring-fg'
-                            : 'opacity-60 hover:opacity-80'
+                            : 'opacity-80 hover:opacity-100'
                         } ${colorClasses.bg} ${colorClasses.text}`}
                       >
                         {isSelected ? (
                           <svg
-                            className="w-3 h-3"
+                            className="w-3.5 h-3.5"
                             fill="currentColor"
                             viewBox="0 0 12 12"
                             aria-hidden="true"
