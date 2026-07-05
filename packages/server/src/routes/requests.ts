@@ -122,10 +122,12 @@ async function handlePreviewRequest(ctx: RouteContext, request: Request): Promis
     .where(eq(songTable.sourceId, metadata.sourceId))
     .limit(1);
 
+  // alreadyExists only counts pending requests — a song that was previously
+  // approved but later deleted from the library should be re-requestable.
   const [existingReq] = await db
     .select()
     .from(requestTable)
-    .where(eq(requestTable.sourceId, metadata.sourceId))
+    .where(and(eq(requestTable.sourceId, metadata.sourceId), eq(requestTable.status, 'pending')))
     .limit(1);
 
   return json({
@@ -188,12 +190,13 @@ async function handleCreateRequest(ctx: RouteContext, request: Request): Promise
   if (!urlResult.ok) return urlResult.response;
   const originalUrl = urlResult.value;
 
-  const autoApprove = await userCanAutoApprove(ctx);
-  const isPlaylist = isPlaylistUrl(originalUrl);
-
-  // Strip ?list= for single-track URLs only
+  // Strip any ?list=... query param so YouTube video URLs with a playlist
+  // parameter (e.g. youtu.be/VIDEO_ID?list=MIX_ID) aren't misdetected as
+  // a full playlist import. Skip stripping when the client explicitly requests
+  // a playlist import via type: 'playlist'.
   let url = originalUrl;
-  if (!isPlaylist) {
+  const explicitPlaylist = (body as { type?: string }).type === 'playlist';
+  if (!explicitPlaylist) {
     try {
       const parsed = new URL(url);
       parsed.searchParams.delete('list');
@@ -202,6 +205,9 @@ async function handleCreateRequest(ctx: RouteContext, request: Request): Promise
       // leave URL unchanged
     }
   }
+
+  const autoApprove = await userCanAutoApprove(ctx);
+  const isPlaylist = isPlaylistUrl(url);
 
   // --- Playlist request ---
   if (isPlaylist) {
@@ -383,11 +389,12 @@ async function handleCreateRequest(ctx: RouteContext, request: Request): Promise
     );
   }
 
-  // Check duplicates: existing requests (any status)
+  // Check duplicates: only block on pending requests. Completed (approved/denied)
+  // requests don't prevent re-requesting — the song may have been deleted since.
   const [existingReq] = await db
     .select()
     .from(requestTable)
-    .where(eq(requestTable.sourceId, metadata.sourceId))
+    .where(and(eq(requestTable.sourceId, metadata.sourceId), eq(requestTable.status, 'pending')))
     .limit(1);
 
   if (existingReq) {
