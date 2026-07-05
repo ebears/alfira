@@ -102,7 +102,7 @@ export default function QueuePanel({
           variant: 'priority',
           song,
           listIndex: i,
-          key: `${song.id}-p${i}`,
+          key: `p-${song.id}`,
         });
       });
     }
@@ -114,7 +114,7 @@ export default function QueuePanel({
           variant: 'regular',
           song,
           listIndex: i,
-          key: `${song.id}-r${i}`,
+          key: `r-${song.id}`,
         });
       });
     }
@@ -123,10 +123,12 @@ export default function QueuePanel({
 
   const virtualizer = useVirtualizer({
     count: virtualItems.length,
+    getItemKey: (i) => virtualItems[i]?.key,
     getScrollElement: () => scrollRef.current,
     estimateSize: (i) => (virtualItems[i]?.type === 'header' ? 36 : 92),
     overscan: 5,
   });
+
   const isQueueEmpty = queue.length === 0 && priorityQueue.length === 0 && !currentSong;
 
   const handleClear = useCallback(async () => {
@@ -267,6 +269,7 @@ export default function QueuePanel({
           menuOpen={menuOpen}
           onToggleMenu={() => setMenuOpen(!menuOpen)}
           mobileQuickControls={mobileQuickControls}
+          showActions={false}
         />
         <div className="flex-1 p-4 space-y-3">
           <div className="skeleton h-5 w-48 rounded" />
@@ -285,6 +288,7 @@ export default function QueuePanel({
         menuOpen={menuOpen}
         onToggleMenu={() => setMenuOpen(!menuOpen)}
         mobileQuickControls={mobileQuickControls}
+        showActions={menuItems.length > 0}
       />
 
       {/* Fixed content: Now Playing */}
@@ -333,6 +337,8 @@ export default function QueuePanel({
                 return (
                   <div
                     key={item.key}
+                    data-index={virtualRow.index}
+                    ref={virtualizer.measureElement}
                     style={{
                       position: 'absolute',
                       top: 0,
@@ -656,11 +662,13 @@ const PanelHeader = memo(function PanelHeader({
   menuOpen,
   onToggleMenu,
   mobileQuickControls,
+  showActions = true,
 }: {
   triggerRef: React.RefObject<HTMLButtonElement | null>;
   menuOpen: boolean;
   onToggleMenu: () => void;
   mobileQuickControls?: MobileQuickControls;
+  showActions?: boolean;
 }) {
   const mqc = mobileQuickControls;
   const isLoopActive = mqc ? mqc.loopMode !== 'off' : false;
@@ -739,20 +747,22 @@ const PanelHeader = memo(function PanelHeader({
             </Button>
           </>
         )}
-        <Button
-          ref={triggerRef}
-          variant="inherit"
-          size="icon"
-          type="button"
-          aria-haspopup="true"
-          aria-expanded={menuOpen}
-          title="More actions"
-          surface="elevated"
-          className={`${menuOpen ? 'pressed text-accent' : ''}`}
-          onClick={onToggleMenu}
-        >
-          <DotsThreeOutlineVerticalIcon size={18} weight="duotone" />
-        </Button>
+        {showActions && (
+          <Button
+            ref={triggerRef}
+            variant="inherit"
+            size="icon"
+            type="button"
+            aria-haspopup="true"
+            aria-expanded={menuOpen}
+            title="More actions"
+            surface="elevated"
+            className={`${menuOpen ? 'pressed text-accent' : ''}`}
+            onClick={onToggleMenu}
+          >
+            <DotsThreeOutlineVerticalIcon size={18} weight="duotone" />
+          </Button>
+        )}
       </div>
     </div>
   );

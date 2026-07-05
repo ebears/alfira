@@ -143,7 +143,7 @@ const SongCardInner = ({
             )}
           </div>
           {/* Artist + Duration */}
-          <div className="flex items-center justify-between gap-2 text-xs text-muted">
+          <div className="flex items-center justify-between gap-2 text-xs text-muted overflow-hidden">
             {song.artist ? (
               <span className="flex items-center gap-1 min-w-0">
                 <UserIcon size={12} weight="fill" className="shrink-0" />
@@ -156,7 +156,7 @@ const SongCardInner = ({
           </div>
 
           {/* Album + VolumeBoost */}
-          <div className="flex items-center justify-between gap-2 text-xs text-muted">
+          <div className="flex items-center justify-between gap-2 text-xs text-muted overflow-hidden">
             {song.album ? (
               <span className="flex items-center gap-1 min-w-0">
                 <DiscIcon size={12} weight="fill" className="shrink-0" />
@@ -253,21 +253,21 @@ const SongCardInner = ({
           />
         </div>
         <div className="flex-1 min-w-0 flex flex-col justify-center gap-1.5">
-          <p className="text-sm font-semibold text-fg truncate leading-tight flex items-center gap-1.5">
+          <p className="text-sm font-semibold text-fg leading-tight flex items-center gap-1.5 min-w-0">
             <MusicNoteIcon size={13} weight="fill" className="shrink-0 text-muted" />
-            {song.nickname || song.title}
+            <span className="truncate">{song.nickname || song.title}</span>
           </p>
           <div className="flex items-center gap-2.5 flex-wrap text-xs text-muted min-w-0">
             {song.artist && (
-              <span className="truncate max-w-[16ch] flex items-center gap-1">
+              <span className="max-w-[16ch] flex items-center gap-1 min-w-0">
                 <UserIcon size={12} weight="fill" className="shrink-0" />
-                {song.artist}
+                <span className="truncate">{song.artist}</span>
               </span>
             )}
             {song.album && (
-              <span className="truncate max-w-[20ch] flex items-center gap-1">
+              <span className="max-w-[20ch] flex items-center gap-1 min-w-0">
                 <DiscIcon size={12} weight="fill" className="shrink-0" />
-                {song.album}
+                <span className="truncate">{song.album}</span>
               </span>
             )}
             {tags.length > 0 && <TagTicker tags={tags} isHovered={isRowHovered} />}
