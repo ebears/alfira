@@ -246,6 +246,23 @@ export class PlaybackCursor<T> {
   // ---------------------------------------------------------------------------
 
   /**
+   * Update all items matching the predicate in-place. Returns the number
+   * of items updated.  Modifies buffer entries directly — does not affect
+   * readIndex or playbackOrder.
+   */
+  updateWhere(predicate: (item: T) => boolean, updater: (item: T) => T): number {
+    let count = 0;
+    for (let i = 0; i < this.buffer.length; i++) {
+      const item = this.buffer[i];
+      if (item !== undefined && predicate(item)) {
+        this.buffer[i] = updater(item);
+        count++;
+      }
+    }
+    return count;
+  }
+
+  /**
    * Convert all unplayed items to an array for the queue display.
    *
    * After advance(), readIndex points to the next song to be played
