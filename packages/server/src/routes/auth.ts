@@ -355,7 +355,7 @@ export async function handleAuth(ctx: RouteContext, request: Request): Promise<R
     return await handleRefresh(ctx);
   }
   if (request.method === 'GET' && pathname === '/auth/me') {
-    return handleMe(ctx);
+    return await handleMe(ctx);
   }
   if (request.method === 'POST' && pathname === '/auth/logout') {
     return await handleLogout(ctx);
@@ -661,9 +661,16 @@ async function handleRefresh(ctx: RouteContext): Promise<Response> {
   return new Response(JSON.stringify({ user: payload }), { status: 200, headers });
 }
 
-function handleMe(ctx: RouteContext): Response {
+async function handleMe(ctx: RouteContext): Promise<Response> {
   if (!ctx.user) {
     return json({ error: 'Not authenticated. Please log in at /auth/login.' }, 401);
+  }
+  // If setup hasn't been completed (e.g., DB was wiped), flag the user as
+  // a setup admin so the frontend redirects to the setup wizard instead of
+  // showing a broken main UI with a valid-but-stale session cookie.
+  const setupDone = await isSetupCompleted();
+  if (!setupDone) {
+    return json({ user: { ...ctx.user, isSetupAdmin: true } });
   }
   return json({ user: ctx.user });
 }
