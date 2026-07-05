@@ -1,6 +1,10 @@
 import type { Playlist, PlaylistDetail, Song, TagItem } from '@alfira-bot/server/shared';
 import type { FetchSongsOptions } from '@alfira-bot/server/shared/api';
 import { fetchTags, updatePlaylistTag } from '@alfira-bot/server/shared/api';
+import { useVirtualizedInfiniteScroll } from '../hooks/useVirtualizedInfiniteScroll';
+
+type PlaylistDetailMeta = Omit<PlaylistDetail, 'songs'>;
+
 import {
   ArrowDownIcon,
   ArrowUpIcon,
@@ -68,7 +72,6 @@ export default function PlaylistDetailPage() {
   const { user } = useAuth();
   const navigate = useNavigate();
 
-  const [playlistDetail, setPlaylistDetail] = useState<PlaylistDetail | null>(null);
   const [renameValue, setRenameValue] = useState('');
   const [renameSaving, setRenameSaving] = useState(false);
   const [showAddSongs, setShowAddSongs] = useState(false);
@@ -90,11 +93,6 @@ export default function PlaylistDetailPage() {
     { value: 'duration', label: 'Duration' },
   ] as const;
 
-  const isOwner = user?.discordId === playlistDetail?.createdBy;
-  const canEdit = isAdminView || isOwner || hasPermission('songs.edit');
-  const canBulk = canEdit;
-  const isSmart = !!playlistDetail?.tagNameLower;
-
   // Bulk selection
   const bulk = useBulkSelection();
   const [selectionMode, setSelectionMode] = useState(false);
@@ -108,36 +106,29 @@ export default function PlaylistDetailPage() {
 
   // Fetch tags for tag change submenu
   useEffect(() => {
-    if (canEdit) {
+    if (isAdminView || user?.discordId) {
       fetchTags()
         .then(setTags)
         .catch(() => {
           // Tags are non-critical — fail silently
         });
     }
-  }, [canEdit]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isAdminView, user?.discordId]);
 
   const { state: queueState } = usePlayerState();
 
-  // Refs for socket handlers
   const idRef = useRef(id);
   const isAdminViewRef = useRef(isAdminView);
   idRef.current = id;
   isAdminViewRef.current = isAdminView;
 
-  // Pagination state
-  const [currentPage, setCurrentPage] = useState(1);
-  const [hasMore, setHasMore] = useState(true);
-  const [totalSongs, setTotalSongs] = useState(0);
-  const [isLoading, setIsLoading] = useState(true);
-  const [isFetching, setIsFetching] = useState(false);
-  const [isError, setIsError] = useState(false);
+  // Search & filter state
   const [search, setSearch] = useState('');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>(() => {
     const saved = localStorage.getItem('alfira-playlist-detail-view');
     return saved === 'grid' ? 'grid' : 'list';
   });
-  const searchRef = useRef(search);
 
   // Sort & filter state
   const [sort, setSort] = useState('position');
@@ -147,26 +138,8 @@ export default function PlaylistDetailPage() {
   const [sortOpen, setSortOpen] = useState(false);
   const [filterPopoverOpen, setFilterPopoverOpen] = useState(false);
   const sortRefEl = useRef<HTMLDivElement>(null);
-  const sortRef = useRef(sort);
-  const orderRef = useRef(order);
-  const filterTagsRef = useRef(filterTags);
-  const filterSourcesRef = useRef(filterSources);
 
-  // Keep refs in sync
-  useEffect(() => {
-    sortRef.current = sort;
-  }, [sort]);
-  useEffect(() => {
-    orderRef.current = order;
-  }, [order]);
-  useEffect(() => {
-    filterTagsRef.current = filterTags;
-  }, [filterTags]);
-  useEffect(() => {
-    filterSourcesRef.current = filterSources;
-  }, [filterSources]);
-
-  // Build stable fetch options for loadPage
+  // Build stable fetch options for the hook
   const songsOpts = useMemo<FetchSongsOptions>(() => {
     const opts: FetchSongsOptions = {};
     if (search) opts.search = search;
@@ -191,206 +164,136 @@ export default function PlaylistDetailPage() {
     return () => document.removeEventListener('mousedown', handler);
   }, [sortOpen]);
 
-  // Keep searchRef in sync with search state
-  useEffect(() => {
-    searchRef.current = search;
-  }, [search]);
+  // ── Infinite scroll with metadata ────────────────────────────────────
 
-  // Accumulated songs from all pages
-  const [songs, setSongs] = useState<PlaylistDetail['songs']>([]);
-
-  // IntersectionObserver ref for sentinel
-  const observerRef = useRef<IntersectionObserver | null>(null);
-
-  const loadPage = useCallback(
-    async (page: number, isInitial = false, isRefetch = false, searchQuery?: string) => {
-      if (!idRef.current) return;
-
-      if (isInitial) {
-        setIsLoading(true);
-        setSongs([]);
-      } else {
-        setIsFetching(true);
-      }
-      setIsError(false);
-
-      try {
-        const opts: FetchSongsOptions = searchQuery
-          ? {
-              search: searchQuery,
-              sort: sortRef.current,
-              order: orderRef.current,
-            }
-          : {
-              sort: sortRef.current,
-              order: orderRef.current,
-            };
-        const tags = filterTagsRef.current.join(',');
-        const sources = filterSourcesRef.current.join(',');
-        if (tags) opts.tags = tags;
-        if (sources) opts.source = sources;
-
-        const pl = await getPlaylistPage(
-          idRef.current,
-          isAdminViewRef.current,
-          page,
-          ITEMS_PER_PAGE,
-          opts
-        );
-
-        if (isInitial) {
-          setPlaylistDetail(pl);
-          setSongs(pl.songs);
-          setRenameValue(pl.name);
-          setTotalSongs(pl.pagination.total);
-        } else if (isRefetch) {
-          // Socket-triggered refetch: replace songs so we don't accumulate duplicates.
-          setSongs(pl.songs);
-          setPlaylistDetail(pl);
-          setTotalSongs(pl.pagination.total);
-        } else {
-          // User scroll: accumulate songs from the new page.
-          setSongs((prev) => [...prev, ...pl.songs]);
-          // Keep latest playlist metadata
-          setPlaylistDetail(pl);
-          setTotalSongs(pl.pagination.total);
-        }
-        setHasMore(pl.songs.length === ITEMS_PER_PAGE);
-      } catch {
-        setIsError(true);
-      } finally {
-        setIsLoading(false);
-        setIsFetching(false);
-      }
+  const {
+    items: songs,
+    metadata: playlistMeta,
+    isLoading,
+    isFetching,
+    isError,
+    hasMore,
+    total: totalSongs,
+    hasLoaded,
+    updateItem,
+    removeItem,
+    retry,
+    sentinelRef,
+    refetch,
+  } = useVirtualizedInfiniteScroll<
+    PlaylistDetail['songs'][number],
+    [string, boolean, FetchSongsOptions],
+    PlaylistDetailMeta
+  >({
+    fetchPage: async (page, limit, playlistId, adminView, opts) => {
+      const pl = await getPlaylistPage(playlistId, adminView, page, limit, opts);
+      return {
+        items: pl.songs,
+        hasMore: pl.songs.length === limit,
+        total: pl.pagination.total,
+        metadata: {
+          id: pl.id,
+          name: pl.name,
+          createdBy: pl.createdBy,
+          createdByDisplayName: pl.createdByDisplayName,
+          isPrivate: pl.isPrivate,
+          tagNameLower: pl.tagNameLower,
+          createdAt: pl.createdAt,
+        } as PlaylistDetailMeta,
+      };
     },
-    []
-  );
+    limit: ITEMS_PER_PAGE,
+    deps: [id!, isAdminView, songsOpts],
+  });
+
+  // Derive PlaylistDetail for JSX — metadata from the hook, songs from items
+  const playlistDetail = playlistMeta
+    ? ({
+        ...playlistMeta,
+        songs,
+      } as PlaylistDetail)
+    : null;
+
+  const isOwner = user?.discordId === playlistDetail?.createdBy;
+  const canEdit = isAdminView || isOwner || hasPermission('songs.edit');
+  const canBulk = canEdit;
+  const isSmart = !!playlistDetail?.tagNameLower;
+
+  // ── Sort / filter handlers ──────────────────────────────────────────
 
   const handleOrderToggle = useCallback(() => {
-    const next = orderRef.current === 'asc' ? 'desc' : 'asc';
-    orderRef.current = next;
-    setOrder(next);
-    setCurrentPage(1);
-    setSongs([]);
-    setIsError(false);
-    void loadPage(1, false, false, searchRef.current);
-  }, [loadPage]);
+    setOrder((prev) => (prev === 'asc' ? 'desc' : 'asc'));
+  }, []);
 
   const handleSortChange = useCallback(
     (newSort: string) => {
-      if (newSort === sortRef.current) {
+      if (newSort === sort) {
         handleOrderToggle();
       } else {
-        // When switching to a text field, default to ascending (A-Z)
         const newOrder =
           newSort === 'createdAt' || newSort === 'position' || newSort === 'duration'
             ? 'desc'
             : 'asc';
-        sortRef.current = newSort;
         setSort(newSort);
-        if (newOrder !== orderRef.current) {
-          orderRef.current = newOrder;
-          setOrder(newOrder);
-        }
+        setOrder(newOrder);
         setSortOpen(false);
-        setCurrentPage(1);
-        setSongs([]);
-        setIsError(false);
-        void loadPage(1, false, false, searchRef.current);
       }
     },
-    [loadPage, handleOrderToggle]
+    [sort, handleOrderToggle]
   );
 
-  const handleRemoveTag = useCallback(
-    (tag: string) => {
-      const next = filterTagsRef.current.filter((t) => t !== tag);
-      filterTagsRef.current = next;
-      setFilterTags(next);
-      setCurrentPage(1);
-      setSongs([]);
-      setIsError(false);
-      void loadPage(1, false, false, searchRef.current);
-    },
-    [loadPage]
-  );
+  const handleRemoveTag = useCallback((tag: string) => {
+    setFilterTags((prev) => prev.filter((t) => t !== tag));
+  }, []);
 
-  const handleRemoveSource = useCallback(
-    (source: string) => {
-      const next = filterSourcesRef.current.filter((s) => s !== source);
-      filterSourcesRef.current = next;
-      setFilterSources(next);
-      setCurrentPage(1);
-      setSongs([]);
-      setIsError(false);
-      void loadPage(1, false, false, searchRef.current);
-    },
-    [loadPage]
-  );
+  const handleRemoveSource = useCallback((source: string) => {
+    setFilterSources((prev) => prev.filter((s) => s !== source));
+  }, []);
 
-  const handleAddTag = useCallback(
-    (tag: string) => {
-      const normalized = tag.toLowerCase();
-      const next = filterTagsRef.current.includes(normalized)
-        ? filterTagsRef.current
-        : [...filterTagsRef.current, normalized];
-      filterTagsRef.current = next;
-      setFilterTags(next);
-      setCurrentPage(1);
-      setSongs([]);
-      setIsError(false);
-      void loadPage(1, false, false, searchRef.current);
-    },
-    [loadPage]
-  );
+  const handleAddTag = useCallback((tag: string) => {
+    const normalized = tag.toLowerCase();
+    setFilterTags((prev) => (prev.includes(normalized) ? prev : [...prev, normalized]));
+  }, []);
 
-  const handleAddSource = useCallback(
-    (source: string) => {
-      const next = filterSourcesRef.current.includes(source)
-        ? filterSourcesRef.current
-        : [...filterSourcesRef.current, source];
-      filterSourcesRef.current = next;
-      setFilterSources(next);
-      setCurrentPage(1);
-      setSongs([]);
-      setIsError(false);
-      void loadPage(1, false, false, searchRef.current);
-    },
-    [loadPage]
-  );
+  const handleAddSource = useCallback((source: string) => {
+    setFilterSources((prev) => (prev.includes(source) ? prev : [...prev, source]));
+  }, []);
 
-  // Initial load
-  useEffect(() => {
-    void loadPage(1, true);
-  }, [loadPage]);
-
-  // Socket: playlist updated (rename, visibility, song count changes)
+  // ── Socket: playlist updated (rename, visibility, song count changes) ──
   useEffect(() => {
     const handlePlaylistUpdated = (updated: Playlist) => {
       if (updated.id !== idRef.current) return;
-      // Refetch current page to get updated playlist + songs
-      void loadPage(currentPage, false, true);
+      refetch();
     };
-
     const offUpdated = onSocketEvent('playlists:updated', handlePlaylistUpdated);
-
     return () => {
       offUpdated();
     };
-  }, [currentPage, loadPage]);
+  }, [refetch]);
 
-  // Stable callback to update a single song in the list (mirrors useVirtualizedInfiniteScroll.updateItem)
-  const updateSong = useCallback((song: Song) => {
-    setSongs((prev) => prev.map((ps) => (ps.songId === song.id ? { ...ps, song } : ps)));
-  }, []);
+  // ── Socket: song edited — update in real-time ────────────────────────
+  const songsRef = useRef(songs);
+  songsRef.current = songs;
 
-  // Socket: song edited — update in real-time
   useEffect(() => {
-    const offSongUpdated = onSocketEvent('songs:updated', updateSong);
+    const handleSongUpdated = (song: Song) => {
+      const match = songsRef.current.find((ps) => ps.songId === song.id);
+      if (match) {
+        updateItem({ ...match, song });
+      }
+    };
+    const offSongUpdated = onSocketEvent('songs:updated', handleSongUpdated);
     return () => {
       offSongUpdated();
     };
-  }, [updateSong]);
+  }, [updateItem]);
+
+  // Set initial rename value when metadata loads
+  useEffect(() => {
+    if (playlistMeta?.name) {
+      setRenameValue(playlistMeta.name);
+    }
+  }, [playlistMeta?.name]);
 
   const handleRenameSave = async () => {
     if (!playlistDetail || !renameValue.trim() || renameValue.trim() === playlistDetail.name) {
@@ -399,8 +302,8 @@ export default function PlaylistDetailPage() {
     }
     setRenameSaving(true);
     try {
-      const updated = await renamePlaylist(playlistDetail.id, renameValue.trim());
-      setPlaylistDetail((p) => (p ? { ...p, name: updated.name } : p));
+      await renamePlaylist(playlistDetail.id, renameValue.trim());
+      refetch();
     } finally {
       setRenameSaving(false);
       setRenameValue('');
@@ -409,24 +312,14 @@ export default function PlaylistDetailPage() {
 
   const handleRemoveSong = async (songId: string) => {
     if (!playlistDetail) return;
-
-    const prevLength = songs.length;
+    const junction = songsRef.current.find((ps) => ps.songId === songId);
+    if (!junction) {
+      setRemoveId(null);
+      return;
+    }
     try {
       await removeSongFromPlaylist(playlistDetail.id, songId);
-      setSongs((prev) => prev.filter((ps) => ps.songId !== songId));
-
-      // Refill if we dropped below a page
-      if (prevLength === ITEMS_PER_PAGE && hasMore && idRef.current) {
-        getPlaylistPage(
-          idRef.current,
-          isAdminViewRef.current,
-          currentPage + 1,
-          ITEMS_PER_PAGE,
-          songsOpts
-        ).then((pl) => {
-          setSongs((prev) => [...prev, ...pl.songs].slice(0, ITEMS_PER_PAGE * currentPage));
-        });
-      }
+      removeItem(junction.id);
     } finally {
       setRemoveId(null);
     }
@@ -443,11 +336,17 @@ export default function PlaylistDetailPage() {
     setBulkRemoving(true);
     try {
       const allIds = [...bulk.selectedIds];
+      // Map song IDs to junction IDs before the API call
+      const junctionIds = allIds
+        .map((songId) => songsRef.current.find((ps) => ps.songId === songId)?.id)
+        .filter((id): id is string => id !== undefined);
       const chunkSize = 500;
       for (let i = 0; i < allIds.length; i += chunkSize) {
         await bulkRemoveSongsFromPlaylist(playlistDetail.id, allIds.slice(i, i + chunkSize));
       }
-      setSongs((prev) => prev.filter((ps) => !bulk.selectedIds.has(ps.songId)));
+      for (const junctionId of junctionIds) {
+        removeItem(junctionId);
+      }
       notify(`Removed ${allIds.length} song${allIds.length !== 1 ? 's' : ''}`, 'success');
     } catch (err: unknown) {
       notify(apiErrorMessage(err, 'Failed to remove songs.'), 'error', 5000);
@@ -456,7 +355,7 @@ export default function PlaylistDetailPage() {
       bulk.clearAll();
       setSelectionMode(false);
     }
-  }, [playlistDetail, bulk, notify]);
+  }, [playlistDetail, bulk, notify, removeItem]);
 
   const handleBulkEdit = useCallback(
     async (data: import('@alfira-bot/server/shared/api').BulkEditData) => {
@@ -495,7 +394,7 @@ export default function PlaylistDetailPage() {
         !playlistDetail.isPrivate,
         isAdminView
       );
-      setPlaylistDetail((p) => (p ? { ...p, isPrivate: updated.isPrivate } : p));
+      refetch();
       notify(updated.isPrivate ? 'Playlist set to private' : 'Playlist set to public', 'success');
     } catch (err: unknown) {
       notify(apiErrorMessage(err, 'Could not toggle visibility.'), 'error', 5000);
@@ -533,27 +432,25 @@ export default function PlaylistDetailPage() {
     if (!playlistDetail) return;
     try {
       await updatePlaylistTag(playlistDetail.id, null);
-      setPlaylistDetail((p) => (p ? { ...p, tagNameLower: null } : p));
-      void loadPage(currentPage, false, true);
+      refetch();
       notify('Playlist converted to regular playlist', 'success');
     } catch (err: unknown) {
       notify(apiErrorMessage(err, 'Could not convert playlist.'), 'error', 5000);
     }
-  }, [playlistDetail, currentPage, loadPage, notify]);
+  }, [playlistDetail, refetch, notify]);
 
   const handleChangeTag = useCallback(
     async (tagNameLower: string) => {
       if (!playlistDetail) return;
       try {
-        const updated = await updatePlaylistTag(playlistDetail.id, tagNameLower);
-        setPlaylistDetail((p) => (p ? { ...p, tagNameLower: updated.tagNameLower ?? null } : p));
-        void loadPage(currentPage, false, true);
+        await updatePlaylistTag(playlistDetail.id, tagNameLower);
+        refetch();
         notify('Playlist tag updated', 'success');
       } catch (err: unknown) {
         notify(apiErrorMessage(err, 'Could not update playlist tag.'), 'error', 5000);
       }
     },
-    [playlistDetail, currentPage, loadPage, notify]
+    [playlistDetail, refetch, notify]
   );
 
   const handleMakeSmart = useCallback(
@@ -561,15 +458,14 @@ export default function PlaylistDetailPage() {
       if (!playlistDetail) return;
       setTagSmartConfirm(null);
       try {
-        const updated = await updatePlaylistTag(playlistDetail.id, tagNameLower);
-        setPlaylistDetail((p) => (p ? { ...p, tagNameLower: updated.tagNameLower ?? null } : p));
-        void loadPage(currentPage, false, true);
+        await updatePlaylistTag(playlistDetail.id, tagNameLower);
+        refetch();
         notify('Playlist now tracking tag', 'success');
       } catch (err: unknown) {
         notify(apiErrorMessage(err, 'Could not update playlist tag.'), 'error', 5000);
       }
     },
-    [playlistDetail, currentPage, loadPage, notify]
+    [playlistDetail, refetch, notify]
   );
 
   const handleAddPlaylistToQueue = useCallback(async () => {
@@ -675,48 +571,7 @@ export default function PlaylistDetailPage() {
       : []),
   ];
 
-  const loadMore = useCallback(() => {
-    const nextPage = currentPage + 1;
-    setCurrentPage(nextPage);
-    void loadPage(nextPage, false, false, searchRef.current);
-  }, [currentPage, loadPage]);
-
-  const retry = useCallback(() => {
-    void loadPage(currentPage, false, false, searchRef.current);
-  }, [currentPage, loadPage]);
-
-  // IntersectionObserver for infinite scroll
-  const sentinelRef = useCallback(
-    (el: HTMLDivElement | null) => {
-      if (observerRef.current) {
-        observerRef.current.disconnect();
-        observerRef.current = null;
-      }
-
-      if (!el) return;
-
-      observerRef.current = new IntersectionObserver(
-        (entries) => {
-          if (entries[0]?.isIntersecting && !isFetching && hasMore) {
-            loadMore();
-          }
-        },
-        { rootMargin: '300px' }
-      );
-
-      observerRef.current.observe(el);
-    },
-    [isFetching, hasMore, loadMore]
-  );
-
-  // Cleanup observer on unmount
-  useEffect(() => {
-    return () => {
-      observerRef.current?.disconnect();
-    };
-  }, []);
-
-  if (isLoading) return <DetailSkeleton />;
+  if (isLoading || !hasLoaded) return <DetailSkeleton />;
   if (!playlistDetail) return null;
 
   // Extract plain songs from PlaylistDetailSong[]
@@ -832,13 +687,7 @@ export default function PlaylistDetailPage() {
             placeholder="Search by title, nickname, artist, album, or tag..."
             value={search}
             onChange={(e) => {
-              const value = e.target.value;
-              setSearch(value);
-              setCurrentPage(1);
-              setSongs([]);
-              setIsFetching(true);
-              setIsError(false);
-              void loadPage(1, false, false, value);
+              setSearch(e.target.value);
             }}
           />
         </div>
@@ -1030,7 +879,7 @@ export default function PlaylistDetailPage() {
           playlist={playlistDetail}
           onClose={() => setShowAddSongs(false)}
           onAdded={() => {
-            void loadPage(currentPage, false);
+            refetch();
             setShowAddSongs(false);
           }}
         />
