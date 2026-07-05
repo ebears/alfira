@@ -23,7 +23,7 @@ export default function RequestsPage() {
   const [actionError, setActionError] = useState<string | null>(null);
   const autoRedirected = useRef(false);
 
-  const { items, isLoading, isFetching, isError, total, removeItem, retry, sentinelRef } =
+  const { items, isLoading, isFetching, isError, total, removeItem, retry, reset, sentinelRef } =
     useVirtualizedInfiniteScroll<SongRequest, [string, boolean]>({
       fetchPage: async (page, limit, currentTab, currentMineOnly) => {
         const status = currentTab === 'pending' ? 'pending' : 'all';
@@ -76,14 +76,26 @@ export default function RequestsPage() {
     [user?.discordId]
   );
 
-  // If pending tab is empty on initial load, switch to history
+  // Redirect to history if pending is empty after the initial fetch completes.
+  // Detected by watching for items[] reference change (setItems always creates a
+  // new array). A mount guard skips the initial render + Strict Mode double-invoke.
+  const mounted = useRef(false);
+  const prevItemsRef = useRef(items);
   useEffect(() => {
+    const itemsChanged = prevItemsRef.current !== items;
+    prevItemsRef.current = items;
+
+    if (!mounted.current) {
+      mounted.current = true;
+      return;
+    }
+    if (!itemsChanged) return;
     if (autoRedirected.current) return;
-    if (!isLoading && tab === 'pending' && total === 0) {
+    if (tab === 'pending' && total === 0) {
       autoRedirected.current = true;
       setTab('closed');
     }
-  }, [isLoading, tab, total]);
+  });
 
   const countLabel = isLoading ? '—' : `${total} request${total !== 1 ? 's' : ''}`;
 
@@ -169,6 +181,9 @@ export default function RequestsPage() {
           onClose={() => setShowAddModal(false)}
           onAdded={() => {
             setShowAddModal(false);
+          }}
+          onRequestCreated={() => {
+            reset();
           }}
         />
       )}
