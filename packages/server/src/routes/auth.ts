@@ -2,21 +2,20 @@ import crypto from 'node:crypto';
 import { and, eq, lt } from 'drizzle-orm';
 import jwt from 'jsonwebtoken';
 import type { RouteContext } from '../index';
-import { WEB_UI_ORIGIN } from '../lib/config';
+import { getGuildId } from '../lib/config';
 import { json } from '../lib/json';
+import { getClientIp } from '../lib/rateLimit';
 import { db, tables } from '../shared/db';
 import { logger } from '../shared/logger';
 
-const { refreshToken: refreshTokenTable } = tables;
+const { refreshToken: refreshTokenTable, guildSettings: guildSettingsTable } = tables;
 
 const {
   DISCORD_CLIENT_ID,
   DISCORD_CLIENT_SECRET,
   DISCORD_REDIRECT_URI,
   DISCORD_BOT_TOKEN,
-  GUILD_ID,
   JWT_SECRET,
-  ADMIN_ROLE_IDS,
 } = process.env;
 
 if (
@@ -24,7 +23,6 @@ if (
   !DISCORD_CLIENT_SECRET ||
   !DISCORD_REDIRECT_URI ||
   !DISCORD_BOT_TOKEN ||
-  !GUILD_ID ||
   !JWT_SECRET
 ) {
   throw new Error('Missing required environment variables for auth');
@@ -35,20 +33,51 @@ const DISCORD_CLIENT_ID_: string = DISCORD_CLIENT_ID;
 const DISCORD_CLIENT_SECRET_: string = DISCORD_CLIENT_SECRET;
 const DISCORD_REDIRECT_URI_: string = DISCORD_REDIRECT_URI;
 const DISCORD_BOT_TOKEN_: string = DISCORD_BOT_TOKEN;
-const GUILD_ID_: string = GUILD_ID;
 const JWT_SECRET_: string = JWT_SECRET;
-
-const ADMIN_ROLE_ID_SET = new Set(
-  (ADMIN_ROLE_IDS ?? '')
-    .split(',')
-    .map((id) => id.trim())
-    .filter(Boolean)
-);
 
 const isProduction = process.env.NODE_ENV === 'production';
 
-function isAdminUser(memberRoles: string[]): boolean {
-  return memberRoles.some((roleId) => ADMIN_ROLE_ID_SET.has(roleId));
+/** Read admin role IDs from the database (set via setup wizard or admin settings). */
+async function getAdminRoleIdSet(): Promise<Set<string>> {
+  try {
+    const row = await db
+      .select({ adminRoleIds: guildSettingsTable.adminRoleIds })
+      .from(guildSettingsTable)
+      .where(eq(guildSettingsTable.id, 1))
+      .get();
+
+    if (row?.adminRoleIds) {
+      return new Set(
+        row.adminRoleIds
+          .split(',')
+          .map((id: string) => id.trim())
+          .filter(Boolean)
+      );
+    }
+  } catch {
+    // DB not ready yet.
+  }
+
+  return new Set();
+}
+
+/** Check whether the setup wizard has been completed. */
+async function isSetupCompleted(): Promise<boolean> {
+  try {
+    const row = await db
+      .select({ setupCompleted: guildSettingsTable.setupCompleted })
+      .from(guildSettingsTable)
+      .where(eq(guildSettingsTable.id, 1))
+      .get();
+    return row?.setupCompleted ?? false;
+  } catch {
+    return false;
+  }
+}
+
+async function isAdminUser(memberRoles: string[]): Promise<boolean> {
+  const adminSet = await getAdminRoleIdSet();
+  return memberRoles.some((roleId) => adminSet.has(roleId));
 }
 
 // Access tokens are short-lived (1h). Refresh tokens are long-lived (30d default),
@@ -79,6 +108,8 @@ function generateAccessToken(payload: {
   username: string;
   avatar: string | null;
   isAdmin: boolean;
+  isSetupAdmin?: boolean;
+  roles?: string[];
 }): string {
   return jwt.sign(payload, JWT_SECRET_, {
     expiresIn: ACCESS_TOKEN_EXPIRES_IN,
@@ -139,9 +170,12 @@ function authRateLimit(ip: string): boolean {
 
 /** Fetches guild member roles. Returns 'not-in-guild' on 404, null on other errors. */
 async function fetchGuildMemberRoles(discordId: string): Promise<string[] | null | 'not-in-guild'> {
+  const guildId = getGuildId();
+  if (!guildId) return null; // guild not configured yet
+
   try {
     const memberRes = await fetch(
-      `https://discord.com/api/guilds/${GUILD_ID_}/members/${discordId}`,
+      `https://discord.com/api/guilds/${guildId}/members/${discordId}`,
       { headers: { Authorization: `Bot ${DISCORD_BOT_TOKEN_}` } }
     );
     if (memberRes.status === 404) {
@@ -161,10 +195,34 @@ async function fetchGuildMemberRoles(discordId: string): Promise<string[] | null
   }
 }
 
+/**
+ * Fetch a Discord user's basic profile (username, avatar).
+ * Does NOT check guild membership. Used during setup mode.
+ */
+async function fetchDiscordUserProfile(
+  discordId: string
+): Promise<{ username: string; avatar: string | null } | null> {
+  try {
+    const res = await fetch(`https://discord.com/api/users/${discordId}`, {
+      headers: { Authorization: `Bot ${DISCORD_BOT_TOKEN_}` },
+    });
+    if (!res.ok) return null;
+    const data = (await res.json()) as { username: string; avatar: string | null };
+    return {
+      username: data.username,
+      avatar: data.avatar
+        ? `https://cdn.discordapp.com/avatars/${discordId}/${data.avatar}.png`
+        : null,
+    };
+  } catch {
+    return null;
+  }
+}
+
 /** Returns null if the user is not in the guild or Discord is unreachable. */
 async function fetchUserAdminStatus(
   discordId: string
-): Promise<{ isAdmin: boolean; username: string; avatar: string | null } | null> {
+): Promise<{ isAdmin: boolean; username: string; avatar: string | null; roles: string[] } | null> {
   try {
     const userRes = await fetch(`https://discord.com/api/users/${discordId}`, {
       headers: { Authorization: `Bot ${DISCORD_BOT_TOKEN_}` },
@@ -179,9 +237,10 @@ async function fetchUserAdminStatus(
     if (roles === null || roles === 'not-in-guild') return null;
 
     return {
-      isAdmin: isAdminUser(roles),
+      isAdmin: await isAdminUser(roles),
       username,
       avatar: avatar ? `https://cdn.discordapp.com/avatars/${discordId}/${avatar}.png` : null,
+      roles,
     };
   } catch (err: unknown) {
     logger.error(
@@ -244,9 +303,17 @@ async function fetchDiscordIdentity(
  */
 async function generateAndStoreTokens(
   discordUser: { id: string; username: string; avatar: string | null },
-  isAdmin: boolean
+  isAdmin: boolean,
+  opts: { isSetupAdmin?: boolean; roles?: string[] } = {}
 ): Promise<{ accessToken: string; refreshToken: string }> {
-  const payload = {
+  const payload: {
+    discordId: string;
+    username: string;
+    avatar: string | null;
+    isAdmin: boolean;
+    isSetupAdmin?: boolean;
+    roles?: string[];
+  } = {
     discordId: discordUser.id,
     username: discordUser.username,
     avatar: discordUser.avatar
@@ -254,6 +321,8 @@ async function generateAndStoreTokens(
       : null,
     isAdmin,
   };
+  if (opts.isSetupAdmin) payload.isSetupAdmin = true;
+  if (opts.roles) payload.roles = opts.roles;
   const accessToken = generateAccessToken(payload);
   const refreshToken = generateRefreshToken(discordUser.id);
 
@@ -272,14 +341,6 @@ async function generateAndStoreTokens(
 // Route handlers
 // ---------------------------------------------------------------------------
 
-function getClientIp(request: Request): string {
-  return (
-    request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ??
-    request.headers.get('x-real-ip') ??
-    'unknown'
-  );
-}
-
 export async function handleAuth(ctx: RouteContext, request: Request): Promise<Response> {
   const url = new URL(request.url);
   const pathname = url.pathname;
@@ -294,7 +355,7 @@ export async function handleAuth(ctx: RouteContext, request: Request): Promise<R
     return await handleRefresh(ctx);
   }
   if (request.method === 'GET' && pathname === '/auth/me') {
-    return handleMe(ctx);
+    return await handleMe(ctx);
   }
   if (request.method === 'POST' && pathname === '/auth/logout') {
     return await handleLogout(ctx);
@@ -345,20 +406,74 @@ async function handleCallback(request: Request, url: URL): Promise<Response> {
     return json({ error: 'Failed to fetch Discord user info.' }, 502);
   }
 
-  // 3. Verify guild membership and get member roles.
+  // 3. Check if setup has been completed.
+  const setupDone = await isSetupCompleted();
+
+  if (!setupDone) {
+    // If GUILD_ID and ADMIN_ROLE_IDS are in env (existing deployment),
+    // auto-complete setup. Otherwise, redirect to the setup wizard.
+    const envGuildId = process.env.GUILD_ID;
+    if (envGuildId) {
+      // Seed env vars into DB and mark setup complete.
+      await db
+        .insert(guildSettingsTable)
+        .values({
+          id: 1,
+          guildId: envGuildId,
+          setupCompleted: true,
+          adminRoleIds: process.env.ADMIN_ROLE_IDS ?? '',
+        })
+        .onConflictDoUpdate({
+          target: guildSettingsTable.id,
+          set: {
+            guildId: envGuildId,
+            setupCompleted: true,
+            adminRoleIds: process.env.ADMIN_ROLE_IDS ?? '',
+          },
+        })
+        .run();
+
+      // Refresh the in-memory guild ID cache.
+      const { refreshGuildId } = await import('../lib/config');
+      refreshGuildId(envGuildId);
+
+      // Fall through to normal auth flow below.
+    } else {
+      // Fresh install — redirect to setup wizard.
+      const { accessToken, refreshToken } = await generateAndStoreTokens(discordUser, true, {
+        isSetupAdmin: true,
+      });
+
+      const headers = new Headers();
+      headers.append(
+        'Set-Cookie',
+        buildCookieHeader(ACCESS_COOKIE_NAME, accessToken, { maxAge: 60 * 60 * 1000 })
+      );
+      headers.append(
+        'Set-Cookie',
+        buildCookieHeader(REFRESH_COOKIE_NAME, refreshToken, { maxAge: REFRESH_TOKEN_MAX_AGE })
+      );
+      headers.append('Location', '/setup');
+      return new Response(null, { status: 302, headers });
+    }
+  }
+
+  // 4. Normal flow — verify guild membership and get member roles.
   const rolesResult = await fetchGuildMemberRoles(discordUser.id);
   if (rolesResult === null || rolesResult === 'not-in-guild') {
     return json({ error: 'You must be a member of the server to use this app.' }, 403);
   }
   const memberRoles = rolesResult;
 
-  // 4. Determine admin status.
-  const isAdmin = isAdminUser(memberRoles);
+  // 5. Determine admin status.
+  const isAdmin = await isAdminUser(memberRoles);
 
-  // 5. Generate and store tokens.
-  const { accessToken, refreshToken } = await generateAndStoreTokens(discordUser, isAdmin);
+  // 6. Generate and store tokens.
+  const { accessToken, refreshToken } = await generateAndStoreTokens(discordUser, isAdmin, {
+    roles: memberRoles,
+  });
 
-  // 6. Set cookies and redirect.
+  // 7. Set cookies and redirect.
   const headers = new Headers();
   headers.append(
     'Set-Cookie',
@@ -368,13 +483,30 @@ async function handleCallback(request: Request, url: URL): Promise<Response> {
     'Set-Cookie',
     buildCookieHeader(REFRESH_COOKIE_NAME, refreshToken, { maxAge: REFRESH_TOKEN_MAX_AGE })
   );
-  headers.append('Location', WEB_UI_ORIGIN);
+  headers.append('Location', '/');
   return new Response(null, { status: 302, headers });
+}
+
+/** Retry an async operation up to `attempts` times with exponential backoff. */
+async function withRetry<T>(fn: () => Promise<T>, attempts = 3, baseDelayMs = 500): Promise<T> {
+  let lastErr: unknown;
+  for (let i = 0; i < attempts; i++) {
+    try {
+      return await fn();
+    } catch (err) {
+      lastErr = err;
+      if (i < attempts - 1) {
+        await new Promise((r) => setTimeout(r, baseDelayMs * 2 ** i));
+      }
+    }
+  }
+  throw lastErr;
 }
 
 async function handleRefresh(ctx: RouteContext): Promise<Response> {
   const refreshToken = ctx.cookies[REFRESH_COOKIE_NAME];
   if (!refreshToken) {
+    logger.warn('Auth refresh failed: no refresh token cookie present');
     return json({ error: 'No refresh token provided.' }, 401);
   }
 
@@ -383,9 +515,11 @@ async function handleRefresh(ctx: RouteContext): Promise<Response> {
   try {
     decoded = jwt.verify(refreshToken, JWT_SECRET_) as { discordId: string; type: string };
     if (decoded.type !== 'refresh') {
+      logger.warn({ decodedType: decoded.type }, 'Auth refresh failed: invalid token type');
       return json({ error: 'Invalid token type.' }, 401);
     }
-  } catch {
+  } catch (err) {
+    logger.warn({ err: (err as Error).message }, 'Auth refresh failed: JWT verification');
     return json({ error: 'Invalid or expired refresh token.' }, 401);
   }
 
@@ -397,19 +531,24 @@ async function handleRefresh(ctx: RouteContext): Promise<Response> {
     .where(eq(refreshTokenTable.tokenHash, tokenHash))
     .limit(1);
   if (!storedToken) {
+    logger.warn(
+      { discordId: decoded.discordId },
+      'Auth refresh failed: token hash not found in DB (revoked or already burned)'
+    );
     return json({ error: 'Refresh token has been revoked.' }, 401);
   }
 
   // 3. Check if the refresh token has expired.
   if (storedToken.expiresAt < new Date()) {
+    logger.warn(
+      { discordId: decoded.discordId, expiresAt: storedToken.expiresAt, now: new Date() },
+      'Auth refresh failed: DB expiresAt has passed'
+    );
     await db.delete(refreshTokenTable).where(eq(refreshTokenTable.id, storedToken.id));
     return json({ error: 'Refresh token has expired.' }, 401);
   }
 
-  // 4. Delete the used refresh token (single-use for security).
-  await db.delete(refreshTokenTable).where(eq(refreshTokenTable.id, storedToken.id));
-
-  // 5. Clean up expired tokens for this user (lazy cleanup).
+  // 4. Clean up expired tokens for this user (lazy cleanup).
   await db
     .delete(refreshTokenTable)
     .where(
@@ -419,20 +558,83 @@ async function handleRefresh(ctx: RouteContext): Promise<Response> {
       )
     );
 
-  // 6. Re-fetch user info from Discord (including admin status).
-  const userInfo = await fetchUserAdminStatus(decoded.discordId);
-  if (!userInfo) {
-    await db.delete(refreshTokenTable).where(eq(refreshTokenTable.discordId, decoded.discordId));
-    return json({ error: 'Unable to verify user membership. Please log in again.' }, 401);
+  // 5. Re-fetch user info from Discord (including admin status).
+  //    This runs BEFORE we burn the old refresh token — if Discord is
+  //    unreachable, the client can retry with the same token.
+  //    During setup mode, skip guild membership check.
+  const setupDone = await isSetupCompleted();
+  let username: string;
+  let avatar: string | null;
+  let isAdmin: boolean;
+  let isSetupAdmin = false;
+  let roles: string[] | undefined;
+
+  if (!setupDone) {
+    // Setup not complete — fetch basic profile, grant admin.
+    try {
+      const profile = await withRetry(() => fetchDiscordUserProfile(decoded.discordId));
+      if (!profile) {
+        logger.warn(
+          { discordId: decoded.discordId },
+          'Auth refresh failed: fetchDiscordUserProfile returned null (setup mode)'
+        );
+        return json({ error: 'Unable to verify user identity. Please try again.' }, 503);
+      }
+      username = profile.username;
+      avatar = profile.avatar;
+      isAdmin = true;
+      isSetupAdmin = true;
+    } catch (err) {
+      logger.warn(
+        { discordId: decoded.discordId, err: (err as Error).message },
+        'Auth refresh failed: Discord unreachable (setup mode)'
+      );
+      return json({ error: 'Discord is temporarily unreachable. Please try again.' }, 503);
+    }
+  } else {
+    // Normal flow — verify guild membership and roles.
+    try {
+      const userInfo = await withRetry(() => fetchUserAdminStatus(decoded.discordId));
+      if (!userInfo) {
+        logger.warn(
+          { discordId: decoded.discordId },
+          'Auth refresh failed: fetchUserAdminStatus returned null (not in guild or Discord error)'
+        );
+        return json({ error: 'Unable to verify user membership. Please try again.' }, 503);
+      }
+      username = userInfo.username;
+      avatar = userInfo.avatar;
+      isAdmin = userInfo.isAdmin;
+      roles = userInfo.roles;
+    } catch (err) {
+      logger.warn(
+        { discordId: decoded.discordId, err: (err as Error).message },
+        'Auth refresh failed: Discord unreachable'
+      );
+      return json({ error: 'Discord is temporarily unreachable. Please try again.' }, 503);
+    }
   }
 
+  // 6. Burn the old refresh token now that Discord verification succeeded.
+  logger.info({ discordId: decoded.discordId }, 'Auth refresh succeeded — issuing new tokens');
+  await db.delete(refreshTokenTable).where(eq(refreshTokenTable.id, storedToken.id));
+
   // 7. Generate new tokens.
-  const payload = {
+  const payload: {
+    discordId: string;
+    username: string;
+    avatar: string | null;
+    isAdmin: boolean;
+    isSetupAdmin?: boolean;
+    roles?: string[];
+  } = {
     discordId: decoded.discordId,
-    username: userInfo.username,
-    avatar: userInfo.avatar,
-    isAdmin: userInfo.isAdmin,
+    username,
+    avatar,
+    isAdmin,
   };
+  if (isSetupAdmin) payload.isSetupAdmin = true;
+  if (roles) payload.roles = roles;
   const newAccessToken = generateAccessToken(payload);
   const newRefreshToken = generateRefreshToken(decoded.discordId);
 
@@ -459,9 +661,16 @@ async function handleRefresh(ctx: RouteContext): Promise<Response> {
   return new Response(JSON.stringify({ user: payload }), { status: 200, headers });
 }
 
-function handleMe(ctx: RouteContext): Response {
+async function handleMe(ctx: RouteContext): Promise<Response> {
   if (!ctx.user) {
     return json({ error: 'Not authenticated. Please log in at /auth/login.' }, 401);
+  }
+  // If setup hasn't been completed (e.g., DB was wiped), flag the user as
+  // a setup admin so the frontend redirects to the setup wizard instead of
+  // showing a broken main UI with a valid-but-stale session cookie.
+  const setupDone = await isSetupCompleted();
+  if (!setupDone) {
+    return json({ user: { ...ctx.user, isSetupAdmin: true } });
   }
   return json({ user: ctx.user });
 }

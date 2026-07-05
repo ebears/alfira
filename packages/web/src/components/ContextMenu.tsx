@@ -59,6 +59,9 @@ export function ContextMenuTrigger({
   ref,
   className,
   surface,
+  size,
+  style,
+  variant,
   onMouseDown,
 }: {
   onToggle: () => void;
@@ -66,17 +69,21 @@ export function ContextMenuTrigger({
   ref: RefObject<HTMLButtonElement | null>;
   className?: string;
   surface?: 'base' | 'surface' | 'elevated';
+  size?: 'default' | 'icon';
+  style?: React.CSSProperties;
+  variant?: 'inherit' | 'surface';
   onMouseDown?: (e: React.MouseEvent) => void;
 }) {
   return (
     <Button
       ref={ref}
-      variant="inherit"
-      size="icon"
+      variant={variant ?? 'inherit'}
+      size={size ?? 'icon'}
       aria-haspopup="true"
       aria-expanded={isOpen}
       title="More actions"
       surface={surface ?? 'elevated'}
+      style={style}
       onMouseDown={onMouseDown}
       onClick={(e) => {
         e.stopPropagation();
@@ -264,7 +271,7 @@ export function ContextMenu({
       onKeyDown={activeEditItemId ? undefined : handleKeyDown}
       onClick={(e) => e.stopPropagation()}
     >
-      <div className="bg-base rounded-2xl clay-floating overflow-hidden animate-fade-up">
+      <div className="glass-popover outline-2 outline-accent/20">
         {activeSubmenu ? (
           <SubmenuPanel
             config={activeSubmenu}

@@ -135,13 +135,16 @@ export default {
       },
     },
     soundcloud: {
-      enabled: false,
+      enabled: true,
     },
     spotify: {
-      enabled: false,
+      enabled: !!(process.env.SPOTIFY_CLIENT_ID && process.env.SPOTIFY_CLIENT_SECRET),
+      clientId: process.env.SPOTIFY_CLIENT_ID || '',
+      clientSecret: process.env.SPOTIFY_CLIENT_SECRET || '',
     },
     applemusic: {
-      enabled: false,
+      enabled: !!process.env.APPLE_MUSIC_MEDIA_API_TOKEN,
+      mediaApiToken: process.env.APPLE_MUSIC_MEDIA_API_TOKEN || 'token_here',
     },
     deezer: {
       enabled: false,
@@ -218,6 +221,10 @@ export default {
     'google-tts': {
       enabled: false,
     },
+    googledrive: {
+      enabled: true,
+      cookies: process.env.GOOGLE_DRIVE_COOKIES,
+    },
     pipertts: {
       enabled: false,
     },
@@ -231,7 +238,8 @@ export default {
       enabled: false,
     },
     tidal: {
-      enabled: false,
+      enabled: !!process.env.TIDAL_TOKEN,
+      token: process.env.TIDAL_TOKEN || 'token_here',
     },
     pandora: {
       enabled: false,

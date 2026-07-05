@@ -20,7 +20,7 @@ export function useProgressBar(
 ) {
   const [elapsed, setElapsed] = useState(0);
   const progressBars = useRef<Set<HTMLDivElement>>(new Set());
-  const rangeInputs = useRef<Set<HTMLInputElement>>(new Set());
+  const thumbs = useRef<Set<HTMLDivElement>>(new Set());
   const rafIdRef = useRef(0);
   // biome-ignore lint/suspicious/noExplicitAny: setInterval return type differs across environments
   const intervalIdRef = useRef<any>(0);
@@ -38,12 +38,13 @@ export function useProgressBar(
     }
   }, []);
 
-  // Register a <input type="range"> whose thumb position should track progress.
-  // Its value is updated in the rAF loop so the thumb glides smoothly instead
-  // of jumping once per second (which happens when driven by React state alone).
-  const registerRangeInput = useCallback((ref: HTMLInputElement | null) => {
+  // Register a thumb div whose left position should track progress.
+  // Its style.left is updated in the rAF loop so the thumb glides smoothly
+  // instead of jumping once per second (which happens when driven by React
+  // state alone).
+  const registerThumb = useCallback((ref: HTMLDivElement | null) => {
     if (ref) {
-      rangeInputs.current.add(ref);
+      thumbs.current.add(ref);
     }
   }, []);
 
@@ -54,11 +55,22 @@ export function useProgressBar(
   const trackStartedAt = state.trackStartedAt;
 
   useEffect(() => {
-    // When overrideElapsed is provided (after a seek), reset effectiveStart
-    // so the rAF loop picks up the new position immediately.
+    // When overrideElapsed is provided (after a seek), sync the React
+    // elapsed state immediately so that any React re-render uses the correct
+    // position and doesn't fight the rAF-driven thumb placement.
     if (overrideElapsed !== undefined) {
       accumulatedMsRef.current = overrideElapsed * 1000;
       effectiveStartRef.current = Date.now() - overrideElapsed * 1000;
+      setElapsed(overrideElapsed);
+      // Immediately position fill bar and thumb at the seek target so they
+      // don't flicker to stale positions when React re-renders.
+      const seekPct = (overrideElapsed / currentSongDuration) * 100;
+      for (const ref of progressBars.current) {
+        ref.style.width = `${seekPct}%`;
+      }
+      for (const ref of thumbs.current) {
+        ref.style.left = `${seekPct}%`;
+      }
     }
 
     const prevSongId = prevSongIdRef.current;
@@ -96,13 +108,18 @@ export function useProgressBar(
         accumulatedMsRef.current = 0;
         setElapsed(0);
         for (const ref of progressBars.current) ref.style.width = '0%';
+        for (const ref of thumbs.current) ref.style.left = '0%';
       }
 
       // When pausing (song exists + paused), capture current elapsed
       if (hasSong && isPaused) {
         accumulatedMsRef.current =
           effectiveStartRef.current > 0 ? Date.now() - effectiveStartRef.current : 0;
-        setElapsed(Math.min(Math.round(accumulatedMsRef.current / 1000), duration));
+        const pausedSec = Math.min(Math.round(accumulatedMsRef.current / 1000), duration);
+        setElapsed(pausedSec);
+        const pct = (pausedSec / duration) * 100;
+        for (const ref of progressBars.current) ref.style.width = `${pct}%`;
+        for (const ref of thumbs.current) ref.style.left = `${pct}%`;
       }
 
       return;
@@ -133,19 +150,18 @@ export function useProgressBar(
 
     effectiveStartRef.current = effectiveStart;
 
-    // rAF loop — directly sets style.width on registered progress bars AND
-    // syncs range input values so the thumb glides at rAF speed, not 1-sec intervals.
+    // rAF loop — directly sets style.width on registered progress bars and
+    // style.left on registered thumbs so both glide at display-native rate.
     const tick = () => {
       const elapsedMs = Date.now() - effectiveStart;
       const pct = Math.min((elapsedMs / (duration * 1000)) * 100, 100);
       if (pct >= 100) return;
+      const pctStr = `${pct}%`;
       for (const ref of progressBars.current) {
-        ref.style.width = `${pct}%`;
+        ref.style.width = pctStr;
       }
-      // Update range input values so thumb position is smooth (not 1-sec jumps)
-      const sec = elapsedMs / 1000;
-      for (const input of rangeInputs.current) {
-        input.value = String(sec);
+      for (const ref of thumbs.current) {
+        ref.style.left = pctStr;
       }
       rafIdRef.current = requestAnimationFrame(tick);
     };
@@ -173,5 +189,5 @@ export function useProgressBar(
     setOverrideElapsed,
   ]);
 
-  return { elapsed, registerProgress, registerRangeInput };
+  return { elapsed, registerProgress, registerThumb };
 }

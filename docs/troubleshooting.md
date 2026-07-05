@@ -34,19 +34,25 @@ Common issues and solutions for Alfira.
 1. Verify `DISCORD_REDIRECT_URI` matches exactly in:
    - Discord Developer Portal → OAuth2 → Redirects
    - Your `.env` file
-2. Check that `WEB_UI_ORIGIN` matches your actual domain.
-3. Ensure you're using `https://` in production.
+2. Ensure you're using `https://` in production.
 
-### "Add Song" button not visible / Admin features missing
+### "Request Song" button not visible
 
-**Symptoms:** Logged in but no "Add Song" button, can't use quick-add, can't manage playlists.
+**Symptoms:** Logged in but the "+ Request Song" button is missing from the Songs page.
 
 **Solutions:**
-1. **Check `ADMIN_ROLE_IDS` in `.env`** — must be set to your actual Discord role ID (not the placeholder).
+1. **Re-login** — The button is visible to all authenticated users. If you can't see it, your session may be expired. Log out and back in.
+2. **Check your internet connection** — The UI relies on the API being reachable.
+
+### Admin features missing (approve/deny requests, manage playlists)
+
+**Symptoms:** Logged in but can't approve/deny requests, can't edit/delete songs, can't access admin settings.
+
+**Solutions:**
+1. **Check admin role configuration** — Go to **Settings → Admin** and verify the correct roles are selected under "Admin Roles". Save changes if needed.
 2. **Enable Server Members Intent** — Go to Discord Developer Portal → Bot → Privileged Gateway Intents → enable **Server Members Intent** → Save Changes.
-3. **Verify role ID** — Enable Developer Mode in Discord (Settings → Advanced), right-click the admin role → "Copy Role ID".
-4. **Re-login** — Admin status is cached in the JWT token. Log out and log back in after fixing the above.
-5. **Check logs** — Run `docker compose logs alfira | grep -i admin` to verify the bot detects your admin status.
+3. **Re-login** — Admin status is cached in the JWT token. Log out and log back in after fixing the above.
+4. **Check logs** — Run `docker compose logs alfira | grep -i admin` to verify the bot detects your admin status.
 
 ### "undefined command does not have 'run' callback" / Slash commands not working
 
@@ -66,6 +72,58 @@ Common issues and solutions for Alfira.
    ```
    (Requires `.env` with `DISCORD_BOT_TOKEN`, `DISCORD_CLIENT_ID`, `GUILD_ID`)
 4. **Wait for Discord cache** — After unregistering, commands disappear from Discord's menu immediately for guild commands (global commands can take up to 1 hour).
+
+## Setup Wizard Issues
+
+### Setup wizard keeps appearing after completing it
+
+**Symptoms:** You complete the setup wizard (select guild, admin roles, sources), but it reappears on next login.
+
+**Solutions:**
+1. **Verify setup completed successfully** — After clicking the final "Finish Setup" button, you should be redirected to the Songs page. If you were redirected back to the wizard, the setup API call may have failed.
+2. **Check admin role permissions** — The setup wizard requires at least one admin role to be selected and saved. If you skip this step, setup won't be marked complete.
+3. **Check server logs** — Run `docker compose logs alfira | grep -i setup` for errors during the setup process.
+4. **Stale session** — Log out and log back in after confirming setup completed.
+
+### Setup wizard shows "No Discord servers found"
+
+**Symptoms:** After logging in, the guild picker is empty or shows no servers.
+
+**Solutions:**
+1. **Check the bot is in your server** — Invite the bot to your Discord server using the invite link shown in the wizard, or generate one from Discord Developer Portal → OAuth2 → URL Generator.
+2. **Verify Server Members Intent** — Discord Developer Portal → Bot → Privileged Gateway Intents → enable **Server Members Intent** → Save Changes.
+3. **Re-login** — Log out and log back in so the server list refreshes with your updated guild memberships.
+
+### "Source unavailable" warning on music sources
+
+**Symptoms:** In the setup wizard or Settings → Admin → Music Sources, some sources show a warning that they require credentials.
+
+**Solutions:**
+1. Add the required credentials to your `.env` file (see [Installation Guide](installation.md#optional)).
+2. Restart Alfira: `docker compose restart alfira`
+3. The source should now be available to enable in admin settings.
+
+## Music Source Issues
+
+### Spotify / Apple Music / Tidal tracks won't load
+
+**Symptoms:** Pasting a Spotify, Apple Music, or Tidal URL returns "Could not fetch track info" or similar error.
+
+**Cause:** These sources require API credentials that aren't configured.
+
+**Solutions:**
+1. Add the required credentials to your `.env` file (see [Installation Guide](installation.md#optional)).
+2. Restart Alfira after adding credentials: `docker compose restart alfira`
+3. Verify the source is enabled in **Settings → Admin → Music Sources**.
+
+### "That URL doesn't look right" error
+
+**Symptoms:** Pasting a valid URL from a supported source but getting a validation error.
+
+**Solutions:**
+1. Check that the source is enabled in **Settings → Admin → Music Sources**.
+2. The error message lists which sources are currently enabled — check those match what you expect.
+3. Ensure the URL is a direct track/playlist link (not a search results page).
 
 ## Database Issues
 

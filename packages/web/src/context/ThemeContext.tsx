@@ -29,7 +29,7 @@ export const COLOR_THEMES: ColorTheme[] = [
   {
     name: 'artificer',
     displayName: 'Artificer',
-    accentColor: '#f97316', // Orange
+    accentColor: '#8b5cf6', // Soft violet
   },
   {
     name: 'barbarian',
@@ -44,7 +44,7 @@ export const COLOR_THEMES: ColorTheme[] = [
   {
     name: 'cleric',
     displayName: 'Cleric',
-    accentColor: '#ca8a04', // Yellow-600
+    accentColor: '#84cc16', // Vibrant lime
   },
   {
     name: 'druid',
@@ -54,7 +54,7 @@ export const COLOR_THEMES: ColorTheme[] = [
   {
     name: 'fighter',
     displayName: 'Fighter',
-    accentColor: '#64748b', // Slate
+    accentColor: '#d97706', // Forged bronze
   },
   {
     name: 'monk',
@@ -64,12 +64,12 @@ export const COLOR_THEMES: ColorTheme[] = [
   {
     name: 'paladin',
     displayName: 'Paladin',
-    accentColor: '#94a3b8', // Slate-400
+    accentColor: '#eab308', // Holy gold
   },
   {
     name: 'ranger',
     displayName: 'Ranger',
-    accentColor: '#15803d', // Forest Green
+    accentColor: '#16a34a', // Emerald green
   },
   {
     name: 'rogue',
@@ -84,7 +84,7 @@ export const COLOR_THEMES: ColorTheme[] = [
   {
     name: 'warlock',
     displayName: 'Warlock',
-    accentColor: '#9333ea', // Purple-600
+    accentColor: '#a855f7', // Arcane violet
   },
   {
     name: 'wizard',
@@ -123,7 +123,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
         return stored as ColorThemeName;
       }
     }
-    return 'bard';
+    return 'artificer';
   });
   const [mode, setModeState] = useState<ColorMode>(() => {
     if (typeof window !== 'undefined') {

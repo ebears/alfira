@@ -1,46 +1,44 @@
 import type { QueuedSong } from '@alfira-bot/server/shared';
 import { formatDuration } from '@alfira-bot/server/shared';
 import {
-  AlienIcon,
+  ArrowDownIcon,
+  ArrowLineDownIcon,
+  ArrowLineUpIcon,
+  ArrowUpIcon,
   BombIcon,
-  CakeIcon,
-  CatIcon,
   CircleNotchIcon,
-  CookieIcon,
   DotsThreeOutlineVerticalIcon,
-  GhostIcon,
   LightningIcon,
   ListIcon,
-  MoonIcon,
-  OnigiriIcon,
-  PizzaIcon,
-  PlanetIcon,
-  PlayCircleIcon,
+  MusicNoteIcon,
   PlayIcon,
   PlusCircleIcon,
+  QueueIcon,
   RepeatIcon,
   RepeatOnceIcon,
-  RocketLaunchIcon,
   ShuffleIcon,
   SkipForwardIcon,
-  SkullIcon,
-  SmileyAngryIcon,
-  SockIcon,
-  SwordIcon,
-  ToiletPaperIcon,
-  YinYangIcon,
+  TrashIcon,
+  UserCircleIcon,
+  UserIcon,
 } from '@phosphor-icons/react';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { memo, useCallback, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import ConfirmModal from '../components/ConfirmModal';
 import { ContextMenu, type MenuItem } from '../components/ContextMenu';
-import LoadPlaylistModal from '../components/queue/LoadPlaylistModal';
 import OverrideModal from '../components/queue/OverrideModal';
 import QuickAddModal from '../components/queue/QuickAddModal';
+import { SourceIcon } from '../components/SourceIcons';
 import { useAdminView } from '../context/AdminViewContext';
+import { usePermissions } from '../context/PermissionsContext';
 import { usePlayer } from '../context/PlayerContext';
+import { getSourceKey } from '../utils/source';
+import { getRandomIdleIcon } from './EmptyState';
+import { ArtworkImage } from './ui/ArtworkImage';
 import { Button } from './ui/Button';
+import { DurationBadge } from './ui/DurationBadge';
+import { VolumeBoostBadge } from './ui/VolumeBoostBadge';
 
 export interface MobileQuickControls {
   currentSong: QueuedSong | null;
@@ -69,10 +67,20 @@ export default function QueuePanel({
 }: {
   mobileQuickControls?: MobileQuickControls;
 }) {
-  const { state, loading, elapsed, registerProgress, clear } = usePlayer();
+  const {
+    state,
+    loading,
+    elapsed,
+    registerProgress,
+    clear,
+    removeSong,
+    promoteSong,
+    demoteSong,
+    reorderQueue,
+  } = usePlayer();
   const { isAdminView } = useAdminView();
+  const { hasPermission } = usePermissions();
   const [showQuickAdd, setShowQuickAdd] = useState(false);
-  const [showLoadPlaylist, setShowLoadPlaylist] = useState(false);
   const [showOverride, setShowOverride] = useState(false);
   const [clearBusy, setClearBusy] = useState(false);
   const [clearConfirm, setClearConfirm] = useState(false);
@@ -80,7 +88,9 @@ export default function QueuePanel({
   const triggerRef = useRef<HTMLButtonElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
 
-  const { currentSong, queue, priorityQueue, isPlaying } = state;
+  const { currentSong, queue, priorityQueue } = state;
+
+  const canManage = isAdminView || hasPermission('queue.manage');
 
   const virtualItems: VirtualQueueItem[] = useMemo(() => {
     const items: VirtualQueueItem[] = [];
@@ -92,7 +102,7 @@ export default function QueuePanel({
           variant: 'priority',
           song,
           listIndex: i,
-          key: `${song.id}-p${i}`,
+          key: `p-${song.id}`,
         });
       });
     }
@@ -104,7 +114,7 @@ export default function QueuePanel({
           variant: 'regular',
           song,
           listIndex: i,
-          key: `${song.id}-r${i}`,
+          key: `r-${song.id}`,
         });
       });
     }
@@ -113,10 +123,12 @@ export default function QueuePanel({
 
   const virtualizer = useVirtualizer({
     count: virtualItems.length,
+    getItemKey: (i) => virtualItems[i]?.key,
     getScrollElement: () => scrollRef.current,
-    estimateSize: (i) => (virtualItems[i]?.type === 'header' ? 36 : 56),
+    estimateSize: (i) => (virtualItems[i]?.type === 'header' ? 36 : 92),
     overscan: 5,
   });
+
   const isQueueEmpty = queue.length === 0 && priorityQueue.length === 0 && !currentSong;
 
   const handleClear = useCallback(async () => {
@@ -128,22 +140,106 @@ export default function QueuePanel({
     }
   }, [clear]);
 
+  const handleRemove = useCallback(
+    async (songId: string) => {
+      await removeSong(songId);
+    },
+    [removeSong]
+  );
+
+  const handlePromote = useCallback(
+    async (songId: string) => {
+      await promoteSong(songId);
+    },
+    [promoteSong]
+  );
+
+  const handleDemote = useCallback(
+    async (songId: string) => {
+      await demoteSong(songId);
+    },
+    [demoteSong]
+  );
+
+  const handleMoveUp = useCallback(
+    (targetQueue: QueuedSong[], songId: string, target: 'queue' | 'priority') => {
+      const idx = targetQueue.findIndex((s) => s.id === songId);
+      if (idx <= 0) return;
+      const newOrder = [...targetQueue];
+      const a = newOrder[idx];
+      const b = newOrder[idx - 1];
+      if (a && b) {
+        newOrder[idx - 1] = a;
+        newOrder[idx] = b;
+      }
+      reorderQueue(
+        newOrder.map((s) => s.id),
+        target
+      );
+    },
+    [reorderQueue]
+  );
+
+  const handleMoveDown = useCallback(
+    (targetQueue: QueuedSong[], songId: string, target: 'queue' | 'priority') => {
+      const idx = targetQueue.findIndex((s) => s.id === songId);
+      if (idx < 0 || idx >= targetQueue.length - 1) return;
+      const newOrder = [...targetQueue];
+      const a = newOrder[idx];
+      const b = newOrder[idx + 1];
+      if (a && b) {
+        newOrder[idx] = b;
+        newOrder[idx + 1] = a;
+      }
+      reorderQueue(
+        newOrder.map((s) => s.id),
+        target
+      );
+    },
+    [reorderQueue]
+  );
+
+  const handleMoveToTop = useCallback(
+    (targetQueue: QueuedSong[], songId: string, target: 'queue' | 'priority') => {
+      const idx = targetQueue.findIndex((s) => s.id === songId);
+      if (idx <= 0) return;
+      const newOrder = [...targetQueue];
+      const [item] = newOrder.splice(idx, 1);
+      if (item) newOrder.unshift(item);
+      reorderQueue(
+        newOrder.map((s) => s.id),
+        target
+      );
+    },
+    [reorderQueue]
+  );
+
+  const handleMoveToBottom = useCallback(
+    (targetQueue: QueuedSong[], songId: string, target: 'queue' | 'priority') => {
+      const idx = targetQueue.findIndex((s) => s.id === songId);
+      if (idx < 0 || idx >= targetQueue.length - 1) return;
+      const newOrder = [...targetQueue];
+      const [item] = newOrder.splice(idx, 1);
+      if (item) newOrder.push(item);
+      reorderQueue(
+        newOrder.map((s) => s.id),
+        target
+      );
+    },
+    [reorderQueue]
+  );
+
   const menuItems: MenuItem[] = useMemo(() => {
-    const items: MenuItem[] = [
-      {
-        id: 'load-playlist',
-        label: 'Load Playlist',
-        icon: <ListIcon size={14} weight="duotone" />,
-        onClick: () => setShowLoadPlaylist(true),
-      },
-      {
+    const items: MenuItem[] = [];
+    if (isAdminView || hasPermission('queue.quickadd')) {
+      items.push({
         id: 'quick-add',
         label: 'Quick Add',
         icon: <PlusCircleIcon size={14} weight="duotone" />,
         onClick: () => setShowQuickAdd(true),
-      },
-    ];
-    if (isAdminView) {
+      });
+    }
+    if (isAdminView || hasPermission('queue.override')) {
       items.push({
         id: 'override',
         label: 'Override',
@@ -151,6 +247,8 @@ export default function QueuePanel({
         danger: true,
         onClick: () => setShowOverride(true),
       });
+    }
+    if (isAdminView || hasPermission('queue.manage')) {
       items.push({
         id: 'clear-queue',
         label: 'Clear Queue',
@@ -161,7 +259,7 @@ export default function QueuePanel({
       });
     }
     return items;
-  }, [isAdminView, clearBusy, isQueueEmpty]);
+  }, [isAdminView, hasPermission, clearBusy, isQueueEmpty]);
 
   if (loading) {
     return (
@@ -171,6 +269,7 @@ export default function QueuePanel({
           menuOpen={menuOpen}
           onToggleMenu={() => setMenuOpen(!menuOpen)}
           mobileQuickControls={mobileQuickControls}
+          showActions={false}
         />
         <div className="flex-1 p-4 space-y-3">
           <div className="skeleton h-5 w-48 rounded" />
@@ -189,6 +288,7 @@ export default function QueuePanel({
         menuOpen={menuOpen}
         onToggleMenu={() => setMenuOpen(!menuOpen)}
         mobileQuickControls={mobileQuickControls}
+        showActions={menuItems.length > 0}
       />
 
       {/* Fixed content: Now Playing */}
@@ -196,7 +296,6 @@ export default function QueuePanel({
         {currentSong ? (
           <NowPlayingCard
             song={currentSong}
-            isPlaying={isPlaying}
             elapsed={elapsed}
             registerProgress={registerProgress}
           />
@@ -206,22 +305,24 @@ export default function QueuePanel({
 
         {/* Empty state */}
         {virtualItems.length === 0 && (
-          <div className="py-8 text-center space-y-2">
+          <div className="py-8 text-center">
             <p className="font-mono text-[11px] text-faint">queue is empty</p>
-            <button
-              type="button"
-              onClick={() => setShowLoadPlaylist(true)}
-              className="cursor-pointer font-mono text-[11px] text-accent hover:underline"
-            >
-              load a playlist to get started
-            </button>
           </div>
         )}
       </div>
 
       {/* Virtualized scroll container */}
       {virtualItems.length > 0 && (
-        <div ref={scrollRef} className="flex-1 overflow-y-auto px-4 pb-4 min-h-0">
+        <div
+          ref={scrollRef}
+          className="flex-1 overflow-y-auto px-4 pb-4 min-h-0"
+          style={{
+            WebkitMaskImage:
+              'linear-gradient(to bottom, black 0%, black calc(100% - 40px), transparent 100%)',
+            maskImage:
+              'linear-gradient(to bottom, black 0%, black calc(100% - 40px), transparent 100%)',
+          }}
+        >
           <div
             style={{
               height: `${virtualizer.getTotalSize()}px`,
@@ -236,6 +337,8 @@ export default function QueuePanel({
                 return (
                   <div
                     key={item.key}
+                    data-index={virtualRow.index}
+                    ref={virtualizer.measureElement}
                     style={{
                       position: 'absolute',
                       top: 0,
@@ -271,6 +374,7 @@ export default function QueuePanel({
                   key={item.key}
                   data-index={virtualRow.index}
                   ref={virtualizer.measureElement}
+                  className="pb-1"
                   style={{
                     position: 'absolute',
                     top: 0,
@@ -282,7 +386,16 @@ export default function QueuePanel({
                   <QueueSongItem
                     song={item.song}
                     index={item.listIndex}
-                    accent={item.variant === 'priority'}
+                    variant={item.variant}
+                    canManage={canManage}
+                    targetQueue={item.variant === 'priority' ? priorityQueue : queue}
+                    onRemove={handleRemove}
+                    onPromote={handlePromote}
+                    onDemote={handleDemote}
+                    onMoveUp={handleMoveUp}
+                    onMoveDown={handleMoveDown}
+                    onMoveToTop={handleMoveToTop}
+                    onMoveToBottom={handleMoveToBottom}
                   />
                 </div>
               );
@@ -302,16 +415,6 @@ export default function QueuePanel({
       )}
 
       {/* Modals rendered via portal to escape slideout stacking context */}
-      {showLoadPlaylist &&
-        createPortal(
-          <LoadPlaylistModal
-            onClose={() => setShowLoadPlaylist(false)}
-            onLoaded={() => {
-              setShowLoadPlaylist(false);
-            }}
-          />,
-          document.body
-        )}
       {showQuickAdd &&
         createPortal(
           <QuickAddModal
@@ -353,37 +456,203 @@ export default function QueuePanel({
 const QueueSongItem = memo(function QueueSongItem({
   song,
   index,
-  accent,
+  variant,
+  canManage,
+  targetQueue,
+  onRemove,
+  onPromote,
+  onDemote,
+  onMoveUp,
+  onMoveDown,
+  onMoveToTop,
+  onMoveToBottom,
 }: {
   song: QueuedSong;
   index: number;
-  accent?: boolean;
+  variant: 'priority' | 'regular';
+  canManage: boolean;
+  targetQueue: QueuedSong[];
+  onRemove: (songId: string) => Promise<void>;
+  onPromote: (songId: string) => Promise<void>;
+  onDemote: (songId: string) => Promise<void>;
+  onMoveUp: (targetQueue: QueuedSong[], songId: string, target: 'queue' | 'priority') => void;
+  onMoveDown: (targetQueue: QueuedSong[], songId: string, target: 'queue' | 'priority') => void;
+  onMoveToTop: (targetQueue: QueuedSong[], songId: string, target: 'queue' | 'priority') => void;
+  onMoveToBottom: (targetQueue: QueuedSong[], songId: string, target: 'queue' | 'priority') => void;
 }) {
+  const [menuOpen, setMenuOpen] = useState(false);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const isPriority = variant === 'priority';
+  const isFirst = index === 0;
+  const isLast = index >= targetQueue.length - 1;
+
+  const menuItems: MenuItem[] = useMemo(() => {
+    if (!canManage) return [];
+    const items: MenuItem[] = [];
+
+    // Remove — always available
+    items.push({
+      id: 'remove',
+      label: 'Remove',
+      icon: <TrashIcon size={14} weight="duotone" />,
+      danger: true,
+      onClick: () => onRemove(song.id),
+    });
+
+    // Promote — only for regular queue items
+    if (!isPriority) {
+      items.push({
+        id: 'promote',
+        label: 'Promote to Up Next',
+        icon: <LightningIcon size={14} weight="duotone" />,
+        onClick: () => onPromote(song.id),
+      });
+    }
+
+    // Demote — only for priority queue items
+    if (isPriority) {
+      items.push({
+        id: 'demote',
+        label: 'Demote to Queue',
+        icon: <ListIcon size={14} weight="duotone" />,
+        onClick: () => onDemote(song.id),
+      });
+    }
+
+    // Reorder controls — for both queues
+    if (targetQueue.length > 1) {
+      items.push({
+        id: 'move-up',
+        label: 'Move Up',
+        icon: <ArrowUpIcon size={14} weight="duotone" />,
+        disabled: isFirst,
+        onClick: () => onMoveUp(targetQueue, song.id, isPriority ? 'priority' : 'queue'),
+      });
+      items.push({
+        id: 'move-down',
+        label: 'Move Down',
+        icon: <ArrowDownIcon size={14} weight="duotone" />,
+        disabled: isLast,
+        onClick: () => onMoveDown(targetQueue, song.id, isPriority ? 'priority' : 'queue'),
+      });
+      items.push({
+        id: 'move-top',
+        label: 'Move to Top',
+        icon: <ArrowLineUpIcon size={14} weight="duotone" />,
+        disabled: isFirst,
+        onClick: () => onMoveToTop(targetQueue, song.id, isPriority ? 'priority' : 'queue'),
+      });
+      items.push({
+        id: 'move-bottom',
+        label: 'Move to Bottom',
+        icon: <ArrowLineDownIcon size={14} weight="duotone" />,
+        disabled: isLast,
+        onClick: () => onMoveToBottom(targetQueue, song.id, isPriority ? 'priority' : 'queue'),
+      });
+    }
+
+    return items;
+  }, [
+    canManage,
+    isPriority,
+    isFirst,
+    isLast,
+    targetQueue,
+    song.id,
+    onRemove,
+    onPromote,
+    onDemote,
+    onMoveUp,
+    onMoveDown,
+    onMoveToTop,
+    onMoveToBottom,
+  ]);
+
+  const accent = isPriority;
+  const sourceKey = useMemo(() => getSourceKey(song.sourceUrl), [song.sourceUrl]);
+
   return (
-    <div className="flex items-center gap-2 px-3 py-2.5">
-      <span
-        className={`font-mono text-[10px] w-4 text-right shrink-0 ${accent ? 'text-accent' : 'text-faint'}`}
-      >
-        {index + 1}
-      </span>
-      <div className="overflow-hidden w-8 h-8 rounded border border-border shrink-0">
-        <img
-          src={song.artwork ?? song.thumbnailUrl}
-          alt={song.nickname || song.title}
-          className="w-full h-full object-cover scale-[1.33]"
-          loading="lazy"
-          decoding="async"
+    <div className="rounded-lg overflow-hidden" style={{ background: 'var(--color-base)' }}>
+      <div className="flex items-center gap-3 px-3 py-2 group">
+        {/* Index */}
+        <span
+          className={`font-mono text-[10px] w-4 text-right shrink-0 ${accent ? 'text-accent' : 'text-faint'}`}
+        >
+          {index + 1}
+        </span>
+
+        {/* Thumbnail */}
+        <div className="overflow-hidden w-10 h-10 rounded border border-border shrink-0 bg-elevated">
+          <ArtworkImage
+            src={song.artwork ?? song.thumbnailUrl}
+            alt={song.nickname || song.title}
+            className="w-full h-full"
+            imageClassName="scale-[1.33]"
+          />
+        </div>
+
+        {/* Info */}
+        <div className="flex-1 min-w-0 flex flex-col justify-center gap-0.5">
+          <p className="text-xs font-semibold text-fg leading-tight flex items-center gap-1.5 min-w-0">
+            <MusicNoteIcon size={13} weight="fill" className="shrink-0 text-muted" />
+            <span className="truncate">{song.nickname || song.title}</span>
+          </p>
+          <div className="flex items-center gap-2 text-[11px] text-muted min-w-0">
+            {song.artist && (
+              <span className="max-w-[16ch] flex items-center gap-1 min-w-0">
+                <UserIcon size={12} weight="fill" className="shrink-0" />
+                <span className="truncate">{song.artist}</span>
+              </span>
+            )}
+            <DurationBadge seconds={song.duration} className="text-[11px]" />
+          </div>
+          <div className="flex items-center gap-2 text-[11px] text-muted min-w-0">
+            {sourceKey && (
+              <span className="flex items-center shrink-0 [&_svg]:w-3.5 [&_svg]:h-3.5">
+                <SourceIcon sourceKey={sourceKey} />
+              </span>
+            )}
+            <span className="max-w-[16ch] flex items-center gap-1 min-w-0">
+              <UserCircleIcon size={12} weight="fill" className="shrink-0" />
+              <span className="truncate">{song.requestedBy}</span>
+            </span>
+          </div>
+        </div>
+
+        {/* Badges */}
+        <div className="flex items-center gap-2 shrink-0">
+          <VolumeBoostBadge volumeBoost={song.volumeBoost} />
+        </div>
+
+        {/* Actions */}
+        {canManage && (
+          <Button
+            ref={triggerRef}
+            variant="inherit"
+            surface="base"
+            size="icon"
+            aria-haspopup="true"
+            aria-expanded={menuOpen}
+            aria-label="Song actions"
+            className={`opacity-0 group-hover:opacity-100 transition-opacity shrink-0 w-6 h-6 ${menuOpen ? 'pressed text-accent opacity-100' : 'text-muted hover:text-fg'}`}
+            onClick={(e) => {
+              e.stopPropagation();
+              setMenuOpen((prev) => !prev);
+            }}
+          >
+            <DotsThreeOutlineVerticalIcon size={14} weight="duotone" />
+          </Button>
+        )}
+      </div>
+      {menuOpen && (
+        <ContextMenu
+          items={menuItems}
+          isOpen={menuOpen}
+          onClose={() => setMenuOpen(false)}
+          triggerRef={triggerRef}
+          align="right"
         />
-      </div>
-      <div className="flex-1 min-w-0">
-        <p className="font-body text-xs font-medium text-fg truncate">
-          {song.nickname || song.title}
-        </p>
-        <p className="font-mono text-[9px] text-muted hidden sm:block">req. {song.requestedBy}</p>
-      </div>
-      <span className="font-mono text-[10px] text-muted shrink-0">
-        {formatDuration(song.duration)}
-      </span>
+      )}
     </div>
   );
 });
@@ -393,11 +662,13 @@ const PanelHeader = memo(function PanelHeader({
   menuOpen,
   onToggleMenu,
   mobileQuickControls,
+  showActions = true,
 }: {
   triggerRef: React.RefObject<HTMLButtonElement | null>;
   menuOpen: boolean;
   onToggleMenu: () => void;
   mobileQuickControls?: MobileQuickControls;
+  showActions?: boolean;
 }) {
   const mqc = mobileQuickControls;
   const isLoopActive = mqc ? mqc.loopMode !== 'off' : false;
@@ -414,7 +685,10 @@ const PanelHeader = memo(function PanelHeader({
 
   return (
     <div className="flex items-center justify-between px-4 py-3 border-b border-border shrink-0">
-      <h1 className="font-display text-3xl text-fg tracking-wider">Queue</h1>
+      <h1 className="font-display text-3xl text-accent tracking-wider flex items-center gap-2">
+        <QueueIcon size={24} weight="duotone" className="shrink-0 relative top-1" />
+        Queue
+      </h1>
       <div className="flex items-center gap-1">
         {mqc && (
           <>
@@ -473,20 +747,22 @@ const PanelHeader = memo(function PanelHeader({
             </Button>
           </>
         )}
-        <Button
-          ref={triggerRef}
-          variant="inherit"
-          size="icon"
-          type="button"
-          aria-haspopup="true"
-          aria-expanded={menuOpen}
-          title="More actions"
-          surface="elevated"
-          className={`${menuOpen ? 'pressed text-accent' : ''}`}
-          onClick={onToggleMenu}
-        >
-          <DotsThreeOutlineVerticalIcon size={18} weight="duotone" />
-        </Button>
+        {showActions && (
+          <Button
+            ref={triggerRef}
+            variant="inherit"
+            size="icon"
+            type="button"
+            aria-haspopup="true"
+            aria-expanded={menuOpen}
+            title="More actions"
+            surface="elevated"
+            className={`${menuOpen ? 'pressed text-accent' : ''}`}
+            onClick={onToggleMenu}
+          >
+            <DotsThreeOutlineVerticalIcon size={18} weight="duotone" />
+          </Button>
+        )}
       </div>
     </div>
   );
@@ -494,42 +770,60 @@ const PanelHeader = memo(function PanelHeader({
 
 const NowPlayingCard = memo(function NowPlayingCard({
   song,
-  isPlaying,
   elapsed,
   registerProgress,
 }: {
   song: QueuedSong;
-  isPlaying: boolean;
   elapsed: number;
   registerProgress: (ref: HTMLDivElement | null) => void;
 }) {
+  const sourceKey = useMemo(() => getSourceKey(song.sourceUrl), [song.sourceUrl]);
+
   return (
     <div className="card overflow-hidden" style={{ background: 'var(--color-base)' }}>
-      <div className="flex gap-3 p-3">
-        <div className="relative shrink-0 overflow-hidden rounded-xl">
-          <img
+      <div className="flex gap-4 p-4">
+        {/* Artwork */}
+        <div className="relative shrink-0 overflow-hidden rounded-xl bg-elevated">
+          <ArtworkImage
             src={song.artwork ?? song.thumbnailUrl}
             alt={song.nickname || song.title}
-            className="w-20 h-20 rounded-xl border border-border object-cover scale-[1.33]"
-            decoding="async"
+            className="w-20 h-20 rounded-xl border border-border"
+            imageClassName="scale-[1.33]"
           />
-          {isPlaying && (
-            <div className="absolute -bottom-1.5 -right-1.5 w-6 h-6 rounded-full bg-accent flex items-center justify-center">
-              <PlayCircleIcon size={10} weight="duotone" className="text-white" />
-            </div>
-          )}
         </div>
-        <div className="flex-1 flex flex-col justify-center min-w-0">
+
+        {/* Info */}
+        <div className="flex-1 flex flex-col justify-center min-w-0 gap-1.5">
           <a
-            href={song.youtubeUrl}
+            href={song.sourceUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className="font-body text-sm text-fg hover:text-accent line-clamp-2"
+            className="text-xs font-semibold text-fg hover:text-accent leading-tight flex items-center gap-1.5 min-w-0"
           >
-            {song.nickname || song.title}
+            <MusicNoteIcon size={13} weight="fill" className="shrink-0 text-muted" />
+            <span className="truncate">{song.nickname || song.title}</span>
           </a>
-          <p className="font-mono text-[10px] text-muted mt-0.5">requested by {song.requestedBy}</p>
-          <div className="mt-2">
+          <div className="flex items-center gap-2 text-[11px] text-muted min-w-0">
+            {song.artist && (
+              <span className="max-w-[16ch] flex items-center gap-1 min-w-0">
+                <UserIcon size={12} weight="fill" className="shrink-0" />
+                <span className="truncate">{song.artist}</span>
+              </span>
+            )}
+            <span className="max-w-[16ch] flex items-center gap-1 min-w-0">
+              <UserCircleIcon size={12} weight="fill" className="shrink-0" />
+              <span className="truncate">{song.requestedBy}</span>
+            </span>
+            {sourceKey && (
+              <span className="flex items-center shrink-0 [&_svg]:w-3.5 [&_svg]:h-3.5">
+                <SourceIcon sourceKey={sourceKey} />
+              </span>
+            )}
+            <VolumeBoostBadge volumeBoost={song.volumeBoost} />
+          </div>
+
+          {/* Progress */}
+          <div className="mt-1">
             <div className="relative h-1.5 w-full bg-elevated rounded-full overflow-hidden">
               <div
                 ref={registerProgress}
@@ -538,8 +832,8 @@ const NowPlayingCard = memo(function NowPlayingCard({
               />
             </div>
             <div className="flex justify-between mt-1">
-              <span className="font-mono text-[9px] text-muted">{formatDuration(elapsed)}</span>
-              <span className="font-mono text-[9px] text-muted">
+              <span className="font-mono text-[10px] text-muted">{formatDuration(elapsed)}</span>
+              <span className="font-mono text-[10px] text-muted">
                 {formatDuration(song.duration)}
               </span>
             </div>
@@ -549,36 +843,6 @@ const NowPlayingCard = memo(function NowPlayingCard({
     </div>
   );
 });
-
-const IdleIcons = [
-  AlienIcon,
-  BombIcon,
-  CakeIcon,
-  CatIcon,
-  CookieIcon,
-  GhostIcon,
-  MoonIcon,
-  OnigiriIcon,
-  PizzaIcon,
-  PlanetIcon,
-  RocketLaunchIcon,
-  SkullIcon,
-  SmileyAngryIcon,
-  SockIcon,
-  SwordIcon,
-  ToiletPaperIcon,
-  YinYangIcon,
-];
-
-let lastIndex = -1;
-function getRandomIdleIcon() {
-  let idx: number;
-  do {
-    idx = Math.floor(Math.random() * IdleIcons.length);
-  } while (IdleIcons.length > 1 && idx === lastIndex);
-  lastIndex = idx;
-  return IdleIcons[idx] ?? IdleIcons[0];
-}
 
 const IdleCard = memo(function IdleCard() {
   const [Icon] = useState(getRandomIdleIcon);

@@ -32,11 +32,12 @@ export class GuildPlayer {
   // auto-started the next track. Cleared after playSong consumes it.
   private gaplessTransition = false;
 
-  // Gapless preloading via NodeLink's nextTrack is currently disabled.
-  // NodeLink v3.7.0's gapless transition (player.ts:496) calls
-  // connection.play() without awaiting encoder initialization, causing
-  // a ~3s silence gap — worse than a cold start (~1s). Re-enable when
-  // NodeLink fixes the encoder pipeline in its gapless transition.
+  // Gapless preloading via NodeLink's nextTrack.
+  // When enabled, the next track is preloaded into NodeLink so that a
+  // gapless TrackEndEvent can transition without a cold-start load.
+  // NodeLink v3.7.0 had a bug (~3s silence) in its gapless pipeline;
+  // if the encoder issue recurs, set this to false and fall back to
+  // cold-start loading for each track.
   // See: https://github.com/PerformanC/NodeLink/issues (TBD)
   private static readonly ENABLE_GAPLESS_PRELOAD = true;
 
@@ -52,16 +53,38 @@ export class GuildPlayer {
   // Auto-leave idle timer.
   private idleLeaveTimer: ReturnType<typeof setTimeout> | null = null;
 
-  private getIdleTimeoutMinutes(): number {
+  private async getIdleTimeoutMinutes(): Promise<number> {
+    // Read from DB first (set via setup wizard or admin settings).
+    try {
+      const row = await db
+        .select({ timeout: tables.guildSettings.voiceIdleTimeoutMinutes })
+        .from(tables.guildSettings)
+        .where(eq(tables.guildSettings.id, 1))
+        .get();
+      if (row && Number.isFinite(row.timeout) && row.timeout > 0) {
+        return row.timeout;
+      }
+    } catch {
+      // DB not available — fall through to env / default.
+    }
+
+    // Fall back to env var, then default.
     const raw = process.env.VOICE_IDLE_TIMEOUT_MINUTES;
     const parsed = Number(raw);
     return Number.isFinite(parsed) && parsed > 0 ? parsed : 5;
   }
 
-  private scheduleIdleLeave(): void {
+  private async scheduleIdleLeave(): Promise<void> {
     this.cancelIdleLeave();
-    const minutes = this.getIdleTimeoutMinutes();
-    this.idleLeaveTimer = setTimeout(() => this.leaveOnIdle(), minutes * 60 * 1000);
+    const minutes = await this.getIdleTimeoutMinutes();
+    this.idleLeaveTimer = setTimeout(
+      () => {
+        this.leaveOnIdle().catch(() => {
+          // noop — errors are already logged inside leaveOnIdle
+        });
+      },
+      minutes * 60 * 1000
+    );
   }
 
   private cancelIdleLeave(): void {
@@ -80,13 +103,40 @@ export class GuildPlayer {
     '💀 Alfira failed the last death saving throw.',
   ];
 
-  private leaveOnIdle(): void {
+  private async leaveOnIdle(): Promise<void> {
+    const timeoutMinutes = await this.getIdleTimeoutMinutes();
     logger.info(
       { guildId: this.guildId },
-      `Auto-leaving voice channel after idle (${this.getIdleTimeoutMinutes()} minutes).`
+      `Auto-leaving voice channel after idle (${timeoutMinutes} minutes).`
     );
     const phrase = this.LEAVE_PHRASES[Math.floor(Math.random() * this.LEAVE_PHRASES.length)];
     logger.info({ guildId: this.guildId }, `${phrase} (Left the voice channel due to inactivity.)`);
+
+    // Send notification to the configured channel, if any.
+    try {
+      const row = await db
+        .select({ channelId: tables.guildSettings.afkNotificationChannelId })
+        .from(tables.guildSettings)
+        .where(eq(tables.guildSettings.id, 1))
+        .get();
+
+      if (row?.channelId) {
+        const token = process.env.DISCORD_BOT_TOKEN;
+        if (token) {
+          await fetch(`https://discord.com/api/v10/channels/${row.channelId}/messages`, {
+            method: 'POST',
+            headers: {
+              Authorization: `Bot ${token}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ content: phrase }),
+          });
+        }
+      }
+    } catch (err) {
+      logger.warn({ err, guildId: this.guildId }, 'Failed to send idle-leave notification');
+    }
+
     this.stop();
   }
 
@@ -278,6 +328,117 @@ export class GuildPlayer {
     this.broadcast();
   }
 
+  /**
+   * Remove a song from either the priority queue or the regular queue
+   * by its unique queue-entry id. Returns true if a song was found and removed.
+   */
+  removeSongById(songId: string): boolean {
+    // Check priority queue first
+    const prioIdx = this.priorityQueue.findIndex((s) => s.id === songId);
+    if (prioIdx !== -1) {
+      this.priorityQueue.splice(prioIdx, 1);
+      this.broadcast();
+      return true;
+    }
+
+    // Check regular queue
+    const removed = this.queue.removeWhere((s) => s.id === songId);
+    if (removed.length > 0) {
+      this.broadcast();
+      return true;
+    }
+
+    return false;
+  }
+
+  /**
+   * Promote a song from the regular queue to the priority queue
+   * ("Promote to Up Next"). Songs are appended in promotion order so the
+   * first-promoted song plays first. Returns true if found and promoted.
+   */
+  promoteSong(songId: string): boolean {
+    const removed = this.queue.removeWhere((s) => s.id === songId);
+    if (removed.length === 0) return false;
+
+    // Push to the end of priority — earlier promotions play first
+    this.priorityQueue.push(...removed);
+
+    this.broadcast();
+    return true;
+  }
+
+  /**
+   * Demote a song from the priority queue back to the front of the regular
+   * queue. Returns true if the song was found and demoted.
+   */
+  demoteSong(songId: string): boolean {
+    const prioIdx = this.priorityQueue.findIndex((s) => s.id === songId);
+    if (prioIdx === -1) return false;
+
+    // Remove from priority and insert at the front of the regular queue
+    // so it plays first among unplayed regular songs.
+    const [song] = this.priorityQueue.splice(prioIdx, 1);
+    if (song) {
+      this.queue.insertAtFront(song);
+    }
+
+    this.broadcast();
+    return true;
+  }
+
+  /**
+   * Reorder the remaining regular-queue items to match the given songId order.
+   * The array must contain exactly the IDs of all currently-remaining queue
+   * items (no more, no less). Unshuffles the queue.
+   */
+  reorderQueue(songIds: string[]): void {
+    const remaining = this.queue.toRemaining();
+
+    // Build reordered array by looking up each songId in remaining
+    const remainingById = new Map(remaining.map((s) => [s.id, s]));
+    const reordered: QueuedSong[] = [];
+
+    for (const id of songIds) {
+      const song = remainingById.get(id);
+      if (!song) {
+        throw new Error(`Reorder references unknown song id: ${id}`);
+      }
+      reordered.push(song);
+    }
+
+    if (reordered.length !== remaining.length) {
+      throw new Error('Reorder must include all queue items');
+    }
+
+    this.queue.reorderRemaining(reordered, (a, b) => a.id === b.id);
+    this.broadcast();
+  }
+
+  /**
+   * Reorder the priority queue to match the given songId order.
+   * The array must contain exactly the IDs of all current priority queue
+   * items (no more, no less).
+   */
+  reorderPriorityQueue(songIds: string[]): void {
+    const byId = new Map(this.priorityQueue.map((s) => [s.id, s]));
+    const reordered: QueuedSong[] = [];
+
+    for (const id of songIds) {
+      const song = byId.get(id);
+      if (!song) {
+        throw new Error(`Reorder references unknown song id: ${id}`);
+      }
+      reordered.push(song);
+    }
+
+    if (reordered.length !== this.priorityQueue.length) {
+      throw new Error('Reorder must include all Up Next items');
+    }
+
+    this.priorityQueue = reordered;
+    this.broadcast();
+  }
+
   setLoopMode(mode: LoopMode): void {
     this.loopMode = mode;
     // Loop is tracked client-side — NodeLink has no loop opcode.
@@ -305,7 +466,7 @@ export class GuildPlayer {
       this.pausedAt = Date.now();
       await updateNodeLinkPlayer(this.guildId, sessionId, { paused: true });
       this.paused = true;
-      this.scheduleIdleLeave();
+      await this.scheduleIdleLeave();
     }
 
     this.broadcast();
@@ -344,6 +505,64 @@ export class GuildPlayer {
     updateNodeLinkPlayer(this.guildId, sessionId, {
       volume: 100 + boost,
     });
+  }
+
+  /**
+   * Update a song's metadata in-place across currentSong, priorityQueue,
+   * and regular queue after a DB edit. Only updates the fields present in
+   * the partial update — other fields are left unchanged.
+   *
+   * Accepts either a single song ID or an array of IDs (for bulk edits).
+   */
+  updateSongMetadata(
+    songIds: string | string[],
+    fields: {
+      nickname?: string | null;
+      artist?: string | null;
+      album?: string | null;
+      artwork?: string | null;
+      tags?: string[];
+      volumeBoost?: number | null;
+    }
+  ): void {
+    const ids = Array.isArray(songIds) ? songIds : [songIds];
+    const idSet = new Set(ids);
+
+    const merge = (s: QueuedSong): QueuedSong => {
+      const updated = { ...s };
+      if ('nickname' in fields) updated.nickname = fields.nickname ?? undefined;
+      if ('artist' in fields) updated.artist = fields.artist ?? undefined;
+      if ('album' in fields) updated.album = fields.album ?? undefined;
+      if ('artwork' in fields) updated.artwork = fields.artwork ?? undefined;
+      if ('tags' in fields) updated.tags = fields.tags;
+      if ('volumeBoost' in fields) updated.volumeBoost = fields.volumeBoost ?? undefined;
+      return updated;
+    };
+
+    let changed = false;
+
+    // Current song
+    if (this.currentSong && idSet.has(this.currentSong.id)) {
+      this.currentSong = merge(this.currentSong);
+      changed = true;
+    }
+
+    // Priority queue
+    for (let i = 0; i < this.priorityQueue.length; i++) {
+      const s = this.priorityQueue[i];
+      if (s && idSet.has(s.id)) {
+        this.priorityQueue[i] = merge(s);
+        changed = true;
+      }
+    }
+
+    // Regular queue
+    const regularUpdated = this.queue.updateWhere((s) => idSet.has(s.id), merge);
+    if (regularUpdated > 0) changed = true;
+
+    if (changed) {
+      this.broadcast();
+    }
   }
 
   getQueue(): QueuedSong[] {
@@ -423,6 +642,12 @@ export class GuildPlayer {
 
     const prioritySong = this.priorityQueue.shift();
     if (prioritySong) {
+      // The gapless preload was for a different track (the regular-queue
+      // next seen at preload time).  Clear the flag so playSong does a
+      // full cold-start load for this priority track instead of assuming
+      // NodeLink auto-started it.
+      this.gaplessTransition = false;
+
       this.currentSong = prioritySong;
       if (this.currentSong) {
         this.currentSong = { ...this.currentSong, isSeekable: true };
@@ -442,7 +667,7 @@ export class GuildPlayer {
         this.currentSong = null;
         this.queue.clear();
         this.broadcast();
-        this.scheduleIdleLeave();
+        await this.scheduleIdleLeave();
         return;
       }
     }
@@ -572,7 +797,7 @@ export class GuildPlayer {
     let trackData: { track: string; isWebmOpus: boolean };
 
     try {
-      trackData = await this.fetchStreamWithRetry(next.youtubeUrl);
+      trackData = await this.fetchStreamWithRetry(next.sourceUrl);
     } catch (error) {
       logger.error(
         { guildId: this.guildId, track: next.title, error },
@@ -662,13 +887,13 @@ export class GuildPlayer {
     const nextTrack = this.peekNextTrack();
     if (!nextTrack) return;
 
-    preloadTrack(this.guildId, sessionId, nextTrack.youtubeUrl).catch((err) => {
+    preloadTrack(this.guildId, sessionId, nextTrack.sourceUrl).catch((err) => {
       logger.warn({ guildId: this.guildId, track: nextTrack.title, err }, 'Gapless preload failed');
     });
   }
 
   private async fetchStreamWithRetry(
-    youtubeUrl: string
+    sourceUrl: string
   ): Promise<{ track: string; isWebmOpus: boolean }> {
     const RETRY_ATTEMPTS = 3;
     const RETRY_DELAY_MS = 1_000;
@@ -676,7 +901,7 @@ export class GuildPlayer {
     for (let attempt = 0; attempt < RETRY_ATTEMPTS; attempt++) {
       try {
         const { getStreamFormat } = await import('./utils/nodelink');
-        return await getStreamFormat(youtubeUrl);
+        return await getStreamFormat(sourceUrl);
       } catch (error) {
         lastError = error;
         if (attempt < RETRY_ATTEMPTS - 1) {

@@ -1,4 +1,4 @@
-import { memo, useCallback, useEffect, useRef, useState } from 'react';
+import { memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useTagColors } from '../context/TagsContext';
 import { getTagColorClasses } from '../utils/tagColors';
 
@@ -13,23 +13,30 @@ const TagTicker = memo(({ tags, isHovered: externalHovered }: TagTickerProps) =>
   const [shouldScroll, setShouldScroll] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
   const [duration, setDuration] = useState(15);
+  const prevHoveredRef = useRef(false);
+  const durationRef = useRef(15);
   const { tagColorMap } = useTagColors();
 
+  const dedupedTags = useMemo(() => [...new Set(tags)], [tags]);
+
+  // biome-ignore lint/correctness/useExhaustiveDependencies: re-run when tags change to remeasure overflow
   useEffect(() => {
     if (outerRef.current && innerRef.current && outerRef.current.clientWidth > 0) {
       const overflow = innerRef.current.scrollWidth > outerRef.current.clientWidth;
-      setShouldScroll(overflow || tags.length > 3);
+      setShouldScroll(overflow);
 
-      if (overflow || tags.length > 3) {
+      if (overflow) {
         const contentWidth = innerRef.current.scrollWidth;
-        setDuration(Math.max(10, contentWidth * 0.02));
+        const d = Math.max(10, contentWidth * 0.02);
+        setDuration(d);
+        durationRef.current = d;
       }
     }
   }, [tags]);
 
   const renderTags = useCallback(
     (prefix: string) =>
-      tags.map((tag) => {
+      dedupedTags.map((tag) => {
         const tagKey = tag.toLowerCase();
         const explicitColor = tagColorMap[tagKey];
         const colors = getTagColorClasses(tag, explicitColor);
@@ -42,22 +49,67 @@ const TagTicker = memo(({ tags, isHovered: externalHovered }: TagTickerProps) =>
           </span>
         );
       }),
-    [tags, tagColorMap]
+    [dedupedTags, tagColorMap]
   );
-
-  if (tags.length === 0) return null;
 
   const effectiveHovered = externalHovered ?? isHovered;
 
-  const animationStyle: React.CSSProperties =
-    shouldScroll && effectiveHovered
-      ? {
-          width: 'max-content',
-          animation: `ticker-scroll ${duration}s linear infinite`,
-        }
-      : shouldScroll
-        ? { width: 'max-content' }
-        : {};
+  // Smooth return on de-hover: pause animation at current position, then transition back to 0
+  useLayoutEffect(() => {
+    if (!shouldScroll) return;
+
+    const prev = prevHoveredRef.current;
+    prevHoveredRef.current = effectiveHovered;
+
+    if (prev && !effectiveHovered) {
+      // De-hovered: capture paused position and transition back to start
+      const el = innerRef.current;
+      if (!el) return;
+
+      const computed = getComputedStyle(el);
+      const matrix = new DOMMatrixReadOnly(computed.transform);
+      const x = matrix.m41;
+
+      // Replace animation with static transform at captured position
+      el.style.animation = 'none';
+      el.style.transform = `translateX(${x}px)`;
+      el.offsetHeight; // force layout
+
+      // Transition back to 0
+      el.style.transition = 'transform 0.5s ease-out';
+      el.style.transform = 'translateX(0)';
+
+      const onEnd = () => {
+        el.style.transition = '';
+        el.style.transform = '';
+        el.style.animation = '';
+        el.removeEventListener('transitionend', onEnd);
+      };
+      el.addEventListener('transitionend', onEnd);
+
+      return () => el.removeEventListener('transitionend', onEnd);
+    }
+
+    if (!prev && effectiveHovered) {
+      // Re-hovered: cancel any in-progress return and restart animation
+      const el = innerRef.current;
+      if (el) {
+        el.style.transition = '';
+        el.style.transform = '';
+        el.style.animation = `ticker-scroll ${durationRef.current}s linear infinite`;
+      }
+    }
+  }, [effectiveHovered, shouldScroll]);
+
+  if (dedupedTags.length === 0) return null;
+
+  const animationStyle: React.CSSProperties = shouldScroll
+    ? {
+        width: 'max-content',
+        animation: `ticker-scroll ${duration}s linear infinite`,
+        animationPlayState: effectiveHovered ? 'running' : 'paused',
+      }
+    : {};
 
   return (
     <div
@@ -70,7 +122,6 @@ const TagTicker = memo(({ tags, isHovered: externalHovered }: TagTickerProps) =>
           WebkitMaskImage:
             'linear-gradient(to right, transparent, black 8%, black 80%, transparent)',
         }),
-        cursor: 'default',
       }}
       onMouseEnter={() => {
         if (externalHovered === undefined) setIsHovered(true);

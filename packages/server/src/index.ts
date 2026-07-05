@@ -20,15 +20,22 @@ function parseCookies(header: string): Record<string, string> {
 }
 
 import { sql } from 'drizzle-orm';
+import { initGuildId, VERSION } from './lib/config';
 import { ensureTagsMigrated } from './lib/ensureTagsMigrated';
 import { json } from './lib/json';
+import { lavalink } from './lib/lavalink';
+import { pruneRateLimitStores } from './lib/rateLimit';
 import { closeAllClients, registerClient, unregisterClient, type WsClient } from './lib/socket';
 import { verifySessionToken } from './middleware/requireAuth';
 import { handleAuth } from './routes/auth';
 import { handleCompressor } from './routes/compressor';
 import { handleEqualizer } from './routes/equalizer';
+import { handleGeneralSettings } from './routes/generalSettings';
+import { handlePermissions } from './routes/permissions';
 import { handlePlayer } from './routes/player';
 import { handlePlaylists } from './routes/playlists';
+import { handleRequests } from './routes/requests';
+import { handleSetup } from './routes/setup';
 import { handleSongs } from './routes/songs';
 import { handleTags } from './routes/tags';
 import { $client, db } from './shared/db';
@@ -43,7 +50,6 @@ const requiredVars = [
   'DISCORD_CLIENT_ID',
   'DISCORD_CLIENT_SECRET',
   'DISCORD_REDIRECT_URI',
-  'GUILD_ID',
   'DATABASE_URL',
   'JWT_SECRET',
 ];
@@ -138,12 +144,35 @@ function createContext(request: Request): RouteContext {
 // ---------------------------------------------------------------------------
 
 async function handleHealth(): Promise<Response> {
+  const checks: Record<string, string> = {};
+
+  // Database
   try {
     await db.all(sql`SELECT 1`);
-    return json({ status: 'ok' });
+    checks.database = 'ok';
   } catch {
-    return json({ status: 'degraded' }, 503);
+    checks.database = 'error';
   }
+
+  // NodeLink
+  try {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 500);
+    const res = await fetch('http://127.0.0.1:2333/v4/info', {
+      headers: { Authorization: 'nodelink-internal' },
+      signal: controller.signal,
+    });
+    clearTimeout(timeout);
+    checks.nodelink = res.ok ? 'ok' : 'error';
+  } catch {
+    checks.nodelink = 'error';
+  }
+
+  // Discord gateway
+  checks.discord = lavalink.getSessionId() ? 'ok' : 'disconnected';
+
+  const allOk = Object.values(checks).every((v) => v === 'ok');
+  return json({ status: allOk ? 'ok' : 'degraded', version: VERSION, checks }, allOk ? 200 : 503);
 }
 
 // ---------------------------------------------------------------------------
@@ -165,6 +194,11 @@ function startServer(): void {
       // Health check
       if (url.pathname === '/health') {
         return setSecurityHeaders(await handleHealth());
+      }
+
+      // Version — public, no auth required
+      if (url.pathname === '/api/version') {
+        return setSecurityHeaders(json({ version: VERSION }));
       }
 
       // WebSocket upgrade — auth is handled here before upgrade
@@ -202,6 +236,9 @@ function startServer(): void {
       if (url.pathname.startsWith('/api/tags')) {
         return setSecurityHeaders(await handleTags(ctx, request));
       }
+      if (url.pathname.startsWith('/api/requests')) {
+        return setSecurityHeaders(await handleRequests(ctx, request));
+      }
       if (url.pathname.startsWith('/api/songs')) {
         return setSecurityHeaders(await handleSongs(ctx, request));
       }
@@ -216,6 +253,15 @@ function startServer(): void {
       }
       if (url.pathname.startsWith('/api/settings/equalizer')) {
         return setSecurityHeaders(await handleEqualizer(ctx, request));
+      }
+      if (url.pathname.startsWith('/api/permissions')) {
+        return setSecurityHeaders(await handlePermissions(ctx, request));
+      }
+      if (url.pathname.startsWith('/api/settings/general')) {
+        return setSecurityHeaders(await handleGeneralSettings(ctx, request));
+      }
+      if (url.pathname.startsWith('/api/setup')) {
+        return setSecurityHeaders(await handleSetup(ctx, request));
       }
       if (url.pathname.startsWith('/auth')) {
         return setSecurityHeaders(await handleAuth(ctx, request));
@@ -287,11 +333,16 @@ function runMigrations(): void {
       try {
         $client.run(trimmed);
       } catch (err) {
-        // Skip "already exists" errors — the table/index is already there
-        if ((err as Error).message.includes('already exists')) {
+        // Skip errors that indicate the schema change was already applied
+        // in a previous partial run (RENAME, ADD COLUMN, CREATE TABLE retries).
+        if (
+          (err as Error).message.includes('already exists') ||
+          (err as Error).message.includes('no such column') ||
+          (err as Error).message.includes('duplicate column name')
+        ) {
           logger.info(
             { file, stmt: trimmed.substring(0, 50) },
-            'Skipping already-exists statement'
+            'Skipping already-applied statement'
           );
           continue;
         }
@@ -374,12 +425,32 @@ async function main(): Promise<void> {
     process.exit(1);
   }
 
+  // 2.5. Initialize guild ID cache.
+  try {
+    await initGuildId();
+    logger.info('Guild ID cache initialized');
+  } catch (error) {
+    logger.error(error, 'Failed to initialize guild settings');
+  }
+
+  // 2.6. Initialize enabled sources cache.
+  try {
+    const { initEnabledSources } = await import('./startDiscord');
+    await initEnabledSources();
+    logger.info('Enabled sources cache initialized');
+  } catch (error) {
+    logger.error(error, 'Failed to initialize enabled sources cache');
+  }
+
   // 3. Start NodeLink in-process.
   try {
     await startNodeLink();
   } catch (error) {
     logger.error(error, 'Failed to start NodeLink');
   }
+
+  // 3.5. Periodically prune stale rate-limit entries (every 5 minutes).
+  setInterval(pruneRateLimitStores, 5 * 60_000);
 
   // 4. Start the Discord bot.
   try {

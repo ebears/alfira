@@ -1,15 +1,26 @@
-interface SongMetadata {
+export interface SongMetadata {
   title: string;
-  youtubeId: string;
+  sourceId: string;
   duration: number; // seconds
   thumbnailUrl: string;
+  sourceName?: string;
+  artist?: string;
+  artworkUrl?: string;
 }
 
 export interface PlaylistMetadata {
   title: string;
   playlistId: string;
   videoCount: number;
-  videos: { id: string; title: string; duration: number; thumbnailUrl: string }[];
+  videos: {
+    id: string;
+    title: string;
+    duration: number;
+    thumbnailUrl: string;
+    sourceName?: string;
+    artist?: string;
+    artworkUrl?: string;
+  }[];
 }
 
 const NODELINK_URL = 'http://127.0.0.1:2333';
@@ -31,7 +42,7 @@ function nodeLinkHeaders(): Record<string, string> {
 // Player command types
 // ---------------------------------------------------------------------------
 
-export interface UpdatePlayerOptions {
+interface UpdatePlayerOptions {
   /** Voice server connection details — sent once to establish the voice link. */
   voice?: { token: string; endpoint: string; sessionId: string };
   /** Encoded track to play. Pass { encoded: null } to stop playback. */
@@ -61,6 +72,7 @@ interface LoadTrackResponse {
       position?: number;
       author?: string;
       artworkUrl?: string;
+      sourceName?: string;
       name?: string; // playlist name when loadType is "playlist"
       selectedTrack?: number;
     };
@@ -90,23 +102,180 @@ interface TrackInfo {
   pluginInfo?: Record<string, unknown>;
 }
 
-const YOUTUBE_HOSTS = ['youtube.com', 'www.youtube.com', 'youtu.be', 'music.youtube.com'];
+// ---------------------------------------------------------------------------
+// Source definitions
+//
+// Each source has:
+// - hosts: hostnames to validate URLs against
+// - displayName: human-readable name for UI / error messages
+// - isPlaylistUrl: optional fn to detect playlist URLs for this source
+// ---------------------------------------------------------------------------
 
-export function isValidYouTubeUrl(url: string): boolean {
+export interface SourceDefinition {
+  key: string;
+  displayName: string;
+  hosts: string[];
+  isPlaylistUrl?: (parsed: URL) => boolean;
+  requiresCredentials?: boolean;
+  helpText?: string;
+}
+
+export const SOURCE_DEFINITIONS: Record<string, SourceDefinition> = {
+  youtube: {
+    key: 'youtube',
+    displayName: 'YouTube',
+    hosts: ['youtube.com', 'www.youtube.com', 'youtu.be', 'music.youtube.com'],
+    isPlaylistUrl: (parsed: URL) => parsed.searchParams.has('list'),
+  },
+  soundcloud: {
+    key: 'soundcloud',
+    displayName: 'SoundCloud',
+    hosts: ['soundcloud.com', 'www.soundcloud.com'],
+    isPlaylistUrl: (parsed: URL) => parsed.pathname.includes('/sets/'),
+  },
+  spotify: {
+    key: 'spotify',
+    displayName: 'Spotify',
+    hosts: ['open.spotify.com', 'spotify.com', 'www.spotify.com'],
+    isPlaylistUrl: (parsed: URL) =>
+      parsed.pathname.includes('/playlist/') || parsed.pathname.includes('/album/'),
+    requiresCredentials: true,
+  },
+  applemusic: {
+    key: 'applemusic',
+    displayName: 'Apple Music',
+    hosts: ['music.apple.com'],
+    isPlaylistUrl: (parsed: URL) =>
+      parsed.pathname.includes('/playlist/') || parsed.pathname.includes('/album/'),
+    requiresCredentials: true,
+  },
+  tidal: {
+    key: 'tidal',
+    displayName: 'Tidal',
+    hosts: ['tidal.com', 'www.tidal.com', 'listen.tidal.com'],
+    isPlaylistUrl: (parsed: URL) =>
+      parsed.pathname.includes('/playlist/') || parsed.pathname.includes('/album/'),
+    requiresCredentials: true,
+  },
+  googledrive: {
+    key: 'googledrive',
+    displayName: 'Google Drive',
+    hosts: ['drive.google.com'],
+    helpText: 'Paste a Google Drive share link to play audio files hosted on Google Drive.',
+  },
+};
+
+// ---------------------------------------------------------------------------
+// Enabled sources cache — mirrors getGuildId() / initGuildId() pattern.
+// Loaded async from DB on startup, read synchronously at call time.
+// Falls back to ENABLED_SOURCES env var, then to all sources.
+// ---------------------------------------------------------------------------
+
+let _cachedEnabledSources: string[] | null = null;
+let _enabledSourcesLoaded = false;
+
+const ALL_SOURCE_KEYS = Object.keys(SOURCE_DEFINITIONS);
+
+function getEnabledSourcesSync(): string[] {
+  if (_cachedEnabledSources) return _cachedEnabledSources;
+  return ALL_SOURCE_KEYS;
+}
+
+export function getEnabledSourceDisplayNames(): string[] {
+  return getEnabledSourcesSync()
+    .map((key) => SOURCE_DEFINITIONS[key]?.displayName)
+    .filter(Boolean) as string[];
+}
+
+export async function initEnabledSources(): Promise<void> {
+  if (_enabledSourcesLoaded) return;
   try {
-    return YOUTUBE_HOSTS.includes(new URL(url).hostname);
+    const { db, tables, eq } = await import('../shared/db');
+    const row = await db
+      .select({ enabledSources: tables.guildSettings.enabledSources })
+      .from(tables.guildSettings)
+      .where(eq(tables.guildSettings.id, 1))
+      .get();
+    if (row?.enabledSources) {
+      _cachedEnabledSources = row.enabledSources
+        .split(',')
+        .map((s) => s.trim())
+        .filter(Boolean);
+    } else {
+      _cachedEnabledSources = parseEnabledSourcesEnv();
+    }
+  } catch {
+    _cachedEnabledSources = parseEnabledSourcesEnv();
+  }
+  _enabledSourcesLoaded = true;
+}
+
+function parseEnabledSourcesEnv(): string[] {
+  const envVal = process.env.ENABLED_SOURCES;
+  if (envVal) {
+    const keys = envVal
+      .split(',')
+      .map((s) => s.trim().toLowerCase())
+      .filter(Boolean);
+    const valid = keys.filter((k) => SOURCE_DEFINITIONS[k]);
+    if (valid.length > 0) return valid;
+  }
+  return ALL_SOURCE_KEYS;
+}
+
+/** Update the in-memory cache after setup wizard or admin settings save. */
+export function refreshEnabledSources(sources: string): void {
+  _cachedEnabledSources = sources
+    .split(',')
+    .map((s) => s.trim())
+    .filter(Boolean);
+}
+
+export function isValidSourceUrl(url: string): boolean {
+  try {
+    const parsed = new URL(url);
+    if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') return false;
+    const enabled = getEnabledSourcesSync();
+    return enabled.some((key) => {
+      const def = SOURCE_DEFINITIONS[key];
+      if (!def) return false;
+      return def.hosts.some(
+        (host) => parsed.hostname === host || parsed.hostname.endsWith(`.${host}`)
+      );
+    });
   } catch {
     return false;
   }
 }
 
-export function isYouTubePlaylistUrl(url: string): boolean {
-  if (!isValidYouTubeUrl(url)) return false;
+export function isPlaylistUrl(url: string): boolean {
+  if (!isValidSourceUrl(url)) return false;
   try {
-    return new URL(url).searchParams.has('list');
+    const parsed = new URL(url);
+    const enabled = getEnabledSourcesSync();
+    return enabled.some((key) => {
+      const def = SOURCE_DEFINITIONS[key];
+      return def?.isPlaylistUrl?.(parsed) ?? false;
+    });
   } catch {
     return false;
   }
+}
+
+function resolveThumbnail(info: TrackInfo['info']): string {
+  const identifier = info?.identifier ?? '';
+  const artworkUrl = info?.artworkUrl;
+  const sourceName = info?.sourceName;
+
+  // Prefer artworkUrl from NodeLink when available (SoundCloud, Bandcamp, etc.)
+  if (artworkUrl) return artworkUrl;
+
+  // Fall back to YouTube thumbnail for YouTube identifiers
+  if (sourceName === 'youtube' && identifier) {
+    return `https://img.youtube.com/vi/${identifier}/hqdefault.jpg`;
+  }
+
+  return '';
 }
 
 async function loadTrack(url: string): Promise<LoadTrackResponse> {
@@ -129,8 +298,8 @@ async function loadTrack(url: string): Promise<LoadTrackResponse> {
   return data;
 }
 
-export async function getMetadata(youtubeUrl: string): Promise<SongMetadata> {
-  const response = await loadTrack(youtubeUrl);
+export async function getMetadata(url: string): Promise<SongMetadata> {
+  const response = await loadTrack(url);
 
   const data = response.data;
 
@@ -140,13 +309,18 @@ export async function getMetadata(youtubeUrl: string): Promise<SongMetadata> {
     const first = data.tracks[0];
     if (!first?.info) throw new Error('NodeLink returned no track data');
     const info = first.info;
-    const youtubeId = info.identifier ?? '';
+    const sourceId = info.identifier ?? '';
     const title = info.title ?? 'Unknown';
+    const artist = info.author || undefined;
+    const artworkUrl = info.artworkUrl || undefined;
     return {
       title,
-      youtubeId,
-      duration: (info.length ?? 0) / 1000,
-      thumbnailUrl: `https://img.youtube.com/vi/${youtubeId}/hqdefault.jpg`,
+      sourceId,
+      duration: Math.round((info.length ?? 0) / 1000),
+      thumbnailUrl: resolveThumbnail(info),
+      sourceName: info.sourceName,
+      artist,
+      artworkUrl,
     };
   }
 
@@ -155,21 +329,27 @@ export async function getMetadata(youtubeUrl: string): Promise<SongMetadata> {
   }
 
   const info = data.info;
-  const youtubeId = info.identifier ?? '';
+  const sourceId = info.identifier ?? '';
   const title = info.title ?? 'Unknown';
+
+  const artist = info.author || undefined;
+  const artworkUrl = info.artworkUrl || undefined;
 
   return {
     title,
-    youtubeId,
-    duration: (info.length ?? 0) / 1000,
-    thumbnailUrl: `https://img.youtube.com/vi/${youtubeId}/hqdefault.jpg`,
+    sourceId,
+    duration: Math.round((info.length ?? 0) / 1000),
+    thumbnailUrl: resolveThumbnail(info),
+    sourceName: info.sourceName,
+    artist,
+    artworkUrl,
   };
 }
 
 export async function getStreamFormat(
-  youtubeUrl: string
+  url: string
 ): Promise<{ track: string; isWebmOpus: boolean }> {
-  const response = await loadTrack(youtubeUrl);
+  const response = await loadTrack(url);
 
   const data = response.data;
 
@@ -193,7 +373,7 @@ export async function getPlaylistMetadataWithVideos(
   playlistUrl: string,
   maxVideos?: number
 ): Promise<PlaylistMetadata> {
-  // NodeLink v4 uses /v4/loadtracks with YouTube playlist URL.
+  // NodeLink v4 uses /v4/loadtracks with the playlist URL.
   // It returns a "playlist" loadType with track array.
   const response = await loadTrack(playlistUrl);
 
@@ -209,8 +389,11 @@ export async function getPlaylistMetadataWithVideos(
     return {
       id,
       title: t.info?.title ?? 'Unknown',
-      duration: (t.info?.length ?? 0) / 1000,
-      thumbnailUrl: `https://img.youtube.com/vi/${id}/hqdefault.jpg`,
+      duration: Math.round((t.info?.length ?? 0) / 1000),
+      thumbnailUrl: resolveThumbnail(t.info),
+      sourceName: t.info?.sourceName,
+      artist: t.info?.author || undefined,
+      artworkUrl: t.info?.artworkUrl || undefined,
     };
   });
 
@@ -222,14 +405,10 @@ export async function getPlaylistMetadataWithVideos(
   };
 }
 
-export async function preloadTrack(
-  guildId: string,
-  sessionId: string,
-  youtubeUrl: string
-): Promise<void> {
+export async function preloadTrack(guildId: string, sessionId: string, url: string): Promise<void> {
   // Resolve the track via NodeLink's loadtracks endpoint.
   const loadUrl = new URL('/v4/loadtracks', NODELINK_URL);
-  loadUrl.searchParams.set('identifier', youtubeUrl);
+  loadUrl.searchParams.set('identifier', url);
 
   const headers: Record<string, string> = { 'Content-Type': 'application/json' };
   if (NODELINK_AUTH) headers.Authorization = NODELINK_AUTH;
@@ -264,7 +443,7 @@ export async function preloadTrack(
     throw new Error(`NodeLink preload PATCH returned ${patchResp.status}`);
   }
 
-  logger.debug({ guildId, youtubeUrl }, 'Gapless preload succeeded');
+  logger.debug({ guildId, url }, 'Gapless preload succeeded');
 }
 
 // ---------------------------------------------------------------------------

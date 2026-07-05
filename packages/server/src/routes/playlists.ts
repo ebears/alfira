@@ -1,16 +1,47 @@
-import { and, count, desc, eq, inArray } from 'drizzle-orm';
+import { and, count, desc, eq, inArray, sql } from 'drizzle-orm';
 import type { RouteContext } from '../index';
 import { getUserDisplayName, resolveDisplayNames } from '../lib/displayName';
 import { json } from '../lib/json';
 import { parsePagination } from '../lib/pagination';
 import { canAccessPlaylist } from '../lib/playlistAccess';
+import { checkRateLimit, getClientIp, rateLimitResponse } from '../lib/rateLimit';
 import { checkGuards } from '../lib/routeGuards';
 import { buildSongSearchClause } from '../lib/search';
 import { emitPlaylistUpdated } from '../lib/socket';
+import { syncPlaylistToTag } from '../lib/syncPlaylistToTag';
 import { validatePlaylistName } from '../lib/validation';
 import { db, tables } from '../shared/db';
 
 const { playlist: playlistTable, playlistSong: playlistSongTable } = tables;
+
+// ---------------------------------------------------------------------------
+// Source URL → LIKE patterns (mirrors songs.ts)
+// ---------------------------------------------------------------------------
+const SOURCE_LIKE_PATTERNS: Record<string, string[]> = {
+  youtube: ['%youtube.com%', '%youtu.be%'],
+  soundcloud: ['%soundcloud.com%'],
+  spotify: ['%spotify.com%'],
+  applemusic: ['%music.apple.com%'],
+  tidal: ['%tidal.com%'],
+  googledrive: ['%drive.google.com%'],
+};
+
+function buildSongOrderBy(field: string, direction: 'ASC' | 'DESC'): ReturnType<typeof sql> {
+  switch (field) {
+    case 'title':
+      return sql`lower(${tables.song.title}) ${sql.raw(direction)}`;
+    case 'artist':
+      return sql`${tables.song.artist} IS NULL, lower(${tables.song.artist}) ${sql.raw(direction)}`;
+    case 'album':
+      return sql`${tables.song.album} IS NULL, lower(${tables.song.album}) ${sql.raw(direction)}`;
+    case 'duration':
+      return sql`${tables.song.duration} ${sql.raw(direction)}`;
+    case 'createdAt':
+      return sql`${tables.song.createdAt} ${sql.raw(direction)}`;
+    default:
+      return sql`${tables.song.createdAt} ${sql.raw(direction)}`;
+  }
+}
 
 async function getPlaylistSongCount(playlistId: string): Promise<number> {
   const result = await db
@@ -25,6 +56,7 @@ type PlaylistRow = {
   name: string;
   createdBy: string;
   isPrivate: boolean;
+  tagNameLower: string | null;
   createdAt: Date;
   _count?: { songs: number };
 };
@@ -36,6 +68,7 @@ async function findPlaylistOr404(id: string, withCount = false): Promise<Playlis
       name: playlistTable.name,
       createdBy: playlistTable.createdBy,
       isPrivate: playlistTable.isPrivate,
+      tagNameLower: playlistTable.tagNameLower,
       createdAt: playlistTable.createdAt,
     })
     .from(playlistTable)
@@ -104,11 +137,37 @@ async function handleGetPlaylists(ctx: RouteContext, request: Request): Promise<
     (pl) => canAccessPlaylist(pl, user, adminView).ok
   );
 
+  // Batch-fetch cover artwork URLs (up to 4 per playlist)
+  const playlistIds = filteredPlaylists.map((pl) => pl.id);
+  const coverMap = new Map<string, string[]>();
+  if (playlistIds.length > 0) {
+    const songRows = await db
+      .select({
+        playlistId: playlistSongTable.playlistId,
+        artwork: tables.song.artwork,
+        thumbnailUrl: tables.song.thumbnailUrl,
+      })
+      .from(playlistSongTable)
+      .innerJoin(tables.song, eq(playlistSongTable.songId, tables.song.id))
+      .where(inArray(playlistSongTable.playlistId, playlistIds))
+      .orderBy(playlistSongTable.playlistId, playlistSongTable.position);
+
+    for (const row of songRows) {
+      const urls = coverMap.get(row.playlistId);
+      if (!urls) {
+        coverMap.set(row.playlistId, [row.artwork ?? row.thumbnailUrl]);
+      } else if (urls.length < 4) {
+        urls.push(row.artwork ?? row.thumbnailUrl);
+      }
+    }
+  }
+
   // Fetch creator display names for each playlist
   const playlistsWithCreator = await Promise.all(
     filteredPlaylists.map(async (pl) => ({
       ...pl,
       createdByDisplayName: await getUserDisplayName(pl.createdBy),
+      coverUrls: coverMap.get(pl.id),
     }))
   );
 
@@ -131,7 +190,7 @@ async function handlePostPlaylist(ctx: RouteContext, request: Request): Promise<
   if (guards instanceof Response) return guards;
   const { user } = guards;
 
-  let body: { name?: unknown };
+  let body: { name?: unknown; tagNameLower?: unknown };
   try {
     body = (await request.json()) as typeof body;
   } catch {
@@ -142,11 +201,17 @@ async function handlePostPlaylist(ctx: RouteContext, request: Request): Promise<
   if (!nameResult.ok) return nameResult.response;
   const trimmedName = nameResult.value;
 
+  const tagNameLower =
+    typeof body.tagNameLower === 'string' && body.tagNameLower.trim().length > 0
+      ? body.tagNameLower.trim().toLowerCase()
+      : null;
+
   const [playlist] = await db
     .insert(playlistTable)
     .values({
       name: trimmedName,
       createdBy: user.discordId,
+      tagNameLower,
     })
     .returning();
 
@@ -154,7 +219,13 @@ async function handlePostPlaylist(ctx: RouteContext, request: Request): Promise<
     return json({ error: 'Failed to create playlist.' }, 500);
   }
 
-  emitPlaylistUpdated(formatPlaylist(playlist, 0));
+  // If smart playlist, populate with matching songs
+  if (tagNameLower) {
+    await syncPlaylistToTag(playlist.id);
+  }
+
+  const songCount = await getPlaylistSongCount(playlist.id);
+  emitPlaylistUpdated(formatPlaylist(playlist, songCount));
   return json(playlist, 201);
 }
 
@@ -175,6 +246,32 @@ async function handleGetPlaylist(
   const { page, limit, skip } = parsePagination(url);
   const search = url.searchParams.get('search')?.trim() ?? '';
 
+  // Sort & filter
+  const sortRaw = url.searchParams.get('sort') ?? 'position';
+  const sortField = ['position', 'title', 'artist', 'album', 'duration', 'createdAt'].includes(
+    sortRaw
+  )
+    ? sortRaw
+    : 'position';
+  const sortOrder = url.searchParams.get('order') === 'asc' ? 'ASC' : 'DESC';
+
+  const tagsParam = url.searchParams.get('tags')?.trim();
+  const sourcesParam = url.searchParams.get('source')?.trim();
+  const filterTags = tagsParam
+    ? tagsParam
+        .split(',')
+        .map((t) => t.trim())
+        .filter(Boolean)
+    : [];
+  const filterSources = sourcesParam
+    ? sourcesParam
+        .split(',')
+        .map((s) => s.trim().toLowerCase())
+        .filter(Boolean)
+    : [];
+
+  const wantsCustomSort = sortField !== 'position';
+
   const playlist = await findPlaylistOr404(id, true);
   if (!playlist) {
     return json({ error: 'Playlist not found.' }, 404);
@@ -185,6 +282,86 @@ async function handleGetPlaylist(
     return json({ error: accessResult.error }, 403);
   }
 
+  // ── Custom sort path: join playlistSong ↔ song, sort + filter in one query ──
+  if (wantsCustomSort || filterTags.length > 0 || filterSources.length > 0) {
+    // Build song-level filter clauses
+    const songFilterClauses: ReturnType<typeof sql>[] = [];
+
+    if (search) {
+      const searchClause = buildSongSearchClause(search);
+      if (searchClause) songFilterClauses.push(searchClause);
+    }
+
+    for (const tag of filterTags) {
+      songFilterClauses.push(sql`lower(${tables.song.tags}) LIKE lower(${`%"${tag}"%`})`);
+    }
+
+    if (filterSources.length > 0) {
+      const sourceOrs: ReturnType<typeof sql>[] = [];
+      for (const source of filterSources) {
+        const patterns = SOURCE_LIKE_PATTERNS[source];
+        if (patterns) {
+          for (const pattern of patterns) {
+            sourceOrs.push(sql`${tables.song.sourceUrl} LIKE ${pattern}`);
+          }
+        }
+      }
+      if (sourceOrs.length > 0) {
+        songFilterClauses.push(sql`(${sql.join(sourceOrs, sql` OR `)})`);
+      }
+    }
+
+    const joinWhere = and(
+      eq(playlistSongTable.playlistId, id),
+      ...(songFilterClauses.length > 0 ? [sql.join(songFilterClauses, sql` AND `)] : [])
+    );
+
+    const orderBy = wantsCustomSort
+      ? buildSongOrderBy(sortField, sortOrder)
+      : playlistSongTable.position;
+
+    const [rows, countResult] = await Promise.all([
+      db
+        .select()
+        .from(playlistSongTable)
+        .innerJoin(tables.song, eq(playlistSongTable.songId, tables.song.id))
+        .where(joinWhere)
+        .orderBy(orderBy)
+        .limit(limit)
+        .offset(skip),
+      db
+        .select({ count: count() })
+        .from(playlistSongTable)
+        .innerJoin(tables.song, eq(playlistSongTable.songId, tables.song.id))
+        .where(joinWhere),
+    ]);
+
+    const total = countResult[0]?.count ?? 0;
+    const songs = rows.map((r) => r.Song);
+    const nameMap = await resolveDisplayNames(songs);
+
+    return json({
+      ...playlist,
+      createdAt:
+        playlist.createdAt instanceof Date ? playlist.createdAt.toISOString() : playlist.createdAt,
+      songs: rows.map((r) =>
+        formatPlaylistSongWithSong(
+          r.PlaylistSong,
+          r.Song,
+          nameMap.get(r.Song.addedBy) ?? r.Song.addedBy
+        )
+      ),
+      createdByDisplayName: await getUserDisplayName(playlist.createdBy),
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit),
+      },
+    });
+  }
+
+  // ── Default path: position sort, search-only filter ──
   // Build list of song IDs to filter by when searching
   let songIds: string[] = [];
   if (search) {
@@ -325,16 +502,12 @@ async function handlePatchPlaylist(
   if (guards instanceof Response) return guards;
   const { user } = guards;
 
-  let body: { name?: unknown };
+  let body: { name?: unknown; tagNameLower?: unknown };
   try {
     body = (await request.json()) as typeof body;
   } catch {
     return json({ error: 'Invalid JSON body.' }, 400);
   }
-
-  const nameResult = validatePlaylistName(body.name);
-  if (!nameResult.ok) return nameResult.response;
-  const trimmedName = nameResult.value;
 
   const existing = await findPlaylistOr404(id);
   if (!existing) {
@@ -346,14 +519,39 @@ async function handlePatchPlaylist(
     return json({ error: `Only the playlist owner or admins can rename this playlist.` }, 403);
   }
 
+  const data: Record<string, unknown> = {};
+
+  if (body.name !== undefined) {
+    const nameResult = validatePlaylistName(body.name);
+    if (!nameResult.ok) return nameResult.response;
+    data.name = nameResult.value;
+  }
+
+  if (body.tagNameLower !== undefined) {
+    if (body.tagNameLower === null || body.tagNameLower === '') {
+      data.tagNameLower = null;
+    } else if (typeof body.tagNameLower === 'string' && body.tagNameLower.trim().length > 0) {
+      data.tagNameLower = body.tagNameLower.trim().toLowerCase();
+    }
+  }
+
+  if (Object.keys(data).length === 0) {
+    return json({ error: 'No valid fields to update.' }, 400);
+  }
+
   const [updatedPlaylist] = await db
     .update(playlistTable)
-    .set({ name: trimmedName })
+    .set(data)
     .where(eq(playlistTable.id, id))
     .returning();
 
   if (!updatedPlaylist) {
     return json({ error: 'Failed to update playlist.' }, 500);
+  }
+
+  // If tag was set or changed, sync songs to tag
+  if ('tagNameLower' in data) {
+    await syncPlaylistToTag(updatedPlaylist.id);
   }
 
   const value = await getPlaylistSongCount(updatedPlaylist.id);
@@ -411,6 +609,19 @@ async function handleAddSong(ctx: RouteContext, request: Request, id: string): P
   const playlist = await findPlaylistOr404(id);
   if (!playlist) {
     return json({ error: 'Playlist not found.' }, 404);
+  }
+
+  // Smart playlists are auto-managed — reject manual adds
+  if (playlist.tagNameLower) {
+    return json(
+      {
+        error:
+          'This playlist automatically tracks the "' +
+          playlist.tagNameLower +
+          '" tag. Songs are added when tagged and cannot be added manually.',
+      },
+      409
+    );
   }
 
   const accessResult = canAccessPlaylist(playlist, user, undefined);
@@ -540,6 +751,72 @@ async function handleRemoveSong(
 }
 
 // ---------------------------------------------------------------------------
+// POST /api/playlists/:id/songs/bulk-remove — remove multiple songs from a playlist
+// ---------------------------------------------------------------------------
+async function handleBulkRemoveSongs(
+  ctx: RouteContext,
+  request: Request,
+  playlistId: string
+): Promise<Response> {
+  const guards = await checkGuards(ctx);
+  if (guards instanceof Response) return guards;
+  const { user } = guards;
+
+  const playlist = await findPlaylistOr404(playlistId);
+  if (!playlist) {
+    return json({ error: 'Playlist not found.' }, 404);
+  }
+
+  const accessResult = canAccessPlaylist(playlist, user, undefined);
+  if (!accessResult.ok) {
+    return json({ error: `Only the playlist owner or admins can remove songs.` }, 403);
+  }
+
+  let body: { songIds?: unknown };
+  try {
+    body = (await request.json()) as typeof body;
+  } catch {
+    return json({ error: 'Invalid JSON body.' }, 400);
+  }
+
+  if (!Array.isArray(body.songIds) || body.songIds.length === 0) {
+    return json({ error: 'songIds must be a non-empty array.' }, 400);
+  }
+
+  const songIds = (body.songIds as string[]).slice(0, 5000);
+
+  // Delete and re-index in a transaction
+  await db.transaction(async (tx) => {
+    await tx
+      .delete(playlistSongTable)
+      .where(
+        and(
+          eq(playlistSongTable.playlistId, playlistId),
+          inArray(playlistSongTable.songId, songIds)
+        )
+      );
+
+    // Re-index remaining songs to close gaps in positions
+    const remaining = await tx
+      .select()
+      .from(playlistSongTable)
+      .where(eq(playlistSongTable.playlistId, playlistId))
+      .orderBy(playlistSongTable.position);
+
+    await Promise.all(
+      remaining.map((ps, index) =>
+        tx.update(playlistSongTable).set({ position: index }).where(eq(playlistSongTable.id, ps.id))
+      )
+    );
+  });
+
+  const value = await getPlaylistSongCount(playlistId);
+  emitPlaylistUpdated(formatPlaylist(playlist, value));
+
+  return json({ removed: songIds.length });
+}
+
+// ---------------------------------------------------------------------------
 // Dispatcher
 // ---------------------------------------------------------------------------
 
@@ -547,12 +824,29 @@ export async function handlePlaylists(ctx: RouteContext, request: Request): Prom
   const url = new URL(request.url);
   const pathname = url.pathname;
 
+  // Rate-limit mutation endpoints — 20 requests per 60s per IP.
+  if (request.method !== 'GET') {
+    const ip = getClientIp(request);
+    if (!checkRateLimit('playlists-mutations', ip, { windowMs: 60_000, maxRequests: 20 })) {
+      return rateLimitResponse(60);
+    }
+  }
+
   // Strip /api/playlists prefix
   const path = pathname.slice('/api/playlists'.length);
   if (!path) {
     if (request.method === 'GET') return await handleGetPlaylists(ctx, request);
     if (request.method === 'POST') return await handlePostPlaylist(ctx, request);
     return json({ error: 'Not Found' }, 404);
+  }
+
+  // /api/playlists/:id/songs/bulk-remove POST
+  const bulkRemoveMatch = path.match(/^\/([^/]+)\/songs\/bulk-remove$/);
+  if (bulkRemoveMatch && request.method === 'POST') {
+    const [, playlistId] = bulkRemoveMatch;
+    if (playlistId) {
+      return await handleBulkRemoveSongs(ctx, request, playlistId);
+    }
   }
 
   // /api/playlists/:id/songs/:songId DELETE

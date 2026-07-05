@@ -11,14 +11,18 @@ import {
   RepeatOnceIcon,
   ShuffleIcon,
   SkipForwardIcon,
-  SparkleIcon,
 } from '@phosphor-icons/react';
 import { memo, useCallback, useEffect, useRef, useState } from 'react';
 import { usePlayer } from '../context/PlayerContext';
 import { useQueuePanel } from '../context/QueuePanelContext';
+import { getSourceKey } from '../utils/source';
 import { BarButton } from './BarButton';
 import QueuePanel from './QueuePanel';
+import { SourceIcon } from './SourceIcons';
+import TagTicker from './TagTicker';
+import { ArtworkImage } from './ui/ArtworkImage';
 import { Button } from './ui/Button';
+import { VolumeBoostBadge } from './ui/VolumeBoostBadge';
 
 /* ---------------------------------------------------------------------------
  * Memoized sub-components — these bail out of re-rendering when their props
@@ -56,14 +60,14 @@ const PlaybackControls = memo(function PlaybackControls({
         onClick={onPauseResume}
         busy={pauseBusy}
         disabled={!currentSong || pauseBusy || skipBusy}
-        title={isPaused || isStopped ? 'Resume' : 'Pause'}
+        title={isPaused || isStopped ? 'Play' : 'Pause'}
         hoverColor="hover:text-fg"
         pulse={isPlaying && !isPaused}
       >
         {isPaused || isStopped ? (
-          <PlayIcon size={20} weight="duotone" className="md:w-4.5 md:h-4.5" />
+          <PlayIcon size={24} weight="duotone" className="md:w-5 md:h-5" />
         ) : (
-          <PauseIcon size={20} weight="duotone" className="md:w-4.5 md:h-4.5" />
+          <PauseIcon size={24} weight="duotone" className="md:w-5 md:h-5" />
         )}
       </BarButton>
       <BarButton
@@ -74,7 +78,7 @@ const PlaybackControls = memo(function PlaybackControls({
         hoverColor="hover:text-fg"
         className="hidden md:flex"
       >
-        <SkipForwardIcon size={20} weight="duotone" className="md:w-4.5 md:h-4.5" />
+        <SkipForwardIcon size={24} weight="duotone" className="md:w-5 md:h-5" />
       </BarButton>
 
       <Button
@@ -84,24 +88,11 @@ const PlaybackControls = memo(function PlaybackControls({
         onClick={onStop}
         disabled={!isConnectedToVoice}
         title="Stop playback"
-        className="text-black dark:text-white hover:text-danger"
+        className="text-black dark:text-white hover:text-danger md:w-12 md:h-12"
       >
-        <DoorOpenIcon size={20} weight="duotone" className="md:w-4.5 md:h-4.5" />
+        <DoorOpenIcon size={24} weight="duotone" className="md:w-5 md:h-5" />
       </Button>
     </div>
-  );
-});
-
-interface TimingDisplayProps {
-  elapsed: number;
-  duration: number;
-}
-
-const TimingDisplay = memo(function TimingDisplay({ elapsed, duration }: TimingDisplayProps) {
-  return (
-    <p className="font-mono text-xs text-muted">
-      {formatDuration(elapsed)} / {formatDuration(duration)}
-    </p>
   );
 });
 
@@ -127,12 +118,12 @@ const LoopShuffleControls = memo(function LoopShuffleControls({
   const isLoopActive = loopMode !== 'off';
   const loopIcon = isLoopActive ? (
     loopMode === 'song' ? (
-      <RepeatOnceIcon size={18} weight="fill" className="md:w-4 md:h-4" />
+      <RepeatOnceIcon size={22} weight="fill" className="md:w-5 md:h-5" />
     ) : (
-      <RepeatIcon size={18} weight="fill" className="md:w-4 md:h-4" />
+      <RepeatIcon size={22} weight="fill" className="md:w-5 md:h-5" />
     )
   ) : (
-    <RepeatIcon size={18} weight="duotone" className="md:w-4 md:h-4" />
+    <RepeatIcon size={22} weight="duotone" className="md:w-5 md:h-5" />
   );
 
   return (
@@ -144,14 +135,14 @@ const LoopShuffleControls = memo(function LoopShuffleControls({
         onClick={onCycleLoop}
         disabled={!currentSong || loopBusy}
         title={`Loop: ${loopMode}`}
-        className={`shrink-0 disabled:opacity-50 ${
+        className={`shrink-0 disabled:opacity-50 md:w-12 md:h-12 ${
           isLoopActive
             ? 'pressed text-accent hover:text-accent-muted'
             : 'text-black dark:text-white hover:text-fg'
         }`}
       >
         {loopBusy ? (
-          <CircleNotchIcon size={18} weight="bold" className="animate-spin md:w-4 md:h-4" />
+          <CircleNotchIcon size={22} weight="bold" className="animate-spin md:w-5 md:h-5" />
         ) : (
           loopIcon
         )}
@@ -163,19 +154,19 @@ const LoopShuffleControls = memo(function LoopShuffleControls({
         onClick={onShuffleToggle}
         disabled={!currentSong || shuffleBusy}
         title={isShuffled ? 'Unshuffle queue' : 'Shuffle queue'}
-        className={`shrink-0 disabled:opacity-50 ${
+        className={`shrink-0 disabled:opacity-50 md:w-12 md:h-12 ${
           isShuffled
             ? 'pressed text-accent hover:text-accent-muted'
             : 'text-black dark:text-white hover:text-fg'
         }`}
       >
         {shuffleBusy ? (
-          <CircleNotchIcon size={18} weight="bold" className="animate-spin md:w-4 md:h-4" />
+          <CircleNotchIcon size={22} weight="bold" className="animate-spin md:w-5 md:h-5" />
         ) : (
           <ShuffleIcon
-            size={20}
+            size={24}
             weight={isShuffled ? 'fill' : 'duotone'}
-            className="md:w-4 md:h-4"
+            className="md:w-5 md:h-5"
           />
         )}
       </Button>
@@ -189,9 +180,8 @@ const LoopShuffleControls = memo(function LoopShuffleControls({
 interface ScrubberProps {
   isSeekable: boolean;
   duration: number; // seconds
-  elapsed: number; // seconds
   registerProgress: (ref: HTMLDivElement | null) => void;
-  registerRangeInput: (ref: HTMLInputElement | null) => void;
+  registerThumb: (ref: HTMLDivElement | null) => void;
   onSeek: (seconds: number) => void;
   setOverrideElapsed: (seconds: number) => void;
 }
@@ -199,9 +189,8 @@ interface ScrubberProps {
 const Scrubber = memo(function Scrubber({
   isSeekable,
   duration,
-  elapsed,
   registerProgress,
-  registerRangeInput: _registerRangeInput,
+  registerThumb,
   onSeek,
   setOverrideElapsed,
 }: ScrubberProps) {
@@ -213,8 +202,13 @@ const Scrubber = memo(function Scrubber({
   // Last known slider value during drag (used to commit seek on pointer up)
   const lastDragValueRef = useRef<number>(0);
 
-  const pct = duration > 0 ? elapsed / duration : 0;
-  const pctStr = `${pct * 100}%`;
+  // Position both fill bar and thumb directly in the DOM during drag.
+  // Bypasses React + rAF entirely — immediate, jank-free visual feedback.
+  const seekElements = useCallback((trackPct: number) => {
+    const pctStr = `${trackPct * 100}%`;
+    if (fillRef.current) fillRef.current.style.width = pctStr;
+    if (thumbRef.current) thumbRef.current.style.left = pctStr;
+  }, []);
 
   const handlePointerMove = useCallback(
     (e: PointerEvent) => {
@@ -224,12 +218,9 @@ const Scrubber = memo(function Scrubber({
       const seekSec = Math.round(trackPct * duration);
       lastDragValueRef.current = seekSec;
       setOverrideElapsed(seekSec);
-      // Directly position the thumb to avoid waiting for React re-render
-      if (thumbRef.current) {
-        thumbRef.current.style.left = `${trackPct * 100}%`;
-      }
+      seekElements(trackPct);
     },
-    [duration, setOverrideElapsed]
+    [duration, setOverrideElapsed, seekElements]
   );
 
   const handlePointerUp = useCallback(() => {
@@ -247,30 +238,29 @@ const Scrubber = memo(function Scrubber({
       if (!isSeekable) return;
       e.currentTarget.setPointerCapture(e.pointerId);
       isDraggingRef.current = true;
-      // Compute initial position from click location
       if (trackRef.current) {
         const rect = trackRef.current.getBoundingClientRect();
         const trackPct = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
         const seekSec = Math.round(trackPct * duration);
         lastDragValueRef.current = seekSec;
         setOverrideElapsed(seekSec);
-        if (thumbRef.current) {
-          thumbRef.current.style.left = `${trackPct * 100}%`;
-        }
+        seekElements(trackPct);
       }
       document.addEventListener('pointermove', handlePointerMove);
       document.addEventListener('pointerup', handlePointerUp);
     },
-    [isSeekable, duration, handlePointerMove, handlePointerUp, setOverrideElapsed]
+    [isSeekable, duration, handlePointerMove, handlePointerUp, setOverrideElapsed, seekElements]
   );
 
   if (!isSeekable) {
     return (
       <div className="w-full h-2 clay-inset rounded-full relative overflow-hidden cursor-not-allowed opacity-50">
         <div
-          ref={fillRef}
+          ref={(ref) => {
+            fillRef.current = ref;
+            registerProgress(ref);
+          }}
           className="absolute inset-y-0 left-0 bg-accent rounded-full"
-          style={{ width: pctStr }}
         />
       </div>
     );
@@ -288,13 +278,15 @@ const Scrubber = memo(function Scrubber({
           registerProgress(ref);
         }}
         className="absolute inset-y-0 left-0 bg-accent rounded-full"
-        style={{ width: pctStr }}
       />
-      {/* Custom thumb — positioned manually via ref, not via native range input */}
+      {/* Fill & thumb — positioned entirely by useProgressBar (rAF + effect).
+           No React style props. */}
       <div
-        ref={thumbRef}
+        ref={(ref) => {
+          thumbRef.current = ref;
+          if (ref) registerThumb(ref);
+        }}
         className="scrubber-thumb absolute top-1/2 -translate-y-1/2 w-3.5 h-3.5 rounded-full bg-surface border-2 border-accent opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity"
-        style={{ left: pctStr }}
       />
       {/* Invisible hit area for hovering */}
       <div className="absolute inset-0" />
@@ -306,7 +298,7 @@ interface ProgressBarProps {
   currentSong: QueuedSong | null;
   elapsed: number;
   registerProgress: (ref: HTMLDivElement | null) => void;
-  registerRangeInput: (ref: HTMLInputElement | null) => void;
+  registerThumb: (ref: HTMLDivElement | null) => void;
   onSeek?: (seconds: number) => void;
   setOverrideElapsed: (seconds: number) => void;
   variant: 'mobile' | 'desktop';
@@ -314,9 +306,8 @@ interface ProgressBarProps {
 
 const ProgressBar = memo(function ProgressBar({
   currentSong,
-  elapsed,
   registerProgress,
-  registerRangeInput,
+  registerThumb,
   onSeek,
   setOverrideElapsed,
   variant,
@@ -337,30 +328,13 @@ const ProgressBar = memo(function ProgressBar({
     );
   }
 
-  const displayName = currentSong ? currentSong.nickname || currentSong.title : '';
-  const artist = currentSong?.artist || null;
-
   return (
-    <div className="hidden md:flex flex-col flex-1 items-center xl:items-end self-stretch px-4 min-h-0 gap-1 relative">
-      {currentSong ? (
-        <div className="text-center w-full truncate xl:text-right h-12 flex flex-col justify-center min-h-12">
-          <p className="font-body text-sm font-semibold text-fg truncate">{displayName}</p>
-          {artist && <p className="font-body text-xs text-muted truncate">{artist}</p>}
-        </div>
-      ) : (
-        <div className="h-12 shrink-0 flex items-center xl:justify-end justify-center">
-          <p className="font-body text-sm text-muted">Nothing playing</p>
-        </div>
-      )}
-      <div className="absolute top-1/2 -translate-y-1/2 left-4">
-        <TimingDisplay elapsed={elapsed} duration={currentSong?.duration ?? 0} />
-      </div>
+    <div className="hidden md:flex items-center flex-1 min-h-0">
       <Scrubber
         isSeekable={currentSong?.isSeekable ?? false}
         duration={currentSong?.duration ?? 0}
-        elapsed={elapsed}
         registerProgress={registerProgress}
-        registerRangeInput={registerRangeInput}
+        registerThumb={registerThumb}
         onSeek={onSeek ?? (() => undefined)}
         setOverrideElapsed={setOverrideElapsed}
       />
@@ -370,30 +344,67 @@ const ProgressBar = memo(function ProgressBar({
 
 interface AlbumArtProps {
   currentSong: QueuedSong | null;
-  isPlaying: boolean;
-  isPaused: boolean;
 }
 
-const AlbumArt = memo(function AlbumArt({ currentSong, isPlaying, isPaused }: AlbumArtProps) {
+const AlbumArt = memo(function AlbumArt({ currentSong }: AlbumArtProps) {
   return (
-    <div className="w-12 h-12 md:w-14 md:h-14 rounded-2xl clay-inset shrink-0 overflow-hidden relative">
-      {currentSong && isPlaying && !isPaused && (
-        <div className="absolute -top-1.5 -right-1.5 z-10">
-          <SparkleIcon size={12} weight="duotone" className="text-accent animate-pulse-gentle" />
-        </div>
-      )}
+    <div className="w-12 h-12 md:w-14 md:h-14 rounded border border-border shrink-0 overflow-hidden relative bg-elevated">
       {currentSong ? (
-        <img
+        <ArtworkImage
           src={currentSong.artwork ?? currentSong.thumbnailUrl}
           alt={currentSong.title}
-          className="w-full h-full object-cover scale-[1.33]"
-          decoding="async"
+          className="w-full h-full"
+          imageClassName="scale-[1.33]"
         />
       ) : (
         <div className="w-full h-full flex items-center justify-center">
           <GuitarIcon size={18} weight="duotone" className="text-faint" />
         </div>
       )}
+    </div>
+  );
+});
+
+interface MetadataSectionProps {
+  currentSong: QueuedSong | null;
+  elapsed: number;
+}
+
+const MetadataSection = memo(function MetadataSection({
+  currentSong,
+  elapsed,
+}: MetadataSectionProps) {
+  if (!currentSong) {
+    return (
+      <div className="flex items-center h-6">
+        <p className="font-body text-sm text-muted">Nothing playing</p>
+      </div>
+    );
+  }
+
+  const displayName = currentSong.nickname || currentSong.title;
+  const sourceKey = getSourceKey(currentSong.sourceUrl);
+
+  return (
+    <div className="flex flex-col min-w-0 gap-0.5">
+      <div className="flex items-center gap-2 min-w-0">
+        <p className="font-body text-sm font-medium text-fg truncate">{displayName}</p>
+        {currentSong.artist && (
+          <p className="font-body text-xs text-muted shrink-0">· {currentSong.artist}</p>
+        )}
+        <TagTicker tags={currentSong.tags ?? []} />
+      </div>
+      <div className="flex items-center gap-2">
+        <p className="font-mono text-xs text-muted">
+          {formatDuration(elapsed)} / {formatDuration(currentSong.duration)}
+        </p>
+        {sourceKey && (
+          <span className="flex items-center shrink-0 [&_svg]:w-3 [&_svg]:h-3">
+            <SourceIcon sourceKey={sourceKey} />
+          </span>
+        )}
+        <VolumeBoostBadge volumeBoost={currentSong.volumeBoost} />
+      </div>
     </div>
   );
 });
@@ -408,7 +419,7 @@ export function NowPlayingBar() {
     state,
     elapsed,
     registerProgress,
-    registerRangeInput,
+    registerThumb,
     skip,
     leave,
     pause,
@@ -496,15 +507,13 @@ export function NowPlayingBar() {
       <ProgressBar
         currentSong={currentSong}
         registerProgress={registerProgress}
-        registerRangeInput={registerRangeInput}
+        registerThumb={registerThumb}
         elapsed={elapsed}
         setOverrideElapsed={setOverrideElapsed}
         variant="mobile"
       />
 
-      <div
-        className={`h-22 md:h-20 flex flex-row items-center px-3 md:px-5 gap-1 md:gap-1.5 ${!currentSong ? 'justify-end md:justify-start' : ''}`}
-      >
+      <div className="h-22 md:h-20 flex flex-row items-center px-3 md:px-8 gap-1">
         {/* Playback controls: Play/Pause (desktop: also Skip, Leave) */}
         <PlaybackControls
           currentSong={currentSong}
@@ -519,22 +528,54 @@ export function NowPlayingBar() {
           onStop={handleStop}
         />
 
-        {/* Desktop: centered progress bar */}
-        <ProgressBar
-          currentSong={currentSong}
-          registerProgress={registerProgress}
-          registerRangeInput={registerRangeInput}
-          elapsed={elapsed}
-          onSeek={handleSeek}
-          setOverrideElapsed={setOverrideElapsed}
-          variant="desktop"
-        />
+        {/* Desktop: spacer → art → metadata+progress → spacer → loop/shuffle+queue */}
+        <div className="hidden md:flex flex-1" />
+        <div className="hidden md:block shrink-0">
+          <AlbumArt currentSong={currentSong} />
+        </div>
+        <div className="hidden md:flex flex-col flex-8 min-w-0 px-3 h-14 justify-between">
+          <MetadataSection currentSong={currentSong} elapsed={elapsed} />
+          <ProgressBar
+            currentSong={currentSong}
+            registerProgress={registerProgress}
+            registerThumb={registerThumb}
+            elapsed={elapsed}
+            onSeek={handleSeek}
+            setOverrideElapsed={setOverrideElapsed}
+            variant="desktop"
+          />
+        </div>
+        <div className="hidden md:flex flex-1" />
+        <div className="hidden md:flex items-center gap-1.5 shrink-0">
+          <LoopShuffleControls
+            currentSong={currentSong}
+            loopMode={loopMode}
+            isShuffled={isShuffled}
+            loopBusy={loopBusy}
+            shuffleBusy={shuffleBusy}
+            onCycleLoop={handleCycleLoop}
+            onShuffleToggle={handleShuffleToggle}
+          />
+          <Button
+            variant="inherit"
+            surface="base"
+            size="icon"
+            onClick={() => setQueueOpen(!queueOpen)}
+            title="Queue"
+            className={`shrink-0 md:w-12 md:h-12 ${
+              queueOpen
+                ? 'pressed text-accent hover:text-accent-muted'
+                : 'text-black dark:text-white hover:text-fg'
+            }`}
+          >
+            <QueueIcon size={24} weight="duotone" className="md:w-5 md:h-5" />
+          </Button>
+        </div>
 
-        {/* Right-aligned group: metadata, art, queue */}
-        <div className="flex items-center ms-auto shrink-0">
-          {/* Mobile: metadata (left of art, right-aligned text) */}
+        {/* Mobile: metadata + art + queue */}
+        <div className="md:hidden flex items-center ms-auto shrink-0">
           {currentSong ? (
-            <div className="md:hidden max-w-32 min-w-0 mr-2">
+            <div className="max-w-32 min-w-0 mr-2">
               <p className="font-body text-sm font-semibold text-fg truncate text-right">
                 {currentSong.nickname || currentSong.title}
               </p>
@@ -545,44 +586,26 @@ export function NowPlayingBar() {
               )}
             </div>
           ) : (
-            <div className="md:hidden min-w-0 mr-2">
+            <div className="min-w-0 mr-2">
               <p className="font-body text-sm text-muted text-right">Nothing playing</p>
             </div>
           )}
-
-          {/* Album art */}
-          <AlbumArt currentSong={currentSong} isPlaying={isPlaying} isPaused={isPaused} />
-
-          {/* Separator */}
-          <div className="hidden md:block w-px h-8 md:h-10 bg-border shrink-0 mx-3 md:mx-5" />
-          <div className="md:hidden w-px h-8 bg-border shrink-0 mx-1" />
-
-          {/* Queue button (with desktop-only loop/shuffle) */}
-          <div className="flex items-center gap-1 md:gap-1.5 shrink-0">
-            <LoopShuffleControls
-              currentSong={currentSong}
-              loopMode={loopMode}
-              isShuffled={isShuffled}
-              loopBusy={loopBusy}
-              shuffleBusy={shuffleBusy}
-              onCycleLoop={handleCycleLoop}
-              onShuffleToggle={handleShuffleToggle}
-            />
-            <Button
-              variant="inherit"
-              surface="base"
-              size="icon"
-              onClick={() => setQueueOpen(!queueOpen)}
-              title="Queue"
-              className={`shrink-0 ${
-                queueOpen
-                  ? 'pressed text-accent hover:text-accent-muted'
-                  : 'text-black dark:text-white hover:text-fg'
-              }`}
-            >
-              <QueueIcon size={20} weight="duotone" className="md:w-4 md:h-4" />
-            </Button>
-          </div>
+          <AlbumArt currentSong={currentSong} />
+          <div className="w-px h-8 bg-border shrink-0 mx-1" />
+          <Button
+            variant="inherit"
+            surface="base"
+            size="icon"
+            onClick={() => setQueueOpen(!queueOpen)}
+            title="Queue"
+            className={`shrink-0 md:w-12 md:h-12 ${
+              queueOpen
+                ? 'pressed text-accent hover:text-accent-muted'
+                : 'text-black dark:text-white hover:text-fg'
+            }`}
+          >
+            <QueueIcon size={24} weight="duotone" className="md:w-5 md:h-5" />
+          </Button>
         </div>
       </div>
 

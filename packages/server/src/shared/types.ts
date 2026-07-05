@@ -15,8 +15,8 @@
 export interface Song {
   id: string;
   title: string;
-  youtubeUrl: string;
-  youtubeId: string;
+  sourceUrl: string;
+  sourceId: string;
   duration: number; // seconds
   thumbnailUrl: string;
   addedBy: string; // Discord user ID
@@ -28,20 +28,6 @@ export interface Song {
   tags?: string[];
   volumeBoost?: number | null;
   createdAt: string; // ISO 8601 string (JSON wire format)
-}
-
-// ---------------------------------------------------------------------------
-// Tag
-//
-// Stores canonical tag spellings, keyed by lowercase name.
-// The first spelling introduced becomes the canonical form.
-// ---------------------------------------------------------------------------
-export interface Tag {
-  id: string;
-  nameLower: string;
-  canonicalName: string;
-  color?: string | null;
-  createdAt: string; // ISO 8601 string
 }
 
 // ---------------------------------------------------------------------------
@@ -86,6 +72,77 @@ export interface CompressorSettings {
 // ---------------------------------------------------------------------------
 export interface EqualizerSettings {
   bands: number[]; // length 15, values 0–100, 50 = neutral (0 dB)
+  enabled: boolean;
+}
+
+// ---------------------------------------------------------------------------
+// GeneralSettings
+//
+// Guild-level general configuration. Stored in guildSettings table,
+// configured via the setup wizard and the Admin Settings page.
+// ---------------------------------------------------------------------------
+export interface GeneralSettings {
+  guildId: string | null;
+  setupCompleted: boolean;
+  adminRoleIds: string;
+  voiceIdleTimeoutMinutes: number;
+  afkNotificationChannelId: string | null;
+  requestNotificationChannelId: string | null;
+  notifyOnApproved: boolean;
+  notifyOnDenied: boolean;
+  publicUrl: string | null;
+  enabledSources: string;
+  availableSources: {
+    key: string;
+    displayName: string;
+    requiresCredentials: boolean;
+    helpText: string | null;
+  }[];
+}
+
+// ---------------------------------------------------------------------------
+// SetupStatus
+//
+// Returned by GET /api/setup/status to tell the frontend whether to show
+// the setup wizard.
+// ---------------------------------------------------------------------------
+export interface SetupStatus {
+  setupCompleted: boolean;
+  guildName: string | null;
+  clientId: string;
+}
+
+// ---------------------------------------------------------------------------
+// SetupRole
+//
+// A simplified role object returned by the setup API for the role picker.
+// ---------------------------------------------------------------------------
+export interface SetupRole {
+  id: string;
+  name: string;
+  color: number;
+}
+
+// ---------------------------------------------------------------------------
+// SetupChannel
+//
+// A simplified text-channel object returned by the setup API for the
+// channel picker.
+// ---------------------------------------------------------------------------
+export interface SetupChannel {
+  id: string;
+  name: string;
+}
+
+// ---------------------------------------------------------------------------
+// SetupGuild
+//
+// A simplified guild object returned by the setup API for the guild picker.
+// ---------------------------------------------------------------------------
+export interface SetupGuild {
+  id: string;
+  name: string;
+  icon: string | null;
 }
 
 // ---------------------------------------------------------------------------
@@ -119,17 +176,12 @@ export interface Playlist {
   createdBy: string;
   createdByDisplayName?: string;
   isPrivate: boolean;
+  tagNameLower?: string | null;
   createdAt: string; // ISO 8601 string (JSON wire format)
-  songs?: PlaylistSong[];
+  songs?: { id: string; playlistId: string; songId: string; position: number; song?: Song }[];
   _count?: { songs: number };
-}
-
-export interface PlaylistSong {
-  id: string;
-  playlistId: string;
-  songId: string;
-  position: number;
-  song?: Song;
+  /** Up to 4 artwork URLs from the playlist's songs, for the cover grid. Only present in list responses. */
+  coverUrls?: string[];
 }
 
 // ---------------------------------------------------------------------------
@@ -138,7 +190,7 @@ export interface PlaylistSong {
 // A Playlist with its songs fully populated. Used by GET /api/playlists/:id
 // ---------------------------------------------------------------------------
 export interface PlaylistDetail extends Omit<Playlist, 'songs'> {
-  songs: (Omit<PlaylistSong, 'song'> & { song: Song })[];
+  songs: { id: string; playlistId: string; songId: string; position: number; song: Song }[];
 }
 
 // ---------------------------------------------------------------------------
@@ -166,4 +218,131 @@ export interface User {
   username: string;
   avatar: string | null;
   isAdmin: boolean;
+  /** Temporarily granted during first-run setup before admin roles are configured. */
+  isSetupAdmin?: boolean;
+  /** Discord role IDs the user has in the guild. Used for granular permission checks. */
+  roles?: string[];
+}
+
+// ---------------------------------------------------------------------------
+// Permissions
+// ---------------------------------------------------------------------------
+
+/** Granular permission actions that can be delegated to non-admin roles. */
+export type PermissionAction =
+  | 'songs.edit'
+  | 'songs.delete'
+  | 'songs.import'
+  | 'requests.autoapprove'
+  | 'queue.quickadd'
+  | 'queue.manage'
+  | 'queue.override'
+  | 'tags.manage'
+  | 'audio.manage';
+
+/** Human-readable labels for each permission action. */
+export const PERMISSION_LABELS: Record<PermissionAction, string> = {
+  'songs.edit': 'Edit song metadata',
+  'songs.delete': 'Delete songs',
+  'songs.import': 'Import external playlists',
+  'requests.autoapprove': 'Auto-approved song requests',
+  'queue.quickadd': 'Quick-add external URLs',
+  'queue.manage': 'Manage queue (reorder, promote, remove, shuffle, clear)',
+  'queue.override': 'Override playback',
+  'tags.manage': 'Manage tags',
+  'audio.manage': 'Audio settings (EQ & compressor)',
+};
+
+/** Categories for grouping permissions in the UI. */
+export const PERMISSION_CATEGORIES: { label: string; actions: PermissionAction[] }[] = [
+  {
+    label: 'Library',
+    actions: ['songs.edit', 'songs.delete', 'songs.import', 'requests.autoapprove'],
+  },
+  {
+    label: 'Playback',
+    actions: ['queue.quickadd', 'queue.manage', 'queue.override'],
+  },
+  {
+    label: 'Management',
+    actions: ['tags.manage', 'audio.manage'],
+  },
+];
+
+// ---------------------------------------------------------------------------
+// Song Requests
+// ---------------------------------------------------------------------------
+
+export interface SongRequestTrack {
+  id: string;
+  sourceUrl: string;
+  sourceId: string;
+  title: string;
+  duration: number;
+  thumbnailUrl: string;
+  artist: string | null;
+  artworkUrl: string | null;
+  sourceName: string | null;
+  requestedBy: string;
+  requestedByDisplayName?: string;
+  notifyDm: boolean;
+  type: 'track';
+  playlistData: null;
+  status: 'pending' | 'approved' | 'denied';
+  reviewedBy: string | null;
+  createdAt: string;
+  closedAt: string | null;
+}
+
+export interface SongRequestPlaylist {
+  id: string;
+  sourceUrl: string;
+  sourceId: string;
+  title: string;
+  duration: number;
+  thumbnailUrl: string;
+  artist: string | null;
+  artworkUrl: string | null;
+  sourceName: string | null;
+  requestedBy: string;
+  requestedByDisplayName?: string;
+  notifyDm: boolean;
+  type: 'playlist';
+  playlistData: {
+    name: string;
+    videoCount: number;
+    thumbnailUrl?: string | null;
+    videos?: Array<{
+      id: string;
+      title: string;
+      duration: number;
+      thumbnailUrl?: string | null;
+      artist?: string | null;
+      artworkUrl?: string | null;
+    }>;
+  } | null;
+  status: 'pending' | 'approved' | 'denied';
+  reviewedBy: string | null;
+  createdAt: string;
+  closedAt: string | null;
+}
+
+export type SongRequest = SongRequestTrack | SongRequestPlaylist;
+
+export interface RequestPreview {
+  title: string;
+  sourceId: string;
+  duration: number;
+  thumbnailUrl: string;
+  sourceName: string | null;
+  artist: string | null;
+  artworkUrl: string | null;
+  alreadyExists: boolean;
+  existingSong?: unknown;
+  isPlaylist: boolean;
+  playlistMeta?: {
+    name: string;
+    videoCount: number;
+    thumbnailUrl?: string | null;
+  };
 }

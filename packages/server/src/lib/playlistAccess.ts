@@ -1,4 +1,4 @@
-export interface UserContext {
+interface UserContext {
   discordId?: string;
   isAdmin?: boolean;
 }

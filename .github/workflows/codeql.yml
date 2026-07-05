@@ -2,9 +2,25 @@ name: CodeQL
 
 on:
   push:
-    branches: [main]
+    branches: [main, dev]
+    paths-ignore:
+      - "docs/**"
+      - "**.md"
+      - ".zed/**"
+      - ".pi/**"
+      - "LICENSE"
+      - ".git-commit-template"
+      - ".env.example"
   pull_request:
-    branches: [main]
+    branches: [main, dev]
+    paths-ignore:
+      - "docs/**"
+      - "**.md"
+      - ".zed/**"
+      - ".pi/**"
+      - "LICENSE"
+      - ".git-commit-template"
+      - ".env.example"
   schedule:
     - cron: "0 6 * * 1" # every Monday at 06:00 UTC
   workflow_dispatch:

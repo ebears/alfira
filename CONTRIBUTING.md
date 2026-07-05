@@ -4,27 +4,42 @@ Thanks for your interest in contributing! This guide covers the development work
 
 For setup instructions, see the **[Installation Guide](docs/installation.md)**.
 
+## Branching Model
+
+```
+feature branch  ──PR──►  dev  ──release PR──►  main
+```
+
+- **`main`** — protected, production-ready. Only updated via release PRs from `dev`.
+- **`dev`** — integration branch. All feature work merges here.
+- **Feature branches** — created from `dev`, named `type/short-description` (e.g., `feat/playlist-folders`, `fix/login-redirect`).
+
+See [AGENTS.md](../AGENTS.md) for the full git workflow and commit conventions.
+
 ---
 
 ## Development Workflow
 
-The main dev command is `bun run dev`, which builds the shared and bot packages locally (for editor LSP support) and then starts all services with Docker.
+The main dev command is `bun run dev`, which builds the server dist/ locally and then starts all services with Docker.
 
 | What Changed | Action |
 |--------------|--------|
-| Any of the above | `bun run dev` — builds changed packages and restarts Docker |
+| Any of the above | `bun run dev` — rebuilds server dist/ and restarts Docker |
 | `packages/web/src/**` | Run `bun run web:build` locally to rebuild the UI, then `docker compose restart alfira` |
-| `packages/api/src/**` | `docker compose restart alfira` |
+| `packages/server/src/**` | `docker compose restart alfira` (source is live-mounted) |
 
 ## Database Migrations
 
-Migrations run automatically on startup via the `migrate` service.
+Migrations run automatically on startup — the server applies any pending SQL migration files before starting the HTTP server.
 
 ### Manual Migration Commands
 
 ```bash
-# Run migrations manually
-docker compose run --rm migrate
+# Generate new migration files after schema changes
+bun run db:generate
+
+# Run migrations manually via Drizzle Kit
+bun run db:migrate
 
 # Reset database (wipe all data)
 docker compose down -v
@@ -49,6 +64,15 @@ bun run format
 ```
 
 CI runs `bun run lint` in the typecheck workflow — your code must pass before merging. See the [Biome Setup](docs/biome-setup.md) doc for configuration details.
+
+## Editor Tooling
+
+The repo includes preconfigured settings for a couple of tools (optional — use whatever you prefer):
+
+- **Zed** (`.zed/`) — Biome integration, TypeScript inlay hints, Markdown formatting, and task shortcuts for common dev commands
+- **Pi** (`.pi/`) — Prompt templates and extensions for the project's development pipeline (plan, verify, submit, release)
+
+If you use Zed or Pi, you'll get a pre-tuned experience out of the box. Nothing is enforced — these are just defaults for convenience.
 
 ---
 

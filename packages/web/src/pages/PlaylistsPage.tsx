@@ -1,4 +1,6 @@
-import type { Playlist } from '@alfira-bot/server/shared';
+import type { Playlist, TagItem } from '@alfira-bot/server/shared';
+import { fetchTags } from '@alfira-bot/server/shared/api';
+import { PlaylistIcon } from '@phosphor-icons/react';
 import { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getPlaylistsPage } from '../api/api';
@@ -20,7 +22,7 @@ export default function PlaylistsPage() {
   const [showCreate, setShowCreate] = useState(false);
   const { notification } = useNotification();
 
-  const { items, isLoading, isFetching, isError, prepend, retry, sentinelRef } =
+  const { items, isLoading, isFetching, isError, hasLoaded, prepend, retry, sentinelRef } =
     useVirtualizedInfiniteScroll<Playlist, [boolean]>({
       fetchPage: async (page, limit, admin) => {
         const result = await getPlaylistsPage(admin, page, limit);
@@ -69,9 +71,13 @@ export default function PlaylistsPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6 md:mb-8">
         <div>
-          <h1 className="font-display text-3xl md:text-4xl text-fg tracking-wider">Playlists</h1>
-          <p className="font-mono text-xs text-muted mt-1">
-            {isLoading ? '—' : `${items.length} playlist${items.length !== 1 ? 's' : ''}`}
+          <h1 className="font-display text-3xl md:text-4xl text-accent tracking-wider flex items-center gap-2">
+            <PlaylistIcon size={28} weight="duotone" className="shrink-0 relative top-1" />
+            Playlists
+          </h1>
+          <p className="font-mono text-xs text-muted mt-2">
+            Browse & manage playlists
+            {hasLoaded ? ` • ${items.length} playlist${items.length !== 1 ? 's' : ''}` : ''}
           </p>
         </div>
         <Button
@@ -89,9 +95,12 @@ export default function PlaylistsPage() {
         isLoading={isLoading}
         isFetching={isFetching}
         isError={isError}
+        hasLoaded={hasLoaded}
         onRetry={retry}
         sentinelRef={sentinelRef}
         onRowClick={handleRowClick}
+        emptyTitle="No Playlists Yet"
+        emptyMessage="Create one to get started"
       />
 
       {showCreate && <CreatePlaylistModal onClose={() => setShowCreate(false)} />}
@@ -106,6 +115,16 @@ export default function PlaylistsPage() {
 function CreatePlaylistModal({ onClose }: { onClose: () => void }) {
   const [state, formAction] = useCreatePlaylist();
   const [name, setName] = useState('');
+  const [tags, setTags] = useState<TagItem[]>([]);
+  const [selectedTag, setSelectedTag] = useState('');
+
+  useEffect(() => {
+    fetchTags()
+      .then(setTags)
+      .catch(() => {
+        // Tags are non-critical — fail silently
+      });
+  }, []);
 
   // Close modal on success (error === null means success)
   useEffect(() => {
@@ -118,7 +137,7 @@ function CreatePlaylistModal({ onClose }: { onClose: () => void }) {
     <Backdrop onClose={onClose}>
       <form
         action={formAction}
-        className="bg-surface border border-border rounded-xl p-5 md:p-6 w-full max-w-sm mx-4 modal-clay animate-fade-up"
+        className="p-5 md:p-6 w-full max-w-sm mx-4 glass-modal animate-fade-up"
       >
         <h2 className="font-display text-2xl md:text-3xl text-fg tracking-wider mb-1">
           New Playlist
@@ -137,6 +156,22 @@ function CreatePlaylistModal({ onClose }: { onClose: () => void }) {
           }}
           required
         />
+        <div className="mb-3">
+          <p className="font-mono text-xs text-muted mb-1.5">track a tag (optional)</p>
+          <select
+            name="tagNameLower"
+            className="input w-full"
+            value={selectedTag}
+            onChange={(e) => setSelectedTag(e.target.value)}
+          >
+            <option value="">None (manual playlist)</option>
+            {tags.map((tag) => (
+              <option key={tag.nameLower} value={tag.nameLower}>
+                {tag.canonicalName}
+              </option>
+            ))}
+          </select>
+        </div>
         {state?.error && <p className="font-mono text-xs text-danger mb-3">{state.error}</p>}
         <div className="flex gap-2 justify-end">
           <Button variant="inherit" type="button" onClick={onClose} surface="surface">

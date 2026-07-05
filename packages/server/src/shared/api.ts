@@ -1,11 +1,18 @@
 import type {
+  GeneralSettings,
   LoopMode,
   PaginatedResult,
   PaginationMeta,
   Playlist,
   PlaylistDetail,
   QueueState,
+  RequestPreview,
+  SetupChannel,
+  SetupGuild,
+  SetupRole,
+  SetupStatus,
   Song,
+  SongRequest,
   User,
 } from './types';
 
@@ -83,6 +90,14 @@ export async function remove<T>(url: string): Promise<T> {
 }
 
 // ---------------------------------------------------------------------------
+// Version
+// ---------------------------------------------------------------------------
+
+export function fetchVersion(): Promise<{ version: string }> {
+  return get<{ version: string }>('/api/version');
+}
+
+// ---------------------------------------------------------------------------
 // Auth API Functions
 // ---------------------------------------------------------------------------
 
@@ -98,30 +113,129 @@ export function fetchLogout(): Promise<void> {
 // Songs API Functions
 // ---------------------------------------------------------------------------
 
+export interface FetchSongsOptions {
+  search?: string;
+  sort?: string;
+  order?: string;
+  tags?: string;
+  source?: string;
+}
+
 export function fetchSongsPage(
   page: number,
   limit = 30,
-  search?: string
+  opts?: FetchSongsOptions
 ): Promise<PaginatedResult<Song>> {
   const params = new URLSearchParams({ page: String(page), limit: String(limit) });
-  if (search) params.set('search', search);
+  if (opts?.search) params.set('search', opts.search);
+  if (opts?.sort) params.set('sort', opts.sort);
+  if (opts?.order) params.set('order', opts.order);
+  if (opts?.tags) params.set('tags', opts.tags);
+  if (opts?.source) params.set('source', opts.source);
   return get(`/api/songs?${params}`);
 }
 
-export function createSong(
-  youtubeUrl: string,
-  nickname?: string,
-  asPlaylist?: boolean
-): Promise<Song> {
-  return post('/api/songs', {
-    youtubeUrl,
-    ...(nickname && { nickname }),
-    ...(asPlaylist && { asPlaylist }),
+// ---------------------------------------------------------------------------
+// Requests API Functions
+// ---------------------------------------------------------------------------
+
+export interface RequestCreateData {
+  sourceUrl: string;
+  /** Explicitly request a playlist import — skips ?list= stripping. */
+  type?: 'playlist';
+  notifyDm?: boolean;
+  nickname?: string | null;
+  artist?: string | null;
+  album?: string | null;
+  artwork?: string | null;
+  tags?: string[];
+  volumeBoost?: number | null;
+}
+
+export interface CreateRequestResult {
+  request?: SongRequest;
+  song?: Song;
+  songs?: Song[];
+  autoApproved: boolean;
+  importedCount?: number;
+  skippedCount?: number;
+  playlistTitle?: string;
+}
+
+export function createRequest(data: RequestCreateData): Promise<CreateRequestResult> {
+  return post('/api/requests', {
+    sourceUrl: data.sourceUrl,
+    type: data.type,
+    notifyDm: data.notifyDm ?? false,
+    ...(data.nickname != null && { nickname: data.nickname }),
+    ...(data.artist != null && { artist: data.artist }),
+    ...(data.album != null && { album: data.album }),
+    ...(data.artwork != null && { artwork: data.artwork }),
+    ...(data.tags != null && { tags: data.tags }),
+    ...(data.volumeBoost !== undefined && { volumeBoost: data.volumeBoost }),
   });
+}
+
+export function previewRequest(url: string): Promise<RequestPreview> {
+  return post('/api/requests/preview', { url });
+}
+
+export interface FetchRequestsResult {
+  items: SongRequest[];
+  pagination: PaginationMeta;
+}
+
+export function fetchRequests(
+  page: number,
+  limit = 30,
+  opts?: { status?: string; mine?: boolean }
+): Promise<FetchRequestsResult> {
+  const params = new URLSearchParams({ page: String(page), limit: String(limit) });
+  if (opts?.status) params.set('status', opts.status);
+  if (opts?.mine) params.set('mine', 'true');
+  return get(`/api/requests?${params}`);
+}
+
+export function approveRequest(id: string): Promise<{ request: SongRequest; songs?: Song[] }> {
+  return patch(`/api/requests/${id}`, { status: 'approved' });
+}
+
+export function denyRequest(id: string): Promise<{ request: SongRequest }> {
+  return patch(`/api/requests/${id}`, { status: 'denied' });
+}
+
+export function cancelRequest(id: string): Promise<void> {
+  return remove(`/api/requests/${id}`);
 }
 
 export function deleteSong(id: string): Promise<void> {
   return remove(`/api/songs/${id}`);
+}
+
+export function bulkDeleteSongs(ids: string[]): Promise<{ deleted: number }> {
+  return post('/api/songs/bulk-delete', { ids });
+}
+
+export function bulkTagSongs(
+  ids: string[],
+  tags: string[],
+  mode: 'add' | 'set' = 'add'
+): Promise<{ updated: number; tags: string[] }> {
+  return post('/api/songs/bulk-tag', { ids, tags, mode });
+}
+
+export interface BulkEditData {
+  nickname?: string | null;
+  artist?: string | null;
+  album?: string | null;
+  artwork?: string | null;
+  tags?: string[];
+  volumeBoost?: number | null;
+  clearFields?: string[];
+}
+
+export function bulkEditSongs(ids: string[], data: BulkEditData): Promise<{ updated: number }> {
+  return post('/api/songs/bulk-edit', { ids, ...data });
 }
 
 /**
@@ -172,15 +286,8 @@ export function deleteTag(nameLower: string): Promise<{ success: boolean }> {
 // Playlists API Functions
 // ---------------------------------------------------------------------------
 
-export function fetchPlaylists(adminView = false): Promise<Playlist[]> {
-  const params = adminView ? '?adminView=true' : '';
-  return get<PaginatedResult<Playlist>>(`/api/playlists${params}`).then(
-    (r) => r.items as Playlist[]
-  );
-}
-
-export function createPlaylist(name: string): Promise<Playlist> {
-  return post('/api/playlists', { name });
+export function createPlaylist(name: string, tagNameLower?: string): Promise<Playlist> {
+  return post('/api/playlists', { name, ...(tagNameLower && { tagNameLower }) });
 }
 
 export function fetchPlaylistsPage(
@@ -198,16 +305,24 @@ export function fetchPlaylistPage(
   adminView = false,
   page: number,
   limit = 30,
-  search?: string
+  opts?: FetchSongsOptions
 ): Promise<PlaylistDetail & { pagination: PaginationMeta }> {
   const params = new URLSearchParams({ page: String(page), limit: String(limit) });
   if (adminView) params.set('adminView', 'true');
-  if (search) params.set('search', search);
+  if (opts?.search) params.set('search', opts.search);
+  if (opts?.sort) params.set('sort', opts.sort);
+  if (opts?.order) params.set('order', opts.order);
+  if (opts?.tags) params.set('tags', opts.tags);
+  if (opts?.source) params.set('source', opts.source);
   return get(`/api/playlists/${id}?${params}`);
 }
 
 export function renamePlaylist(id: string, name: string): Promise<Playlist> {
   return patch(`/api/playlists/${id}`, { name });
+}
+
+export function updatePlaylistTag(id: string, tagNameLower: string | null): Promise<Playlist> {
+  return patch(`/api/playlists/${id}`, { tagNameLower });
 }
 
 export function deletePlaylist(id: string): Promise<void> {
@@ -220,6 +335,13 @@ export function addSongToPlaylist(playlistId: string, songId: string): Promise<v
 
 export function removeSongFromPlaylist(playlistId: string, songId: string): Promise<void> {
   return remove(`/api/playlists/${playlistId}/songs/${songId}`);
+}
+
+export function bulkRemoveSongsFromPlaylist(
+  playlistId: string,
+  songIds: string[]
+): Promise<{ removed: number }> {
+  return post(`/api/playlists/${playlistId}/songs/bulk-remove`, { songIds });
 }
 
 export function togglePlaylistVisibility(
@@ -280,15 +402,15 @@ export function seek(positionMs: number): Promise<void> {
   return post('/api/player/seek', { position: positionMs });
 }
 
-export function quickAddToQueue(youtubeUrl: string): Promise<{
+export function quickAddToQueue(url: string): Promise<{
   message: string;
   song: { title: string; duration: number; thumbnailUrl: string; requestedBy: string };
 }> {
-  return post('/api/player/quick-add', { youtubeUrl });
+  return post('/api/player/quick-add', { url });
 }
 
 export function quickAddPlaylistToQueue(
-  youtubeUrl: string,
+  url: string,
   maxVideos?: number
 ): Promise<{
   message: string;
@@ -298,7 +420,7 @@ export function quickAddPlaylistToQueue(
   songs: Array<{ title: string; duration: number; thumbnailUrl: string; requestedBy: string }>;
 }> {
   return post('/api/player/quick-add-playlist', {
-    youtubeUrl,
+    url,
     ...(maxVideos && { maxVideos }),
   });
 }
@@ -310,29 +432,115 @@ export function addToPriorityQueue(songId: string): Promise<{
   return post('/api/player/add-to-priority', { songId });
 }
 
-export function overridePlay(youtubeUrl: string): Promise<{
+export function overridePlay(url: string): Promise<{
   message: string;
   song: { title: string; duration: number; thumbnailUrl: string; requestedBy: string };
 }> {
-  return post('/api/player/override', { youtubeUrl });
+  return post('/api/player/override', { url });
+}
+
+export function removeQueueSong(songId: string): Promise<void> {
+  return remove(`/api/player/queue/${encodeURIComponent(songId)}`);
+}
+
+export function promoteQueueSong(songId: string): Promise<void> {
+  return post(`/api/player/queue/${encodeURIComponent(songId)}/promote`);
+}
+
+export function demoteQueueSong(songId: string): Promise<void> {
+  return post(`/api/player/queue/${encodeURIComponent(songId)}/demote`);
+}
+
+export function reorderQueueSongs(songIds: string[], target?: 'queue' | 'priority'): Promise<void> {
+  return patch('/api/player/queue/reorder', { songIds, target });
 }
 
 // ---------------------------------------------------------------------------
-// Import Playlist API Functions
+// Setup API Functions
 // ---------------------------------------------------------------------------
 
-export interface ImportPlaylistResult {
-  message: string;
-  playlistTitle: string;
-  totalVideos: number;
-  importedCount: number;
-  skippedCount: number;
-  songs: Song[];
+export function fetchSetupStatus(): Promise<SetupStatus> {
+  return get('/api/setup/status');
 }
 
-export function importPlaylist(
-  youtubeUrl: string,
-  maxVideos?: number
-): Promise<ImportPlaylistResult> {
-  return post('/api/songs/import-playlist', { youtubeUrl, ...(maxVideos && { maxVideos }) });
+export function fetchSetupGuilds(): Promise<{ guilds: SetupGuild[] }> {
+  return get('/api/setup/guilds');
+}
+
+export function fetchSetupRoles(guildId: string): Promise<{ roles: SetupRole[] }> {
+  return get(`/api/setup/roles?guildId=${encodeURIComponent(guildId)}`);
+}
+
+export function fetchSetupChannels(guildId: string): Promise<{ channels: SetupChannel[] }> {
+  return get(`/api/setup/channels?guildId=${encodeURIComponent(guildId)}`);
+}
+
+export interface CompleteSetupPayload {
+  guildId: string;
+  adminRoleIds: string;
+  voiceIdleTimeoutMinutes: number;
+  afkNotificationChannelId?: string | null;
+  requestNotificationChannelId?: string | null;
+  publicUrl?: string | null;
+  enabledSources?: string;
+}
+
+export function completeSetup(data: CompleteSetupPayload): Promise<{ success: boolean }> {
+  return post('/api/setup/complete', data);
+}
+
+// ---------------------------------------------------------------------------
+// General Settings API Functions
+// ---------------------------------------------------------------------------
+
+export function fetchGeneralSettings(): Promise<GeneralSettings> {
+  return get('/api/settings/general');
+}
+
+export type GeneralSettingsUpdate = Partial<
+  Pick<
+    GeneralSettings,
+    | 'adminRoleIds'
+    | 'voiceIdleTimeoutMinutes'
+    | 'afkNotificationChannelId'
+    | 'requestNotificationChannelId'
+    | 'notifyOnApproved'
+    | 'notifyOnDenied'
+    | 'publicUrl'
+    | 'enabledSources'
+  >
+>;
+
+export function updateGeneralSettings(data: GeneralSettingsUpdate): Promise<GeneralSettings> {
+  return patch('/api/settings/general', data);
+}
+
+// ---------------------------------------------------------------------------
+// Permissions API Functions
+// ---------------------------------------------------------------------------
+
+export interface PermissionsResponse {
+  mapping: Record<string, string[]>;
+  roles: { id: string; name: string; color: number }[];
+  categories: { label: string; actions: string[] }[];
+  labels: Record<string, string>;
+}
+
+export function fetchPermissions(): Promise<PermissionsResponse> {
+  return get('/api/permissions');
+}
+
+export function updatePermission(
+  action: string,
+  roleIds: string[]
+): Promise<{ action: string; roleIds: string[] }> {
+  return patch('/api/permissions', { action, roleIds });
+}
+
+export interface MyPermissionsResponse {
+  permissions: string[];
+}
+
+export function fetchMyPermissions(): Promise<MyPermissionsResponse> {
+  return get('/api/permissions/me');
 }

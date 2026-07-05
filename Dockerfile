@@ -12,6 +12,8 @@ WORKDIR /app
 # Development stage
 # ---------------------------------------------------------------------------
 FROM build AS dev
+ARG GIT_HASH
+ENV GIT_HASH=${GIT_HASH}
 RUN apk add --no-cache git
 WORKDIR /usr/local/nodelink
 ARG NODELINK_VERSION=v3.7.0
@@ -58,6 +60,8 @@ COPY packages/server/src/shared/db/migrations packages/server/dist/shared/db/mig
 # ---------------------------------------------------------------------------
 FROM oven/bun:1-alpine AS runtime
 
+ARG ALFIRA_VERSION=dev
+
 RUN apk add --no-cache \
     ca-certificates
 
@@ -88,6 +92,7 @@ ENV PATH=/usr/local/bin:$PATH
 USER nodejs
 
 ENV NODE_ENV=production
+ENV ALFIRA_VERSION=${ALFIRA_VERSION}
 
 EXPOSE 3001
 

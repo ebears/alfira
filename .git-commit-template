@@ -1,0 +1,26 @@
+
+# <type>[optional scope]: <description>
+# |<----  Use a 72-character line limit  ---->|
+#
+# type must be one of:
+#   feat     fix      chore    refactor docs     ci
+#   style    test     perf     security revert
+#
+# scope (optional): server, web, deps, db, docker, auth, ci, docs
+#
+# Description: imperative mood, lowercase, no trailing period
+#
+# Examples:
+#   feat(server): add queue reordering endpoint
+#   fix(web): prevent scrubber thumb from sticking at 0
+#   chore(deps): bump ws to 8.21.0
+#
+# Branch workflow: feature branch → dev (PR) → main (release PR)
+#
+# Body (optional):
+# - Explain what and why, not how
+# - Wrap at 72 characters
+#
+# Footer (optional):
+# Closes #123
+# BREAKING CHANGE: description of breaking change

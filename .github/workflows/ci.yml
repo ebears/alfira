@@ -5,8 +5,24 @@ permissions:
 
 on:
   push:
-    branches: [main]
+    branches: [main, dev]
+    paths-ignore:
+      - "docs/**"
+      - "**.md"
+      - ".zed/**"
+      - ".pi/**"
+      - "LICENSE"
+      - ".git-commit-template"
+      - ".env.example"
   pull_request:
+    paths-ignore:
+      - "docs/**"
+      - "**.md"
+      - ".zed/**"
+      - ".pi/**"
+      - "LICENSE"
+      - ".git-commit-template"
+      - ".env.example"
   workflow_dispatch:
 
 concurrency:

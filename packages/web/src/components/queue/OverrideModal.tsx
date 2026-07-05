@@ -4,6 +4,7 @@ import { overridePlay } from '../../api/api';
 import { apiErrorMessage } from '../../utils/api';
 import { Backdrop } from '../Backdrop';
 import { Button } from '../ui/Button';
+import { Spinner } from '../ui/Spinner';
 
 export default function OverrideModal({
   onClose,
@@ -12,16 +13,16 @@ export default function OverrideModal({
   onClose: () => void;
   onOverride: () => void;
 }) {
-  const [youtubeUrl, setYoutubeUrl] = useState('');
+  const [sourceUrl, setSourceUrl] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
 
   const handleSubmit = async () => {
-    if (!youtubeUrl.trim()) return;
+    if (!sourceUrl.trim()) return;
     setSubmitting(true);
     setError('');
     try {
-      await overridePlay(youtubeUrl.trim());
+      await overridePlay(sourceUrl.trim());
       onOverride();
     } catch (err: unknown) {
       setError(apiErrorMessage(err, 'Could not override playback. Is the bot in a voice channel?'));
@@ -31,7 +32,7 @@ export default function OverrideModal({
 
   return (
     <Backdrop onClose={onClose}>
-      <div className="p-5 md:p-6 w-full max-w-sm mx-4 modal-clay animate-fade-up">
+      <div className="p-5 md:p-6 w-full max-w-sm mx-4 glass-modal animate-fade-up">
         <h2 className="font-display text-2xl md:text-3xl text-fg tracking-wider mb-1">Override</h2>
         <p className="font-mono text-xs text-danger mb-4 md:mb-6">
           <WarningIcon size={14} weight="duotone" className="inline mr-1" /> This will stop current
@@ -41,20 +42,20 @@ export default function OverrideModal({
         <div className="space-y-4 mb-6">
           <div>
             <p className="font-mono text-xs text-muted mb-2 uppercase tracking-widest">
-              YouTube URL
+              Source URL
             </p>
             <input
               type="text"
-              value={youtubeUrl}
+              value={sourceUrl}
               onChange={(e) => {
-                setYoutubeUrl(e.target.value);
+                setSourceUrl(e.target.value);
                 setError('');
               }}
-              placeholder="https://youtube.com/watch?v=..."
+              placeholder="https://..."
               className="input w-full"
               disabled={submitting}
               onKeyDown={(e) => {
-                if (e.key === 'Enter' && youtubeUrl.trim()) {
+                if (e.key === 'Enter' && sourceUrl.trim()) {
                   handleSubmit();
                 }
               }}
@@ -66,7 +67,7 @@ export default function OverrideModal({
 
         {submitting && (
           <p className="font-mono text-xs text-muted mb-4 flex items-center gap-2">
-            <span className="w-3 h-3 border border-accent border-t-transparent rounded-full animate-spin inline-block" />
+            <Spinner />
             Overriding...
           </p>
         )}
@@ -85,7 +86,7 @@ export default function OverrideModal({
             variant="danger"
             type="button"
             onClick={handleSubmit}
-            disabled={submitting || !youtubeUrl.trim()}
+            disabled={submitting || !sourceUrl.trim()}
           >
             {submitting ? 'Overriding...' : 'Override & Play'}
           </Button>

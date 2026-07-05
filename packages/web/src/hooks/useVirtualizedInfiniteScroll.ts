@@ -17,6 +17,7 @@ export interface UseInfiniteScrollReturn<T> {
   isError: boolean;
   hasMore: boolean;
   total: number;
+  hasLoaded: boolean;
   prepend: (item: T) => void;
   updateItem: (item: T) => void;
   removeItem: (id: string) => void;
@@ -31,16 +32,20 @@ export function useVirtualizedInfiniteScroll<T, A extends unknown[]>({
   deps = [] as unknown as A,
 }: UseInfiniteScrollOptions<T, A>): UseInfiniteScrollReturn<T> {
   const [items, setItems] = useState<T[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
   const [isFetching, setIsFetching] = useState(false);
   const [isError, setIsError] = useState(false);
   const [hasMore, setHasMore] = useState(true);
   const [total, setTotal] = useState(0);
+  const [hasLoaded, setHasLoaded] = useState(false);
 
   const pageRef = useRef(1);
   const hasMoreRef = useRef(true);
   const isFetchingRef = useRef(false);
   const isMountedRef = useRef(true);
+  const hasEverLoadedRef = useRef(false);
+  const loadingTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const resetInProgressRef = useRef(false);
 
   hasMoreRef.current = hasMore;
   isFetchingRef.current = isFetching;
@@ -48,30 +53,45 @@ export function useVirtualizedInfiniteScroll<T, A extends unknown[]>({
   const fetchPageRef = useRef(fetchPage);
   fetchPageRef.current = fetchPage;
 
+  const depsRef = useRef(deps);
+  depsRef.current = deps;
+
   const sentinelRefInternal = useRef<HTMLDivElement | null>(null);
   const observerRef = useRef<IntersectionObserver | null>(null);
   // Initial value is a no-op; immediately overwritten after render
   // biome-ignore lint/suspicious/noEmptyBlockStatements: initial no-op value is immediately replaced
   const fetchMoreFnRef = useRef<() => void>(() => {});
 
-  // biome-ignore lint/correctness/useExhaustiveDependencies: intentionally uses deps inside via fetchPageRef; deps changes trigger refetch via useEffect
   const loadPage = useCallback(
     async (page: number, isInitial = false, searchOverride?: string) => {
       if (isFetchingRef.current) return;
       if (!isInitial && !hasMoreRef.current) return;
 
       if (isInitial) {
-        setIsLoading(true);
+        resetInProgressRef.current = true;
+        // Delay the skeleton by 200ms — if the fetch completes faster,
+        // the skeleton is never rendered, avoiding a flash.
+        // On subsequent deps changes (tab switch, filter change), keep
+        // stale items visible instead.
+        if (!hasEverLoadedRef.current) {
+          loadingTimerRef.current = setTimeout(() => {
+            if (isMountedRef.current) {
+              setIsLoading(true);
+            }
+          }, 200);
+        }
       } else {
         setIsFetching(true);
       }
       setIsError(false);
 
-      const searchArgs = (searchOverride !== undefined ? [searchOverride] : deps) as A;
+      const searchArgs = (searchOverride !== undefined ? [searchOverride] : depsRef.current) as A;
 
       try {
         const result = await fetchPageRef.current(page, limit, ...searchArgs);
         if (!isMountedRef.current) return;
+
+        hasEverLoadedRef.current = true;
 
         if (isInitial) {
           setItems(result.items);
@@ -87,9 +107,15 @@ export function useVirtualizedInfiniteScroll<T, A extends unknown[]>({
         if (!isMountedRef.current) return;
         setIsError(true);
       } finally {
+        if (loadingTimerRef.current) {
+          clearTimeout(loadingTimerRef.current);
+          loadingTimerRef.current = undefined;
+        }
+        resetInProgressRef.current = false;
         if (isMountedRef.current) {
           setIsLoading(false);
           setIsFetching(false);
+          setHasLoaded(true);
         }
       }
     },
@@ -97,7 +123,7 @@ export function useVirtualizedInfiniteScroll<T, A extends unknown[]>({
   );
 
   const fetchMore = useCallback(() => {
-    if (!hasMoreRef.current || isFetchingRef.current) return;
+    if (!hasMoreRef.current || isFetchingRef.current || resetInProgressRef.current) return;
     const nextPage = pageRef.current + 1;
     void loadPage(nextPage);
   }, [loadPage]);
@@ -111,6 +137,7 @@ export function useVirtualizedInfiniteScroll<T, A extends unknown[]>({
   }, [loadPage]);
 
   const prepend = useCallback((item: T) => {
+    if (resetInProgressRef.current) return;
     setItems((prev) => {
       if (prev.some((i) => (i as { id: string }).id === (item as { id: string }).id)) return prev;
       return [item, ...prev];
@@ -118,12 +145,14 @@ export function useVirtualizedInfiniteScroll<T, A extends unknown[]>({
   }, []);
 
   const updateItem = useCallback((item: T) => {
+    if (resetInProgressRef.current) return;
     setItems((prev) =>
       prev.map((i) => ((i as { id: string }).id === (item as { id: string }).id ? item : i))
     );
   }, []);
 
   const removeItem = useCallback((id: string) => {
+    if (resetInProgressRef.current) return;
     setItems((prev) => prev.filter((i) => (i as { id: string }).id !== id));
   }, []);
 
@@ -146,6 +175,11 @@ export function useVirtualizedInfiniteScroll<T, A extends unknown[]>({
 
     return () => {
       isMountedRef.current = false;
+      resetInProgressRef.current = false;
+      if (loadingTimerRef.current) {
+        clearTimeout(loadingTimerRef.current);
+        loadingTimerRef.current = undefined;
+      }
     };
   }, [...deps, loadPage]);
 
@@ -186,6 +220,7 @@ export function useVirtualizedInfiniteScroll<T, A extends unknown[]>({
     isError,
     hasMore,
     total,
+    hasLoaded,
     prepend,
     updateItem,
     removeItem,

@@ -127,6 +127,23 @@
       }
     },
     {
+      "includes": [
+        "packages/web/src/components/AddSongModal.tsx",
+        "packages/web/src/components/queue/QuickAddModal.tsx",
+        "packages/web/src/pages/RequestsPage.tsx",
+        "packages/web/src/components/settings/AdminSection.tsx",
+        "packages/web/src/pages/SetupWizard.tsx",
+        "packages/web/src/pages/PermissionsPage.tsx"
+      ],
+      "linter": {
+        "rules": {
+          "a11y": {
+            "noLabelWithoutControl": "off"
+          }
+        }
+      }
+    },
+    {
       "includes": ["packages/server/src/middleware/requireAuth.ts"],
       "linter": {
         "rules": {

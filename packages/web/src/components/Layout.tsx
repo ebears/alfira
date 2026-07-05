@@ -1,7 +1,7 @@
-import { CaretLeftIcon, CraneTowerIcon, GuitarIcon, StairsIcon } from '@phosphor-icons/react';
+import { CaretLeftIcon, CraneTowerIcon, GuitarIcon, LinkBreakIcon } from '@phosphor-icons/react';
 import { useEffect, useState } from 'react';
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
-import { NAV_ITEMS } from '../constants';
+import { ADMIN_NAV_ITEMS, NAV_ITEMS } from '../constants';
 import { useAdminView } from '../context/AdminViewContext';
 import { useAuth } from '../context/AuthContext';
 import { QueuePanelProvider, useQueuePanel } from '../context/QueuePanelContext';
@@ -10,7 +10,7 @@ import MobileNav from './MobileNav';
 import { NowPlayingBar } from './NowPlayingBar';
 import QueuePanel from './QueuePanel';
 import SettingsMenu from './SettingsMenu';
-import { Button } from './ui/Button';
+import UserMenu from './UserMenu';
 
 export default function Layout() {
   return (
@@ -22,7 +22,7 @@ export default function Layout() {
 
 function LayoutContent() {
   const { user, logout } = useAuth();
-  const { isAdminView } = useAdminView();
+  const { isAdminView, toggleAdminView } = useAdminView();
   const connectionStatus = useConnectionStatus();
   const navigate = useNavigate();
   const [collapsed, setCollapsed] = useState(() => {
@@ -65,29 +65,46 @@ function LayoutContent() {
         >
           {!collapsed && (
             <div className="flex items-center gap-2 min-w-0">
-              {isAdminView ? (
-                <span className="flex items-center justify-center w-10 h-10 shrink-0 rounded border border-accent/30 bg-accent/10 self-end">
+              <button
+                type="button"
+                onClick={toggleAdminView}
+                title={
+                  user?.isAdmin
+                    ? isAdminView
+                      ? 'Switch to Member view'
+                      : 'Switch to Admin view'
+                    : undefined
+                }
+                className={`flex items-center justify-center w-10 h-10 shrink-0 rounded border border-accent/30 bg-accent/10 self-end transition-opacity ${user?.isAdmin ? 'cursor-pointer hover:opacity-80' : 'cursor-default'}`}
+              >
+                {isAdminView ? (
                   <CraneTowerIcon size={24} weight="duotone" className="text-accent" />
-                </span>
-              ) : (
-                <span className="flex items-center justify-center w-10 h-10 shrink-0 rounded border border-accent/30 bg-accent/10 self-end">
+                ) : (
                   <GuitarIcon size={24} weight="duotone" className="text-accent" />
-                </span>
-              )}
+                )}
+              </button>
               <span className="font-display text-5xl text-accent tracking-wider">Alfira</span>
             </div>
           )}
           {collapsed && (
-            <div
-              className="w-10 h-10 flex items-center justify-center shrink-0 rounded border border-accent/30 bg-accent/10"
-              title={isAdminView ? 'Admin mode' : 'Member mode'}
+            <button
+              type="button"
+              onClick={toggleAdminView}
+              className={`w-10 h-10 flex items-center justify-center shrink-0 rounded border border-accent/30 bg-accent/10 transition-opacity ${user?.isAdmin ? 'cursor-pointer hover:opacity-80' : 'cursor-default'}`}
+              title={
+                user?.isAdmin
+                  ? isAdminView
+                    ? 'Admin mode — click to switch'
+                    : 'Member mode — click to switch'
+                  : undefined
+              }
             >
               {isAdminView ? (
                 <CraneTowerIcon size={24} weight="duotone" className="text-accent" />
               ) : (
                 <GuitarIcon size={24} weight="duotone" className="text-accent" />
               )}
-            </div>
+            </button>
           )}
         </div>
 
@@ -120,34 +137,57 @@ function LayoutContent() {
               <Icon size={22} weight="duotone" />
             </NavLink>
           ))}
+          {isAdminView && ADMIN_NAV_ITEMS.length > 0 && (
+            <>
+              {/* Separator between user and admin nav items */}
+              {collapsed ? (
+                <div className="flex justify-center px-2 py-1">
+                  <div className="w-6 h-px bg-fg/15" />
+                </div>
+              ) : (
+                <div className="px-2 py-1">
+                  <div className="h-px bg-fg/15" />
+                </div>
+              )}
+              {ADMIN_NAV_ITEMS.map(({ to, label, icon: Icon }) => (
+                <NavLink
+                  key={to}
+                  to={to}
+                  title={collapsed ? label : undefined}
+                  className={({ isActive }) =>
+                    `flex items-center rounded-xl font-body text-md transition-all duration-150 cursor-pointer ${
+                      collapsed ? 'justify-center px-0 py-3' : 'px-3 py-3'
+                    } ${isActive ? 'btn-inherit pressed' : 'btn-inherit'}`
+                  }
+                  style={{ '--btn-surface': 'var(--color-elevated)' } as React.CSSProperties}
+                >
+                  {!collapsed && <span className="mr-auto">{label}</span>}
+                  <Icon size={22} weight="duotone" />
+                </NavLink>
+              ))}
+            </>
+          )}
         </nav>
 
         {/* Connection status */}
         {connectionStatus !== 'connected' && (
-          <div className="px-3 pb-2">
+          <div className={collapsed ? 'flex justify-center px-2 pb-2' : 'px-3 pb-2'}>
             <div
-              className={`flex items-center gap-2 text-sm font-mono px-2 py-1.5 rounded-lg ${
-                collapsed
-                  ? 'bg-warning/10 text-warning'
-                  : connectionStatus === 'reconnecting'
-                    ? 'bg-warning/10 text-warning'
-                    : 'bg-danger/10 text-danger'
-              }`}
+              title={connectionStatus === 'reconnecting' ? 'Reconnecting...' : 'Disconnected'}
+              className={`flex items-center rounded-xl font-body w-full select-none ${
+                collapsed ? 'justify-center px-0 py-3' : 'px-3 py-3 gap-3'
+              } ${connectionStatus === 'reconnecting' ? 'text-warning' : 'text-danger'}`}
             >
-              <span
-                className={`w-1.5 h-1.5 rounded-full ${
-                  collapsed
-                    ? 'bg-warning animate-pulse'
-                    : connectionStatus === 'reconnecting'
-                      ? 'bg-warning animate-pulse'
-                      : 'bg-danger'
-                }`}
+              {!collapsed && (
+                <span className="mr-auto text-sm text-fg/80">
+                  {connectionStatus === 'reconnecting' ? 'Reconnecting...' : 'Disconnected'}
+                </span>
+              )}
+              <LinkBreakIcon
+                size={22}
+                weight="duotone"
+                className={connectionStatus === 'reconnecting' ? 'animate-pulse' : ''}
               />
-              {collapsed
-                ? null
-                : connectionStatus === 'reconnecting'
-                  ? 'Reconnecting...'
-                  : 'Disconnected'}
             </div>
           </div>
         )}
@@ -183,68 +223,11 @@ function LayoutContent() {
         )}
 
         {/* User section */}
-        <div className="p-3">
-          {collapsed ? (
-            <div className="flex flex-col items-center gap-4">
-              <div
-                className="w-7 h-7 rounded-full bg-elevated flex items-center justify-center overflow-hidden"
-                title={user?.username}
-              >
-                {user?.avatar ? (
-                  <img
-                    src={user.avatar}
-                    alt={user.username}
-                    className="w-full h-full object-cover"
-                    decoding="async"
-                  />
-                ) : (
-                  <span className="font-mono text-sm text-muted">
-                    {user?.username?.[0]?.toUpperCase()}
-                  </span>
-                )}
-              </div>
-              <div className="flex justify-center px-2 pt-1">
-                <Button
-                  variant="danger"
-                  size="default"
-                  className="w-full! flex justify-center py-2.5! rounded-xl! min-h-0!"
-                  onClick={handleLogout}
-                  title="Log out"
-                >
-                  <StairsIcon size={16} weight="duotone" />
-                </Button>
-              </div>
-            </div>
-          ) : (
-            <>
-              <div className="flex items-center gap-3 px-2 py-2 mb-3">
-                {user?.avatar ? (
-                  <img
-                    src={user.avatar}
-                    alt={user.username}
-                    className="w-7 h-7 rounded-full"
-                    decoding="async"
-                  />
-                ) : (
-                  <div className="w-7 h-7 rounded-full bg-elevated flex items-center justify-center">
-                    <span className="font-mono text-sm text-muted">
-                      {user?.username?.[0]?.toUpperCase()}
-                    </span>
-                  </div>
-                )}
-                <span className="text-fg font-body truncate flex-1">{user?.username}</span>
-              </div>
-              <Button
-                variant="danger"
-                onClick={handleLogout}
-                className="flex items-center px-3 py-2 w-full"
-              >
-                <span className="mr-auto text-sm">log out</span>
-                <StairsIcon size={18} weight="duotone" />
-              </Button>
-            </>
-          )}
-        </div>
+        {user && (
+          <div className={collapsed ? 'px-2 py-3' : 'p-3'}>
+            <UserMenu user={user} collapsed={collapsed} onLogout={handleLogout} />
+          </div>
+        )}
       </aside>
 
       {/* ------------------------------------------------------------------ */}

@@ -1,8 +1,12 @@
 import type { LoopMode, QueueState } from '@alfira-bot/server/shared';
 import {
   clearQueue,
+  demoteQueueSong,
   fetchQueueState,
   leaveVoice,
+  promoteQueueSong,
+  removeQueueSong,
+  reorderQueueSongs,
   seek as seekTrack,
   setLoopMode,
   shuffleQueue,
@@ -39,8 +43,8 @@ interface PlayerContextValue {
   elapsed: number;
   // Register a progress bar DOM element for direct rAF-driven updates.
   registerProgress: (ref: HTMLDivElement | null) => void;
-  // Register a range input whose thumb tracks progress at rAF speed.
-  registerRangeInput: (ref: HTMLInputElement | null) => void;
+  // Register a thumb div whose position tracks progress at rAF speed.
+  registerThumb: (ref: HTMLDivElement | null) => void;
   // Override elapsed time (e.g. after a seek).
   setOverrideElapsed: (elapsed: number | undefined) => void;
   // Actions — each calls the API; state updates arrive via real-time events.
@@ -53,6 +57,10 @@ interface PlayerContextValue {
   shuffle: () => Promise<void>;
   unshuffle: () => Promise<void>;
   seek: (positionMs: number) => Promise<void>;
+  removeSong: (songId: string) => Promise<void>;
+  promoteSong: (songId: string) => Promise<void>;
+  demoteSong: (songId: string) => Promise<void>;
+  reorderQueue: (songIds: string[], target?: 'queue' | 'priority') => Promise<void>;
   // Force an immediate REST refetch (e.g. after starting playback from QueuePage).
   refetch: () => Promise<void>;
 }
@@ -65,13 +73,13 @@ interface PlayerContextValue {
 // ---------------------------------------------------------------------------
 const PlayerStateContext = createContext<Omit<
   PlayerContextValue,
-  'elapsed' | 'registerProgress' | 'registerRangeInput'
+  'elapsed' | 'registerProgress' | 'registerThumb'
 > | null>(null);
 const PlayerElapsedContext = createContext<number>(0);
 const PlayerProgressContext = createContext<(ref: HTMLDivElement | null) => void>(() => {
   /* noop */
 });
-const PlayerRangeInputContext = createContext<(ref: HTMLInputElement | null) => void>(() => {
+const PlayerThumbContext = createContext<(ref: HTMLDivElement | null) => void>(() => {
   /* noop */
 });
 const PlayerOverrideContext = createContext<(elapsed: number | undefined) => void>(() => {
@@ -86,7 +94,7 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
   useSocket();
 
   // Use the progress bar hook (rAF + 1-sec interval)
-  const { elapsed, registerProgress, registerRangeInput } = useProgressBar(
+  const { elapsed, registerProgress, registerThumb } = useProgressBar(
     state,
     overrideElapsed,
     setOverrideElapsed
@@ -186,35 +194,69 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     await seekTrack(positionMs);
   }, []);
 
-  const stateValue: Omit<
-    PlayerContextValue,
-    'elapsed' | 'registerProgress' | 'registerRangeInput'
-  > = useMemo(
-    () => ({
-      state,
-      loading,
-      skip,
-      leave,
-      pause,
-      clear,
-      setLoop,
-      shuffle,
-      unshuffle,
-      seek,
-      refetch,
-      setOverrideElapsed,
-    }),
-    [state, loading, skip, leave, pause, clear, setLoop, shuffle, unshuffle, seek, refetch]
-  );
+  const removeSong = useCallback(async (songId: string) => {
+    await removeQueueSong(songId);
+  }, []);
+
+  const promoteSong = useCallback(async (songId: string) => {
+    await promoteQueueSong(songId);
+  }, []);
+
+  const demoteSong = useCallback(async (songId: string) => {
+    await demoteQueueSong(songId);
+  }, []);
+
+  const reorderQueue = useCallback(async (songIds: string[], target?: 'queue' | 'priority') => {
+    await reorderQueueSongs(songIds, target);
+  }, []);
+
+  const stateValue: Omit<PlayerContextValue, 'elapsed' | 'registerProgress' | 'registerThumb'> =
+    useMemo(
+      () => ({
+        state,
+        loading,
+        skip,
+        leave,
+        pause,
+        clear,
+        setLoop,
+        shuffle,
+        unshuffle,
+        seek,
+        removeSong,
+        promoteSong,
+        demoteSong,
+        reorderQueue,
+        refetch,
+        setOverrideElapsed,
+      }),
+      [
+        state,
+        loading,
+        skip,
+        leave,
+        pause,
+        clear,
+        setLoop,
+        shuffle,
+        unshuffle,
+        seek,
+        removeSong,
+        promoteSong,
+        demoteSong,
+        reorderQueue,
+        refetch,
+      ]
+    );
 
   return (
     <PlayerStateContext value={stateValue}>
       <PlayerProgressContext value={registerProgress}>
-        <PlayerRangeInputContext value={registerRangeInput}>
+        <PlayerThumbContext value={registerThumb}>
           <PlayerOverrideContext.Provider value={setOverrideElapsed}>
             <PlayerElapsedContext value={elapsed}>{children}</PlayerElapsedContext>
           </PlayerOverrideContext.Provider>
-        </PlayerRangeInputContext>
+        </PlayerThumbContext>
       </PlayerProgressContext>
     </PlayerStateContext>
   );
@@ -227,7 +269,7 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
  */
 export function usePlayerState(): Omit<
   PlayerContextValue,
-  'elapsed' | 'registerProgress' | 'registerRangeInput'
+  'elapsed' | 'registerProgress' | 'registerThumb'
 > {
   const context = useContext(PlayerStateContext);
   if (!context) {
@@ -245,10 +287,10 @@ export function usePlayer(): PlayerContextValue {
   const stateContext = useContext(PlayerStateContext);
   const elapsed = useContext(PlayerElapsedContext);
   const registerProgress = useContext(PlayerProgressContext);
-  const registerRangeInput = useContext(PlayerRangeInputContext);
+  const registerThumb = useContext(PlayerThumbContext);
   const setOverrideElapsed = useContext(PlayerOverrideContext);
   if (!stateContext) {
     throw new Error('usePlayer must be used within a PlayerProvider');
   }
-  return { ...stateContext, elapsed, registerProgress, registerRangeInput, setOverrideElapsed };
+  return { ...stateContext, elapsed, registerProgress, registerThumb, setOverrideElapsed };
 }

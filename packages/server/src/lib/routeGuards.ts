@@ -1,18 +1,27 @@
+import { and, eq, inArray } from 'drizzle-orm';
 import type { RouteContext } from '../index';
-import type { User } from '../shared';
+import type { PermissionAction, User } from '../shared';
+import { db, tables } from '../shared/db';
 import { requireAdmin, requireAuth } from './guards';
+import { json } from './json';
 import { requireUserInVoice } from './voice';
 
-export interface GuardOptions {
+interface GuardOptions {
   /** Require authenticated user. Defaults to true. */
   auth?: boolean;
   /** Require admin role. Defaults to false. */
   admin?: boolean;
+  /** Allow access during first-run setup (user must have isSetupAdmin flag).
+   *  Overrides the normal admin check. Defaults to false. */
+  setupMode?: boolean;
   /** Require user is in a voice channel. Defaults to false. Requires auth. */
   voice?: boolean;
+  /** Granular permission action. When set with admin:true, super-admins bypass;
+   *  non-admin users are checked against the rolePermission table. */
+  permission?: PermissionAction;
 }
 
-export interface GuardResult {
+interface GuardResult {
   user: User;
 }
 
@@ -27,15 +36,37 @@ export async function checkGuards(
   ctx: RouteContext,
   options: GuardOptions = {}
 ): Promise<GuardResult | Response> {
-  const { admin = false, voice = false } = options;
+  const { admin = false, setupMode = false, voice = false } = options;
 
   const authResult = requireAuth(ctx);
   if (authResult instanceof Response) return authResult;
   const user = authResult;
 
+  // Setup mode: grant access to the first user who logs in during setup.
+  // This bypasses the normal admin check since admin roles aren't configured yet.
+  if (setupMode && user.isSetupAdmin) {
+    if (voice) {
+      const inVoice = await requireUserInVoice(user.discordId);
+      if (inVoice instanceof Response) return inVoice;
+    }
+    return { user };
+  }
+
   if (admin) {
-    const adminErr = requireAdmin(ctx);
-    if (adminErr) return adminErr;
+    // Super-admin bypass: users in adminRoleIds always pass.
+    if (ctx.isAdmin) {
+      // Fall through to voice check below.
+    } else if (options.permission) {
+      // Granular permission check for non-admin users.
+      const hasPermission = await checkRolePermission(user.roles ?? [], options.permission);
+      if (!hasPermission) {
+        return json({ error: 'You do not have permission to perform this action.' }, 403);
+      }
+    } else {
+      // No granular permission — super-admin only.
+      const adminErr = requireAdmin(ctx);
+      if (adminErr) return adminErr;
+    }
   }
 
   if (voice) {
@@ -44,4 +75,27 @@ export async function checkGuards(
   }
 
   return { user };
+}
+
+/**
+ * Check if any of the user's Discord roles have been granted a specific
+ * granular permission via the rolePermission table.
+ */
+async function checkRolePermission(
+  userRoles: string[],
+  action: PermissionAction
+): Promise<boolean> {
+  if (userRoles.length === 0) return false;
+
+  const rows = await db
+    .select({ roleId: tables.rolePermission.roleId })
+    .from(tables.rolePermission)
+    .where(
+      and(
+        eq(tables.rolePermission.action, action),
+        inArray(tables.rolePermission.roleId, userRoles)
+      )
+    );
+
+  return rows.length > 0;
 }

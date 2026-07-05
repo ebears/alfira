@@ -57,6 +57,9 @@ export async function canonicalizeTags(rawTags: string[]): Promise<string[]> {
           .execute();
       }
     });
+
+    // Include the newly created tags in the return value
+    canonicalNames.push(...missingTags);
   }
 
   return canonicalNames;

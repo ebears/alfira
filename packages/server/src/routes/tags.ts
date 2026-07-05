@@ -2,9 +2,10 @@ import { eq, sql } from 'drizzle-orm';
 import type { RouteContext } from '../index';
 import { json } from '../lib/json';
 import { checkGuards } from '../lib/routeGuards';
+import { emitPlaylistUpdated } from '../lib/socket';
 import { db, tables } from '../shared/db';
 
-const { tag: tagTable, song: songTable } = tables;
+const { tag: tagTable, song: songTable, playlist: playlistTable } = tables;
 
 const TAG_COLORS = ['orange', 'sky', 'emerald', 'amber', 'violet'] as const;
 type TagColor = (typeof TAG_COLORS)[number];
@@ -29,7 +30,7 @@ async function handlePatchTag(
   nameLower: string,
   body: Record<string, unknown>
 ): Promise<Response> {
-  const guards = await checkGuards(ctx, { admin: true });
+  const guards = await checkGuards(ctx, { admin: true, permission: 'tags.manage' });
   if (guards instanceof Response) return guards;
 
   const [existing] = await db
@@ -74,7 +75,7 @@ async function handlePatchTag(
 }
 
 async function handleDeleteTag(ctx: RouteContext, nameLower: string): Promise<Response> {
-  const guards = await checkGuards(ctx, { admin: true });
+  const guards = await checkGuards(ctx, { admin: true, permission: 'tags.manage' });
   if (guards instanceof Response) return guards;
 
   const [existing] = await db
@@ -101,6 +102,30 @@ async function handleDeleteTag(ctx: RouteContext, nameLower: string): Promise<Re
         .set({ tags: updatedTags })
         .where(eq(songTable.id, song.id))
         .returning();
+    }
+  }
+
+  // Convert any smart playlists tracking this tag to regular playlists
+  const smartPlaylists = await db
+    .select()
+    .from(playlistTable)
+    .where(eq(playlistTable.tagNameLower, nameLower))
+    .all();
+
+  for (const pl of smartPlaylists) {
+    await db.update(playlistTable).set({ tagNameLower: null }).where(eq(playlistTable.id, pl.id));
+
+    // Emit update for each affected playlist
+    const [updatedPl] = await db
+      .select()
+      .from(playlistTable)
+      .where(eq(playlistTable.id, pl.id))
+      .limit(1);
+    if (updatedPl) {
+      emitPlaylistUpdated({
+        ...updatedPl,
+        createdAt: updatedPl.createdAt.toISOString(),
+      });
     }
   }
 

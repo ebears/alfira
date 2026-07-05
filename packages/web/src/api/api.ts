@@ -4,40 +4,68 @@ import { client } from './client';
 // Configure the shared API service with the web client
 configureApiClient(client);
 
+export type {
+  GeneralSettings,
+  SetupChannel,
+  SetupGuild,
+  SetupRole,
+} from '@alfira-bot/server/shared';
+
+export type {
+  BulkEditData,
+  FetchSongsOptions,
+  MyPermissionsResponse,
+  PermissionsResponse,
+} from '@alfira-bot/server/shared/api';
 // ---------------------------------------------------------------------------
 // Re-export everything from shared API with web-compatible names
 // ---------------------------------------------------------------------------
 export {
   addSongToPlaylist,
   addToPriorityQueue,
-  clearQueue,
+  approveRequest,
+  bulkDeleteSongs,
+  bulkEditSongs,
+  bulkRemoveSongsFromPlaylist,
+  bulkTagSongs,
+  type CreateRequestResult,
+  cancelRequest,
+  completeSetup,
   createPlaylist,
-  createSong as addSong,
+  createRequest,
   deletePlaylist,
   deleteSong,
+  denyRequest,
+  type FetchRequestsResult,
+  fetchGeneralSettings,
   fetchLogout as logout,
   // Auth
   fetchMe as getMe,
+  fetchMyPermissions,
+  fetchPermissions,
   fetchPlaylistPage as getPlaylistPage,
   // Playlists
-  fetchPlaylists as getPlaylists,
   fetchPlaylistsPage as getPlaylistsPage,
-  // Player
-  fetchQueueState,
+  // Requests
+  fetchRequests,
+  // Setup
+  fetchSetupChannels,
+  fetchSetupGuilds,
+  fetchSetupRoles,
+  fetchSetupStatus,
   // Songs
   fetchSongsPage as getSongsPage,
-  importPlaylist,
-  leaveVoice,
+  // Version
+  fetchVersion,
   overridePlay,
+  previewRequest,
   quickAddPlaylistToQueue,
   quickAddToQueue,
+  type RequestCreateData,
   removeSongFromPlaylist,
   renamePlaylist,
-  setLoopMode,
-  shuffleQueue,
-  skipTrack,
   startPlayback,
-  togglePause,
   togglePlaylistVisibility,
-  unshuffleQueue,
+  updateGeneralSettings,
+  updatePermission,
 } from '@alfira-bot/server/shared/api';

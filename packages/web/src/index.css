@@ -32,6 +32,12 @@
     }
 }
 
+@keyframes skeleton-appear {
+    to {
+        opacity: 1;
+    }
+}
+
 @keyframes shimmer {
     0% {
         background-position: -400px 0;
@@ -62,367 +68,393 @@
    Then light/dark modes define surface colors
    ============================================ */
 
+/* ── Artificer · Neutral (no hue tint — for users who prefer a clean M3-free palette) ── */
 [data-color-theme="artificer"] {
-    --color-accent: #f97316;
+    --color-accent: #8b5cf6;
+    --color-accent-secondary: #7c3aed;
 
     &[data-mode="dark"] {
-        --color-surface: #1e1e1e;
-        --color-base: #333333;
-        --color-elevated: #282828;
-        --color-border: #3a3a3a;
-        --color-fg: #f5f5f5;
-        --color-muted: #8a8a8a;
-        --color-faint: #4a4a4a;
-        --color-foreground: #2a2420;
-        --color-foreground-muted: #1a1612;
+        --color-surface: #18181a;
+        --color-base: #2c2c2e;
+        --color-elevated: #202022;
+        --color-border: #323236;
+        --color-fg: #f0f0f0;
+        --color-muted: #808088;
+        --color-faint: #404048;
+        --color-foreground: #262628;
+        --color-foreground-muted: #121214;
     }
 
     &[data-mode="light"] {
-        --color-surface: #ffffff;
+        --color-surface: #f6f6f6;
         --color-base: #dedede;
-        --color-elevated: #f0f0f0;
-        --color-border: #d9d9d9;
+        --color-elevated: #ececec;
+        --color-border: #d0d0d0;
         --color-fg: #1a1a1a;
         --color-muted: #5c5c5c;
-        --color-faint: #9a9a9a;
-        --color-foreground: #f0e8e0;
-        --color-foreground-muted: #d8cec0;
+        --color-faint: #969696;
+        --color-foreground: #f0f0f0;
+        --color-foreground-muted: #d8d8d8;
     }
 }
 
+/* ── Barbarian · Blood on Iron (red accent on cool steel-blue surfaces — rage against cold steel) ── */
 [data-color-theme="barbarian"] {
     --color-accent: #dc2626;
+    --color-accent-secondary: #b91c1c;
 
     &[data-mode="dark"] {
-        --color-surface: #1e1a1a;
-        --color-base: #352a2a;
-        --color-elevated: #282020;
-        --color-border: #3a3030;
-        --color-fg: #f5f0f0;
-        --color-muted: #8a7a7a;
-        --color-faint: #4a3a3a;
-        --color-foreground: #2a1818;
-        --color-foreground-muted: #1a1010;
+        --color-surface: #14161c;
+        --color-base: #242630;
+        --color-elevated: #1a1b24;
+        --color-border: #2c3040;
+        --color-fg: #e8eaf4;
+        --color-muted: #6870a0;
+        --color-faint: #303850;
+        --color-foreground: #1e202c;
+        --color-foreground-muted: #0c0e14;
     }
 
     &[data-mode="light"] {
-        --color-surface: #ffffff;
-        --color-base: #e7dbdb;
-        --color-elevated: #f5f0f0;
-        --color-border: #e5d9d9;
-        --color-fg: #1a1414;
-        --color-muted: #5c5252;
-        --color-faint: #9a8a8a;
-        --color-foreground: #f8ecec;
-        --color-foreground-muted: #e0ccc8;
+        --color-surface: #f4f5fa;
+        --color-base: #cccedc;
+        --color-elevated: #e2e4f0;
+        --color-border: #c0c2d2;
+        --color-fg: #0e1018;
+        --color-muted: #485068;
+        --color-faint: #8890b0;
+        --color-foreground: #e6e8f4;
+        --color-foreground-muted: #ced0de;
     }
 }
 
+/* ── Bard · Magenta Rose ── */
 [data-color-theme="bard"] {
     --color-accent: #db2777;
+    --color-accent-secondary: #9d174d;
 
     &[data-mode="dark"] {
-        --color-surface: #1e1618;
-        --color-base: #35282d;
-        --color-elevated: #281e22;
-        --color-border: #3a2e34;
-        --color-fg: #f5e8f0;
-        --color-muted: #9a7a8a;
-        --color-faint: #5a3a4a;
-        --color-foreground: #2a1e28;
-        --color-foreground-muted: #1a1218;
+        --color-surface: #181218;
+        --color-base: #2c2026;
+        --color-elevated: #20161c;
+        --color-border: #342630;
+        --color-fg: #f0e4ea;
+        --color-muted: #866676;
+        --color-faint: #462636;
+        --color-foreground: #261a20;
+        --color-foreground-muted: #100a10;
     }
 
     &[data-mode="light"] {
-        --color-surface: #ffffff;
-        --color-base: #eacfe0;
-        --color-elevated: #f5e8f0;
-        --color-border: #e8d0d8;
-        --color-fg: #1a1014;
-        --color-muted: #6a4a5a;
-        --color-faint: #aa8a9a;
-        --color-foreground: #f5e8f2;
-        --color-foreground-muted: #ddd0d8;
+        --color-surface: #faf5f6;
+        --color-base: #e4d0d8;
+        --color-elevated: #f2e6ea;
+        --color-border: #d8c2cc;
+        --color-fg: #1c0c12;
+        --color-muted: #5e3846;
+        --color-faint: #a06e7c;
+        --color-foreground: #f2e8ec;
+        --color-foreground-muted: #dcd0d6;
     }
 }
 
+/* ── Cleric · Sky on Coral (sky-blue accent on warm peach surfaces — divine light at dawn) ── */
 [data-color-theme="cleric"] {
-    --color-accent: #ca8a04;
+    --color-accent: #84cc16;
+    --color-accent-secondary: #65a30d;
 
     &[data-mode="dark"] {
-        --color-surface: #1e1a10;
-        --color-base: #363121;
-        --color-elevated: #282418;
-        --color-border: #3a3420;
-        --color-fg: #f5f0d8;
-        --color-muted: #8a8050;
-        --color-faint: #4a4428;
-        --color-foreground: #2a2618;
-        --color-foreground-muted: #1a1810;
+        --color-surface: #1a1416;
+        --color-base: #2a1c20;
+        --color-elevated: #201618;
+        --color-border: #36262a;
+        --color-fg: #f0e6e8;
+        --color-muted: #866470;
+        --color-faint: #462a34;
+        --color-foreground: #22181c;
+        --color-foreground-muted: #100a0c;
     }
 
     &[data-mode="light"] {
-        --color-surface: #ffffff;
-        --color-base: #fdf5a0;
-        --color-elevated: #fef9c3;
-        --color-border: #fde68a;
-        --color-fg: #1a1708;
-        --color-muted: #5c5428;
-        --color-faint: #9a9060;
-        --color-foreground: #faf4e0;
-        --color-foreground-muted: #e8dcc0;
+        --color-surface: #faf5f3;
+        --color-base: #e2d0ca;
+        --color-elevated: #f0e4de;
+        --color-border: #d6c4bc;
+        --color-fg: #1a0e0a;
+        --color-muted: #5a3a34;
+        --color-faint: #9e7670;
+        --color-foreground: #f2e6e2;
+        --color-foreground-muted: #dcd0c8;
     }
 }
 
+/* ── Druid · Rose + Sage (pink accent on earthy green surfaces — the signature duo-tone clash) ── */
 [data-color-theme="druid"] {
     --color-accent: #f43f5e;
+    --color-accent-secondary: #be123c;
 
     &[data-mode="dark"] {
-        --color-surface: #181e18;
-        --color-base: #2a352a;
-        --color-elevated: #202820;
-        --color-border: #2e3a2e;
-        --color-fg: #e8f5e8;
-        --color-muted: #7a9a7a;
-        --color-faint: #3a5a3a;
-        --color-foreground: #1a2a1a;
-        --color-foreground-muted: #101a10;
+        --color-surface: #111611;
+        --color-base: #242a24;
+        --color-elevated: #181e18;
+        --color-border: #2c342c;
+        --color-fg: #e4eee2;
+        --color-muted: #587a52;
+        --color-faint: #264426;
+        --color-foreground: #1e221e;
+        --color-foreground-muted: #0a100a;
     }
 
     &[data-mode="light"] {
-        --color-surface: #ffffff;
-        --color-base: #cfeacf;
-        --color-elevated: #f0f8f0;
-        --color-border: #c8e5c8;
-        --color-fg: #141a14;
-        --color-muted: #4a6a4a;
-        --color-faint: #8aaa8a;
-        --color-foreground: #e8f5e8;
-        --color-foreground-muted: #c8e0c8;
+        --color-surface: #f5f8f3;
+        --color-base: #d0decc;
+        --color-elevated: #e4f0e2;
+        --color-border: #c4d4c0;
+        --color-fg: #0e140c;
+        --color-muted: #3c5834;
+        --color-faint: #7a9470;
+        --color-foreground: #e8f2e6;
+        --color-foreground-muted: #d0dcc8;
     }
 }
 
+/* ── Fighter · Forged Bronze ── */
 [data-color-theme="fighter"] {
-    --color-accent: #64748b;
+    --color-accent: #d97706;
+    --color-accent-secondary: #92400e;
 
     &[data-mode="dark"] {
-        --color-surface: #1a1a1e;
-        --color-base: #2d2d34;
-        --color-elevated: #222228;
-        --color-border: #34343a;
-        --color-fg: #e8e8f0;
-        --color-muted: #7a7a8a;
-        --color-faint: #3a3a4a;
-        --color-foreground: #222228;
-        --color-foreground-muted: #141418;
+        --color-surface: #17110b;
+        --color-base: #2a2016;
+        --color-elevated: #1e1610;
+        --color-border: #342a1e;
+        --color-fg: #eee6d8;
+        --color-muted: #82704a;
+        --color-faint: #443624;
+        --color-foreground: #221a12;
+        --color-foreground-muted: #0e0a08;
     }
 
     &[data-mode="light"] {
-        --color-surface: #ffffff;
-        --color-base: #d2d2e2;
-        --color-elevated: #e8e8f0;
-        --color-border: #c8c8d8;
-        --color-fg: #14141c;
-        --color-muted: #4a4a5a;
-        --color-faint: #9a9aaa;
-        --color-foreground: #eeeef2;
-        --color-foreground-muted: #d8d8e0;
+        --color-surface: #faf6ef;
+        --color-base: #ded0bc;
+        --color-elevated: #eee4d2;
+        --color-border: #d4c4ae;
+        --color-fg: #1a1008;
+        --color-muted: #564228;
+        --color-faint: #9c845e;
+        --color-foreground: #f0e6d4;
+        --color-foreground-muted: #dcd0be;
     }
 }
 
+/* ── Monk · Teal + Warm Stone (cool teal accent on warm sandstone — balance / harmony duo-tone) ── */
 [data-color-theme="monk"] {
     --color-accent: #14b8a6;
+    --color-accent-secondary: #0f766e;
 
     &[data-mode="dark"] {
-        --color-surface: #161e1e;
-        --color-base: #283535;
-        --color-elevated: #1e2828;
-        --color-border: #2c3a3a;
-        --color-fg: #e0f0f0;
-        --color-muted: #6a9a9a;
-        --color-faint: #2a5a5a;
-        --color-foreground: #182828;
-        --color-foreground-muted: #101a1a;
+        --color-surface: #151412;
+        --color-base: #282420;
+        --color-elevated: #1c1a16;
+        --color-border: #322e28;
+        --color-fg: #e8eae2;
+        --color-muted: #60765c;
+        --color-faint: #2a3e28;
+        --color-foreground: #201e1a;
+        --color-foreground-muted: #0c0c08;
     }
 
     &[data-mode="light"] {
-        --color-surface: #ffffff;
-        --color-base: #c5ecec;
-        --color-elevated: #e0f5f5;
-        --color-border: #c0e0e0;
-        --color-fg: #0a1a1a;
-        --color-muted: #3a6a6a;
-        --color-faint: #7aaaaa;
-        --color-foreground: #e0f5f5;
-        --color-foreground-muted: #c0e0e0;
+        --color-surface: #f7f6f2;
+        --color-base: #dad8cc;
+        --color-elevated: #eceadf;
+        --color-border: #cfcdc0;
+        --color-fg: #14140c;
+        --color-muted: #4c543c;
+        --color-faint: #8c8c78;
+        --color-foreground: #eeecde;
+        --color-foreground-muted: #d6d4c4;
     }
 }
 
+/* ── Paladin · Holy Gold (bright gold accent on warm ivory — radiant oath / divine light duo-tone) ── */
 [data-color-theme="paladin"] {
-    --color-accent: #94a3b8;
+    --color-accent: #eab308;
+    --color-accent-secondary: #a16207;
 
     &[data-mode="dark"] {
-        --color-surface: #181c22;
-        --color-base: #29313e;
-        --color-elevated: #202630;
-        --color-border: #303a4a;
-        --color-fg: #eef2f8;
-        --color-muted: #7a8fa8;
-        --color-faint: #3a4a60;
-        --color-foreground: #222630;
-        --color-foreground-muted: #141820;
+        --color-surface: #161410;
+        --color-base: #2a2618;
+        --color-elevated: #1c1a14;
+        --color-border: #363020;
+        --color-fg: #f0e8d8;
+        --color-muted: #867246;
+        --color-faint: #464028;
+        --color-foreground: #222016;
+        --color-foreground-muted: #0e0c08;
     }
 
     &[data-mode="light"] {
-        --color-surface: #ffffff;
-        --color-base: #d5dfee;
-        --color-elevated: #eef2f8;
-        --color-border: #d0dae8;
-        --color-fg: #0d1520;
-        --color-muted: #4a6080;
-        --color-faint: #94a3b8;
-        --color-foreground: #eef2f8;
-        --color-foreground-muted: #d8dce8;
+        --color-surface: #faf8ef;
+        --color-base: #e0d8b2;
+        --color-elevated: #f0e8c8;
+        --color-border: #d4cca4;
+        --color-fg: #1a1208;
+        --color-muted: #564826;
+        --color-faint: #9c8c5a;
+        --color-foreground: #f2eacc;
+        --color-foreground-muted: #ded4b8;
     }
 }
 
+/* ── Ranger · Emerald Earth ── */
 [data-color-theme="ranger"] {
-    --color-accent: #15803d;
+    --color-accent: #16a34a;
+    --color-accent-secondary: #15803d;
 
     &[data-mode="dark"] {
-        --color-surface: #161e14;
-        --color-base: #283623;
-        --color-elevated: #1e281a;
-        --color-border: #2a3828;
-        --color-fg: #dff0dc;
-        --color-muted: #5e8a5a;
-        --color-faint: #284825;
-        --color-foreground: #182a18;
-        --color-foreground-muted: #101a10;
+        --color-surface: #111710;
+        --color-base: #242820;
+        --color-elevated: #181e14;
+        --color-border: #2e3228;
+        --color-fg: #e2eee0;
+        --color-muted: #547a48;
+        --color-faint: #244222;
+        --color-foreground: #1c2218;
+        --color-foreground-muted: #0a0e08;
     }
 
     &[data-mode="light"] {
-        --color-surface: #ffffff;
-        --color-base: #c5e3c2;
-        --color-elevated: #dceeda;
-        --color-border: #b0d4ac;
-        --color-fg: #0a1a09;
-        --color-muted: #386034;
-        --color-faint: #78a874;
-        --color-foreground: #e8f5e0;
-        --color-foreground-muted: #c8e0c0;
+        --color-surface: #f4f8f2;
+        --color-base: #ccdcc8;
+        --color-elevated: #e2f0de;
+        --color-border: #c0d0bc;
+        --color-fg: #0c140a;
+        --color-muted: #385832;
+        --color-faint: #74946c;
+        --color-foreground: #e6f2e2;
+        --color-foreground-muted: #cedcc8;
     }
 }
 
+/* ── Rogue · Indigo Night (gold standard — cool violet surfaces, everything from one hue family) ── */
 [data-color-theme="rogue"] {
     --color-accent: #6366f1;
+    --color-accent-secondary: #4f46e5;
 
     &[data-mode="dark"] {
-        --color-surface: #18181e;
-        --color-base: #2a2a35;
-        --color-elevated: #202028;
-        --color-border: #2e2e38;
-        --color-fg: #e8e8f5;
-        --color-muted: #6a6a9a;
-        --color-faint: #32324a;
-        --color-foreground: #1e1e28;
-        --color-foreground-muted: #12121a;
+        --color-surface: #16161e;
+        --color-base: #2a2a34;
+        --color-elevated: #1c1c26;
+        --color-border: #30303e;
+        --color-fg: #e8e8f4;
+        --color-muted: #686898;
+        --color-faint: #303048;
+        --color-foreground: #22222c;
+        --color-foreground-muted: #0e0e14;
     }
 
     &[data-mode="light"] {
-        --color-surface: #ffffff;
-        --color-base: #d4d4e4;
-        --color-elevated: #eaeaf2;
-        --color-border: #d0d0e0;
-        --color-fg: #0e0e1c;
-        --color-muted: #484870;
-        --color-faint: #9898b8;
-        --color-foreground: #eaeaf5;
+        --color-surface: #f6f6fa;
+        --color-base: #d2d2e2;
+        --color-elevated: #e6e6f2;
+        --color-border: #c8c8dc;
+        --color-fg: #0e0e18;
+        --color-muted: #484868;
+        --color-faint: #9090b0;
+        --color-foreground: #eaeaf4;
         --color-foreground-muted: #d0d0e0;
     }
 }
 
+/* ── Sorcerer · Crimson Shadow ── */
 [data-color-theme="sorcerer"] {
     --color-accent: #e11d48;
+    --color-accent-secondary: #be123c;
 
     &[data-mode="dark"] {
-        --color-surface: #1e1618;
-        --color-base: #35282d;
-        --color-elevated: #281e22;
-        --color-border: #3a2830;
-        --color-fg: #f8e8ec;
-        --color-muted: #905060;
-        --color-faint: #502030;
-        --color-foreground: #2a1418;
-        --color-foreground-muted: #1a0e12;
+        --color-surface: #171013;
+        --color-base: #2a1c22;
+        --color-elevated: #1e1418;
+        --color-border: #36242e;
+        --color-fg: #f0e4e8;
+        --color-muted: #865866;
+        --color-faint: #462836;
+        --color-foreground: #22161c;
+        --color-foreground-muted: #0e0a0c;
     }
 
     &[data-mode="light"] {
-        --color-surface: #ffffff;
-        --color-base: #f8c4cd;
-        --color-elevated: #fff0f4;
-        --color-border: #f8c8d0;
-        --color-fg: #1a080c;
-        --color-muted: #6c2030;
-        --color-faint: #b87080;
-        --color-foreground: #fce8ec;
-        --color-foreground-muted: #e8d0d8;
+        --color-surface: #faf4f6;
+        --color-base: #e8c8d0;
+        --color-elevated: #f2dee4;
+        --color-border: #dcbac4;
+        --color-fg: #1a0a0e;
+        --color-muted: #5e2c38;
+        --color-faint: #a46474;
+        --color-foreground: #f4e2e8;
+        --color-foreground-muted: #dcc8d0;
     }
 }
 
+/* ── Warlock · Arcane Violet ── */
 [data-color-theme="warlock"] {
-    --color-accent: #9333ea;
+    --color-accent: #a855f7;
+    --color-accent-secondary: #7e22ce;
 
     &[data-mode="dark"] {
-        --color-surface: #1c1620;
-        --color-base: #32273a;
-        --color-elevated: #261e2c;
-        --color-border: #382e40;
-        --color-fg: #f0e8f4;
-        --color-muted: #9070a0;
-        --color-faint: #503060;
-        --color-foreground: #241828;
-        --color-foreground-muted: #16101a;
+        --color-surface: #15111b;
+        --color-base: #28202e;
+        --color-elevated: #1c1622;
+        --color-border: #32283a;
+        --color-fg: #ece6f4;
+        --color-muted: #7e60a0;
+        --color-faint: #3e2860;
+        --color-foreground: #201826;
+        --color-foreground-muted: #0e0a14;
     }
 
     &[data-mode="light"] {
-        --color-surface: #ffffff;
-        --color-base: #e4d5ee;
-        --color-elevated: #f4eef8;
-        --color-border: #e0d4e8;
-        --color-fg: #1a101e;
-        --color-muted: #6a5080;
-        --color-faint: #b0a0c0;
-        --color-foreground: #f5e8f8;
-        --color-foreground-muted: #e0d0e8;
+        --color-surface: #f8f5fb;
+        --color-base: #dacee8;
+        --color-elevated: #ece2f4;
+        --color-border: #d2c4e0;
+        --color-fg: #160c1a;
+        --color-muted: #563670;
+        --color-faint: #9674b0;
+        --color-foreground: #eee4f6;
+        --color-foreground-muted: #d8cce4;
     }
 }
 
+/* ── Wizard · Arcane on Parchment (blue accent on warm amber surfaces — arcane fire on ancient tomes) ── */
 [data-color-theme="wizard"] {
     --color-accent: #3b82f6;
+    --color-accent-secondary: #1d4ed8;
 
     &[data-mode="dark"] {
-        --color-surface: #161a22;
-        --color-base: #272f3c;
-        --color-elevated: #1e242e;
-        --color-border: #2c3444;
-        --color-fg: #e0e8f5;
-        --color-muted: #7080a0;
-        --color-faint: #304060;
-        --color-foreground: #181e2a;
-        --color-foreground-muted: #101420;
+        --color-surface: #18130e;
+        --color-base: #2c2014;
+        --color-elevated: #201810;
+        --color-border: #382c1e;
+        --color-fg: #f2e6d4;
+        --color-muted: #887048;
+        --color-faint: #483824;
+        --color-foreground: #221a12;
+        --color-foreground-muted: #0c0a06;
     }
 
     &[data-mode="light"] {
-        --color-surface: #ffffff;
-        --color-base: #cfd7ea;
-        --color-elevated: #e8ecf5;
-        --color-border: #c8d0e0;
-        --color-fg: #101420;
-        --color-muted: #506080;
-        --color-faint: #90a0c0;
-        --color-foreground: #e8ecfa;
-        --color-foreground-muted: #d0d8e8;
+        --color-surface: #faf6ee;
+        --color-base: #dcd0b8;
+        --color-elevated: #f0e6d0;
+        --color-border: #d4c4a8;
+        --color-fg: #1a1006;
+        --color-muted: #584426;
+        --color-faint: #9c885c;
+        --color-foreground: #f0e8d8;
+        --color-foreground-muted: #dcd4c0;
     }
 }
 
@@ -430,6 +462,7 @@
     /* Theme color tokens — values come from data-color-theme selectors above */
     --color-accent: var(--color-accent);
     --color-accent-muted: color-mix(in srgb, var(--color-accent) 55%, var(--color-muted));
+    --color-accent-secondary: var(--color-accent-secondary);
     --color-accent-foreground: color-mix(in srgb, var(--color-accent) 70%, var(--color-foreground));
     --color-danger: #ef4444;
     --color-warning: #f59e0b;
@@ -472,7 +505,7 @@
         inset 0 2px 3px 0 rgba(0, 0, 0, 0.15),
         inset 0 1px 1px 0 rgba(255, 255, 255, 0.04);
     --clay-shadow-floating:
-        0 7px 0 0 color-mix(in srgb, var(--color-surface) 60%, black),
+        0 2px 0 0 color-mix(in srgb, var(--color-surface) 60%, black),
         inset 0 2px 3px 0 rgba(0, 0, 0, 0.15),
         inset 0 1px 1px 0 rgba(255, 255, 255, 0.04);
     --clay-shadow-flat:
@@ -501,7 +534,7 @@
         0 5px 12px -2px rgba(0, 0, 0, 0.16),
         0 -6px 14px -4px rgba(0, 0, 0, 0.18);
     --clay-shadow-floating:
-        0 7px 0 0 color-mix(in srgb, var(--color-surface) 60%, black),
+        0 2px 0 0 color-mix(in srgb, var(--color-surface) 60%, black),
         0 8px 16px -4px rgba(0, 0, 0, 0.2),
         0 -9px 18px -6px rgba(0, 0, 0, 0.20);
     --clay-shadow-sidebar: 4px 0 16px -4px rgba(0, 0, 0, 0.2);
@@ -568,6 +601,7 @@
 
 @layer components {
     .skeleton {
+        opacity: 0;
         background: linear-gradient(
             90deg,
             var(--color-elevated) 25%,
@@ -575,7 +609,9 @@
             var(--color-elevated) 75%
         );
         background-size: 400px 100%;
-        animation: shimmer 1.4s infinite linear;
+        animation:
+            skeleton-appear 0s 0.2s forwards,
+            shimmer 1.4s 0.2s infinite linear;
         border-radius: 4px;
     }
 
@@ -585,36 +621,159 @@
            disabled:cursor-not-allowed min-h-11 md:min-h-0;
         border-radius: var(--clay-radius-lg);
         color: var(--color-fg);
-        background: linear-gradient(
-            180deg,
-            color-mix(in srgb, var(--color-accent) 75%, white) 0%,
-            var(--color-accent) 100%
-        );
+        background: color-mix(in srgb, var(--color-accent) 95%, white);
         box-shadow:
-            0 3px 0 0
-                color-mix(in srgb, var(--color-accent) 100%, black 35%),
-            0 4px 8px -2px rgba(0, 0, 0, 0.3),
-            inset 0 1px 1px 0 rgba(255, 255, 255, 0.08);
+            0 2px 0 0 color-mix(in srgb, var(--color-accent) 100%, black 35%),
+            inset 0 2px 3px 0 rgba(0, 0, 0, 0.15),
+            inset 0 1px 1px 0 rgba(255, 255, 255, 0.04);
     }
     .btn-primary:hover {
         transform: var(--btn-transform-hover);
+        background: color-mix(in srgb, var(--color-accent) 88%, white);
+        box-shadow:
+            0 4px 0 0 color-mix(in srgb, var(--color-accent) 100%, black 35%),
+            inset 0 2px 3px 0 rgba(0, 0, 0, 0.15),
+            inset 0 1px 1px 0 rgba(255, 255, 255, 0.04);
+    }
+    .btn-primary:active {
+        transform: var(--btn-transform-active-md);
+        scale: var(--btn-scale-active);
+        background: var(--color-accent);
+        box-shadow:
+            0 1px 0 0 color-mix(in srgb, var(--color-accent) 100%, black 20%),
+            inset 0 2px 3px 0 rgba(0, 0, 0, 0.15);
+    }
+    .btn-primary.pressed {
+        transform: var(--btn-transform-active-md);
+        scale: var(--btn-scale-active);
+        background: color-mix(in srgb, var(--color-accent) 75%, black);
+        box-shadow: inset 0 2px 3px 0 rgba(0, 0, 0, 0.2);
+    }
+
+    /* Light mode: solid bottom shadow for visible depth on light backgrounds */
+    [data-mode="light"] .btn-primary {
+        background: color-mix(in srgb, var(--color-accent) 85%, white);
+        box-shadow:
+            0 2px 0 0 color-mix(in srgb, var(--color-accent) 100%, black 25%),
+            0 2px 4px rgba(0, 0, 0, 0.08),
+            0 0 0 1px rgba(0, 0, 0, 0.04);
+    }
+    [data-mode="light"] .btn-primary:hover {
+        background: color-mix(in srgb, var(--color-accent) 75%, white);
+        box-shadow:
+            0 3px 0 0 color-mix(in srgb, var(--color-accent) 100%, black 25%),
+            0 3px 6px rgba(0, 0, 0, 0.1),
+            0 0 0 1px rgba(0, 0, 0, 0.06);
+    }
+    [data-mode="light"] .btn-primary:active {
+        background: var(--color-accent);
+        box-shadow:
+            0 1px 0 0 color-mix(in srgb, var(--color-accent) 100%, black 15%),
+            inset 0 2px 3px 0 rgba(0, 0, 0, 0.08);
+    }
+    [data-mode="light"] .btn-primary.pressed {
+        background: color-mix(in srgb, var(--color-accent) 80%, black);
+        box-shadow: inset 0 2px 3px 0 rgba(0, 0, 0, 0.15);
+    }
+
+    .btn-primary-secondary {
+        @apply font-body text-sm px-4 py-2.5 md:py-2
+           transition-all duration-150 cursor-pointer disabled:opacity-40
+           disabled:cursor-not-allowed min-h-11 md:min-h-0;
+        border-radius: var(--clay-radius-lg);
+        color: var(--color-fg);
+        background: color-mix(in srgb, var(--color-accent-secondary) 95%, white);
+        box-shadow:
+            0 2px 0 0 color-mix(in srgb, var(--color-accent-secondary) 100%, black 35%),
+            inset 0 2px 3px 0 rgba(0, 0, 0, 0.15),
+            inset 0 1px 1px 0 rgba(255, 255, 255, 0.04);
+    }
+    .btn-primary-secondary:hover {
+        transform: var(--btn-transform-hover);
+        background: color-mix(in srgb, var(--color-accent-secondary) 88%, white);
+        box-shadow:
+            0 4px 0 0 color-mix(in srgb, var(--color-accent-secondary) 100%, black 35%),
+            inset 0 2px 3px 0 rgba(0, 0, 0, 0.15),
+            inset 0 1px 1px 0 rgba(255, 255, 255, 0.04);
+    }
+    .btn-primary-secondary:active {
+        transform: var(--btn-transform-active-md);
+        scale: var(--btn-scale-active);
+        background: var(--color-accent-secondary);
+        box-shadow:
+            0 1px 0 0 color-mix(in srgb, var(--color-accent-secondary) 100%, black 20%),
+            inset 0 2px 3px 0 rgba(0, 0, 0, 0.15);
+    }
+    .btn-primary-secondary.pressed {
+        transform: var(--btn-transform-active-md);
+        scale: var(--btn-scale-active);
+        background: color-mix(in srgb, var(--color-accent-secondary) 75%, black);
+        box-shadow: inset 0 2px 3px 0 rgba(0, 0, 0, 0.2);
+    }
+
+    [data-mode="light"] .btn-primary-secondary {
+        background: color-mix(in srgb, var(--color-accent-secondary) 85%, white);
+        box-shadow:
+            0 2px 0 0 color-mix(in srgb, var(--color-accent-secondary) 100%, black 25%),
+            0 2px 4px rgba(0, 0, 0, 0.08),
+            0 0 0 1px rgba(0, 0, 0, 0.04);
+    }
+    [data-mode="light"] .btn-primary-secondary:hover {
+        background: color-mix(in srgb, var(--color-accent-secondary) 75%, white);
+        box-shadow:
+            0 3px 0 0 color-mix(in srgb, var(--color-accent-secondary) 100%, black 25%),
+            0 3px 6px rgba(0, 0, 0, 0.1),
+            0 0 0 1px rgba(0, 0, 0, 0.06);
+    }
+    [data-mode="light"] .btn-primary-secondary:active {
+        background: var(--color-accent-secondary);
+        box-shadow:
+            0 1px 0 0 color-mix(in srgb, var(--color-accent-secondary) 100%, black 15%),
+            inset 0 2px 3px 0 rgba(0, 0, 0, 0.08);
+    }
+    [data-mode="light"] .btn-primary-secondary.pressed {
+        background: color-mix(in srgb, var(--color-accent-secondary) 80%, black);
+        box-shadow: inset 0 2px 3px 0 rgba(0, 0, 0, 0.15);
+    }
+
+    .btn-primary-surface {
+        @apply font-body text-sm px-4 py-2.5 md:py-2
+           transition-all duration-150 cursor-pointer disabled:opacity-40
+           disabled:cursor-not-allowed min-h-11 md:min-h-0;
+        border-radius: var(--clay-radius-lg);
+        color: var(--color-fg);
         background: linear-gradient(
             180deg,
-            color-mix(in srgb, var(--color-accent) 65%, white) 0%,
-            var(--color-accent) 100%
+            color-mix(in srgb, var(--color-surface) 85%, white) 0%,
+            var(--color-surface) 100%
+        );
+        box-shadow:
+            0 3px 0 0
+                color-mix(in srgb, var(--color-surface) 60%, black),
+            0 4px 8px -2px rgba(0, 0, 0, 0.3),
+            inset 0 1px 1px 0 rgba(255, 255, 255, 0.08);
+    }
+    .btn-primary-surface:hover {
+        transform: var(--btn-transform-hover);
+        background: linear-gradient(
+            180deg,
+            color-mix(in srgb, var(--color-surface) 70%, white) 0%,
+            var(--color-surface) 100%
         );
         box-shadow:
             0 4px 0 0
-                color-mix(in srgb, var(--color-accent) 100%, black 35%),
+                color-mix(in srgb, var(--color-surface) 60%, black),
             0 6px 12px -2px rgba(0, 0, 0, 0.35),
             inset 0 1px 1px 0 rgba(255, 255, 255, 0.08);
     }
-    .btn-primary:active {
+    .btn-primary-surface:active {
         transform: var(--btn-transform-active);
         scale: var(--btn-scale-active);
-        box-shadow: var(--clay-shadow-flat);
+        box-shadow:
+            0 1px 0 0 color-mix(in srgb, var(--color-surface) 60%, black),
+            inset 0 2px 3px 0 rgba(0, 0, 0, 0.15);
     }
-    .btn-primary.pressed {
+    .btn-primary-surface.pressed {
         transform: var(--btn-transform-active);
         scale: var(--btn-scale-active);
         box-shadow: inset 0 2px 4px 0 rgba(0, 0, 0, 0.25);
@@ -628,21 +787,31 @@
         color: var(--color-fg);
     }
 
-    /* Dark mode: lighten surface with white mix */
+    /* Dark mode: inherit uses 3px/5px bottom shadow (vs primary's 2px/4px)
+       to compensate for surface-colored shadows being less visually
+       prominent than accent-colored shadows on dark backgrounds. */
     .btn-inherit {
         background: color-mix(in srgb, var(--btn-surface) 95%, white);
-        box-shadow: var(--clay-shadow-resting);
+        box-shadow:
+            0 3px 0 0 color-mix(in srgb, var(--btn-surface) 100%, black 35%),
+            inset 0 2px 3px 0 rgba(0, 0, 0, 0.15),
+            inset 0 1px 1px 0 rgba(255, 255, 255, 0.04);
     }
     .btn-inherit:hover {
         transform: var(--btn-transform-hover);
         background: color-mix(in srgb, var(--btn-surface) 88%, white);
-        box-shadow: var(--clay-shadow-raised);
+        box-shadow:
+            0 5px 0 0 color-mix(in srgb, var(--btn-surface) 100%, black 35%),
+            inset 0 2px 3px 0 rgba(0, 0, 0, 0.15),
+            inset 0 1px 1px 0 rgba(255, 255, 255, 0.04);
     }
     .btn-inherit:active {
         transform: var(--btn-transform-active-md);
         scale: var(--btn-scale-active);
         background: var(--btn-surface);
-        box-shadow: var(--clay-shadow-flat);
+        box-shadow:
+            0 1px 0 0 color-mix(in srgb, var(--btn-surface) 100%, black 20%),
+            inset 0 2px 3px 0 rgba(0, 0, 0, 0.15);
     }
     .btn-inherit.pressed {
         transform: var(--btn-transform-active-md);
@@ -652,27 +821,30 @@
         color: var(--color-accent);
     }
 
-    /* Light mode: distinguish via shadow + border */
-    .light .btn-inherit {
+    /* Light mode: solid bottom shadow for visible depth on light backgrounds */
+    [data-mode="light"] .btn-inherit {
         background: var(--btn-surface);
-        border: 1px solid color-mix(in srgb, var(--btn-surface) 80%, white);
         box-shadow:
-            0 3px 6px -2px rgba(0, 0, 0, 0.12),
-            0 -4px 8px -4px rgba(0, 0, 0, 0.15);
+            0 2px 0 0 color-mix(in srgb, var(--btn-surface) 80%, black),
+            0 2px 4px rgba(0, 0, 0, 0.08),
+            0 0 0 1px rgba(0, 0, 0, 0.04);
     }
-    .light .btn-inherit:hover {
-        border-color: color-mix(in srgb, var(--btn-surface) 70%, white);
+    [data-mode="light"] .btn-inherit:hover {
+        background: color-mix(in srgb, var(--btn-surface) 92%, white);
         box-shadow:
-            0 4px 8px -2px rgba(0, 0, 0, 0.14),
-            0 -5px 10px -4px rgba(0, 0, 0, 0.18);
+            0 3px 0 0 color-mix(in srgb, var(--btn-surface) 80%, black),
+            0 3px 6px rgba(0, 0, 0, 0.1),
+            0 0 0 1px rgba(0, 0, 0, 0.06);
     }
-    .light .btn-inherit:active {
-        border-color: transparent;
-        box-shadow: var(--clay-shadow-flat);
+    [data-mode="light"] .btn-inherit:active {
+        background: color-mix(in srgb, var(--btn-surface) 95%, black);
+        box-shadow:
+            0 1px 0 0 color-mix(in srgb, var(--btn-surface) 100%, black 15%),
+            inset 0 2px 3px 0 rgba(0, 0, 0, 0.08);
     }
-    .light .btn-inherit.pressed {
-        border-color: transparent;
-        box-shadow: inset 0 2px 3px 0 rgba(0, 0, 0, 0.2);
+    [data-mode="light"] .btn-inherit.pressed {
+        background: color-mix(in srgb, var(--btn-surface) 90%, black);
+        box-shadow: inset 0 2px 3px 0 rgba(0, 0, 0, 0.15);
         color: var(--color-accent);
     }
 
@@ -682,81 +854,118 @@
            disabled:cursor-not-allowed min-h-11 md:min-h-0;
         border-radius: var(--clay-radius-lg);
         color: #fff;
-           background: linear-gradient(
-            180deg,
-            color-mix(in srgb, var(--color-danger) 75%, white) 0%,
-            var(--color-danger) 100%
-        );
+        background: color-mix(in srgb, var(--color-danger) 95%, white);
         box-shadow:
-            0 3px 0 0 color-mix(in srgb, var(--color-danger) 50%, black),
-            0 4px 8px -2px rgba(0, 0, 0, 0.3),
-            inset 0 1px 1px 0 rgba(255, 255, 255, 0.08);
+            0 2px 0 0 color-mix(in srgb, var(--color-danger) 100%, black 35%),
+            inset 0 2px 3px 0 rgba(0, 0, 0, 0.15),
+            inset 0 1px 1px 0 rgba(255, 255, 255, 0.04);
     }
     .btn-danger:hover {
         transform: var(--btn-transform-hover);
+        background: color-mix(in srgb, var(--color-danger) 88%, white);
         box-shadow:
-            0 4px 0 0 color-mix(in srgb, var(--color-danger) 50%, black),
-            0 6px 12px -2px rgba(0, 0, 0, 0.35),
-            inset 0 1px 1px 0 rgba(255, 255, 255, 0.08);
-        background: linear-gradient(
-            180deg,
-            color-mix(in srgb, var(--color-danger) 65%, white) 0%,
-            var(--color-danger) 100%
-        );
+            0 4px 0 0 color-mix(in srgb, var(--color-danger) 100%, black 35%),
+            inset 0 2px 3px 0 rgba(0, 0, 0, 0.15),
+            inset 0 1px 1px 0 rgba(255, 255, 255, 0.04);
     }
     .btn-danger:active {
-        transform: var(--btn-transform-active);
+        transform: var(--btn-transform-active-md);
         scale: var(--btn-scale-active);
-        box-shadow: var(--clay-shadow-flat);
+        background: var(--color-danger);
+        box-shadow:
+            0 1px 0 0 color-mix(in srgb, var(--color-danger) 100%, black 20%),
+            inset 0 2px 3px 0 rgba(0, 0, 0, 0.15);
     }
     .btn-danger.pressed {
-        transform: var(--btn-transform-active);
+        transform: var(--btn-transform-active-md);
         scale: var(--btn-scale-active);
-        box-shadow: inset 0 2px 4px 0 rgba(0, 0, 0, 0.25);
+        background: color-mix(in srgb, var(--color-danger) 75%, black);
+        box-shadow: inset 0 2px 3px 0 rgba(0, 0, 0, 0.2);
     }
+
     [data-mode="light"] .btn-danger {
-        color: #1a1a1a;
+        color: #fff;
+        background: var(--color-danger);
+        box-shadow:
+            0 2px 0 0 color-mix(in srgb, var(--color-danger) 80%, black),
+            0 2px 4px rgba(0, 0, 0, 0.08),
+            0 0 0 1px rgba(0, 0, 0, 0.04);
+    }
+    [data-mode="light"] .btn-danger:hover {
+        background: color-mix(in srgb, var(--color-danger) 92%, white);
+        box-shadow:
+            0 3px 0 0 color-mix(in srgb, var(--color-danger) 80%, black),
+            0 3px 6px rgba(0, 0, 0, 0.1),
+            0 0 0 1px rgba(0, 0, 0, 0.06);
+    }
+    [data-mode="light"] .btn-danger:active {
+        background: color-mix(in srgb, var(--color-danger) 95%, black);
+        box-shadow:
+            0 1px 0 0 color-mix(in srgb, var(--color-danger) 100%, black 15%),
+            inset 0 2px 3px 0 rgba(0, 0, 0, 0.08);
+    }
+    [data-mode="light"] .btn-danger.pressed {
+        background: color-mix(in srgb, var(--color-danger) 90%, black);
+        box-shadow: inset 0 2px 3px 0 rgba(0, 0, 0, 0.15);
     }
 
     .btn-discord {
         @apply font-body text-sm px-4 py-2.5 md:py-2 transition-all duration-150 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed min-h-11 md:min-h-0;
         border-radius: var(--clay-radius-lg);
         color: #fff;
-        background: linear-gradient(
-            180deg,
-            color-mix(in srgb, var(--color-discord) 75%, white) 0%,
-            var(--color-discord) 100%
-        );
+        background: color-mix(in srgb, var(--color-discord) 95%, white);
         box-shadow:
-            0 3px 0 0
-                color-mix(in srgb, var(--color-discord) 100%, black 35%),
-            0 4px 8px -2px rgba(0, 0, 0, 0.3),
-            inset 0 1px 1px 0 rgba(255, 255, 255, 0.08);
+            0 2px 0 0 color-mix(in srgb, var(--color-discord) 100%, black 35%),
+            inset 0 2px 3px 0 rgba(0, 0, 0, 0.15),
+            inset 0 1px 1px 0 rgba(255, 255, 255, 0.04);
     }
-
     .btn-discord:hover {
         transform: var(--btn-transform-hover);
-        background: linear-gradient(
-            180deg,
-            color-mix(in srgb, var(--color-discord) 65%, white) 0%,
-            var(--color-discord) 100%
-        );
+        background: color-mix(in srgb, var(--color-discord) 88%, white);
         box-shadow:
-            0 4px 0 0
-                color-mix(in srgb, var(--color-discord) 100%, black 35%),
-            0 6px 12px -2px rgba(0, 0, 0, 0.35),
-            inset 0 1px 1px 0 rgba(255, 255, 255, 0.08);
+            0 4px 0 0 color-mix(in srgb, var(--color-discord) 100%, black 35%),
+            inset 0 2px 3px 0 rgba(0, 0, 0, 0.15),
+            inset 0 1px 1px 0 rgba(255, 255, 255, 0.04);
     }
-
     .btn-discord:active {
-        transform: var(--btn-transform-active);
+        transform: var(--btn-transform-active-md);
         scale: var(--btn-scale-active);
-        box-shadow: var(--clay-shadow-flat);
+        background: var(--color-discord);
+        box-shadow:
+            0 1px 0 0 color-mix(in srgb, var(--color-discord) 100%, black 20%),
+            inset 0 2px 3px 0 rgba(0, 0, 0, 0.15);
     }
     .btn-discord.pressed {
-        transform: var(--btn-transform-active);
+        transform: var(--btn-transform-active-md);
         scale: var(--btn-scale-active);
-        box-shadow: inset 0 2px 4px 0 rgba(0, 0, 0, 0.25);
+        background: color-mix(in srgb, var(--color-discord) 75%, black);
+        box-shadow: inset 0 2px 3px 0 rgba(0, 0, 0, 0.2);
+    }
+
+    /* Light mode: solid bottom shadow for visible depth on light backgrounds */
+    [data-mode="light"] .btn-discord {
+        background: color-mix(in srgb, var(--color-discord) 85%, white);
+        box-shadow:
+            0 2px 0 0 color-mix(in srgb, var(--color-discord) 100%, black 25%),
+            0 2px 4px rgba(0, 0, 0, 0.08),
+            0 0 0 1px rgba(0, 0, 0, 0.04);
+    }
+    [data-mode="light"] .btn-discord:hover {
+        background: color-mix(in srgb, var(--color-discord) 75%, white);
+        box-shadow:
+            0 3px 0 0 color-mix(in srgb, var(--color-discord) 100%, black 25%),
+            0 3px 6px rgba(0, 0, 0, 0.1),
+            0 0 0 1px rgba(0, 0, 0, 0.06);
+    }
+    [data-mode="light"] .btn-discord:active {
+        background: var(--color-discord);
+        box-shadow:
+            0 1px 0 0 color-mix(in srgb, var(--color-discord) 100%, black 15%),
+            inset 0 2px 3px 0 rgba(0, 0, 0, 0.08);
+    }
+    [data-mode="light"] .btn-discord.pressed {
+        background: color-mix(in srgb, var(--color-discord) 80%, black);
+        box-shadow: inset 0 2px 3px 0 rgba(0, 0, 0, 0.15);
     }
     .input {
         @apply text-fg font-mono text-sm px-3 py-3 md:py-2 outline-none focus:border-accent/60 transition-all duration-200 placeholder:text-faint w-full;
@@ -766,7 +975,7 @@
             var(--color-elevated) 0%,
             color-mix(in srgb, var(--color-elevated) 90%, black) 100%
         );
-        border: 1px solid var(--color-border);
+        border: 1px solid transparent;
         box-shadow:
             var(--clay-shadow-flat),
             inset 0 1px 0 0 rgba(255, 255, 255, 0.06);
@@ -795,15 +1004,120 @@
         border-bottom: 3px solid
             color-mix(in srgb, var(--color-surface) 70%, black);
     }
-    .modal-clay {
-        border-radius: var(--clay-radius-lg);
-        box-shadow:
-            0 5px 0 0 color-mix(in srgb, var(--color-foreground) 60%, black),
-            0 13px 30px -6px rgba(0, 0, 0, 0.4);
-        background: var(--color-foreground);
-    }
 
     .btn-icon-primary {
+        @apply w-11 h-11 md:w-10 md:h-10 flex items-center justify-center
+           transition-all duration-150 cursor-pointer disabled:opacity-40
+           disabled:cursor-not-allowed;
+        border-radius: var(--clay-radius-md);
+        color: var(--color-fg);
+        background: color-mix(in srgb, var(--color-accent) 92%, white);
+        box-shadow:
+            0 1px 0 0 color-mix(in srgb, var(--color-accent) 100%, black 35%),
+            0 2px 4px -1px rgba(0, 0, 0, 0.2),
+            inset 0 1px 1px 0 rgba(0, 0, 0, 0.15),
+            inset 0 1px 1px 0 rgba(255, 255, 255, 0.04);
+    }
+    .btn-icon-primary:hover {
+        transform: var(--btn-transform-hover);
+        background: color-mix(in srgb, var(--color-accent) 88%, white);
+        box-shadow:
+            0 2px 0 0 color-mix(in srgb, var(--color-accent) 100%, black 35%),
+            0 3px 6px -1px rgba(0, 0, 0, 0.25),
+            inset 0 1px 1px 0 rgba(255, 255, 255, 0.04);
+    }
+    .btn-icon-primary:active {
+        transform: var(--btn-transform-active-sm);
+        scale: var(--btn-scale-active);
+        background: var(--color-accent);
+        box-shadow: inset 0 2px 3px 0 rgba(0, 0, 0, 0.2);
+    }
+    .btn-icon-primary.pressed {
+        transform: var(--btn-transform-active-sm);
+        background: color-mix(in srgb, var(--color-accent) 80%, black);
+        box-shadow: inset 0 2px 3px 0 rgba(0, 0, 0, 0.2);
+    }
+
+    [data-mode="light"] .btn-icon-primary {
+        background: color-mix(in srgb, var(--color-accent) 85%, white);
+        box-shadow:
+            0 1px 0 0 color-mix(in srgb, var(--color-accent) 100%, black 25%),
+            0 1px 3px rgba(0, 0, 0, 0.08),
+            0 0 0 1px rgba(0, 0, 0, 0.04);
+    }
+    [data-mode="light"] .btn-icon-primary:hover {
+        background: color-mix(in srgb, var(--color-accent) 75%, white);
+        box-shadow:
+            0 2px 0 0 color-mix(in srgb, var(--color-accent) 100%, black 25%),
+            0 2px 4px rgba(0, 0, 0, 0.1),
+            0 0 0 1px rgba(0, 0, 0, 0.06);
+    }
+    [data-mode="light"] .btn-icon-primary:active {
+        background: var(--color-accent);
+        box-shadow: inset 0 2px 3px 0 rgba(0, 0, 0, 0.1);
+    }
+    [data-mode="light"] .btn-icon-primary.pressed {
+        background: color-mix(in srgb, var(--color-accent) 80%, black);
+        box-shadow: inset 0 2px 3px 0 rgba(0, 0, 0, 0.15);
+    }
+
+    .btn-icon-primary-secondary {
+        @apply w-11 h-11 md:w-10 md:h-10 flex items-center justify-center
+           transition-all duration-150 cursor-pointer disabled:opacity-40
+           disabled:cursor-not-allowed;
+        border-radius: var(--clay-radius-md);
+        color: var(--color-fg);
+        background: color-mix(in srgb, var(--color-accent-secondary) 92%, white);
+        box-shadow:
+            0 1px 0 0 color-mix(in srgb, var(--color-accent-secondary) 100%, black 35%),
+            0 2px 4px -1px rgba(0, 0, 0, 0.2),
+            inset 0 1px 1px 0 rgba(0, 0, 0, 0.15),
+            inset 0 1px 1px 0 rgba(255, 255, 255, 0.04);
+    }
+    .btn-icon-primary-secondary:hover {
+        transform: var(--btn-transform-hover);
+        background: color-mix(in srgb, var(--color-accent-secondary) 88%, white);
+        box-shadow:
+            0 2px 0 0 color-mix(in srgb, var(--color-accent-secondary) 100%, black 35%),
+            0 3px 6px -1px rgba(0, 0, 0, 0.25),
+            inset 0 1px 1px 0 rgba(255, 255, 255, 0.04);
+    }
+    .btn-icon-primary-secondary:active {
+        transform: var(--btn-transform-active-sm);
+        scale: var(--btn-scale-active);
+        background: var(--color-accent-secondary);
+        box-shadow: inset 0 2px 3px 0 rgba(0, 0, 0, 0.2);
+    }
+    .btn-icon-primary-secondary.pressed {
+        transform: var(--btn-transform-active-sm);
+        background: color-mix(in srgb, var(--color-accent-secondary) 80%, black);
+        box-shadow: inset 0 2px 3px 0 rgba(0, 0, 0, 0.2);
+    }
+
+    [data-mode="light"] .btn-icon-primary-secondary {
+        background: color-mix(in srgb, var(--color-accent-secondary) 85%, white);
+        box-shadow:
+            0 1px 0 0 color-mix(in srgb, var(--color-accent-secondary) 100%, black 25%),
+            0 1px 3px rgba(0, 0, 0, 0.08),
+            0 0 0 1px rgba(0, 0, 0, 0.04);
+    }
+    [data-mode="light"] .btn-icon-primary-secondary:hover {
+        background: color-mix(in srgb, var(--color-accent-secondary) 75%, white);
+        box-shadow:
+            0 2px 0 0 color-mix(in srgb, var(--color-accent-secondary) 100%, black 25%),
+            0 2px 4px rgba(0, 0, 0, 0.1),
+            0 0 0 1px rgba(0, 0, 0, 0.06);
+    }
+    [data-mode="light"] .btn-icon-primary-secondary:active {
+        background: var(--color-accent-secondary);
+        box-shadow: inset 0 2px 3px 0 rgba(0, 0, 0, 0.1);
+    }
+    [data-mode="light"] .btn-icon-primary-secondary.pressed {
+        background: color-mix(in srgb, var(--color-accent-secondary) 80%, black);
+        box-shadow: inset 0 2px 3px 0 rgba(0, 0, 0, 0.15);
+    }
+
+    .btn-icon-primary-surface {
         @apply w-11 h-11 md:w-10 md:h-10 flex items-center justify-center
            transition-all duration-150 cursor-pointer disabled:opacity-40
            disabled:cursor-not-allowed;
@@ -817,14 +1131,14 @@
             0 1px 0 0 var(--icon-btn-shadow),
             0 2px 4px -1px rgba(0, 0, 0, 0.2),
             inset 0 1px 1px 0 rgba(255, 255, 255, 0.08);
-        --icon-btn-accent: var(--color-accent);
+        --icon-btn-accent: var(--color-surface);
         --icon-btn-shadow: color-mix(
             in srgb,
-            var(--color-accent) 100%,
+            var(--color-surface) 100%,
             black 35%
         );
     }
-    .btn-icon-primary:hover {
+    .btn-icon-primary-surface:hover {
         transform: var(--btn-transform-hover);
         background: linear-gradient(
             180deg,
@@ -836,12 +1150,12 @@
             0 3px 6px -1px rgba(0, 0, 0, 0.25),
             inset 0 1px 1px 0 rgba(255, 255, 255, 0.08);
     }
-    .btn-icon-primary:active {
+    .btn-icon-primary-surface:active {
         transform: var(--btn-transform-active-sm);
         scale: var(--btn-scale-active);
         box-shadow: inset 0 2px 3px 0 rgba(0, 0, 0, 0.2);
     }
-    .btn-icon-primary.pressed {
+    .btn-icon-primary-surface.pressed {
         transform: var(--btn-transform-active-sm);
         background: linear-gradient(
             180deg,
@@ -892,25 +1206,25 @@
     /* Light mode: distinguish via shadow + border */
     [data-mode="light"] .btn-icon-inherit {
         background: var(--btn-surface);
-        border: 1px solid color-mix(in srgb, var(--btn-surface) 80%, white);
         box-shadow:
-            0 2px 4px -1px rgba(0, 0, 0, 0.2),
-            0 -3px 6px -2px rgba(0, 0, 0, 0.15);
+            0 1px 0 0 color-mix(in srgb, var(--btn-surface) 80%, black),
+            0 1px 3px rgba(0, 0, 0, 0.08),
+            0 0 0 1px rgba(0, 0, 0, 0.04);
     }
     [data-mode="light"] .btn-icon-inherit:hover {
-        border-color: color-mix(in srgb, var(--btn-surface) 70%, white);
+        background: color-mix(in srgb, var(--btn-surface) 92%, white);
         box-shadow:
-            0 3px 6px -1px rgba(0, 0, 0, 0.25),
-            0 -4px 8px -2px rgba(0, 0, 0, 0.18);
+            0 2px 0 0 color-mix(in srgb, var(--btn-surface) 80%, black),
+            0 2px 4px rgba(0, 0, 0, 0.1),
+            0 0 0 1px rgba(0, 0, 0, 0.06);
     }
     [data-mode="light"] .btn-icon-inherit:active {
-        border-color: transparent;
-        box-shadow: inset 0 2px 3px 0 rgba(0, 0, 0, 0.2);
+        background: color-mix(in srgb, var(--btn-surface) 95%, black);
+        box-shadow: inset 0 2px 3px 0 rgba(0, 0, 0, 0.1);
     }
     [data-mode="light"] .btn-icon-inherit.pressed {
-        background: color-mix(in srgb, var(--btn-surface) 85%, black);
-        border-color: transparent;
-        box-shadow: inset 0 2px 3px 0 rgba(0, 0, 0, 0.2);
+        background: color-mix(in srgb, var(--btn-surface) 90%, black);
+        box-shadow: inset 0 2px 3px 0 rgba(0, 0, 0, 0.15);
     }
 
     .btn-icon-danger {
@@ -977,6 +1291,57 @@
         var(--clay-shadow-flat),
         inset 0 1px 0 0 rgba(255, 255, 255, 0.06);
 }
+@utility glass-panel {
+  background:
+    linear-gradient(
+      135deg,
+      rgba(255, 255, 255, 0.04) 0%,
+      rgba(255, 255, 255, 0.015) 40%,
+      rgba(255, 255, 255, 0.00) 100%
+    ),
+    color-mix(in srgb, var(--color-base) 86%, transparent);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+}
+[data-mode="light"] .glass-panel {
+  background:
+    linear-gradient(
+      135deg,
+      rgba(255, 255, 255, 0.06) 0%,
+      rgba(255, 255, 255, 0.025) 50%,
+      rgba(255, 255, 255, 0.00) 100%
+    ),
+    color-mix(in srgb, var(--color-base) 92%, transparent);
+}
+
+/* Glass popover — unified styling for dropdowns, context menus, etc. */
+@utility glass-popover {
+  @apply glass-panel rounded-2xl border border-accent/30 clay-floating overflow-hidden animate-fade-up;
+}
+
+/* Glass hover tooltip — for .group hover-revealed help text */
+/* Glass modal — heavy shadow suitable for centered dialogs */
+/* Glass toast notification — color is set by the component, glass provides blur + shadow */
+@utility glass-toast {
+  @apply rounded-2xl border;
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  box-shadow:
+    0 5px 0 0 color-mix(in srgb, var(--color-surface) 60%, black),
+    0 13px 30px -6px rgba(0, 0, 0, 0.4);
+}
+
+@utility glass-modal {
+  @apply glass-panel rounded-2xl border border-accent/30;
+  box-shadow:
+    0 5px 0 0 color-mix(in srgb, var(--color-surface) 60%, black),
+    0 13px 30px -6px rgba(0, 0, 0, 0.4);
+}
+
+@utility glass-tooltip {
+  @apply rounded-xl glass-panel border border-accent/30 clay-floating text-xs text-muted opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity z-10;
+}
+
 @utility clay-sidebar-edge {
     box-shadow: var(--clay-shadow-sidebar);
 }
@@ -1035,6 +1400,43 @@
     background: var(--color-surface);
     border: 2px solid var(--color-accent);
     cursor: pointer;
+}
+
+/* Range input — base: strips native appearance, custom thumb */
+.range-input {
+    appearance: none;
+    -webkit-appearance: none;
+    cursor: pointer;
+}
+.range-input::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: var(--color-accent);
+    border: 2px solid var(--color-surface);
+    cursor: pointer;
+}
+.range-input::-moz-range-thumb {
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: var(--color-accent);
+    border: 2px solid var(--color-surface);
+    cursor: pointer;
+}
+
+/* Horizontal range input — accent fill up to thumb, theme border for rest */
+.range-input-h {
+    height: 6px;
+    border-radius: 3px;
+    background: linear-gradient(
+        to right,
+        var(--color-accent) 0%,
+        var(--color-accent) var(--range-pct, 50%),
+        var(--color-border) var(--range-pct, 50%),
+        var(--color-border) 100%
+    );
 }
 
 .scrubber-range-input {

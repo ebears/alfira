@@ -1,37 +1,48 @@
-import { useState } from 'react';
-import AppearanceTab from './AppearanceTab';
-import ServerTab from './ServerTab';
-import SettingsTabs from './SettingsTabs';
-import TagsTab from './TagsTab';
+import { WrenchIcon } from '@phosphor-icons/react';
+import { useEffect, useState } from 'react';
+import { fetchVersion } from '../../api/api';
+import { useAuth } from '../../context/AuthContext';
+import AdminSection from './AdminSection';
+import UserSection from './UserSection';
 
 export default function SettingsPage() {
-  const [activeTab, setActiveTab] = useState('appearance');
+  const { user } = useAuth();
+  const [version, setVersion] = useState<string | null>(null);
 
-  const renderTab = () => {
-    switch (activeTab) {
-      case 'appearance':
-        return <AppearanceTab />;
-      case 'audio':
-        return <ServerTab />;
-      case 'tags':
-        return <TagsTab />;
-      default:
-        return <AppearanceTab />;
-    }
-  };
+  useEffect(() => {
+    fetchVersion()
+      .then(({ version }) => setVersion(version))
+      .catch(() => setVersion(null));
+  }, []);
 
   return (
     <div className="p-4 md:p-8">
       {/* Page header */}
-      <div className="mb-6 md:mb-8">
-        <h1 className="font-display text-3xl md:text-4xl text-fg tracking-wider">Settings</h1>
+      <div className="mb-6 md:mb-8 flex items-end justify-between">
+        <h1 className="font-display text-3xl md:text-4xl text-accent tracking-wider flex items-center gap-2">
+          <WrenchIcon size={28} weight="duotone" className="shrink-0 relative top-1" />
+          Settings
+        </h1>
+        {version !== null && <p className="font-mono text-xs text-faint pb-1">{version}</p>}
       </div>
 
-      {/* Tabs */}
-      <SettingsTabs activeTab={activeTab} onTabChange={setActiveTab} />
+      {/* User settings */}
+      <section className="mb-8">
+        <h2 className="font-mono text-xs text-muted uppercase tracking-wider mb-4">User</h2>
+        <div className="bg-elevated clay-resting rounded-lg p-5">
+          <UserSection />
+        </div>
+      </section>
 
-      {/* Tab content */}
-      <div className="mt-6">{renderTab()}</div>
+      {/* Admin settings */}
+      {user?.isAdmin && (
+        <section>
+          <h2 className="font-mono text-xs text-muted uppercase tracking-wider mb-4">Admin</h2>
+          <div className="bg-elevated clay-resting rounded-lg p-5">
+            <AdminSection />
+          </div>
+        </section>
+      )}
     </div>
   );
 }

@@ -4,6 +4,7 @@ import { useVirtualizer } from '@tanstack/react-virtual';
 import { memo, useCallback, useEffect, useRef, useState } from 'react';
 import { addSongToPlaylist, getSongsPage } from '../api/api';
 import { Backdrop } from './Backdrop';
+import { ArtworkImage } from './ui/ArtworkImage';
 import { Button } from './ui/Button';
 
 const PAGE_SIZE = 30;
@@ -47,7 +48,7 @@ export default function AddSongsModal({
     setHasMore(true);
     setLoading(true);
     debouncedSearchRef.current = debouncedSearch;
-    getSongsPage(1, PAGE_SIZE, debouncedSearch || undefined).then((result) => {
+    getSongsPage(1, PAGE_SIZE, { search: debouncedSearch || undefined }).then((result) => {
       setSongs(result.items);
       setHasMore(result.items.length >= PAGE_SIZE);
       hasMoreRef.current = result.items.length >= PAGE_SIZE;
@@ -69,15 +70,17 @@ export default function AddSongsModal({
     loadingMoreRef.current = true;
     setLoadingMore(true);
     const nextPage = pageRef.current + 1;
-    getSongsPage(nextPage, PAGE_SIZE, debouncedSearchRef.current || undefined).then((result) => {
-      setSongs((prev) => [...prev, ...result.items]);
-      setPage(nextPage);
-      pageRef.current = nextPage;
-      setHasMore(result.items.length >= PAGE_SIZE);
-      hasMoreRef.current = result.items.length >= PAGE_SIZE;
-      loadingMoreRef.current = false;
-      setLoadingMore(false);
-    });
+    getSongsPage(nextPage, PAGE_SIZE, { search: debouncedSearchRef.current || undefined }).then(
+      (result) => {
+        setSongs((prev) => [...prev, ...result.items]);
+        setPage(nextPage);
+        pageRef.current = nextPage;
+        setHasMore(result.items.length >= PAGE_SIZE);
+        hasMoreRef.current = result.items.length >= PAGE_SIZE;
+        loadingMoreRef.current = false;
+        setLoadingMore(false);
+      }
+    );
   }, []);
 
   // Check near-bottom on scroll
@@ -124,10 +127,7 @@ export default function AddSongsModal({
 
   return (
     <Backdrop onClose={onClose}>
-      <div
-        className="bg-surface border border-border rounded-xl w-full max-w-lg modal-clay
-        flex flex-col max-h-[80vh] animate-fade-up"
-      >
+      <div className="w-full max-w-lg glass-modal flex flex-col max-h-[80vh] animate-fade-up">
         <div className="p-4 md:p-5 border-b border-border">
           <h2 className="font-display text-2xl md:text-3xl text-fg tracking-wider">Add Songs</h2>
           <p className="font-mono text-xs text-muted mt-0.5">to "{playlist.name}"</p>
@@ -209,13 +209,12 @@ const SongRow = memo(function SongRow({
 }) {
   return (
     <div className="flex items-center gap-2 md:gap-3 px-4 md:px-5 py-3 hover:bg-elevated active:bg-elevated/80 transition-colors duration-100">
-      <div className="overflow-hidden w-10 h-10 md:w-8 md:h-8 rounded border border-border shrink-0">
-        <img
+      <div className="overflow-hidden w-10 h-10 md:w-8 md:h-8 rounded border border-border shrink-0 bg-elevated">
+        <ArtworkImage
           src={song.artwork ?? song.thumbnailUrl}
           alt={song.nickname || song.title}
-          className="w-full h-full object-cover scale-[1.33]"
-          loading="lazy"
-          decoding="async"
+          className="w-full h-full"
+          imageClassName="scale-[1.33]"
         />
       </div>
       <span className="flex-1 font-body text-sm text-fg truncate">

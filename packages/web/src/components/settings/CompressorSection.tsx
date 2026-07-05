@@ -1,6 +1,8 @@
+import { ArrowCounterClockwise, FloppyDisk } from '@phosphor-icons/react';
 import { useEffect, useState } from 'react';
 import { useAdminView } from '../../context/AdminViewContext';
-import SettingsToggle from './SettingsToggle';
+import { usePermissions } from '../../context/PermissionsContext';
+import { Button } from '../ui/Button';
 
 const DEFAULTS = { enabled: false, threshold: -6, ratio: 4.0, attack: 5, release: 50, gain: 3 };
 
@@ -25,9 +27,13 @@ interface CompressorValues {
 
 export default function CompressorSection() {
   const { isAdminView } = useAdminView();
+  const { hasPermission } = usePermissions();
+
+  const canManage = isAdminView || hasPermission('audio.manage');
   const [values, setValues] = useState<CompressorValues>(DEFAULTS);
   const [savedValues, setSavedValues] = useState<CompressorValues>(DEFAULTS);
   const [saving, setSaving] = useState(false);
+  const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
     async function load() {
@@ -40,10 +46,13 @@ export default function CompressorSection() {
         }
       } catch {
         // silently fail
+      } finally {
+        setLoaded(true);
       }
     }
-    if (isAdminView) load();
-  }, [isAdminView]);
+    if (canManage) load();
+    else setLoaded(true);
+  }, [canManage]);
 
   const hasChanges = JSON.stringify(values) !== JSON.stringify(savedValues);
 
@@ -73,20 +82,32 @@ export default function CompressorSection() {
     setValues((v) => ({ ...v, [key]: value }));
   }
 
-  const dimmed = !isAdminView;
+  const dimmed = !canManage;
+
+  if (!loaded) return null;
 
   return (
     <div className={`space-y-3 ${dimmed ? 'opacity-40 pointer-events-none' : ''}`}>
-      <div className="flex items-center justify-between">
-        <h4 className="font-mono text-[11px] text-muted uppercase tracking-wider">Compressor</h4>
-        <SettingsToggle
-          label=""
-          checked={values.enabled}
-          onChange={(enabled) => setValues((v) => ({ ...v, enabled }))}
-        />
+      <div className="flex items-center gap-3">
+        <span className="font-mono text-[11px] text-muted w-20 shrink-0">Enabled</span>
+        <button
+          type="button"
+          role="switch"
+          aria-checked={values.enabled}
+          onClick={() => setValues((v) => ({ ...v, enabled: !v.enabled }))}
+          className={`relative shrink-0 w-9 h-5 rounded-full transition-colors cursor-pointer focus:outline-none focus:ring-2 focus:ring-accent/50 focus:ring-offset-2 focus:ring-offset-surface ${
+            values.enabled ? 'bg-accent' : 'bg-border'
+          }`}
+        >
+          <span
+            className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full transition-transform bg-elevated ${
+              values.enabled ? 'translate-x-4' : 'translate-x-0'
+            }`}
+          />
+        </button>
       </div>
 
-      <div className="space-y-2">
+      <div className={`space-y-2 ${!values.enabled ? 'opacity-40' : ''}`}>
         {SLIDERS.map(({ key, label, min, max, step, unit }) => (
           <div key={key} className="flex items-center gap-3">
             <span className="font-mono text-[11px] text-muted w-20 shrink-0">{label}</span>
@@ -104,32 +125,36 @@ export default function CompressorSection() {
               step={step}
               value={values[key]}
               onChange={(e) => updateValue(key, parseFloat(e.target.value))}
-              className="flex-1 accent-accent"
+              className="flex-1 range-input range-input-h"
+              style={
+                {
+                  ['--range-pct' as string]: `${((values[key] - min) / (max - min)) * 100}%`,
+                } as React.CSSProperties
+              }
             />
           </div>
         ))}
       </div>
 
-      <div className="flex gap-3 pt-1 justify-end">
-        <button
-          type="button"
+      <div className="flex gap-2 pt-1 justify-end">
+        <Button
+          variant="primary"
+          size="icon"
           onClick={handleSave}
           disabled={!hasChanges || saving}
-          className={`font-body text-sm px-4 py-1.5 rounded transition-colors ${
-            hasChanges && !saving
-              ? 'bg-accent text-elevated cursor-pointer'
-              : 'bg-elevated text-muted cursor-not-allowed'
-          }`}
+          title={saving ? 'Saving…' : 'Save Changes'}
         >
-          {saving ? 'Saving…' : 'Save Changes'}
-        </button>
-        <button
-          type="button"
+          <FloppyDisk size={16} weight="duotone" />
+        </Button>
+        <Button
+          variant="inherit"
+          size="icon"
+          surface="elevated"
           onClick={handleReset}
-          className="font-body text-sm px-4 py-1.5 rounded bg-elevated text-muted hover:text-fg transition-colors cursor-pointer"
+          title="Reset to Defaults"
         >
-          Reset to Defaults
-        </button>
+          <ArrowCounterClockwise size={16} weight="duotone" />
+        </Button>
       </div>
     </div>
   );
