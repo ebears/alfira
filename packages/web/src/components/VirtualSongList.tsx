@@ -1,5 +1,5 @@
 import type { Playlist, Song } from '@alfira-bot/server/shared';
-import { memo } from 'react';
+import { memo, useLayoutEffect, useRef } from 'react';
 import EmptyState from './EmptyState';
 import SongCard from './SongCard';
 import { VirtualListFooter } from './ui/VirtualListFooter';
@@ -13,6 +13,7 @@ interface VirtualSongListProps {
   isFetching: boolean;
   isError: boolean;
   hasMore: boolean;
+  hasLoaded: boolean;
   playingId: string | null;
   onRetry: () => void;
   sentinelRef: (el: HTMLDivElement | null) => void;
@@ -90,6 +91,7 @@ export const VirtualSongList = memo(function VirtualSongList({
   isFetching,
   isError,
   hasMore,
+  hasLoaded,
   playingId,
   onRetry,
   sentinelRef,
@@ -99,46 +101,59 @@ export const VirtualSongList = memo(function VirtualSongList({
   emptyTitle,
   emptyMessage,
 }: VirtualSongListProps) {
-  if (isLoading) {
-    return viewMode === 'grid' ? <SkeletonGrid /> : <SkeletonList />;
-  }
-
-  if (items.length === 0) {
-    return <EmptyState title={emptyTitle} message={emptyMessage} />;
-  }
-
+  const containerRef = useRef<HTMLDivElement>(null);
   const isGrid = viewMode === 'grid';
+  const showSkeleton = isLoading;
+  const showEmpty = hasLoaded && items.length === 0;
+  const showContent = !isLoading && hasLoaded && items.length > 0;
+
+  // Reveal the container only after React has committed all DOM mutations,
+  // so the browser paints all cards at once without any staggered rendering.
+  useLayoutEffect(() => {
+    if (!containerRef.current) return;
+    containerRef.current.style.opacity = showContent || showEmpty || showSkeleton ? '1' : '0';
+  }, [showContent, showEmpty, showSkeleton]);
 
   return (
-    <div className="relative">
-      <div
-        className={
-          isGrid
-            ? 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-[repeat(auto-fill,minmax(270px,1fr))] gap-3 md:gap-4 items-start'
-            : 'flex flex-col gap-1.5'
-        }
-      >
-        {items.map((song) => (
-          <SongCard
-            key={song.id}
-            song={song}
-            variant={viewMode === 'grid' ? 'grid' : 'list'}
-            isAdminView={isAdminView}
-            playlists={playlists}
-            onDelete={onDelete}
-            onPlay={() => onPlay(song.id)}
-            isPlaying={playingId === song.id}
-            onAddToQueue={() => onAddToQueue(song.id)}
+    <div
+      ref={containerRef}
+      className="relative"
+      style={{ opacity: 0, transition: 'opacity 120ms ease' }}
+    >
+      {showSkeleton && (isGrid ? <SkeletonGrid /> : <SkeletonList />)}
+      {showEmpty && <EmptyState title={emptyTitle} message={emptyMessage} />}
+      {showContent && (
+        <>
+          <div
+            className={
+              isGrid
+                ? 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-[repeat(auto-fill,minmax(270px,1fr))] gap-3 md:gap-4 items-start'
+                : 'flex flex-col gap-1.5'
+            }
+          >
+            {items.map((song) => (
+              <SongCard
+                key={song.id}
+                song={song}
+                variant={viewMode === 'grid' ? 'grid' : 'list'}
+                isAdminView={isAdminView}
+                playlists={playlists}
+                onDelete={onDelete}
+                onPlay={() => onPlay(song.id)}
+                isPlaying={playingId === song.id}
+                onAddToQueue={() => onAddToQueue(song.id)}
+              />
+            ))}
+          </div>
+          <VirtualListFooter
+            sentinelRef={sentinelRef}
+            isFetching={isFetching}
+            isError={isError}
+            onRetry={onRetry}
           />
-        ))}
-      </div>
-      <VirtualListFooter
-        sentinelRef={sentinelRef}
-        isFetching={isFetching}
-        isError={isError}
-        onRetry={onRetry}
-      />
-      {!isFetching && !isError && !hasMore && items.length > 0 && <div className="h-4" />}
+          {!isFetching && !isError && !hasMore && items.length > 0 && <div className="h-4" />}
+        </>
+      )}
     </div>
   );
 });

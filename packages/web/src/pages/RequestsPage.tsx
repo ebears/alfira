@@ -23,23 +23,33 @@ export default function RequestsPage() {
   const [actionError, setActionError] = useState<string | null>(null);
   const autoRedirected = useRef(false);
 
-  const { items, isLoading, isFetching, isError, total, removeItem, retry, reset, sentinelRef } =
-    useVirtualizedInfiniteScroll<SongRequest, [string, boolean]>({
-      fetchPage: async (page, limit, currentTab, currentMineOnly) => {
-        const status = currentTab === 'pending' ? 'pending' : 'all';
-        const result = await fetchRequests(page, limit, {
-          status,
-          mine: currentMineOnly || undefined,
-        });
-        return {
-          items: result.items,
-          hasMore: result.pagination.page < result.pagination.totalPages,
-          total: result.pagination.total,
-        };
-      },
-      limit: ITEMS_PER_PAGE,
-      deps: [tab, mineOnly],
-    });
+  const {
+    items,
+    isLoading,
+    isFetching,
+    isError,
+    total,
+    hasLoaded,
+    removeItem,
+    retry,
+    reset,
+    sentinelRef,
+  } = useVirtualizedInfiniteScroll<SongRequest, [string, boolean]>({
+    fetchPage: async (page, limit, currentTab, currentMineOnly) => {
+      const status = currentTab === 'pending' ? 'pending' : 'all';
+      const result = await fetchRequests(page, limit, {
+        status,
+        mine: currentMineOnly || undefined,
+      });
+      return {
+        items: result.items,
+        hasMore: result.pagination.page < result.pagination.totalPages,
+        total: result.pagination.total,
+      };
+    },
+    limit: ITEMS_PER_PAGE,
+    deps: [tab, mineOnly],
+  });
 
   const handleApprove = async (id: string) => {
     setActionError(null);
@@ -97,7 +107,7 @@ export default function RequestsPage() {
     }
   });
 
-  const countLabel = isLoading ? '—' : `${total} request${total !== 1 ? 's' : ''}`;
+  const countLabel = hasLoaded ? `${total} request${total !== 1 ? 's' : ''}` : '—';
 
   return (
     <div className="p-4 md:p-8">
@@ -106,7 +116,7 @@ export default function RequestsPage() {
         <div>
           <h1 className="font-display text-3xl md:text-4xl text-fg tracking-wider">Requests</h1>
           <p className="font-mono text-xs text-muted mt-2">
-            Submit & review requests{isLoading ? '' : ` • ${countLabel}`}
+            Submit & review requests{hasLoaded ? ` • ${countLabel}` : ''}
           </p>
         </div>
         <Button
@@ -164,6 +174,7 @@ export default function RequestsPage() {
         isError={isError}
         isOwnFn={isOwnFn}
         isAdmin={isAdminView}
+        hasLoaded={hasLoaded}
         onRetry={retry}
         sentinelRef={sentinelRef}
         onApprove={handleApprove}

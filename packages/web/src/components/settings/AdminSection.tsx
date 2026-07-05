@@ -50,6 +50,7 @@ export default function AdminSection() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
+  const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
     async function load() {
@@ -77,6 +78,8 @@ export default function AdminSection() {
         }
       } catch {
         setError('Could not load settings.');
+      } finally {
+        setLoaded(true);
       }
     }
     load();
@@ -152,6 +155,8 @@ export default function AdminSection() {
       .map((s) => s.trim())
       .filter(Boolean)
   );
+
+  if (!loaded) return null;
 
   return (
     <div className="space-y-6">

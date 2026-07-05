@@ -20,6 +20,7 @@ import { BarButton } from './BarButton';
 import QueuePanel from './QueuePanel';
 import { SourceIcon } from './SourceIcons';
 import TagTicker from './TagTicker';
+import { ArtworkImage } from './ui/ArtworkImage';
 import { Button } from './ui/Button';
 import { VolumeBoostBadge } from './ui/VolumeBoostBadge';
 
@@ -347,13 +348,13 @@ interface AlbumArtProps {
 
 const AlbumArt = memo(function AlbumArt({ currentSong }: AlbumArtProps) {
   return (
-    <div className="w-12 h-12 md:w-14 md:h-14 rounded border border-border shrink-0 overflow-hidden relative">
+    <div className="w-12 h-12 md:w-14 md:h-14 rounded border border-border shrink-0 overflow-hidden relative bg-elevated">
       {currentSong ? (
-        <img
+        <ArtworkImage
           src={currentSong.artwork ?? currentSong.thumbnailUrl}
           alt={currentSong.title}
-          className="w-full h-full object-cover scale-[1.33]"
-          decoding="async"
+          className="w-full h-full"
+          imageClassName="scale-[1.33]"
         />
       ) : (
         <div className="w-full h-full flex items-center justify-center">

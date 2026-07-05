@@ -1,5 +1,5 @@
 import type { Playlist } from '@alfira-bot/server/shared';
-import { memo } from 'react';
+import { memo, useLayoutEffect, useRef } from 'react';
 import EmptyState from './EmptyState';
 import PlaylistRow from './PlaylistRow';
 import { VirtualListFooter } from './ui/VirtualListFooter';
@@ -9,6 +9,7 @@ interface VirtualPlaylistListProps {
   isLoading: boolean;
   isFetching: boolean;
   isError: boolean;
+  hasLoaded: boolean;
   onRetry: () => void;
   sentinelRef: (el: HTMLDivElement | null) => void;
   onRowClick: (e: React.MouseEvent) => void;
@@ -38,40 +39,52 @@ export const VirtualPlaylistList = memo(function VirtualPlaylistList({
   isLoading,
   isFetching,
   isError,
+  hasLoaded,
   onRetry,
   sentinelRef,
   onRowClick,
   emptyTitle,
   emptyMessage,
 }: VirtualPlaylistListProps) {
-  if (isLoading) {
-    return <SkeletonList />;
-  }
+  const containerRef = useRef<HTMLDivElement>(null);
+  const showSkeleton = isLoading;
+  const showEmpty = hasLoaded && items.length === 0;
+  const showContent = !isLoading && hasLoaded && items.length > 0;
 
-  if (items.length === 0) {
-    return <EmptyState title={emptyTitle} message={emptyMessage} />;
-  }
+  useLayoutEffect(() => {
+    if (!containerRef.current) return;
+    containerRef.current.style.opacity = showContent || showEmpty || showSkeleton ? '1' : '0';
+  }, [showContent, showEmpty, showSkeleton]);
 
   return (
-    <div className="relative">
-      <div className="flex flex-col gap-3">
-        {items.map((playlist) => (
-          <PlaylistRow
-            key={playlist.id}
-            playlist={playlist}
-            animationDelay="0ms"
-            onClick={onRowClick}
-            data-playlist-id={playlist.id}
+    <div
+      ref={containerRef}
+      className="relative"
+      style={{ opacity: 0, transition: 'opacity 120ms ease' }}
+    >
+      {showSkeleton && <SkeletonList />}
+      {showEmpty && <EmptyState title={emptyTitle} message={emptyMessage} />}
+      {showContent && (
+        <>
+          <div className="flex flex-col gap-3">
+            {items.map((playlist) => (
+              <PlaylistRow
+                key={playlist.id}
+                playlist={playlist}
+                animationDelay="0ms"
+                onClick={onRowClick}
+                data-playlist-id={playlist.id}
+              />
+            ))}
+          </div>
+          <VirtualListFooter
+            sentinelRef={sentinelRef}
+            isFetching={isFetching}
+            isError={isError}
+            onRetry={onRetry}
           />
-        ))}
-      </div>
-
-      <VirtualListFooter
-        sentinelRef={sentinelRef}
-        isFetching={isFetching}
-        isError={isError}
-        onRetry={onRetry}
-      />
+        </>
+      )}
     </div>
   );
 });

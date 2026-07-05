@@ -34,6 +34,7 @@ import { usePermissions } from '../context/PermissionsContext';
 import { usePlayer } from '../context/PlayerContext';
 import { getSourceKey } from '../utils/source';
 import { getRandomIdleIcon } from './EmptyState';
+import { ArtworkImage } from './ui/ArtworkImage';
 import { Button } from './ui/Button';
 import { DurationBadge } from './ui/DurationBadge';
 import { VolumeBoostBadge } from './ui/VolumeBoostBadge';
@@ -574,13 +575,12 @@ const QueueSongItem = memo(function QueueSongItem({
         </span>
 
         {/* Thumbnail */}
-        <div className="overflow-hidden w-10 h-10 rounded border border-border shrink-0">
-          <img
+        <div className="overflow-hidden w-10 h-10 rounded border border-border shrink-0 bg-elevated">
+          <ArtworkImage
             src={song.artwork ?? song.thumbnailUrl}
             alt={song.nickname || song.title}
-            className="w-full h-full object-cover scale-[1.33]"
-            loading="lazy"
-            decoding="async"
+            className="w-full h-full"
+            imageClassName="scale-[1.33]"
           />
         </div>
 
@@ -769,12 +769,12 @@ const NowPlayingCard = memo(function NowPlayingCard({
     <div className="card overflow-hidden" style={{ background: 'var(--color-base)' }}>
       <div className="flex gap-4 p-4">
         {/* Artwork */}
-        <div className="relative shrink-0 overflow-hidden rounded-xl">
-          <img
+        <div className="relative shrink-0 overflow-hidden rounded-xl bg-elevated">
+          <ArtworkImage
             src={song.artwork ?? song.thumbnailUrl}
             alt={song.nickname || song.title}
-            className="w-20 h-20 rounded-xl border border-border object-cover scale-[1.33]"
-            decoding="async"
+            className="w-20 h-20 rounded-xl border border-border"
+            imageClassName="scale-[1.33]"
           />
         </div>
 

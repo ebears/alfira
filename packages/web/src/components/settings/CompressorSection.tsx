@@ -33,6 +33,7 @@ export default function CompressorSection() {
   const [values, setValues] = useState<CompressorValues>(DEFAULTS);
   const [savedValues, setSavedValues] = useState<CompressorValues>(DEFAULTS);
   const [saving, setSaving] = useState(false);
+  const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
     async function load() {
@@ -45,9 +46,12 @@ export default function CompressorSection() {
         }
       } catch {
         // silently fail
+      } finally {
+        setLoaded(true);
       }
     }
     if (canManage) load();
+    else setLoaded(true);
   }, [canManage]);
 
   const hasChanges = JSON.stringify(values) !== JSON.stringify(savedValues);
@@ -79,6 +83,8 @@ export default function CompressorSection() {
   }
 
   const dimmed = !canManage;
+
+  if (!loaded) return null;
 
   return (
     <div className={`space-y-3 ${dimmed ? 'opacity-40 pointer-events-none' : ''}`}>

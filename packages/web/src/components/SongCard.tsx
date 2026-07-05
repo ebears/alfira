@@ -9,6 +9,7 @@ import { ContextMenu, ContextMenuTrigger } from './ContextMenu';
 import SongEditPanel from './SongEditPanel';
 import { SourceIcon } from './SourceIcons';
 import TagTicker from './TagTicker';
+import { ArtworkImage } from './ui/ArtworkImage';
 import { Card } from './ui/Card';
 import { DurationBadge } from './ui/DurationBadge';
 import { PlayButton } from './ui/PlayButton';
@@ -81,20 +82,18 @@ const SongCardInner = ({
     return (
       <Card
         hoverable={!!isAdminView}
-        animate
         className={`rounded-lg flex flex-col${isAdminView ? ' group cursor-pointer' : ''}`}
         style={gridStyle}
         data-song-edit-container
         onClick={() => canEdit && setOpenSongId(isOpen ? null : song.id)}
       >
         {/* Clean thumbnail */}
-        <div className="relative aspect-square overflow-hidden rounded-lg border border-border m-3 mb-0">
-          <img
+        <div className="relative aspect-square overflow-hidden rounded-lg border border-border m-3 mb-0 bg-elevated">
+          <ArtworkImage
             src={song.artwork ?? song.thumbnailUrl}
             alt=""
-            className="w-full h-full object-cover scale-[1.33]"
-            loading="lazy"
-            decoding="async"
+            className="w-full h-full"
+            imageClassName="scale-[1.33]"
           />
         </div>
 
@@ -199,13 +198,12 @@ const SongCardInner = ({
         onMouseEnter={() => setIsRowHovered(true)}
         onMouseLeave={() => setIsRowHovered(false)}
       >
-        <div className="overflow-hidden w-16 h-16 rounded border border-border shrink-0">
-          <img
+        <div className="overflow-hidden w-16 h-16 rounded border border-border shrink-0 bg-elevated">
+          <ArtworkImage
             src={song.artwork ?? song.thumbnailUrl}
             alt={song.nickname || song.title}
-            className="w-full h-full object-cover scale-[1.33]"
-            loading="lazy"
-            decoding="async"
+            className="w-full h-full"
+            imageClassName="scale-[1.33]"
           />
         </div>
         <div className="flex-1 min-w-0 flex flex-col justify-center gap-1.5">
