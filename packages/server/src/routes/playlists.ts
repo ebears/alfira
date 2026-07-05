@@ -805,6 +805,36 @@ async function handleBulkRemoveSongs(
 }
 
 // ---------------------------------------------------------------------------
+// Path helpers
+// ---------------------------------------------------------------------------
+
+/**
+ * Match a path against a template with `:param` placeholders.
+ * Returns named parameters on match, null otherwise.
+ * Does NOT handle method matching — callers check `request.method`.
+ *
+ * Example: matchPath('/abc/xyz/songs/123', '/:id/songs/:songId') => { id: 'abc/xyz', songId: '123' }
+ */
+function matchPath(path: string, template: string): Record<string, string> | null {
+  const pathParts = path.split('/').filter(Boolean);
+  const tplParts = template.split('/').filter(Boolean);
+  if (pathParts.length !== tplParts.length) return null;
+
+  const params: Record<string, string> = {};
+  for (let i = 0; i < tplParts.length; i++) {
+    const tpl = tplParts[i];
+    const seg = pathParts[i];
+    if (!tpl || !seg) return null;
+    if (tpl.startsWith(':')) {
+      params[tpl.slice(1)] = seg;
+    } else if (tpl !== seg) {
+      return null;
+    }
+  }
+  return params;
+}
+
+// ---------------------------------------------------------------------------
 // Dispatcher
 // ---------------------------------------------------------------------------
 
@@ -821,58 +851,42 @@ export async function handlePlaylists(ctx: RouteContext, request: Request): Prom
   }
 
   // Strip /api/playlists prefix
-  const path = pathname.slice('/api/playlists'.length);
-  if (!path) {
-    if (request.method === 'GET') return await handleGetPlaylists(ctx, request);
-    if (request.method === 'POST') return await handlePostPlaylist(ctx, request);
-    return json({ error: 'Not Found' }, 404);
+  const path = pathname.slice('/api/playlists'.length) || '/';
+
+  // GET /api/playlists
+  if (request.method === 'GET' && path === '/') return await handleGetPlaylists(ctx, request);
+
+  // POST /api/playlists
+  if (request.method === 'POST' && path === '/') return await handlePostPlaylist(ctx, request);
+
+  // POST /api/playlists/:id/songs/bulk-remove
+  let params = matchPath(path, '/:id/songs/bulk-remove');
+  if (params && request.method === 'POST') {
+    return await handleBulkRemoveSongs(ctx, request, params.id);
   }
 
-  // /api/playlists/:id/songs/bulk-remove POST
-  const bulkRemoveMatch = path.match(/^\/([^/]+)\/songs\/bulk-remove$/);
-  if (bulkRemoveMatch && request.method === 'POST') {
-    const [, playlistId] = bulkRemoveMatch;
-    if (playlistId) {
-      return await handleBulkRemoveSongs(ctx, request, playlistId);
-    }
+  // DELETE /api/playlists/:id/songs/:songId
+  params = matchPath(path, '/:id/songs/:songId');
+  if (params && request.method === 'DELETE') {
+    return await handleRemoveSong(ctx, request, params.id, params.songId);
   }
 
-  // /api/playlists/:id/songs/:songId DELETE
-  const songsMatch = path.match(/^\/([^/]+)\/songs\/([^/]+)$/);
-  if (songsMatch && request.method === 'DELETE') {
-    const [, playlistId, songId] = songsMatch;
-    if (playlistId && songId) {
-      return await handleRemoveSong(ctx, request, playlistId, songId);
-    }
-  }
+  // POST /api/playlists/:id/songs
+  params = matchPath(path, '/:id/songs');
+  if (params && request.method === 'POST') return await handleAddSong(ctx, request, params.id);
 
-  // /api/playlists/:id/songs POST
-  const addSongMatch = path.match(/^\/([^/]+)\/songs$/);
-  if (addSongMatch && request.method === 'POST') {
-    const [, playlistId] = addSongMatch;
-    if (playlistId) {
-      return await handleAddSong(ctx, request, playlistId);
-    }
-  }
+  // PATCH /api/playlists/:id/visibility
+  params = matchPath(path, '/:id/visibility');
+  if (params && request.method === 'PATCH')
+    return await handlePatchVisibility(ctx, request, params.id);
 
-  // /api/playlists/:id/visibility PATCH
-  const visibilityMatch = path.match(/^\/([^/]+)\/visibility$/);
-  if (visibilityMatch && request.method === 'PATCH') {
-    const [, playlistId] = visibilityMatch;
-    if (playlistId) {
-      return await handlePatchVisibility(ctx, request, playlistId);
-    }
-  }
-
-  // /api/playlists/:id GET, PATCH, DELETE
-  const idMatch = path.match(/^\/([^/]+)$/);
-  if (idMatch) {
-    const id = idMatch[1];
-    if (id) {
-      if (request.method === 'GET') return await handleGetPlaylist(ctx, request, id);
-      if (request.method === 'PATCH') return await handlePatchPlaylist(ctx, request, id);
-      if (request.method === 'DELETE') return await handleDeletePlaylist(ctx, request, id);
-    }
+  // GET / PATCH / DELETE /api/playlists/:id
+  params = matchPath(path, '/:id');
+  if (params) {
+    const { id } = params;
+    if (request.method === 'GET') return await handleGetPlaylist(ctx, request, id);
+    if (request.method === 'PATCH') return await handlePatchPlaylist(ctx, request, id);
+    if (request.method === 'DELETE') return await handleDeletePlaylist(ctx, request, id);
   }
 
   return json({ error: 'Not Found' }, 404);
