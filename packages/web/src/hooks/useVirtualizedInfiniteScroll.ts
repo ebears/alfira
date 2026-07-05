@@ -1,16 +1,16 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
-export interface UseInfiniteScrollOptions<T, A extends unknown[]> {
+export interface UseInfiniteScrollOptions<T, A extends unknown[], M = undefined> {
   fetchPage: (
     page: number,
     limit: number,
     ...args: A
-  ) => Promise<{ items: T[]; hasMore: boolean; total?: number }>;
+  ) => Promise<{ items: T[]; hasMore: boolean; total?: number; metadata?: M }>;
   limit?: number;
   deps?: A;
 }
 
-export interface UseInfiniteScrollReturn<T> {
+export interface UseInfiniteScrollReturn<T, M = undefined> {
   items: T[];
   isLoading: boolean;
   isFetching: boolean;
@@ -18,20 +18,23 @@ export interface UseInfiniteScrollReturn<T> {
   hasMore: boolean;
   total: number;
   hasLoaded: boolean;
+  metadata: M | undefined;
   prepend: (item: T) => void;
   updateItem: (item: T) => void;
   removeItem: (id: string) => void;
   reset: (searchQuery?: string) => void;
+  refetch: () => void;
   retry: () => void;
   sentinelRef: (el: HTMLDivElement | null) => void;
 }
 
-export function useVirtualizedInfiniteScroll<T, A extends unknown[]>({
+export function useVirtualizedInfiniteScroll<T, A extends unknown[], M = undefined>({
   fetchPage,
   limit = 24,
   deps = [] as unknown as A,
-}: UseInfiniteScrollOptions<T, A>): UseInfiniteScrollReturn<T> {
+}: UseInfiniteScrollOptions<T, A, M>): UseInfiniteScrollReturn<T, M> {
   const [items, setItems] = useState<T[]>([]);
+  const [metadata, setMetadata] = useState<M | undefined>(undefined);
   const [isLoading, setIsLoading] = useState(false);
   const [isFetching, setIsFetching] = useState(false);
   const [isError, setIsError] = useState(false);
@@ -97,6 +100,7 @@ export function useVirtualizedInfiniteScroll<T, A extends unknown[]>({
           setItems(result.items);
           setHasMore(result.hasMore);
           if (result.total !== undefined) setTotal(result.total);
+          if (result.metadata !== undefined) setMetadata(result.metadata);
           pageRef.current = 1;
         } else {
           setItems((prev) => [...prev, ...result.items]);
@@ -159,6 +163,7 @@ export function useVirtualizedInfiniteScroll<T, A extends unknown[]>({
   const reset = useCallback(
     (searchQuery?: string) => {
       setItems([]);
+      setMetadata(undefined);
       pageRef.current = 1;
       setHasMore(true);
       setIsError(false);
@@ -166,6 +171,32 @@ export function useVirtualizedInfiniteScroll<T, A extends unknown[]>({
     },
     [loadPage]
   );
+
+  const refetch = useCallback(() => {
+    if (resetInProgressRef.current) return;
+    setIsFetching(true);
+    setIsError(false);
+    const searchArgs = depsRef.current as A;
+    fetchPageRef
+      .current(1, limit, ...searchArgs)
+      .then((result) => {
+        if (!isMountedRef.current) return;
+        setItems(result.items);
+        setHasMore(result.hasMore);
+        if (result.total !== undefined) setTotal(result.total);
+        if (result.metadata !== undefined) setMetadata(result.metadata);
+        pageRef.current = 1;
+      })
+      .catch(() => {
+        if (!isMountedRef.current) return;
+        setIsError(true);
+      })
+      .finally(() => {
+        if (isMountedRef.current) {
+          setIsFetching(false);
+        }
+      });
+  }, [limit]);
 
   // Initial load
   // biome-ignore lint/correctness/useExhaustiveDependencies: intentionally depends on deps to refetch on search change; loadPage is stable via ref
@@ -215,6 +246,7 @@ export function useVirtualizedInfiniteScroll<T, A extends unknown[]>({
 
   return {
     items,
+    metadata,
     isLoading,
     isFetching,
     isError,
@@ -225,6 +257,7 @@ export function useVirtualizedInfiniteScroll<T, A extends unknown[]>({
     updateItem,
     removeItem,
     reset,
+    refetch,
     retry,
     sentinelRef: setSentinelRef,
   };
