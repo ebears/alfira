@@ -39,7 +39,7 @@ export default function LoginPage() {
 
       {/* Card */}
       <div className="relative z-10 w-full max-w-sm mx-4 animate-fade-up">
-        <div className="bg-surface border border-border rounded-xl p-6 md:p-8 modal-clay">
+        <div className="p-6 md:p-8 glass-modal">
           {/* Logo */}
           <div className="mb-6 md:mb-8 text-center">
             <h1 className="font-display text-5xl md:text-6xl text-accent tracking-widest">

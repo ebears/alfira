@@ -248,7 +248,7 @@ export default function AdminSection() {
                           weight="duotone"
                           className="text-muted cursor-help"
                         />
-                        <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-56 p-2 rounded-lg bg-elevated border border-border text-xs text-muted opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity z-10">
+                        <span className="glass-tooltip absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-56 p-2">
                           {source.helpText}
                         </span>
                       </span>

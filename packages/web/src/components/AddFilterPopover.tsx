@@ -83,10 +83,7 @@ export default function AddFilterPopover({
 
   return (
     <Backdrop onClose={onClose}>
-      <div
-        className="bg-surface border border-border rounded-xl w-full max-w-sm modal-clay
-        flex flex-col max-h-[70vh] animate-fade-up"
-      >
+      <div className="w-full max-w-sm glass-modal flex flex-col max-h-[70vh] animate-fade-up">
         <div className="p-4 border-b border-border flex items-center justify-between">
           <h3 className="font-body font-semibold text-sm text-fg">Filters</h3>
           <button

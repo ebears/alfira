@@ -548,7 +548,7 @@ function TagDropdown({
   const dropdown = (
     <div
       ref={dropdownRef}
-      className="fixed z-50 min-w-45 bg-surface rounded-lg border border-border shadow-lg max-h-48 overflow-y-auto"
+      className="fixed z-50 min-w-45 glass-popover max-h-48"
       style={{ top: 0, left: 0 }}
     >
       {filtered.length === 0 ? (

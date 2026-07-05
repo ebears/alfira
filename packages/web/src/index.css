@@ -1004,13 +1004,6 @@
         border-bottom: 3px solid
             color-mix(in srgb, var(--color-surface) 70%, black);
     }
-    .modal-clay {
-        border-radius: var(--clay-radius-lg);
-        box-shadow:
-            0 5px 0 0 color-mix(in srgb, var(--color-foreground) 60%, black),
-            0 13px 30px -6px rgba(0, 0, 0, 0.4);
-        background: var(--color-foreground);
-    }
 
     .btn-icon-primary {
         @apply w-11 h-11 md:w-10 md:h-10 flex items-center justify-center
@@ -1298,6 +1291,57 @@
         var(--clay-shadow-flat),
         inset 0 1px 0 0 rgba(255, 255, 255, 0.06);
 }
+@utility glass-panel {
+  background:
+    linear-gradient(
+      135deg,
+      rgba(255, 255, 255, 0.04) 0%,
+      rgba(255, 255, 255, 0.015) 40%,
+      rgba(255, 255, 255, 0.00) 100%
+    ),
+    color-mix(in srgb, var(--color-base) 86%, transparent);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+}
+[data-mode="light"] .glass-panel {
+  background:
+    linear-gradient(
+      135deg,
+      rgba(255, 255, 255, 0.06) 0%,
+      rgba(255, 255, 255, 0.025) 50%,
+      rgba(255, 255, 255, 0.00) 100%
+    ),
+    color-mix(in srgb, var(--color-base) 92%, transparent);
+}
+
+/* Glass popover — unified styling for dropdowns, context menus, etc. */
+@utility glass-popover {
+  @apply glass-panel rounded-2xl border border-accent/30 clay-floating overflow-hidden animate-fade-up;
+}
+
+/* Glass hover tooltip — for .group hover-revealed help text */
+/* Glass modal — heavy shadow suitable for centered dialogs */
+/* Glass toast notification — color is set by the component, glass provides blur + shadow */
+@utility glass-toast {
+  @apply rounded-2xl border;
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  box-shadow:
+    0 5px 0 0 color-mix(in srgb, var(--color-surface) 60%, black),
+    0 13px 30px -6px rgba(0, 0, 0, 0.4);
+}
+
+@utility glass-modal {
+  @apply glass-panel rounded-2xl border border-accent/30;
+  box-shadow:
+    0 5px 0 0 color-mix(in srgb, var(--color-surface) 60%, black),
+    0 13px 30px -6px rgba(0, 0, 0, 0.4);
+}
+
+@utility glass-tooltip {
+  @apply rounded-xl glass-panel border border-accent/30 clay-floating text-xs text-muted opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity z-10;
+}
+
 @utility clay-sidebar-edge {
     box-shadow: var(--clay-shadow-sidebar);
 }

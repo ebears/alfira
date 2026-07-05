@@ -194,7 +194,7 @@ export default function AddSongModal({
 
   return (
     <Backdrop onClose={onClose}>
-      <div className="bg-surface rounded-xl p-5 md:p-6 w-full max-w-md mx-4 modal-clay animate-fade-up">
+      <div className="p-5 md:p-6 w-full max-w-md mx-4 glass-modal animate-fade-up">
         <h2 className="font-display text-2xl md:text-3xl text-fg tracking-wider mb-1">
           Request Song
         </h2>

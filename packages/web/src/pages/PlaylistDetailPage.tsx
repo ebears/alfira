@@ -796,7 +796,7 @@ export default function PlaylistDetailPage() {
         <div className="flex gap-2 shrink-0 items-center">
           <Button
             variant="secondary"
-            className="!rounded-full"
+            className="rounded-full!"
             onClick={() => {
               void handlePlayFromSong(songs[0]?.songId, 'random');
             }}
@@ -821,7 +821,7 @@ export default function PlaylistDetailPage() {
             isOpen={menuOpen}
             surface="surface"
             size="default"
-            className="!rounded-full"
+            className="rounded-full!"
           />
           {menuOpen && (
             <ContextMenu
@@ -904,7 +904,7 @@ export default function PlaylistDetailPage() {
           </Button>
 
           {sortOpen && (
-            <div className="absolute right-0 top-full mt-1.5 w-48 bg-elevated border border-border rounded-lg shadow-lg z-20 py-1 animate-fade-up origin-top-right">
+            <div className="absolute right-0 top-full mt-1.5 w-48 glass-popover z-20 py-1 origin-top-right">
               {SORT_OPTIONS.map((opt) => {
                 const isActive = sort === opt.value;
                 return (
