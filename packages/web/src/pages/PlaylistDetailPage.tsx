@@ -57,23 +57,9 @@ import { useBulkSelection } from '../hooks/useBulkSelection';
 import { useNotification } from '../hooks/useNotification';
 import { onSocketEvent } from '../hooks/useSocket';
 import { apiErrorMessage } from '../utils/api';
+import { getTagColorClasses } from '../utils/tagColors';
 
 const ITEMS_PER_PAGE = 24;
-
-const TAG_COLORS: Record<string, { bg: string; text: string }> = {
-  orange: { bg: 'bg-orange-500/15', text: 'text-orange-300' },
-  sky: { bg: 'bg-sky-500/15', text: 'text-sky-300' },
-  emerald: { bg: 'bg-emerald-500/15', text: 'text-emerald-300' },
-  amber: { bg: 'bg-amber-500/15', text: 'text-amber-300' },
-  violet: { bg: 'bg-violet-500/15', text: 'text-violet-300' },
-};
-
-function hashTagColor(tag: string): { bg: string; text: string } {
-  let hash = 5381;
-  for (let i = 0; i < tag.length; i++) hash = (hash * 33) ^ tag.charCodeAt(i);
-  const colors = Object.values(TAG_COLORS);
-  return colors[((hash >>> 0) * 31) % colors.length];
-}
 
 export default function PlaylistDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -766,7 +752,7 @@ export default function PlaylistDetailPage() {
               (() => {
                 const tag = tags.find((t) => t.nameLower === playlistDetail.tagNameLower);
                 const displayName = tag?.canonicalName ?? playlistDetail.tagNameLower;
-                const colors = hashTagColor(displayName);
+                const colors = getTagColorClasses(displayName, tag?.color);
                 return (
                   <span
                     className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-xs font-medium ${colors.bg} ${colors.text}`}

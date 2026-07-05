@@ -58,14 +58,14 @@ export default function UserSection() {
                   type="button"
                   onClick={() => setColorTheme(t.name)}
                   className={`flex flex-col items-center p-1 rounded-lg transition-all cursor-pointer group ${
-                    isSelected ? 'opacity-100' : 'opacity-50'
+                    isSelected ? 'opacity-100' : 'opacity-80'
                   }`}
                 >
                   <span
-                    className={`w-10 h-10 sm:w-12 sm:h-12 rounded-full flex items-center justify-center transition-all ${
+                    className={`w-10 h-10 sm:w-12 sm:h-12 rounded-full flex items-center justify-center transition-all border border-border/40 ${
                       isSelected
                         ? 'ring-2 ring-offset-2 ring-offset-background ring-foreground'
-                        : 'group-hover:ring-2 group-hover:ring-muted/20'
+                        : 'group-hover:ring-2 group-hover:ring-muted/30'
                     }`}
                     style={{ backgroundColor: t.accentColor }}
                   >
