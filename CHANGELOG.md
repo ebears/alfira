@@ -7,24 +7,39 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.0] - 2026-07-05
+
 ### Added
+- Import songs from YouTube URLs (single videos and playlists).
 - **Multi-source support** — SoundCloud, Spotify, Apple Music, Tidal, and Google Drive in addition to YouTube. Admins can enable/disable sources per server; credential-backed sources (Spotify, Apple Music, Tidal) show a warning until credentials are provided.
 - **Song request system** — Non-admin users can request songs via URL. Designated reviewers approve or deny requests in the web UI with optional DM notifications to the requester.
 - **In-app setup wizard** — Guided first-run setup after OAuth login: pick your Discord server, enable music sources, select admin roles, configure a notification channel, set idle timeout, and optionally set a public URL. All configurable later from Settings → Admin.
 - **Role-based granular permissions** — Separate permissions for playback, queue management, request review, and administration. Configured per-role from the Permissions page.
 - **Tag-associated smart playlists** — Tag a song and it automatically joins that tag's playlist. Removing the tag removes the song. Works alongside manual playlist management.
+- Library management with search, filter, and tag support.
+- Playlist creation and management (public/private visibility).
 - **Queue management** — Remove songs from the queue, promote to play next, demote to play later, or drag to reorder.
 - **Sort and filter** — Sort the song library and playlists by title, artist, or date added. Filter by tags with chip-style selectors.
 - **Bulk actions** — Multi-select songs or playlist entries, then delete or edit (tags, volume boost) in bulk.
 - **Metadata editor in add-song modal** — Title, artist, album, and cover art auto-fill from the music source when adding a song via URL. Editable before saving.
+- Playback controls: play, pause, seek, skip, loop (song/queue), shuffle.
+- 15-band equalizer and compressor with per-guild settings.
 - **Equalizer on/off persistence** — EQ enabled/disabled state persists across bot restarts.
 - **Playlist cover art grid** — Playlist thumbnails show a 4-up mosaic of their songs' artwork.
 - **Audio page** — Dedicated page with a 15-band equalizer visualizer, compressor controls, and toggle switches.
+- Gapless track preloading via NodeLink.
+- Auto-pause when all humans leave the voice channel.
+- Idle auto-leave after configurable timeout.
+- Discord OAuth2 authentication with refresh token rotation.
+- Real-time WebSocket state synchronization.
 - **User menu popover** — Discord avatar dropdown with logout, replacing the sidebar logout button.
 - **Tags page** — Dedicated page for managing tags with a carousel layout.
 - **Permissions page** — Role-centric cards for configuring granular access controls.
 - **Source icons on song rows** — Monotone platform icon indicating which source a song came from.
 - **Playful empty states** — Random icons and messaging when pages have no content.
+- Multiple color themes.
+- PWA support for installable web app experience.
+- Docker-based deployment with pre-built images on GHCR.
 - **Pi skills** — Domain knowledge skills for the Pi coding agent (`.pi/skills/`).
 - **Release workflow** — GitHub Actions workflow for multi-arch Docker image builds triggered by `v*` tags, with draft GitHub releases.
 
@@ -56,24 +71,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Admin role clearing prevention (can't accidentally remove all admin roles).
 - UI actions now properly gated by granular permissions rather than a simple admin check.
 - Inherited pointer cursor on modal cards.
-
-## [0.1.0] - 2026-07-01
-
-### Added
-- Initial pre-release of Alfira — a self-hosted Discord music bot with a web UI.
-- Import songs from YouTube URLs (single videos and playlists).
-- Library management with search, filter, and tag support.
-- Playlist creation and management (public/private visibility).
-- Playback controls: play, pause, seek, skip, loop (song/queue), shuffle.
-- 15-band equalizer and compressor with per-guild settings.
-- Gapless track preloading via NodeLink.
-- Auto-pause when all humans leave the voice channel.
-- Idle auto-leave after configurable timeout.
-- Discord OAuth2 authentication with refresh token rotation.
-- Real-time WebSocket state synchronization.
-- Multiple color themes.
-- PWA support for installable web app experience.
-- Docker-based deployment with pre-built images on GHCR.
 
 [Unreleased]: https://github.com/ebears/alfira/compare/v0.1.0...dev
 [0.1.0]: https://github.com/ebears/alfira/releases/tag/v0.1.0
