@@ -33,7 +33,7 @@ export default function BulkActionBar({
     loadedCount < totalCount ? `Select all ${loadedCount}` : `Select all ${totalCount}`;
 
   return (
-    <div className="fixed bottom-22 md:bottom-20 left-0 right-0 z-50 flex justify-center pb-4 md:pb-6 pointer-events-none">
+    <div className="fixed bottom-20 md:bottom-18 left-0 right-0 z-50 flex justify-center pb-4 md:pb-6 pointer-events-none">
       <div className="pointer-events-auto flex items-center gap-3 px-4 py-3 bg-elevated border border-border rounded-xl shadow-2xl animate-fade-up">
         <span className="text-sm font-mono text-fg tabular-nums">
           {count} / {totalCount} selected
