@@ -55,26 +55,4 @@ jobs:
           cache-to: type=gha,mode=max
           pull: true
 
-      - name: Generate release notes
-        id: release-notes
-        run: |
-          PREV_TAG=$(git tag --sort=-creatordate | grep -A1 "${{ github.ref_name }}" | tail -1)
-          if [ -z "$PREV_TAG" ]; then
-            PREV_TAG=$(git rev-list --max-parents=0 HEAD)
-          fi
-          {
-            echo 'notes<<EOF'
-            echo "## Changes since $PREV_TAG"
-            echo
-            git log --pretty=format:'- %s (%h)' "$PREV_TAG..${{ github.ref_name }}"
-            echo
-            echo 'EOF'
-          } >> "$GITHUB_OUTPUT"
 
-      - name: Create GitHub Release
-        uses: softprops/action-gh-release@44faaba098c43619f0edaa59b2f5be2e7b17e9c5 # v2.2.2
-        with:
-          name: ${{ github.ref_name }}
-          body: ${{ steps.release-notes.outputs.notes }}
-          draft: true
-          generate_release_notes: false
