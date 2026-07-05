@@ -854,42 +854,59 @@
            disabled:cursor-not-allowed min-h-11 md:min-h-0;
         border-radius: var(--clay-radius-lg);
         color: #fff;
-           background: linear-gradient(
-            180deg,
-            color-mix(in srgb, var(--color-danger) 75%, white) 0%,
-            var(--color-danger) 100%
-        );
+        background: color-mix(in srgb, var(--color-danger) 95%, white);
         box-shadow:
-            0 3px 0 0 color-mix(in srgb, var(--color-danger) 50%, black),
-            0 4px 8px -2px rgba(0, 0, 0, 0.3),
-            inset 0 1px 1px 0 rgba(255, 255, 255, 0.08);
+            0 2px 0 0 color-mix(in srgb, var(--color-danger) 100%, black 35%),
+            inset 0 2px 3px 0 rgba(0, 0, 0, 0.15),
+            inset 0 1px 1px 0 rgba(255, 255, 255, 0.04);
     }
     .btn-danger:hover {
         transform: var(--btn-transform-hover);
+        background: color-mix(in srgb, var(--color-danger) 88%, white);
         box-shadow:
-            0 4px 0 0 color-mix(in srgb, var(--color-danger) 50%, black),
-            0 6px 12px -2px rgba(0, 0, 0, 0.35),
-            inset 0 1px 1px 0 rgba(255, 255, 255, 0.08);
-        background: linear-gradient(
-            180deg,
-            color-mix(in srgb, var(--color-danger) 65%, white) 0%,
-            var(--color-danger) 100%
-        );
+            0 4px 0 0 color-mix(in srgb, var(--color-danger) 100%, black 35%),
+            inset 0 2px 3px 0 rgba(0, 0, 0, 0.15),
+            inset 0 1px 1px 0 rgba(255, 255, 255, 0.04);
     }
     .btn-danger:active {
-        transform: var(--btn-transform-active);
+        transform: var(--btn-transform-active-md);
         scale: var(--btn-scale-active);
+        background: var(--color-danger);
         box-shadow:
             0 1px 0 0 color-mix(in srgb, var(--color-danger) 100%, black 20%),
             inset 0 2px 3px 0 rgba(0, 0, 0, 0.15);
     }
     .btn-danger.pressed {
-        transform: var(--btn-transform-active);
+        transform: var(--btn-transform-active-md);
         scale: var(--btn-scale-active);
-        box-shadow: inset 0 2px 4px 0 rgba(0, 0, 0, 0.25);
+        background: color-mix(in srgb, var(--color-danger) 75%, black);
+        box-shadow: inset 0 2px 3px 0 rgba(0, 0, 0, 0.2);
     }
+
     [data-mode="light"] .btn-danger {
-        color: #1a1a1a;
+        color: #fff;
+        background: var(--color-danger);
+        box-shadow:
+            0 2px 0 0 color-mix(in srgb, var(--color-danger) 80%, black),
+            0 2px 4px rgba(0, 0, 0, 0.08),
+            0 0 0 1px rgba(0, 0, 0, 0.04);
+    }
+    [data-mode="light"] .btn-danger:hover {
+        background: color-mix(in srgb, var(--color-danger) 92%, white);
+        box-shadow:
+            0 3px 0 0 color-mix(in srgb, var(--color-danger) 80%, black),
+            0 3px 6px rgba(0, 0, 0, 0.1),
+            0 0 0 1px rgba(0, 0, 0, 0.06);
+    }
+    [data-mode="light"] .btn-danger:active {
+        background: color-mix(in srgb, var(--color-danger) 95%, black);
+        box-shadow:
+            0 1px 0 0 color-mix(in srgb, var(--color-danger) 100%, black 15%),
+            inset 0 2px 3px 0 rgba(0, 0, 0, 0.08);
+    }
+    [data-mode="light"] .btn-danger.pressed {
+        background: color-mix(in srgb, var(--color-danger) 90%, black);
+        box-shadow: inset 0 2px 3px 0 rgba(0, 0, 0, 0.15);
     }
 
     .btn-discord {

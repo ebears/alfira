@@ -212,6 +212,32 @@ export function deleteSong(id: string): Promise<void> {
   return remove(`/api/songs/${id}`);
 }
 
+export function bulkDeleteSongs(ids: string[]): Promise<{ deleted: number }> {
+  return post('/api/songs/bulk-delete', { ids });
+}
+
+export function bulkTagSongs(
+  ids: string[],
+  tags: string[],
+  mode: 'add' | 'set' = 'add'
+): Promise<{ updated: number; tags: string[] }> {
+  return post('/api/songs/bulk-tag', { ids, tags, mode });
+}
+
+export interface BulkEditData {
+  nickname?: string | null;
+  artist?: string | null;
+  album?: string | null;
+  artwork?: string | null;
+  tags?: string[];
+  volumeBoost?: number | null;
+  clearFields?: string[];
+}
+
+export function bulkEditSongs(ids: string[], data: BulkEditData): Promise<{ updated: number }> {
+  return post('/api/songs/bulk-edit', { ids, ...data });
+}
+
 /**
  * Data for updating a song. Only provide fields you want to change.
  */
@@ -309,6 +335,13 @@ export function addSongToPlaylist(playlistId: string, songId: string): Promise<v
 
 export function removeSongFromPlaylist(playlistId: string, songId: string): Promise<void> {
   return remove(`/api/playlists/${playlistId}/songs/${songId}`);
+}
+
+export function bulkRemoveSongsFromPlaylist(
+  playlistId: string,
+  songIds: string[]
+): Promise<{ removed: number }> {
+  return post(`/api/playlists/${playlistId}/songs/bulk-remove`, { songIds });
 }
 
 export function togglePlaylistVisibility(
