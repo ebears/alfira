@@ -1,4 +1,4 @@
-import { and, eq, inArray, sql } from 'drizzle-orm';
+import { eq, inArray, sql } from 'drizzle-orm';
 import type { RouteContext } from '../index';
 import { getGuildId } from '../lib/config';
 import { resolveDisplayNames } from '../lib/displayName';
@@ -8,8 +8,8 @@ import { checkRateLimit, getClientIp, rateLimitResponse } from '../lib/rateLimit
 import { checkGuards } from '../lib/routeGuards';
 import { buildSongSearchClause } from '../lib/search';
 import { formatSong } from '../lib/serialization';
-import { emitPlaylistUpdated, emitSongDeleted, emitSongUpdated } from '../lib/socket';
-import { syncPlaylistToTag } from '../lib/syncPlaylistToTag';
+import { emitSongDeleted, emitSongUpdated } from '../lib/socket';
+import { reSyncPlaylistsForTags } from '../lib/syncPlaylistToTag';
 import { canonicalizeTags } from '../lib/tagCanonicalization';
 import {
   validateArtworkUrl,
@@ -21,7 +21,7 @@ import {
 import { db, tables } from '../shared/db';
 import { getPlayer } from '../startDiscord';
 
-const { song: songTable, playlist: playlistTable, playlistSong: playlistSongTable } = tables;
+const { song: songTable } = tables;
 
 // ---------------------------------------------------------------------------
 // Source URL → LIKE patterns for server-side source filtering.
@@ -179,41 +179,7 @@ async function handleBulkTag(ctx: RouteContext, request: Request): Promise<Respo
 
   // If tags changed, re-sync any smart playlists tracking affected tags
   if (newTags.length > 0) {
-    const affectedPlaylists = await db
-      .select({ id: playlistTable.id, tagNameLower: playlistTable.tagNameLower })
-      .from(playlistTable)
-      .where(
-        and(
-          sql`${playlistTable.tagNameLower} IS NOT NULL`,
-          inArray(
-            playlistTable.tagNameLower,
-            newTags.map((t) => t.toLowerCase())
-          )
-        )
-      );
-
-    for (const pl of affectedPlaylists) {
-      if (pl.tagNameLower) {
-        await syncPlaylistToTag(pl.id);
-        const [updatedPl] = await db
-          .select()
-          .from(playlistTable)
-          .where(eq(playlistTable.id, pl.id))
-          .limit(1);
-        if (updatedPl) {
-          const songCountResult = await db
-            .select({ count: sql<number>`count(*)` })
-            .from(playlistSongTable)
-            .where(eq(playlistSongTable.playlistId, pl.id));
-          const count = songCountResult[0]?.count ?? 0;
-          emitPlaylistUpdated({
-            ...updatedPl,
-            createdAt: updatedPl.createdAt.toISOString(),
-            _count: { songs: count },
-          });
-        }
-      }
-    }
+    await reSyncPlaylistsForTags(newTags.map((t) => t.toLowerCase()));
   }
 
   return json({ updated: updatedSongs.length, tags: newTags });
@@ -319,44 +285,7 @@ async function handleBulkEdit(ctx: RouteContext, request: Request): Promise<Resp
 
   // If tags changed, re-sync any smart playlists tracking affected tags
   if ('tags' in data) {
-    const tagValues = (data.tags as string[]) ?? [];
-    if (tagValues.length > 0) {
-      const affectedPlaylists = await db
-        .select({ id: playlistTable.id, tagNameLower: playlistTable.tagNameLower })
-        .from(playlistTable)
-        .where(
-          and(
-            sql`${playlistTable.tagNameLower} IS NOT NULL`,
-            inArray(
-              playlistTable.tagNameLower,
-              tagValues.map((t) => t.toLowerCase())
-            )
-          )
-        );
-
-      for (const pl of affectedPlaylists) {
-        if (pl.tagNameLower) {
-          await syncPlaylistToTag(pl.id);
-          const [updatedPl] = await db
-            .select()
-            .from(playlistTable)
-            .where(eq(playlistTable.id, pl.id))
-            .limit(1);
-          if (updatedPl) {
-            const songCountResult = await db
-              .select({ count: sql<number>`count(*)` })
-              .from(playlistSongTable)
-              .where(eq(playlistSongTable.playlistId, pl.id));
-            const count = songCountResult[0]?.count ?? 0;
-            emitPlaylistUpdated({
-              ...updatedPl,
-              createdAt: updatedPl.createdAt.toISOString(),
-              _count: { songs: count },
-            });
-          }
-        }
-      }
-    }
+    await reSyncPlaylistsForTags(((data.tags as string[]) ?? []).map((t) => t.toLowerCase()));
   }
 
   // Update the player cache for any of the edited songs that are currently
@@ -562,43 +491,8 @@ async function handlePatchSong(ctx: RouteContext, request: Request, id: string):
     const newTagsLower = new Set(
       ((data.tags as string[]) ?? []).map((t: string) => t.toLowerCase())
     );
-
-    // Find all smart playlists whose tagNameLower is in the old or new tag set
-    const affectedTags = new Set([...oldTagsLower, ...newTagsLower]);
-    if (affectedTags.size > 0) {
-      const affectedPlaylists = await db
-        .select({ id: playlistTable.id, tagNameLower: playlistTable.tagNameLower })
-        .from(playlistTable)
-        .where(
-          and(
-            sql`${playlistTable.tagNameLower} IS NOT NULL`,
-            inArray(playlistTable.tagNameLower, [...affectedTags])
-          )
-        );
-
-      for (const pl of affectedPlaylists) {
-        if (pl.tagNameLower) {
-          await syncPlaylistToTag(pl.id);
-          const [updatedPl] = await db
-            .select()
-            .from(playlistTable)
-            .where(eq(playlistTable.id, pl.id))
-            .limit(1);
-          if (updatedPl) {
-            const songCountResult = await db
-              .select({ count: sql<number>`count(*)` })
-              .from(playlistSongTable)
-              .where(eq(playlistSongTable.playlistId, pl.id));
-            const count = songCountResult[0]?.count ?? 0;
-            emitPlaylistUpdated({
-              ...updatedPl,
-              createdAt: updatedPl.createdAt.toISOString(),
-              _count: { songs: count },
-            });
-          }
-        }
-      }
-    }
+    const affectedTags = [...new Set([...oldTagsLower, ...newTagsLower])];
+    await reSyncPlaylistsForTags(affectedTags);
   }
 
   // Update the song in the GuildPlayer's cache (currentSong, priorityQueue,
