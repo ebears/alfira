@@ -27,7 +27,7 @@
 ## Screenshots
 
 <p align="center">
-  <img src=".github/screenshots/songs-page.png" width="900" alt="Songs page">
+  <img src=".github/screenshots/songs-grid-page.png" width="900" alt="Songs page">
 </p>
 
 <details>
@@ -35,12 +35,23 @@
 
 <table align="center">
   <tr>
-    <td><img src=".github/screenshots/playlists-page.png" width="445" alt="Playlists page"></td>
-    <td><img src=".github/screenshots/playlist-details.png" width="445" alt="Playlist details"></td>
+    <td><img src=".github/screenshots/songs-list-page.png" width="445" alt="Songs list"></td>
+    <td><img src=".github/screenshots/playlists-page.png" width="445" alt="Playlists"></td>
   </tr>
   <tr>
-    <td><img src=".github/screenshots/login.png" width="445" alt="Login"></td>
-    <td><img src=".github/screenshots/settings-page.png" width="445" alt="Settings page"></td>
+    <td><img src=".github/screenshots/playlists-details-page.png" width="445" alt="Playlist details"></td>
+    <td><img src=".github/screenshots/requests-page.png" width="445" alt="Requests"></td>
+  </tr>
+  <tr>
+    <td><img src=".github/screenshots/tags-page.png" width="445" alt="Tags"></td>
+    <td><img src=".github/screenshots/audio-page.png" width="445" alt="Audio"></td>
+  </tr>
+  <tr>
+    <td><img src=".github/screenshots/settings-page.png" width="445" alt="Settings"></td>
+    <td><img src=".github/screenshots/permissions-page.png" width="445" alt="Permissions"></td>
+  </tr>
+  <tr>
+    <td><img src=".github/screenshots/login-page.png" width="445" alt="Login"></td>
   </tr>
 </table>
 
@@ -50,14 +61,44 @@
 
 <table align="center">
   <tr>
-    <td><img src=".github/screenshots/theme-example-1.png" width="296" alt="Theme example 1"></td>
-    <td><img src=".github/screenshots/theme-example-2.png" width="296" alt="Theme example 2"></td>
-    <td><img src=".github/screenshots/theme-example-3.png" width="296" alt="Theme example 3"></td>
+    <td><img src=".github/screenshots/theme-example-1.png" width="220" alt="Theme 1"></td>
+    <td><img src=".github/screenshots/theme-example-2.png" width="220" alt="Theme 2"></td>
+    <td><img src=".github/screenshots/theme-example-3.png" width="220" alt="Theme 3"></td>
+    <td><img src=".github/screenshots/theme-example-4.png" width="220" alt="Theme 4"></td>
   </tr>
   <tr>
-    <td><img src=".github/screenshots/theme-example-4.png" width="296" alt="Theme example 4"></td>
-    <td><img src=".github/screenshots/theme-example-5.png" width="296" alt="Theme example 5"></td>
-    <td><img src=".github/screenshots/theme-example-6.png" width="296" alt="Theme example 6"></td>
+    <td><img src=".github/screenshots/theme-example-5.png" width="220" alt="Theme 5"></td>
+    <td><img src=".github/screenshots/theme-example-6.png" width="220" alt="Theme 6"></td>
+    <td><img src=".github/screenshots/theme-example-7.png" width="220" alt="Theme 7"></td>
+    <td><img src=".github/screenshots/theme-example-8.png" width="220" alt="Theme 8"></td>
+  </tr>
+  <tr>
+    <td><img src=".github/screenshots/theme-example-9.png" width="220" alt="Theme 9"></td>
+    <td><img src=".github/screenshots/theme-example-10.png" width="220" alt="Theme 10"></td>
+    <td><img src=".github/screenshots/theme-example-11.png" width="220" alt="Theme 11"></td>
+    <td><img src=".github/screenshots/theme-example-12.png" width="220" alt="Theme 12"></td>
+  </tr>
+  <tr>
+    <td><img src=".github/screenshots/theme-example-13.png" width="220" alt="Theme 13"></td>
+    <td><img src=".github/screenshots/theme-example-14.png" width="220" alt="Theme 14"></td>
+    <td><img src=".github/screenshots/theme-example-15.png" width="220" alt="Theme 15"></td>
+    <td><img src=".github/screenshots/theme-example-16.png" width="220" alt="Theme 16"></td>
+  </tr>
+  <tr>
+    <td><img src=".github/screenshots/theme-example-17.png" width="220" alt="Theme 17"></td>
+    <td><img src=".github/screenshots/theme-example-18.png" width="220" alt="Theme 18"></td>
+    <td><img src=".github/screenshots/theme-example-19.png" width="220" alt="Theme 19"></td>
+    <td><img src=".github/screenshots/theme-example-20.png" width="220" alt="Theme 20"></td>
+  </tr>
+  <tr>
+    <td><img src=".github/screenshots/theme-example-21.png" width="220" alt="Theme 21"></td>
+    <td><img src=".github/screenshots/theme-example-22.png" width="220" alt="Theme 22"></td>
+    <td><img src=".github/screenshots/theme-example-23.png" width="220" alt="Theme 23"></td>
+    <td><img src=".github/screenshots/theme-example-24.png" width="220" alt="Theme 24"></td>
+  </tr>
+  <tr>
+    <td><img src=".github/screenshots/theme-example-25.png" width="220" alt="Theme 25"></td>
+    <td><img src=".github/screenshots/theme-example-26.png" width="220" alt="Theme 26"></td>
   </tr>
 </table>
 

@@ -91,9 +91,8 @@ Top-level scripts:
 | `QueuedSong` | Song with `requestedBy` display name (runtime queue property) |
 | `LoopMode` | `'off'` \| `'song'` \| `'queue'` |
 | `QueueState` | Full player state snapshot for real-time broadcasts |
-| `Playlist` | Database playlist model with optional song count |
-| `PlaylistSong` | Join table entry linking a song to a playlist at a position |
-| `PlaylistDetail` | Playlist with fully populated songs array |
+| `Playlist` | Database playlist model with inline songs array, optional song count, and cover art grid |
+| `PlaylistDetail` | Playlist with fully populated songs array (song guaranteed present) |
 | `User` | Authenticated Discord user (discordId, username, avatar, isAdmin) |
 
 ### Utilities
@@ -105,7 +104,7 @@ Top-level scripts:
 
 ## CI Workflows
 
-Three GitHub Actions workflows run on the repository:
+Four GitHub Actions workflows run on the repository:
 
 | Workflow | Trigger | Purpose |
 |----------|---------|---------|
