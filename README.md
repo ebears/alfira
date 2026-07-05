@@ -121,12 +121,12 @@ Alfira only needs Docker.
 
 ```bash
 # 1. Grab the compose file and env
-curl -o docker-compose.yml https://raw.githubusercontent.com/ebears/alfira/main/docker-compose.prod.yml && curl -o .env https://raw.githubusercontent.com/ebears/alfira/main/.env.example
+curl -o docker-compose.yml https://raw.githubusercontent.com/ebears/alfira/main/docker-compose.yml && curl -o .env https://raw.githubusercontent.com/ebears/alfira/main/.env.example
 
 # 2. Edit .env with your preferred editor (vi / nano / vim / emacs / micro / code / zed)
 vi .env
 
-# 3. Start the stack — web UI at http://localhost:8180
+# 3. Start the stack — web UI at http://localhost:3001
 docker compose up -d
 
 # 4. Open the web UI, log in with Discord, and complete the setup wizard.
