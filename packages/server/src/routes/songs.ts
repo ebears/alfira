@@ -96,6 +96,273 @@ function buildFilterClause(tags: string[], sources: string[]): ReturnType<typeof
 }
 
 // ---------------------------------------------------------------------------
+// POST /api/songs/bulk-delete — delete multiple songs at once.
+// ---------------------------------------------------------------------------
+async function handleBulkDelete(ctx: RouteContext, request: Request): Promise<Response> {
+  const guards = await checkGuards(ctx, { admin: true, permission: 'songs.delete' });
+  if (guards instanceof Response) return guards;
+
+  let body: { ids?: unknown };
+  try {
+    body = (await request.json()) as typeof body;
+  } catch {
+    return json({ error: 'Invalid JSON body.' }, 400);
+  }
+
+  if (!Array.isArray(body.ids) || body.ids.length === 0) {
+    return json({ error: 'ids must be a non-empty array of song IDs.' }, 400);
+  }
+
+  const ids = body.ids.slice(0, 5000) as string[];
+
+  // Delete songs from DB
+  await db.delete(songTable).where(inArray(songTable.id, ids));
+
+  // Emit deleted events for each song so connected clients update in real time
+  for (const id of ids) {
+    emitSongDeleted(id);
+  }
+
+  return json({ deleted: ids.length });
+}
+
+// ---------------------------------------------------------------------------
+// POST /api/songs/bulk-tag — add or set tags on multiple songs at once.
+// ---------------------------------------------------------------------------
+async function handleBulkTag(ctx: RouteContext, request: Request): Promise<Response> {
+  const guards = await checkGuards(ctx, { admin: true, permission: 'songs.edit' });
+  if (guards instanceof Response) return guards;
+
+  let body: { ids?: unknown; tags?: unknown; mode?: unknown };
+  try {
+    body = (await request.json()) as typeof body;
+  } catch {
+    return json({ error: 'Invalid JSON body.' }, 400);
+  }
+
+  if (!Array.isArray(body.ids) || body.ids.length === 0) {
+    return json({ error: 'ids must be a non-empty array of song IDs.' }, 400);
+  }
+
+  const tagsResult = validateTags(body.tags);
+  if (!tagsResult.ok) return tagsResult.response;
+
+  const ids = (body.ids as string[]).slice(0, 5000);
+  const newTags = await canonicalizeTags(tagsResult.value);
+  const mode = body.mode === 'set' ? 'set' : 'add'; // "add" is default (merge with existing)
+
+  // Fetch existing songs
+  const existingSongs = await db.select().from(songTable).where(inArray(songTable.id, ids));
+
+  const updatedIds: string[] = [];
+
+  if (mode === 'set') {
+    // Replace tags entirely
+    await db.update(songTable).set({ tags: newTags }).where(inArray(songTable.id, ids));
+    updatedIds.push(...ids);
+  } else {
+    // Merge: add new tags to each song's existing tags
+    for (const song of existingSongs) {
+      const existingTags = song.tags ?? [];
+      const merged = [...new Set([...existingTags, ...newTags])];
+      await db.update(songTable).set({ tags: merged }).where(eq(songTable.id, song.id));
+      updatedIds.push(song.id);
+    }
+  }
+
+  // Re-fetch updated songs and emit events
+  const updatedSongs = await db.select().from(songTable).where(inArray(songTable.id, updatedIds));
+
+  for (const s of updatedSongs) {
+    emitSongUpdated(formatSong(s));
+  }
+
+  // If tags changed, re-sync any smart playlists tracking affected tags
+  if (newTags.length > 0) {
+    const affectedPlaylists = await db
+      .select({ id: playlistTable.id, tagNameLower: playlistTable.tagNameLower })
+      .from(playlistTable)
+      .where(
+        and(
+          sql`${playlistTable.tagNameLower} IS NOT NULL`,
+          inArray(
+            playlistTable.tagNameLower,
+            newTags.map((t) => t.toLowerCase())
+          )
+        )
+      );
+
+    for (const pl of affectedPlaylists) {
+      if (pl.tagNameLower) {
+        await syncPlaylistToTag(pl.id);
+        const [updatedPl] = await db
+          .select()
+          .from(playlistTable)
+          .where(eq(playlistTable.id, pl.id))
+          .limit(1);
+        if (updatedPl) {
+          const songCountResult = await db
+            .select({ count: sql<number>`count(*)` })
+            .from(playlistSongTable)
+            .where(eq(playlistSongTable.playlistId, pl.id));
+          const count = songCountResult[0]?.count ?? 0;
+          emitPlaylistUpdated({
+            ...updatedPl,
+            createdAt: updatedPl.createdAt.toISOString(),
+            _count: { songs: count },
+          });
+        }
+      }
+    }
+  }
+
+  return json({ updated: updatedSongs.length, tags: newTags });
+}
+
+// ---------------------------------------------------------------------------
+// POST /api/songs/bulk-edit — set metadata fields on multiple songs at once.
+// Fields left undefined are skipped. Fields listed in clearFields are set to null.
+// ---------------------------------------------------------------------------
+async function handleBulkEdit(ctx: RouteContext, request: Request): Promise<Response> {
+  const guards = await checkGuards(ctx, { admin: true, permission: 'songs.edit' });
+  if (guards instanceof Response) return guards;
+
+  let body: {
+    ids?: unknown;
+    nickname?: unknown;
+    artist?: unknown;
+    album?: unknown;
+    artwork?: unknown;
+    tags?: unknown;
+    volumeBoost?: unknown;
+    clearFields?: unknown;
+  };
+  try {
+    body = (await request.json()) as typeof body;
+  } catch {
+    return json({ error: 'Invalid JSON body.' }, 400);
+  }
+
+  if (!Array.isArray(body.ids) || body.ids.length === 0) {
+    return json({ error: 'ids must be a non-empty array of song IDs.' }, 400);
+  }
+
+  const ids = (body.ids as string[]).slice(0, 5000);
+  const clearFields: string[] = Array.isArray(body.clearFields)
+    ? (body.clearFields as string[])
+    : [];
+
+  const data: Record<string, unknown> = {};
+
+  // Nickname
+  if ('nickname' in body && body.nickname !== undefined) {
+    const result = validateNickname(body.nickname);
+    if (!result.ok) return result.response;
+    data.nickname = result.value;
+  } else if (clearFields.includes('nickname')) {
+    data.nickname = null;
+  }
+
+  // Artist
+  if ('artist' in body && body.artist !== undefined) {
+    data.artist = validateOptionalString(body.artist);
+  } else if (clearFields.includes('artist')) {
+    data.artist = null;
+  }
+
+  // Album
+  if ('album' in body && body.album !== undefined) {
+    data.album = validateOptionalString(body.album);
+  } else if (clearFields.includes('album')) {
+    data.album = null;
+  }
+
+  // Artwork
+  if ('artwork' in body && body.artwork !== undefined) {
+    const artworkResult = validateArtworkUrl(body.artwork);
+    if (!artworkResult.ok) return artworkResult.response;
+    data.artwork = artworkResult.value;
+  } else if (clearFields.includes('artwork')) {
+    data.artwork = null;
+  }
+
+  // Tags
+  if ('tags' in body && body.tags !== undefined) {
+    const tagsResult = validateTags(body.tags);
+    if (!tagsResult.ok) return tagsResult.response;
+    data.tags = await canonicalizeTags(tagsResult.value);
+  } else if (clearFields.includes('tags')) {
+    data.tags = [];
+  }
+
+  // Volume boost
+  if ('volumeBoost' in body && body.volumeBoost !== undefined) {
+    const volumeResult = validateVolumeBoost(body.volumeBoost);
+    if (!volumeResult.ok) return volumeResult.response;
+    data.volumeBoost = volumeResult.value;
+  } else if (clearFields.includes('volumeBoost')) {
+    data.volumeBoost = null;
+  }
+
+  if (Object.keys(data).length === 0) {
+    return json({ error: 'No fields to update.' }, 400);
+  }
+
+  await db.update(songTable).set(data).where(inArray(songTable.id, ids));
+
+  // Re-fetch updated songs and emit events
+  const updatedSongs = await db.select().from(songTable).where(inArray(songTable.id, ids));
+
+  for (const s of updatedSongs) {
+    emitSongUpdated(formatSong(s));
+  }
+
+  // If tags changed, re-sync any smart playlists tracking affected tags
+  if ('tags' in data) {
+    const tagValues = (data.tags as string[]) ?? [];
+    if (tagValues.length > 0) {
+      const affectedPlaylists = await db
+        .select({ id: playlistTable.id, tagNameLower: playlistTable.tagNameLower })
+        .from(playlistTable)
+        .where(
+          and(
+            sql`${playlistTable.tagNameLower} IS NOT NULL`,
+            inArray(
+              playlistTable.tagNameLower,
+              tagValues.map((t) => t.toLowerCase())
+            )
+          )
+        );
+
+      for (const pl of affectedPlaylists) {
+        if (pl.tagNameLower) {
+          await syncPlaylistToTag(pl.id);
+          const [updatedPl] = await db
+            .select()
+            .from(playlistTable)
+            .where(eq(playlistTable.id, pl.id))
+            .limit(1);
+          if (updatedPl) {
+            const songCountResult = await db
+              .select({ count: sql<number>`count(*)` })
+              .from(playlistSongTable)
+              .where(eq(playlistSongTable.playlistId, pl.id));
+            const count = songCountResult[0]?.count ?? 0;
+            emitPlaylistUpdated({
+              ...updatedPl,
+              createdAt: updatedPl.createdAt.toISOString(),
+              _count: { songs: count },
+            });
+          }
+        }
+      }
+    }
+  }
+
+  return json({ updated: ids.length });
+}
+
+// ---------------------------------------------------------------------------
 // GET /api/songs — paginated list of songs with sort & filter.
 // ---------------------------------------------------------------------------
 async function handleGetSongs(ctx: RouteContext, request: Request): Promise<Response> {
@@ -343,6 +610,21 @@ export async function handleSongs(ctx: RouteContext, request: Request): Promise<
   // GET /api/songs
   if (request.method === 'GET' && pathname === '/api/songs') {
     return await handleGetSongs(ctx, request);
+  }
+
+  // POST /api/songs/bulk-delete
+  if (request.method === 'POST' && pathname === '/api/songs/bulk-delete') {
+    return await handleBulkDelete(ctx, request);
+  }
+
+  // POST /api/songs/bulk-tag
+  if (request.method === 'POST' && pathname === '/api/songs/bulk-tag') {
+    return await handleBulkTag(ctx, request);
+  }
+
+  // POST /api/songs/bulk-edit
+  if (request.method === 'POST' && pathname === '/api/songs/bulk-edit') {
+    return await handleBulkEdit(ctx, request);
   }
 
   // DELETE /api/songs/:id

@@ -11,6 +11,7 @@ import { SourceIcon } from './SourceIcons';
 import TagTicker from './TagTicker';
 import { ArtworkImage } from './ui/ArtworkImage';
 import { Card } from './ui/Card';
+import Checkbox from './ui/Checkbox';
 import { DurationBadge } from './ui/DurationBadge';
 import { PlayButton } from './ui/PlayButton';
 import { VolumeBoostBadge } from './ui/VolumeBoostBadge';
@@ -31,6 +32,10 @@ interface SongCardProps {
   onPlay: () => void;
   isPlaying?: boolean;
   onAddToQueue: () => void;
+  /** Show a selection checkbox (bulk action mode) */
+  selectionMode?: boolean;
+  isSelected?: boolean;
+  onToggleSelect?: () => void;
 }
 
 // ---------------------------------------------------------------------------
@@ -48,6 +53,9 @@ const SongCardInner = ({
   onPlay,
   isPlaying,
   onAddToQueue,
+  selectionMode = false,
+  isSelected = false,
+  onToggleSelect,
 }: SongCardProps) => {
   const { openSongId, setOpenSongId } = useSongEdit();
   const { hasPermission } = usePermissions();
@@ -79,13 +87,21 @@ const SongCardInner = ({
   if (variant === 'grid') {
     const tags = song.tags ?? [];
 
+    const handleGridClick = () => {
+      if (selectionMode) {
+        onToggleSelect?.();
+      } else if (canEdit) {
+        setOpenSongId(isOpen ? null : song.id);
+      }
+    };
+
     return (
       <Card
-        hoverable={!!isAdminView}
-        className={`rounded-lg flex flex-col${isAdminView ? ' group cursor-pointer' : ''}`}
+        hoverable={!!isAdminView && !selectionMode}
+        className={`rounded-lg flex flex-col${(isAdminView && !selectionMode) || selectionMode ? ' cursor-pointer' : ''}${selectionMode ? ' select-none hover:ring-2 hover:ring-accent/50' : ''}${isAdminView && !selectionMode ? ' group' : ''}`}
         style={gridStyle}
         data-song-edit-container
-        onClick={() => canEdit && setOpenSongId(isOpen ? null : song.id)}
+        onClick={handleGridClick}
       >
         {/* Clean thumbnail */}
         <div className="relative aspect-square overflow-hidden rounded-lg border border-border m-3 mb-0 bg-elevated">
@@ -95,6 +111,21 @@ const SongCardInner = ({
             className="w-full h-full"
             imageClassName="scale-[1.33]"
           />
+          {/* Selection checkbox overlay */}
+          {selectionMode && (
+            <div
+              className="absolute top-2 left-2 z-10"
+              onClick={(e) => e.stopPropagation()}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') onToggleSelect?.();
+              }}
+              role="button"
+              tabIndex={0}
+            >
+              <Checkbox checked={isSelected} onChange={() => onToggleSelect?.()} size="md" />
+            </div>
+          )}
+          {isSelected && <div className="absolute inset-0 bg-accent/20 pointer-events-none" />}
         </div>
 
         {/* Info */}
@@ -176,28 +207,43 @@ const SongCardInner = ({
 
   const tags = song.tags ?? [];
 
+  const handleListClick = () => {
+    if (selectionMode) {
+      onToggleSelect?.();
+    } else if (canEdit) {
+      setOpenSongId(isOpen ? null : song.id);
+    }
+  };
+
   return (
     <Card
-      hoverable={!!isAdminView}
-      className="rounded-lg flex flex-col"
+      hoverable={!!isAdminView && !selectionMode}
+      className={`rounded-lg flex flex-col${selectionMode ? ' select-none hover:ring-2 hover:ring-accent/50' : ''}${isSelected ? ' ring-2 ring-accent' : ''}`}
       data-song-id={song.id}
       data-song-edit-container
     >
       <div
         className="flex items-center gap-3 md:gap-4 px-4 py-4"
-        onClick={() => canEdit && setOpenSongId(isOpen ? null : song.id)}
+        onClick={handleListClick}
         onKeyDown={(e) => {
-          if (canEdit && (e.key === 'Enter' || e.key === ' ')) {
+          if ((e.key === 'Enter' || e.key === ' ') && !selectionMode) {
             e.preventDefault();
-            setOpenSongId(isOpen ? null : song.id);
+            if (canEdit) setOpenSongId(isOpen ? null : song.id);
           }
         }}
         role="button"
         tabIndex={0}
-        style={canEdit ? { cursor: 'pointer' } : undefined}
+        style={canEdit || selectionMode ? { cursor: 'pointer' } : undefined}
         onMouseEnter={() => setIsRowHovered(true)}
         onMouseLeave={() => setIsRowHovered(false)}
       >
+        {/* Selection checkbox */}
+        {selectionMode && (
+          <span onClick={(e) => e.stopPropagation()}>
+            <Checkbox checked={isSelected} onChange={() => onToggleSelect?.()} size="md" />
+          </span>
+        )}
+
         <div className="overflow-hidden w-16 h-16 rounded border border-border shrink-0 bg-elevated">
           <ArtworkImage
             src={song.artwork ?? song.thumbnailUrl}

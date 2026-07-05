@@ -12,6 +12,7 @@ export type {
 } from '@alfira-bot/server/shared';
 
 export type {
+  BulkEditData,
   FetchSongsOptions,
   MyPermissionsResponse,
   PermissionsResponse,
@@ -23,6 +24,10 @@ export {
   addSongToPlaylist,
   addToPriorityQueue,
   approveRequest,
+  bulkDeleteSongs,
+  bulkEditSongs,
+  bulkRemoveSongsFromPlaylist,
+  bulkTagSongs,
   type CreateRequestResult,
   cancelRequest,
   completeSetup,

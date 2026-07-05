@@ -7,6 +7,7 @@ import {
   BombIcon,
   CaretDownIcon,
   CaretLeftIcon,
+  CheckSquareIcon,
   FunnelIcon,
   GhostIcon,
   ListIcon,
@@ -25,6 +26,8 @@ import {
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import {
+  bulkEditSongs,
+  bulkRemoveSongsFromPlaylist,
   deletePlaylist,
   getPlaylistPage,
   removeSongFromPlaylist,
@@ -34,6 +37,8 @@ import {
 } from '../api/api';
 import AddFilterPopover from '../components/AddFilterPopover';
 import AddSongsModal from '../components/AddSongsModal';
+import BulkActionBar from '../components/BulkActionBar';
+import BulkEditModal from '../components/BulkEditModal';
 import ConfirmModal from '../components/ConfirmModal';
 import type { MenuItem } from '../components/ContextMenu';
 import { ContextMenu, ContextMenuTrigger } from '../components/ContextMenu';
@@ -48,6 +53,7 @@ import { useAuth } from '../context/AuthContext';
 import { usePermissions } from '../context/PermissionsContext';
 import { usePlayerState } from '../context/PlayerContext';
 import { useAddToQueue } from '../hooks/useAddToQueue';
+import { useBulkSelection } from '../hooks/useBulkSelection';
 import { useNotification } from '../hooks/useNotification';
 import { onSocketEvent } from '../hooks/useSocket';
 import { apiErrorMessage } from '../utils/api';
@@ -100,7 +106,17 @@ export default function PlaylistDetailPage() {
 
   const isOwner = user?.discordId === playlistDetail?.createdBy;
   const canEdit = isAdminView || isOwner || hasPermission('songs.edit');
+  const canBulk = canEdit;
   const isSmart = !!playlistDetail?.tagNameLower;
+
+  // Bulk selection
+  const bulk = useBulkSelection();
+  const [selectionMode, setSelectionMode] = useState(false);
+  const [bulkRemoving, setBulkRemoving] = useState(false);
+  const [bulkRemoveConfirm, setBulkRemoveConfirm] = useState(false);
+  const [bulkEditingOpen, setBulkEditingOpen] = useState(false);
+  const [bulkEditingApplying, setBulkEditingApplying] = useState(false);
+
   const menuTriggerRef = useRef<HTMLButtonElement>(null);
   const [menuOpen, setMenuOpen] = useState(false);
 
@@ -126,6 +142,7 @@ export default function PlaylistDetailPage() {
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
+  const [totalSongs, setTotalSongs] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [isFetching, setIsFetching] = useState(false);
   const [isError, setIsError] = useState(false);
@@ -239,15 +256,18 @@ export default function PlaylistDetailPage() {
           setPlaylistDetail(pl);
           setSongs(pl.songs);
           setRenameValue(pl.name);
+          setTotalSongs(pl.pagination.total);
         } else if (isRefetch) {
           // Socket-triggered refetch: replace songs so we don't accumulate duplicates.
           setSongs(pl.songs);
           setPlaylistDetail(pl);
+          setTotalSongs(pl.pagination.total);
         } else {
           // User scroll: accumulate songs from the new page.
           setSongs((prev) => [...prev, ...pl.songs]);
           // Keep latest playlist metadata
           setPlaylistDetail(pl);
+          setTotalSongs(pl.pagination.total);
         }
         setHasMore(pl.songs.length === ITEMS_PER_PAGE);
       } catch {
@@ -425,6 +445,55 @@ export default function PlaylistDetailPage() {
       setRemoveId(null);
     }
   };
+
+  // ── Bulk actions ─────────────────────────────────────────────────────
+  const handleBulkRemove = useCallback(() => {
+    setBulkRemoveConfirm(true);
+  }, []);
+
+  const executeBulkRemove = useCallback(async () => {
+    if (!playlistDetail || bulk.count === 0) return;
+    setBulkRemoveConfirm(false);
+    setBulkRemoving(true);
+    try {
+      const allIds = [...bulk.selectedIds];
+      const chunkSize = 500;
+      for (let i = 0; i < allIds.length; i += chunkSize) {
+        await bulkRemoveSongsFromPlaylist(playlistDetail.id, allIds.slice(i, i + chunkSize));
+      }
+      setSongs((prev) => prev.filter((ps) => !bulk.selectedIds.has(ps.songId)));
+      notify(`Removed ${allIds.length} song${allIds.length !== 1 ? 's' : ''}`, 'success');
+    } catch (err: unknown) {
+      notify(apiErrorMessage(err, 'Failed to remove songs.'), 'error', 5000);
+    } finally {
+      setBulkRemoving(false);
+      bulk.clearAll();
+      setSelectionMode(false);
+    }
+  }, [playlistDetail, bulk, notify]);
+
+  const handleBulkEdit = useCallback(
+    async (data: import('@alfira-bot/server/shared/api').BulkEditData) => {
+      if (bulk.count === 0) return;
+      setBulkEditingApplying(true);
+      try {
+        const allIds = [...bulk.selectedIds];
+        const chunkSize = 500;
+        for (let i = 0; i < allIds.length; i += chunkSize) {
+          await bulkEditSongs(allIds.slice(i, i + chunkSize), data);
+        }
+        notify(`Updated ${allIds.length} song${allIds.length !== 1 ? 's' : ''}`, 'success');
+        setBulkEditingOpen(false);
+      } catch (err: unknown) {
+        notify(apiErrorMessage(err, 'Failed to update songs.'), 'error', 5000);
+      } finally {
+        setBulkEditingApplying(false);
+        bulk.clearAll();
+        setSelectionMode(false);
+      }
+    },
+    [bulk, notify]
+  );
 
   const handleDeletePlaylist = async () => {
     if (!playlistDetail) return;
@@ -788,6 +857,24 @@ export default function PlaylistDetailPage() {
           />
         </div>
 
+        {/* Select toggle (only visible to users with bulk permissions) */}
+        {canBulk && (
+          <Button
+            variant="inherit"
+            surface="surface"
+            onClick={() => {
+              if (selectionMode) bulk.clearAll();
+              setSelectionMode((v) => !v);
+            }}
+            className={`flex items-center gap-1.5 px-2.5 ${
+              selectionMode ? 'pressed text-accent' : ''
+            }`}
+            title={selectionMode ? 'Exit selection mode' : 'Select songs'}
+          >
+            <CheckSquareIcon size={16} weight="duotone" />
+          </Button>
+        )}
+
         {/* Add filter button */}
         <Button
           variant="inherit"
@@ -933,12 +1020,19 @@ export default function PlaylistDetailPage() {
           playingId={playingSongId}
           onRetry={retry}
           sentinelRef={sentinelRef}
-          onDelete={(id) => {
-            const ps = songs.find((p) => p.songId === id);
-            if (ps) setRemoveId(ps.songId);
-          }}
+          onDelete={
+            selectionMode
+              ? undefined
+              : (id) => {
+                  const ps = songs.find((p) => p.songId === id);
+                  if (ps) setRemoveId(ps.songId);
+                }
+          }
           onPlay={handlePlayFromSong}
           onAddToQueue={handleAddToQueue}
+          selectionMode={selectionMode}
+          isSelected={bulk.isSelected}
+          onToggleSelect={bulk.toggle}
           emptyTitle="No Songs"
           emptyMessage="Add songs to this playlist"
         />
@@ -956,7 +1050,26 @@ export default function PlaylistDetailPage() {
         />
       )}
       {/* Notification Toast */}
-      {notification && <NotificationToast notification={notification} />}
+      {notification && (
+        <NotificationToast notification={notification} lift={selectionMode && bulk.count !== 0} />
+      )}
+      {bulkRemoveConfirm && (
+        <ConfirmModal
+          title="Remove Songs"
+          message={
+            <>
+              Remove{' '}
+              <span className="text-fg font-semibold">
+                {bulk.count} song{bulk.count !== 1 ? 's' : ''}
+              </span>{' '}
+              from this playlist? The songs won&lsquo;t be deleted from the library.
+            </>
+          }
+          confirmLabel="Remove"
+          onConfirm={executeBulkRemove}
+          onCancel={() => setBulkRemoveConfirm(false)}
+        />
+      )}
       {removeId && (
         <ConfirmModal
           title="Remove Song"
@@ -1015,6 +1128,33 @@ export default function PlaylistDetailPage() {
           onAddSource={handleAddSource}
           onRemoveSource={handleRemoveSource}
           onClose={() => setFilterPopoverOpen(false)}
+        />
+      )}
+
+      {/* Bulk action bar */}
+      {selectionMode && bulk.count > 0 && (
+        <BulkActionBar
+          count={bulk.count}
+          loadedCount={songItems.length}
+          totalCount={totalSongs}
+          canDelete={canEdit}
+          canTag={canEdit}
+          deleteLabel="Remove selected"
+          onDelete={handleBulkRemove}
+          onTag={() => setBulkEditingOpen(true)}
+          onSelectAll={() => bulk.selectAll(songItems.map((s) => s.id))}
+          onDeselectAll={bulk.clearAll}
+          isDeleting={bulkRemoving}
+        />
+      )}
+
+      {/* Bulk edit modal */}
+      {bulkEditingOpen && (
+        <BulkEditModal
+          count={bulk.count}
+          onApply={handleBulkEdit}
+          onClose={() => setBulkEditingOpen(false)}
+          isApplying={bulkEditingApplying}
         />
       )}
     </div>

@@ -4,6 +4,7 @@ import {
   ArrowDownIcon,
   ArrowUpIcon,
   CaretDownIcon,
+  CheckSquareIcon,
   FunnelIcon,
   ListIcon,
   MagnifyingGlassIcon,
@@ -13,16 +14,27 @@ import {
 } from '@phosphor-icons/react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { deleteSong, getPlaylistsPage, getSongsPage, startPlayback } from '../api/api';
+import {
+  bulkDeleteSongs,
+  bulkEditSongs,
+  deleteSong,
+  getPlaylistsPage,
+  getSongsPage,
+  startPlayback,
+} from '../api/api';
 import AddFilterPopover from '../components/AddFilterPopover';
+import BulkActionBar from '../components/BulkActionBar';
+import BulkEditModal from '../components/BulkEditModal';
 import ConfirmModal from '../components/ConfirmModal';
 import FilterChips from '../components/FilterChips';
 import NotificationToast from '../components/NotificationToast';
 import { Button } from '../components/ui/Button';
 import { VirtualSongList } from '../components/VirtualSongList';
 import { useAdminView } from '../context/AdminViewContext';
+import { usePermissions } from '../context/PermissionsContext';
 import { usePlayerState } from '../context/PlayerContext';
 import { useAddToQueue } from '../hooks/useAddToQueue';
+import { useBulkSelection } from '../hooks/useBulkSelection';
 import { useNotification } from '../hooks/useNotification';
 import { onSocketEvent } from '../hooks/useSocket';
 import { useVirtualizedInfiniteScroll } from '../hooks/useVirtualizedInfiniteScroll';
@@ -42,6 +54,7 @@ const SORT_OPTIONS: { value: SortField; label: string }[] = [
 
 export default function SongsPage() {
   const { isAdminView } = useAdminView();
+  const { hasPermission } = usePermissions();
   const { state: queueState } = usePlayerState();
   const [viewMode, setViewMode] = useState<'grid' | 'list'>(() => {
     const saved = localStorage.getItem('alfira-library-view');
@@ -59,6 +72,18 @@ export default function SongsPage() {
 
   // Add filter popover state
   const [filterPopoverOpen, setFilterPopoverOpen] = useState(false);
+
+  // Bulk selection
+  const bulk = useBulkSelection();
+  const [selectionMode, setSelectionMode] = useState(false);
+  const [bulkDeleting, setBulkDeleting] = useState(false);
+  const [bulkDeleteConfirm, setBulkDeleteConfirm] = useState(false);
+  const [bulkEditingOpen, setBulkEditingOpen] = useState(false);
+  const [bulkEditingApplying, setBulkEditingApplying] = useState(false);
+
+  const canDelete = isAdminView || hasPermission('songs.delete');
+  const canEdit = isAdminView || hasPermission('songs.edit');
+  const canBulk = canDelete || canEdit;
 
   // ── URL params ──────────────────────────────────────────────────────
   const [searchParams, setSearchParams] = useSearchParams();
@@ -291,6 +316,57 @@ export default function SongsPage() {
     // Socket event will update the songs list
   };
 
+  // ── Bulk actions ─────────────────────────────────────────────────────
+  const handleBulkDelete = useCallback(() => {
+    setBulkDeleteConfirm(true);
+  }, []);
+
+  const executeBulkDelete = useCallback(async () => {
+    if (bulk.count === 0) return;
+    setBulkDeleteConfirm(false);
+    setBulkDeleting(true);
+    try {
+      const allIds = [...bulk.selectedIds];
+      const chunkSize = 500;
+      for (let i = 0; i < allIds.length; i += chunkSize) {
+        await bulkDeleteSongs(allIds.slice(i, i + chunkSize));
+      }
+      for (const id of allIds) {
+        removeItem(id);
+      }
+      notify(`Deleted ${allIds.length} song${allIds.length !== 1 ? 's' : ''}`, 'success');
+    } catch (err: unknown) {
+      notify(apiErrorMessage(err, 'Failed to delete songs.'), 'error', 5000);
+    } finally {
+      setBulkDeleting(false);
+      bulk.clearAll();
+      setSelectionMode(false);
+    }
+  }, [bulk, removeItem, notify]);
+
+  const handleBulkEdit = useCallback(
+    async (data: import('@alfira-bot/server/shared/api').BulkEditData) => {
+      if (bulk.count === 0) return;
+      setBulkEditingApplying(true);
+      try {
+        const allIds = [...bulk.selectedIds];
+        const chunkSize = 500;
+        for (let i = 0; i < allIds.length; i += chunkSize) {
+          await bulkEditSongs(allIds.slice(i, i + chunkSize), data);
+        }
+        notify(`Updated ${allIds.length} song${allIds.length !== 1 ? 's' : ''}`, 'success');
+        setBulkEditingOpen(false);
+      } catch (err: unknown) {
+        notify(apiErrorMessage(err, 'Failed to update songs.'), 'error', 5000);
+      } finally {
+        setBulkEditingApplying(false);
+        bulk.clearAll();
+        setSelectionMode(false);
+      }
+    },
+    [bulk, notify]
+  );
+
   // ── Play from song ──────────────────────────────────────────────────
   const handlePlayFromSong = useCallback(
     async (songId: string) => {
@@ -351,6 +427,24 @@ export default function SongsPage() {
             onChange={(e) => handleSearchChange(e.target.value)}
           />
         </div>
+
+        {/* Select toggle (only visible to users with bulk permissions) */}
+        {canBulk && (
+          <Button
+            variant="inherit"
+            surface="surface"
+            onClick={() => {
+              if (selectionMode) bulk.clearAll();
+              setSelectionMode((v) => !v);
+            }}
+            className={`flex items-center gap-1.5 px-2.5 ${
+              selectionMode ? 'pressed text-accent' : ''
+            }`}
+            title={selectionMode ? 'Exit selection mode' : 'Select songs'}
+          >
+            <CheckSquareIcon size={16} weight="duotone" />
+          </Button>
+        )}
 
         {/* Add filter button */}
         <Button
@@ -482,9 +576,12 @@ export default function SongsPage() {
         playingId={playingId}
         onRetry={retry}
         sentinelRef={sentinelRef}
-        onDelete={handleSetDeleteId}
+        onDelete={selectionMode ? undefined : handleSetDeleteId}
         onPlay={handlePlayFromSong}
         onAddToQueue={handleAddToQueue}
+        selectionMode={selectionMode}
+        isSelected={bulk.isSelected}
+        onToggleSelect={bulk.toggle}
         emptyTitle={
           search || filterTags.length > 0 || filterSources.length > 0
             ? 'No Matches'
@@ -519,8 +616,54 @@ export default function SongsPage() {
         />
       )}
 
+      {bulkDeleteConfirm && (
+        <ConfirmModal
+          title="Delete Songs"
+          message={
+            <>
+              Permanently delete{' '}
+              <span className="text-fg font-semibold">
+                {bulk.count} song{bulk.count !== 1 ? 's' : ''}
+              </span>{' '}
+              from the library? This cannot be undone.
+            </>
+          }
+          confirmLabel="Delete"
+          onConfirm={executeBulkDelete}
+          onCancel={() => setBulkDeleteConfirm(false)}
+        />
+      )}
+
       {/* Notification Toast */}
-      {notification && <NotificationToast notification={notification} />}
+      {notification && (
+        <NotificationToast notification={notification} lift={selectionMode && bulk.count !== 0} />
+      )}
+
+      {/* Bulk action bar */}
+      {selectionMode && bulk.count > 0 && (
+        <BulkActionBar
+          count={bulk.count}
+          loadedCount={items.length}
+          totalCount={total}
+          canDelete={canDelete}
+          canTag={canEdit}
+          onDelete={handleBulkDelete}
+          onTag={() => setBulkEditingOpen(true)}
+          onSelectAll={() => bulk.selectAll(items.map((s) => s.id))}
+          onDeselectAll={bulk.clearAll}
+          isDeleting={bulkDeleting}
+        />
+      )}
+
+      {/* Bulk edit modal */}
+      {bulkEditingOpen && (
+        <BulkEditModal
+          count={bulk.count}
+          onApply={handleBulkEdit}
+          onClose={() => setBulkEditingOpen(false)}
+          isApplying={bulkEditingApplying}
+        />
+      )}
     </div>
   );
 }

@@ -751,6 +751,72 @@ async function handleRemoveSong(
 }
 
 // ---------------------------------------------------------------------------
+// POST /api/playlists/:id/songs/bulk-remove — remove multiple songs from a playlist
+// ---------------------------------------------------------------------------
+async function handleBulkRemoveSongs(
+  ctx: RouteContext,
+  request: Request,
+  playlistId: string
+): Promise<Response> {
+  const guards = await checkGuards(ctx);
+  if (guards instanceof Response) return guards;
+  const { user } = guards;
+
+  const playlist = await findPlaylistOr404(playlistId);
+  if (!playlist) {
+    return json({ error: 'Playlist not found.' }, 404);
+  }
+
+  const accessResult = canAccessPlaylist(playlist, user, undefined);
+  if (!accessResult.ok) {
+    return json({ error: `Only the playlist owner or admins can remove songs.` }, 403);
+  }
+
+  let body: { songIds?: unknown };
+  try {
+    body = (await request.json()) as typeof body;
+  } catch {
+    return json({ error: 'Invalid JSON body.' }, 400);
+  }
+
+  if (!Array.isArray(body.songIds) || body.songIds.length === 0) {
+    return json({ error: 'songIds must be a non-empty array.' }, 400);
+  }
+
+  const songIds = (body.songIds as string[]).slice(0, 5000);
+
+  // Delete and re-index in a transaction
+  await db.transaction(async (tx) => {
+    await tx
+      .delete(playlistSongTable)
+      .where(
+        and(
+          eq(playlistSongTable.playlistId, playlistId),
+          inArray(playlistSongTable.songId, songIds)
+        )
+      );
+
+    // Re-index remaining songs to close gaps in positions
+    const remaining = await tx
+      .select()
+      .from(playlistSongTable)
+      .where(eq(playlistSongTable.playlistId, playlistId))
+      .orderBy(playlistSongTable.position);
+
+    await Promise.all(
+      remaining.map((ps, index) =>
+        tx.update(playlistSongTable).set({ position: index }).where(eq(playlistSongTable.id, ps.id))
+      )
+    );
+  });
+
+  const value = await getPlaylistSongCount(playlistId);
+  emitPlaylistUpdated(formatPlaylist(playlist, value));
+
+  return json({ removed: songIds.length });
+}
+
+// ---------------------------------------------------------------------------
 // Dispatcher
 // ---------------------------------------------------------------------------
 
@@ -772,6 +838,15 @@ export async function handlePlaylists(ctx: RouteContext, request: Request): Prom
     if (request.method === 'GET') return await handleGetPlaylists(ctx, request);
     if (request.method === 'POST') return await handlePostPlaylist(ctx, request);
     return json({ error: 'Not Found' }, 404);
+  }
+
+  // /api/playlists/:id/songs/bulk-remove POST
+  const bulkRemoveMatch = path.match(/^\/([^/]+)\/songs\/bulk-remove$/);
+  if (bulkRemoveMatch && request.method === 'POST') {
+    const [, playlistId] = bulkRemoveMatch;
+    if (playlistId) {
+      return await handleBulkRemoveSongs(ctx, request, playlistId);
+    }
   }
 
   // /api/playlists/:id/songs/:songId DELETE

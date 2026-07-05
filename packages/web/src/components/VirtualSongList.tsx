@@ -17,11 +17,15 @@ interface VirtualSongListProps {
   playingId: string | null;
   onRetry: () => void;
   sentinelRef: (el: HTMLDivElement | null) => void;
-  onDelete: (id: string) => void;
+  onDelete?: (id: string) => void;
   onPlay: (id: string) => void;
   onAddToQueue: (id: string) => void;
   emptyTitle: string;
   emptyMessage?: string;
+  // Bulk selection
+  selectionMode?: boolean;
+  isSelected?: (id: string) => boolean;
+  onToggleSelect?: (id: string) => void;
 }
 
 function SkeletonGrid() {
@@ -100,6 +104,9 @@ export const VirtualSongList = memo(function VirtualSongList({
   onAddToQueue,
   emptyTitle,
   emptyMessage,
+  selectionMode = false,
+  isSelected,
+  onToggleSelect,
 }: VirtualSongListProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const isGrid = viewMode === 'grid';
@@ -142,6 +149,9 @@ export const VirtualSongList = memo(function VirtualSongList({
                 onPlay={() => onPlay(song.id)}
                 isPlaying={playingId === song.id}
                 onAddToQueue={() => onAddToQueue(song.id)}
+                selectionMode={selectionMode}
+                isSelected={isSelected?.(song.id) ?? false}
+                onToggleSelect={onToggleSelect ? () => onToggleSelect(song.id) : undefined}
               />
             ))}
           </div>
