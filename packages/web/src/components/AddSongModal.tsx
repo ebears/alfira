@@ -14,9 +14,11 @@ type Step = 'url' | 'metadata';
 export default function AddSongModal({
   onClose,
   onAdded,
+  onRequestCreated,
 }: {
   onClose: () => void;
   onAdded: (song: Song) => void;
+  onRequestCreated?: () => void;
 }) {
   const { tagColorMap } = useTagColors();
 
@@ -97,6 +99,7 @@ export default function AddSongModal({
         sourceUrl: url.trim(),
       });
 
+      onRequestCreated?.();
       if (result.autoApproved) {
         setSuccessMsg(
           `Imported ${result.importedCount ?? result.songs?.length ?? 0} songs from "${result.playlistTitle ?? 'playlist'}".`
@@ -131,6 +134,7 @@ export default function AddSongModal({
         volumeBoost: parsedBoost != null && !Number.isNaN(parsedBoost) ? parsedBoost : null,
       });
 
+      onRequestCreated?.();
       if (result.autoApproved) {
         if (result.song) {
           onAdded(result.song);

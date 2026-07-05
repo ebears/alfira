@@ -50,13 +50,15 @@ export function useVirtualizedInfiniteScroll<T, A extends unknown[]>({
   const fetchPageRef = useRef(fetchPage);
   fetchPageRef.current = fetchPage;
 
+  const depsRef = useRef(deps);
+  depsRef.current = deps;
+
   const sentinelRefInternal = useRef<HTMLDivElement | null>(null);
   const observerRef = useRef<IntersectionObserver | null>(null);
   // Initial value is a no-op; immediately overwritten after render
   // biome-ignore lint/suspicious/noEmptyBlockStatements: initial no-op value is immediately replaced
   const fetchMoreFnRef = useRef<() => void>(() => {});
 
-  // biome-ignore lint/correctness/useExhaustiveDependencies: intentionally uses deps inside via fetchPageRef; deps changes trigger refetch via useEffect
   const loadPage = useCallback(
     async (page: number, isInitial = false, searchOverride?: string) => {
       if (isFetchingRef.current) return;
@@ -79,7 +81,7 @@ export function useVirtualizedInfiniteScroll<T, A extends unknown[]>({
       }
       setIsError(false);
 
-      const searchArgs = (searchOverride !== undefined ? [searchOverride] : deps) as A;
+      const searchArgs = (searchOverride !== undefined ? [searchOverride] : depsRef.current) as A;
 
       try {
         const result = await fetchPageRef.current(page, limit, ...searchArgs);
