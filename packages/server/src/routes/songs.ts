@@ -359,6 +359,29 @@ async function handleBulkEdit(ctx: RouteContext, request: Request): Promise<Resp
     }
   }
 
+  // Update the player cache for any of the edited songs that are currently
+  // in the queue / now playing.
+  const bulkPlayer = getPlayer(getGuildId());
+  if (bulkPlayer) {
+    if ('volumeBoost' in data) {
+      const currentSong = bulkPlayer.getCurrentSong();
+      if (currentSong && ids.includes(currentSong.id)) {
+        bulkPlayer.updateVolumeBoost(data.volumeBoost as number);
+      }
+    }
+    const bulkFields: Record<string, unknown> = {};
+    if ('nickname' in data) bulkFields.nickname = data.nickname;
+    if ('artist' in data) bulkFields.artist = data.artist;
+    if ('album' in data) bulkFields.album = data.album;
+    if ('artwork' in data) bulkFields.artwork = data.artwork;
+    if ('tags' in data) bulkFields.tags = data.tags;
+    if ('volumeBoost' in data) bulkFields.volumeBoost = data.volumeBoost;
+    bulkPlayer.updateSongMetadata(
+      ids,
+      bulkFields as Parameters<typeof bulkPlayer.updateSongMetadata>[1]
+    );
+  }
+
   return json({ updated: ids.length });
 }
 
@@ -578,13 +601,28 @@ async function handlePatchSong(ctx: RouteContext, request: Request, id: string):
     }
   }
 
-  // If this song is currently playing, update volume live without restarting
+  // Update the song in the GuildPlayer's cache (currentSong, priorityQueue,
+  // regular queue) so the UI reflects metadata changes immediately.
   const player = getPlayer(getGuildId());
-  if (player && data.volumeBoost !== undefined) {
-    const currentSong = player.getCurrentSong();
-    if (currentSong?.id === id) {
-      player.updateVolumeBoost(data.volumeBoost as number);
+  if (player) {
+    // Volume boost also needs live audio update
+    if (data.volumeBoost !== undefined) {
+      const currentSong = player.getCurrentSong();
+      if (currentSong?.id === id) {
+        player.updateVolumeBoost(data.volumeBoost as number);
+      }
     }
+
+    // Build fields object with only the keys that are actually in data —
+    // undefined values still create keys, which would clear fields in merge.
+    const fields: Record<string, unknown> = {};
+    if ('nickname' in data) fields.nickname = data.nickname;
+    if ('artist' in data) fields.artist = data.artist;
+    if ('album' in data) fields.album = data.album;
+    if ('artwork' in data) fields.artwork = data.artwork;
+    if ('tags' in data) fields.tags = data.tags;
+    if ('volumeBoost' in data) fields.volumeBoost = data.volumeBoost;
+    player.updateSongMetadata(id, fields as Parameters<typeof player.updateSongMetadata>[1]);
   }
 
   return json(formatSong(updatedSong));

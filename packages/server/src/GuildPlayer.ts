@@ -507,6 +507,64 @@ export class GuildPlayer {
     });
   }
 
+  /**
+   * Update a song's metadata in-place across currentSong, priorityQueue,
+   * and regular queue after a DB edit. Only updates the fields present in
+   * the partial update — other fields are left unchanged.
+   *
+   * Accepts either a single song ID or an array of IDs (for bulk edits).
+   */
+  updateSongMetadata(
+    songIds: string | string[],
+    fields: {
+      nickname?: string | null;
+      artist?: string | null;
+      album?: string | null;
+      artwork?: string | null;
+      tags?: string[];
+      volumeBoost?: number | null;
+    }
+  ): void {
+    const ids = Array.isArray(songIds) ? songIds : [songIds];
+    const idSet = new Set(ids);
+
+    const merge = (s: QueuedSong): QueuedSong => {
+      const updated = { ...s };
+      if ('nickname' in fields) updated.nickname = fields.nickname ?? undefined;
+      if ('artist' in fields) updated.artist = fields.artist ?? undefined;
+      if ('album' in fields) updated.album = fields.album ?? undefined;
+      if ('artwork' in fields) updated.artwork = fields.artwork ?? undefined;
+      if ('tags' in fields) updated.tags = fields.tags;
+      if ('volumeBoost' in fields) updated.volumeBoost = fields.volumeBoost ?? undefined;
+      return updated;
+    };
+
+    let changed = false;
+
+    // Current song
+    if (this.currentSong && idSet.has(this.currentSong.id)) {
+      this.currentSong = merge(this.currentSong);
+      changed = true;
+    }
+
+    // Priority queue
+    for (let i = 0; i < this.priorityQueue.length; i++) {
+      const s = this.priorityQueue[i];
+      if (s && idSet.has(s.id)) {
+        this.priorityQueue[i] = merge(s);
+        changed = true;
+      }
+    }
+
+    // Regular queue
+    const regularUpdated = this.queue.updateWhere((s) => idSet.has(s.id), merge);
+    if (regularUpdated > 0) changed = true;
+
+    if (changed) {
+      this.broadcast();
+    }
+  }
+
   getQueue(): QueuedSong[] {
     return this.queue.toRemaining();
   }
@@ -584,6 +642,12 @@ export class GuildPlayer {
 
     const prioritySong = this.priorityQueue.shift();
     if (prioritySong) {
+      // The gapless preload was for a different track (the regular-queue
+      // next seen at preload time).  Clear the flag so playSong does a
+      // full cold-start load for this priority track instead of assuming
+      // NodeLink auto-started it.
+      this.gaplessTransition = false;
+
       this.currentSong = prioritySong;
       if (this.currentSong) {
         this.currentSong = { ...this.currentSong, isSeekable: true };
