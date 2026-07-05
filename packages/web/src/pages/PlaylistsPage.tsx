@@ -21,7 +21,7 @@ export default function PlaylistsPage() {
   const [showCreate, setShowCreate] = useState(false);
   const { notification } = useNotification();
 
-  const { items, isLoading, isFetching, isError, prepend, retry, sentinelRef } =
+  const { items, isLoading, isFetching, isError, hasLoaded, prepend, retry, sentinelRef } =
     useVirtualizedInfiniteScroll<Playlist, [boolean]>({
       fetchPage: async (page, limit, admin) => {
         const result = await getPlaylistsPage(admin, page, limit);
@@ -73,7 +73,7 @@ export default function PlaylistsPage() {
           <h1 className="font-display text-3xl md:text-4xl text-fg tracking-wider">Playlists</h1>
           <p className="font-mono text-xs text-muted mt-2">
             Browse & manage playlists
-            {isLoading ? '' : ` • ${items.length} playlist${items.length !== 1 ? 's' : ''}`}
+            {hasLoaded ? ` • ${items.length} playlist${items.length !== 1 ? 's' : ''}` : ''}
           </p>
         </div>
         <Button
@@ -91,6 +91,7 @@ export default function PlaylistsPage() {
         isLoading={isLoading}
         isFetching={isFetching}
         isError={isError}
+        hasLoaded={hasLoaded}
         onRetry={retry}
         sentinelRef={sentinelRef}
         onRowClick={handleRowClick}

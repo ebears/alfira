@@ -241,6 +241,7 @@ export default function SongsPage() {
     isError,
     hasMore,
     total,
+    hasLoaded,
     prepend,
     updateItem,
     removeItem,
@@ -323,7 +324,7 @@ export default function SongsPage() {
         <div>
           <h1 className="font-display text-3xl md:text-4xl text-fg tracking-wider">Songs</h1>
           <p className="font-mono text-xs text-muted mt-2">
-            Music library{isLoading ? '' : ` • ${total} track${total !== 1 ? 's' : ''}`}
+            Music library{hasLoaded ? ` • ${total} track${total !== 1 ? 's' : ''}` : ''}
           </p>
         </div>
         <span className="relative group">
@@ -477,6 +478,7 @@ export default function SongsPage() {
         isFetching={isFetching}
         isError={isError}
         hasMore={hasMore}
+        hasLoaded={hasLoaded}
         playingId={playingId}
         onRetry={retry}
         sentinelRef={sentinelRef}

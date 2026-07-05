@@ -5,6 +5,7 @@ import { useTagColors } from '../context/TagsContext';
 import { apiErrorMessage } from '../utils/api';
 import { getTagColorClasses } from '../utils/tagColors';
 import { Backdrop } from './Backdrop';
+import { ArtworkImage } from './ui/ArtworkImage';
 import { Button } from './ui/Button';
 import Checkbox from './ui/Checkbox';
 import { Spinner } from './ui/Spinner';
@@ -259,11 +260,13 @@ export default function AddSongModal({
             {/* Thumbnail + title + duration + source */}
             <div className="flex items-center gap-3 -mb-1">
               {(preview.artworkUrl || preview.thumbnailUrl) && (
-                <img
-                  src={preview.artworkUrl || preview.thumbnailUrl}
-                  alt="Album art"
-                  className="w-12 h-12 rounded border border-border object-cover shrink-0"
-                />
+                <div className="w-12 h-12 rounded border border-border shrink-0 overflow-hidden bg-elevated">
+                  <ArtworkImage
+                    src={preview.artworkUrl || preview.thumbnailUrl}
+                    alt="Album art"
+                    className="w-full h-full"
+                  />
+                </div>
               )}
               <div className="flex flex-col gap-0.5 min-w-0">
                 <span className="font-body text-sm text-fg truncate">{preview.title}</span>

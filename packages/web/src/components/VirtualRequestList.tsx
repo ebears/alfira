@@ -1,5 +1,5 @@
 import type { SongRequest } from '@alfira-bot/server/shared';
-import { memo } from 'react';
+import { memo, useLayoutEffect, useRef } from 'react';
 import EmptyState from './EmptyState';
 import RequestCard from './RequestCard';
 import { VirtualListFooter } from './ui/VirtualListFooter';
@@ -9,6 +9,7 @@ export interface VirtualRequestListProps {
   isLoading: boolean;
   isFetching: boolean;
   isError: boolean;
+  hasLoaded: boolean;
   isOwnFn: (requestedBy: string) => boolean;
   isAdmin: boolean;
   onRetry: () => void;
@@ -46,6 +47,7 @@ export const VirtualRequestList = memo(function VirtualRequestList({
   isLoading,
   isFetching,
   isError,
+  hasLoaded,
   isOwnFn,
   isAdmin,
   onRetry,
@@ -56,36 +58,47 @@ export const VirtualRequestList = memo(function VirtualRequestList({
   emptyTitle,
   emptyMessage,
 }: VirtualRequestListProps) {
-  if (isLoading) {
-    return <SkeletonList />;
-  }
+  const containerRef = useRef<HTMLDivElement>(null);
+  const showSkeleton = isLoading;
+  const showEmpty = hasLoaded && items.length === 0;
+  const showContent = !isLoading && hasLoaded && items.length > 0;
 
-  if (items.length === 0) {
-    return <EmptyState title={emptyTitle} message={emptyMessage} />;
-  }
+  useLayoutEffect(() => {
+    if (!containerRef.current) return;
+    containerRef.current.style.opacity = showContent || showEmpty || showSkeleton ? '1' : '0';
+  }, [showContent, showEmpty, showSkeleton]);
 
   return (
-    <div className="relative">
-      <div className="flex flex-col gap-3">
-        {items.map((req) => (
-          <RequestCard
-            key={req.id}
-            req={req}
-            isOwn={isOwnFn(req.requestedBy)}
-            isAdmin={isAdmin}
-            onApprove={onApprove}
-            onDeny={onDeny}
-            onCancel={onCancel}
+    <div
+      ref={containerRef}
+      className="relative"
+      style={{ opacity: 0, transition: 'opacity 120ms ease' }}
+    >
+      {showSkeleton && <SkeletonList />}
+      {showEmpty && <EmptyState title={emptyTitle} message={emptyMessage} />}
+      {showContent && (
+        <>
+          <div className="flex flex-col gap-3">
+            {items.map((req) => (
+              <RequestCard
+                key={req.id}
+                req={req}
+                isOwn={isOwnFn(req.requestedBy)}
+                isAdmin={isAdmin}
+                onApprove={onApprove}
+                onDeny={onDeny}
+                onCancel={onCancel}
+              />
+            ))}
+          </div>
+          <VirtualListFooter
+            sentinelRef={sentinelRef}
+            isFetching={isFetching}
+            isError={isError}
+            onRetry={onRetry}
           />
-        ))}
-      </div>
-
-      <VirtualListFooter
-        sentinelRef={sentinelRef}
-        isFetching={isFetching}
-        isError={isError}
-        onRetry={onRetry}
-      />
+        </>
+      )}
     </div>
   );
 });

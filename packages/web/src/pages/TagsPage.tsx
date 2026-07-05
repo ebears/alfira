@@ -5,6 +5,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import ConfirmModal from '../components/ConfirmModal';
 import EmptyState from '../components/EmptyState';
 import TagTicker from '../components/TagTicker';
+import { ArtworkImage } from '../components/ui/ArtworkImage';
 import { Button } from '../components/ui/Button';
 import { useTagColors } from '../context/TagsContext';
 
@@ -60,6 +61,12 @@ export default function TagsPage() {
   const [savingName, setSavingName] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const { refreshTags } = useTagColors();
+
+  const [showTagsLoading, setShowTagsLoading] = useState(false);
+  useEffect(() => {
+    const t = setTimeout(() => setShowTagsLoading(true), 200);
+    return () => clearTimeout(t);
+  }, []);
 
   useEffect(() => {
     fetchTags()
@@ -176,9 +183,11 @@ export default function TagsPage() {
 
           <div className="flex-1 overflow-y-auto">
             {loadingTags ? (
-              <div className="flex items-center justify-center h-20 text-muted text-sm">
-                Loading…
-              </div>
+              showTagsLoading ? (
+                <div className="flex items-center justify-center h-20 text-muted text-sm">
+                  Loading…
+                </div>
+              ) : null
             ) : filtered.length === 0 ? (
               <EmptyState
                 compact
@@ -309,11 +318,10 @@ export default function TagsPage() {
                         >
                           <div className="w-12 h-12 rounded border border-border shrink-0 overflow-hidden bg-base">
                             {(song.artwork ?? song.thumbnailUrl) ? (
-                              <img
+                              <ArtworkImage
                                 src={song.artwork ?? song.thumbnailUrl}
                                 alt=""
-                                className="w-full h-full object-cover"
-                                loading="lazy"
+                                className="w-full h-full"
                               />
                             ) : (
                               <div className="w-full h-full flex items-center justify-center text-faint text-[10px]" />

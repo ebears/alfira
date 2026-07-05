@@ -1,6 +1,7 @@
 import type { Playlist } from '@alfira-bot/server/shared';
 import { CaretRightIcon, GhostIcon, PlaylistIcon, TagIcon } from '@phosphor-icons/react';
 import { memo } from 'react';
+import { ArtworkImage } from './ui/ArtworkImage';
 import { Card } from './ui/Card';
 
 interface PlaylistRowProps {
@@ -51,13 +52,7 @@ export const PlaylistRow = memo(
               {cells.map((url, i) => (
                 // biome-ignore lint/suspicious/noArrayIndexKey: cells are always exactly 4, never reorder
                 <div key={i} className="overflow-hidden bg-elevated">
-                  <img
-                    src={url ?? undefined}
-                    alt=""
-                    className="w-full h-full object-cover"
-                    loading="lazy"
-                    decoding="async"
-                  />
+                  <ArtworkImage src={url ?? undefined} alt="" className="w-full h-full" />
                 </div>
               ))}
             </div>

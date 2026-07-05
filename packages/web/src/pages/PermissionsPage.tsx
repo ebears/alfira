@@ -186,13 +186,24 @@ export default function PermissionsPage() {
   }, [data, mapping]);
 
   // Loading state ---------------------------------------------------------
+  // Loading state — deferred 200ms to avoid flash on fast loads
+  const [showLoading, setShowLoading] = useState(false);
+  useEffect(() => {
+    const t = setTimeout(() => setShowLoading(true), 200);
+    return () => clearTimeout(t);
+  }, []);
+
   if (!data) {
     return (
       <div className="p-4 md:p-8">
         <div className="mb-6 md:mb-8">
           <h1 className="font-display text-3xl md:text-4xl text-fg tracking-wider">Permissions</h1>
         </div>
-        {error ? <ErrorBanner message={error} /> : <p className="text-sm text-muted">Loading…</p>}
+        {error ? (
+          <ErrorBanner message={error} />
+        ) : (
+          showLoading && <p className="text-sm text-muted">Loading…</p>
+        )}
       </div>
     );
   }

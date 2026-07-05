@@ -3,6 +3,7 @@ import { formatDuration } from '@alfira-bot/server/shared';
 import { CheckCircleIcon, TrashIcon, XCircleIcon } from '@phosphor-icons/react';
 import { memo } from 'react';
 import { SourceIcon } from './SourceIcons';
+import { ArtworkImage } from './ui/ArtworkImage';
 import { Button } from './ui/Button';
 import { Card } from './ui/Card';
 
@@ -40,10 +41,10 @@ export const RequestCard = memo(function RequestCard({
     <Card className="rounded-xl flex items-center gap-4 p-4">
       {/* Thumbnail */}
       {thumbnailUrl ? (
-        <img
+        <ArtworkImage
           src={thumbnailUrl}
           alt=""
-          className="w-14 h-14 rounded-lg object-cover shrink-0 border border-border"
+          className="w-14 h-14 rounded-lg shrink-0 border border-border"
         />
       ) : (
         <div className="w-14 h-14 rounded-lg bg-muted/20 shrink-0 flex items-center justify-center">

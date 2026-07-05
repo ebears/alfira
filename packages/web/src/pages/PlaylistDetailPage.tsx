@@ -929,6 +929,7 @@ export default function PlaylistDetailPage() {
           isFetching={isFetching}
           isError={isError}
           hasMore={hasMore}
+          hasLoaded={!isLoading}
           playingId={playingSongId}
           onRetry={retry}
           sentinelRef={sentinelRef}
