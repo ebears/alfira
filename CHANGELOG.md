@@ -41,7 +41,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - PWA support for installable web app experience.
 - Docker-based deployment with pre-built images on GHCR.
 - **Pi skills** — Domain knowledge skills for the Pi coding agent (`.pi/skills/`).
-- **Release workflow** — GitHub Actions workflow for multi-arch Docker image builds triggered by `v*` tags, with draft GitHub releases.
+- **Release workflow** — GitHub Actions workflow triggered by `v*` tags: builds multi-arch Docker images, creates GitHub Releases with changelog notes, and attaches docker-compose.yml and .env.example as assets.
 
 ### Changed
 - **Full UI redesign** — Clay design system with flat matte shadows on buttons and cards, duo-tone color themes (replacing single-accent palettes), and glassmorphism on popups, modals, and tooltips.
