@@ -6,30 +6,18 @@ import { parsePagination } from '../lib/pagination';
 import { canAccessPlaylist } from '../lib/playlistAccess';
 import { checkGuards } from '../lib/routeGuards';
 import { routeTable } from '../lib/routeTable';
-import { buildSongSearchClause, SOURCE_LIKE_PATTERNS } from '../lib/search';
+import {
+  buildSongFilterClause,
+  buildSongOrderBy,
+  buildSongSearchClause,
+  parseSongSortField,
+} from '../lib/search';
 import { emitPlaylistUpdated } from '../lib/socket';
 import { syncPlaylistToTag } from '../lib/syncPlaylistToTag';
 import { validatePlaylistName } from '../lib/validation';
 import { db, tables } from '../shared/db';
 
 const { playlist: playlistTable, playlistSong: playlistSongTable } = tables;
-
-function buildSongOrderBy(field: string, direction: 'ASC' | 'DESC'): ReturnType<typeof sql> {
-  switch (field) {
-    case 'title':
-      return sql`lower(${tables.song.title}) ${sql.raw(direction)}`;
-    case 'artist':
-      return sql`${tables.song.artist} IS NULL, lower(${tables.song.artist}) ${sql.raw(direction)}`;
-    case 'album':
-      return sql`${tables.song.album} IS NULL, lower(${tables.song.album}) ${sql.raw(direction)}`;
-    case 'duration':
-      return sql`${tables.song.duration} ${sql.raw(direction)}`;
-    case 'createdAt':
-      return sql`${tables.song.createdAt} ${sql.raw(direction)}`;
-    default:
-      return sql`${tables.song.createdAt} ${sql.raw(direction)}`;
-  }
-}
 
 async function getPlaylistSongCount(playlistId: string): Promise<number> {
   const result = await db
@@ -281,32 +269,26 @@ async function handleGetPlaylist(
       if (searchClause) songFilterClauses.push(searchClause);
     }
 
-    for (const tag of filterTags) {
-      songFilterClauses.push(sql`lower(${tables.song.tags}) LIKE lower(${`%"${tag}"%`})`);
-    }
-
-    if (filterSources.length > 0) {
-      const sourceOrs: ReturnType<typeof sql>[] = [];
-      for (const source of filterSources) {
-        const patterns = SOURCE_LIKE_PATTERNS[source];
-        if (patterns) {
-          for (const pattern of patterns) {
-            sourceOrs.push(sql`${tables.song.sourceUrl} LIKE ${pattern}`);
-          }
-        }
-      }
-      if (sourceOrs.length > 0) {
-        songFilterClauses.push(sql`(${sql.join(sourceOrs, sql` OR `)})`);
-      }
-    }
+    const tagSourceFilter = buildSongFilterClause(filterTags, filterSources, {
+      tags: tables.song.tags,
+      sourceUrl: tables.song.sourceUrl,
+    });
+    if (tagSourceFilter) songFilterClauses.push(tagSourceFilter);
 
     const joinWhere = and(
       eq(playlistSongTable.playlistId, id),
       ...(songFilterClauses.length > 0 ? [sql.join(songFilterClauses, sql` AND `)] : [])
     );
 
-    const orderBy = wantsCustomSort
-      ? buildSongOrderBy(sortField, sortOrder)
+    const songSortField = wantsCustomSort ? parseSongSortField(sortField) : null;
+    const orderBy = songSortField
+      ? buildSongOrderBy(songSortField, sortOrder, {
+          title: tables.song.title,
+          artist: tables.song.artist,
+          album: tables.song.album,
+          duration: tables.song.duration,
+          createdAt: tables.song.createdAt,
+        })
       : playlistSongTable.position;
 
     const [rows, countResult] = await Promise.all([
