@@ -7,6 +7,7 @@ import { getPlaylistsPage } from '../api/api';
 import { Backdrop } from '../components/Backdrop';
 import NotificationToast from '../components/NotificationToast';
 import { Button } from '../components/ui/Button';
+import { PageHeader } from '../components/ui/PageHeader';
 import { VirtualPlaylistList } from '../components/VirtualPlaylistList';
 import { useAdminView } from '../context/AdminViewContext';
 import { CreatePlaylistSubmitButton, useCreatePlaylist } from '../hooks/useCreatePlaylist';
@@ -68,18 +69,11 @@ export default function PlaylistsPage() {
 
   return (
     <div className="p-4 md:p-8">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6 md:mb-8">
-        <div>
-          <h1 className="font-display text-3xl md:text-4xl text-accent tracking-wider flex items-center gap-2">
-            <PlaylistIcon size={28} weight="duotone" className="shrink-0 relative top-1" />
-            Playlists
-          </h1>
-          <p className="font-mono text-xs text-muted mt-2">
-            Browse & manage playlists
-            {hasLoaded ? ` • ${items.length} playlist${items.length !== 1 ? 's' : ''}` : ''}
-          </p>
-        </div>
+      <PageHeader
+        icon={PlaylistIcon}
+        title="Playlists"
+        subtitle={`Browse & manage playlists${hasLoaded ? ` • ${items.length} playlist${items.length !== 1 ? 's' : ''}` : ''}`}
+      >
         <Button
           variant="primary"
           onClick={() => setShowCreate(true)}
@@ -87,7 +81,7 @@ export default function PlaylistsPage() {
         >
           + New Playlist
         </Button>
-      </div>
+      </PageHeader>
 
       {/* List */}
       <VirtualPlaylistList

@@ -7,6 +7,7 @@ import EmptyState from '../components/EmptyState';
 import TagTicker from '../components/TagTicker';
 import { ArtworkImage } from '../components/ui/ArtworkImage';
 import { Button } from '../components/ui/Button';
+import { PageHeader } from '../components/ui/PageHeader';
 import { useTagColors } from '../context/TagsContext';
 import { getTagColorClasses, TAG_COLORS } from '../utils/tagColors';
 
@@ -121,17 +122,11 @@ export default function TagsPage() {
 
   return (
     <div className="p-4 md:p-8 flex flex-col h-full">
-      {/* Page header */}
-      <div className="mb-6 md:mb-8 shrink-0">
-        <h1 className="font-display text-3xl md:text-4xl text-accent tracking-wider flex items-center gap-2">
-          <TagIcon size={28} weight="duotone" className="shrink-0 relative top-1" />
-          Tags
-        </h1>
-        <p className="font-mono text-xs text-muted mt-2">
-          Manage tags & colors
-          {loadingTags ? '' : ` • ${allTags.length} tag${allTags.length !== 1 ? 's' : ''}`}
-        </p>
-      </div>
+      <PageHeader
+        icon={TagIcon}
+        title="Tags"
+        subtitle={`Manage tags & colors${loadingTags ? '' : ` • ${allTags.length} tag${allTags.length !== 1 ? 's' : ''}`}`}
+      />
 
       <div className="flex gap-4 flex-1 min-h-0">
         {/* Left pane: tag list */}

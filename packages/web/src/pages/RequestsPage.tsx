@@ -6,6 +6,7 @@ import AddSongModal from '../components/AddSongModal';
 import { Button } from '../components/ui/Button';
 import Checkbox from '../components/ui/Checkbox';
 import { ErrorBanner } from '../components/ui/ErrorBanner';
+import { PageHeader } from '../components/ui/PageHeader';
 import VirtualRequestList from '../components/VirtualRequestList';
 import { useAdminView } from '../context/AdminViewContext';
 import { useAuth } from '../context/AuthContext';
@@ -112,17 +113,11 @@ export default function RequestsPage() {
 
   return (
     <div className="p-4 md:p-8">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6 md:mb-8">
-        <div>
-          <h1 className="font-display text-3xl md:text-4xl text-accent tracking-wider flex items-center gap-2">
-            <TrayIcon size={28} weight="duotone" className="shrink-0 relative top-1" />
-            Requests
-          </h1>
-          <p className="font-mono text-xs text-muted mt-2">
-            Submit & review requests{hasLoaded ? ` • ${countLabel}` : ''}
-          </p>
-        </div>
+      <PageHeader
+        icon={TrayIcon}
+        title="Requests"
+        subtitle={`Submit & review requests${hasLoaded ? ` • ${countLabel}` : ''}`}
+      >
         <Button
           variant="primary"
           onClick={() => setShowAddModal(true)}
@@ -130,7 +125,7 @@ export default function RequestsPage() {
         >
           + Request Song
         </Button>
-      </div>
+      </PageHeader>
 
       {/* Tabs + filter */}
       <div className="flex items-center gap-3 mb-4 md:mb-6">
