@@ -4,8 +4,8 @@ import { getGuildId } from '../lib/config';
 import { resolveDisplayNames } from '../lib/displayName';
 import { json } from '../lib/json';
 import { parsePagination } from '../lib/pagination';
-import { checkRateLimit, getClientIp, rateLimitResponse } from '../lib/rateLimit';
 import { checkGuards } from '../lib/routeGuards';
+import { routeTable } from '../lib/routeTable';
 import { buildSongSearchClause, SOURCE_LIKE_PATTERNS } from '../lib/search';
 import { formatSong } from '../lib/serialization';
 import { emitSongDeleted, emitSongUpdated } from '../lib/socket';
@@ -381,8 +381,9 @@ async function handleGetSongs(ctx: RouteContext, request: Request): Promise<Resp
 async function handleDeleteSong(
   ctx: RouteContext,
   _request: Request,
-  id: string
+  params: Record<string, string>
 ): Promise<Response> {
+  const { id } = params;
   const guards = await checkGuards(ctx, { admin: true, permission: 'songs.delete' });
   if (guards instanceof Response) return guards;
 
@@ -402,7 +403,12 @@ async function handleDeleteSong(
 // ---------------------------------------------------------------------------
 // PATCH /api/songs/:id — update song fields. Admin only.
 // ---------------------------------------------------------------------------
-async function handlePatchSong(ctx: RouteContext, request: Request, id: string): Promise<Response> {
+async function handlePatchSong(
+  ctx: RouteContext,
+  request: Request,
+  params: Record<string, string>
+): Promise<Response> {
+  const { id } = params;
   const guards = await checkGuards(ctx, { admin: true, permission: 'songs.edit' });
   if (guards instanceof Response) return guards;
 
@@ -509,54 +515,14 @@ async function handlePatchSong(ctx: RouteContext, request: Request, id: string):
   return json(formatSong(updatedSong));
 }
 
-// ---------------------------------------------------------------------------
-// Dispatcher
-// ---------------------------------------------------------------------------
-
-export async function handleSongs(ctx: RouteContext, request: Request): Promise<Response> {
-  const url = new URL(request.url);
-  const pathname = url.pathname;
-
-  // Rate-limit mutation endpoints — 20 requests per 60s per IP.
-  // GET is exempt to allow the UI to fetch pages freely.
-  if (request.method !== 'GET') {
-    const ip = getClientIp(request);
-    if (!checkRateLimit('songs-mutations', ip, { windowMs: 60_000, maxRequests: 20 })) {
-      return rateLimitResponse(60);
-    }
-  }
-
-  // GET /api/songs
-  if (request.method === 'GET' && pathname === '/api/songs') {
-    return await handleGetSongs(ctx, request);
-  }
-
-  // POST /api/songs/bulk-delete
-  if (request.method === 'POST' && pathname === '/api/songs/bulk-delete') {
-    return await handleBulkDelete(ctx, request);
-  }
-
-  // POST /api/songs/bulk-tag
-  if (request.method === 'POST' && pathname === '/api/songs/bulk-tag') {
-    return await handleBulkTag(ctx, request);
-  }
-
-  // POST /api/songs/bulk-edit
-  if (request.method === 'POST' && pathname === '/api/songs/bulk-edit') {
-    return await handleBulkEdit(ctx, request);
-  }
-
-  // DELETE /api/songs/:id
-  if (request.method === 'DELETE' && pathname.startsWith('/api/songs/')) {
-    const id = pathname.slice('/api/songs/'.length);
-    return await handleDeleteSong(ctx, request, id);
-  }
-
-  // PATCH /api/songs/:id
-  if (request.method === 'PATCH' && pathname.startsWith('/api/songs/')) {
-    const id = pathname.slice('/api/songs/'.length);
-    return await handlePatchSong(ctx, request, id);
-  }
-
-  return json({ error: 'Not Found' }, 404);
-}
+export const handleSongs = routeTable('/api/songs', {
+  rateLimit: { windowMs: 60_000, maxRequests: 20, bucket: 'songs-mutations' },
+  routes: [
+    ['GET', '/', handleGetSongs],
+    ['POST', '/bulk-delete', handleBulkDelete],
+    ['POST', '/bulk-tag', handleBulkTag],
+    ['POST', '/bulk-edit', handleBulkEdit],
+    ['DELETE', '/:id', handleDeleteSong],
+    ['PATCH', '/:id', handlePatchSong],
+  ],
+});

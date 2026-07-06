@@ -4,8 +4,8 @@ import { getUserDisplayName, resolveDisplayNames } from '../lib/displayName';
 import { json } from '../lib/json';
 import { parsePagination } from '../lib/pagination';
 import { canAccessPlaylist } from '../lib/playlistAccess';
-import { checkRateLimit, getClientIp, rateLimitResponse } from '../lib/rateLimit';
 import { checkGuards } from '../lib/routeGuards';
+import { routeTable } from '../lib/routeTable';
 import { buildSongSearchClause, SOURCE_LIKE_PATTERNS } from '../lib/search';
 import { emitPlaylistUpdated } from '../lib/socket';
 import { syncPlaylistToTag } from '../lib/syncPlaylistToTag';
@@ -223,8 +223,9 @@ async function handlePostPlaylist(ctx: RouteContext, request: Request): Promise<
 async function handleGetPlaylist(
   ctx: RouteContext,
   request: Request,
-  id: string
+  params: Record<string, string>
 ): Promise<Response> {
+  const { id } = params;
   const guards = await checkGuards(ctx);
   if (guards instanceof Response) return guards;
   const { user } = guards;
@@ -434,8 +435,9 @@ async function handleGetPlaylist(
 async function handlePatchVisibility(
   ctx: RouteContext,
   request: Request,
-  id: string
+  params: Record<string, string>
 ): Promise<Response> {
+  const { id } = params;
   const guards = await checkGuards(ctx);
   if (guards instanceof Response) return guards;
   const { user } = guards;
@@ -484,8 +486,9 @@ async function handlePatchVisibility(
 async function handlePatchPlaylist(
   ctx: RouteContext,
   request: Request,
-  id: string
+  params: Record<string, string>
 ): Promise<Response> {
+  const { id } = params;
   const guards = await checkGuards(ctx);
   if (guards instanceof Response) return guards;
   const { user } = guards;
@@ -554,8 +557,9 @@ async function handlePatchPlaylist(
 async function handleDeletePlaylist(
   ctx: RouteContext,
   _request: Request,
-  id: string
+  params: Record<string, string>
 ): Promise<Response> {
+  const { id } = params;
   const guards = await checkGuards(ctx);
   if (guards instanceof Response) return guards;
   const { user } = guards;
@@ -578,7 +582,12 @@ async function handleDeletePlaylist(
 // ---------------------------------------------------------------------------
 // POST /api/playlists/:id/songs — add a song to a playlist
 // ---------------------------------------------------------------------------
-async function handleAddSong(ctx: RouteContext, request: Request, id: string): Promise<Response> {
+async function handleAddSong(
+  ctx: RouteContext,
+  request: Request,
+  params: Record<string, string>
+): Promise<Response> {
+  const { id } = params;
   const guards = await checkGuards(ctx);
   if (guards instanceof Response) return guards;
   const { user } = guards;
@@ -681,9 +690,9 @@ async function handleAddSong(ctx: RouteContext, request: Request, id: string): P
 async function handleRemoveSong(
   ctx: RouteContext,
   _request: Request,
-  playlistId: string,
-  songId: string
+  params: Record<string, string>
 ): Promise<Response> {
+  const { id: playlistId, songId } = params;
   const guards = await checkGuards(ctx);
   if (guards instanceof Response) return guards;
   const { user } = guards;
@@ -744,8 +753,9 @@ async function handleRemoveSong(
 async function handleBulkRemoveSongs(
   ctx: RouteContext,
   request: Request,
-  playlistId: string
+  params: Record<string, string>
 ): Promise<Response> {
+  const { id: playlistId } = params;
   const guards = await checkGuards(ctx);
   if (guards instanceof Response) return guards;
   const { user } = guards;
@@ -805,89 +815,17 @@ async function handleBulkRemoveSongs(
 }
 
 // ---------------------------------------------------------------------------
-// Path helpers
-// ---------------------------------------------------------------------------
-
-/**
- * Match a path against a template with `:param` placeholders.
- * Returns named parameters on match, null otherwise.
- * Does NOT handle method matching — callers check `request.method`.
- *
- * Example: matchPath('/abc/xyz/songs/123', '/:id/songs/:songId') => { id: 'abc/xyz', songId: '123' }
- */
-function matchPath(path: string, template: string): Record<string, string> | null {
-  const pathParts = path.split('/').filter(Boolean);
-  const tplParts = template.split('/').filter(Boolean);
-  if (pathParts.length !== tplParts.length) return null;
-
-  const params: Record<string, string> = {};
-  for (let i = 0; i < tplParts.length; i++) {
-    const tpl = tplParts[i];
-    const seg = pathParts[i];
-    if (!tpl || !seg) return null;
-    if (tpl.startsWith(':')) {
-      params[tpl.slice(1)] = seg;
-    } else if (tpl !== seg) {
-      return null;
-    }
-  }
-  return params;
-}
-
-// ---------------------------------------------------------------------------
-// Dispatcher
-// ---------------------------------------------------------------------------
-
-export async function handlePlaylists(ctx: RouteContext, request: Request): Promise<Response> {
-  const url = new URL(request.url);
-  const pathname = url.pathname;
-
-  // Rate-limit mutation endpoints — 20 requests per 60s per IP.
-  if (request.method !== 'GET') {
-    const ip = getClientIp(request);
-    if (!checkRateLimit('playlists-mutations', ip, { windowMs: 60_000, maxRequests: 20 })) {
-      return rateLimitResponse(60);
-    }
-  }
-
-  // Strip /api/playlists prefix
-  const path = pathname.slice('/api/playlists'.length) || '/';
-
-  // GET /api/playlists
-  if (request.method === 'GET' && path === '/') return await handleGetPlaylists(ctx, request);
-
-  // POST /api/playlists
-  if (request.method === 'POST' && path === '/') return await handlePostPlaylist(ctx, request);
-
-  // POST /api/playlists/:id/songs/bulk-remove
-  let params = matchPath(path, '/:id/songs/bulk-remove');
-  if (params && request.method === 'POST') {
-    return await handleBulkRemoveSongs(ctx, request, params.id);
-  }
-
-  // DELETE /api/playlists/:id/songs/:songId
-  params = matchPath(path, '/:id/songs/:songId');
-  if (params && request.method === 'DELETE') {
-    return await handleRemoveSong(ctx, request, params.id, params.songId);
-  }
-
-  // POST /api/playlists/:id/songs
-  params = matchPath(path, '/:id/songs');
-  if (params && request.method === 'POST') return await handleAddSong(ctx, request, params.id);
-
-  // PATCH /api/playlists/:id/visibility
-  params = matchPath(path, '/:id/visibility');
-  if (params && request.method === 'PATCH')
-    return await handlePatchVisibility(ctx, request, params.id);
-
-  // GET / PATCH / DELETE /api/playlists/:id
-  params = matchPath(path, '/:id');
-  if (params) {
-    const { id } = params;
-    if (request.method === 'GET') return await handleGetPlaylist(ctx, request, id);
-    if (request.method === 'PATCH') return await handlePatchPlaylist(ctx, request, id);
-    if (request.method === 'DELETE') return await handleDeletePlaylist(ctx, request, id);
-  }
-
-  return json({ error: 'Not Found' }, 404);
-}
+export const handlePlaylists = routeTable('/api/playlists', {
+  rateLimit: { windowMs: 60_000, maxRequests: 20, bucket: 'playlists-mutations' },
+  routes: [
+    ['GET', '/', handleGetPlaylists],
+    ['POST', '/', handlePostPlaylist],
+    ['POST', '/:id/songs/bulk-remove', handleBulkRemoveSongs],
+    ['DELETE', '/:id/songs/:songId', handleRemoveSong],
+    ['POST', '/:id/songs', handleAddSong],
+    ['PATCH', '/:id/visibility', handlePatchVisibility],
+    ['GET', '/:id', handleGetPlaylist],
+    ['PATCH', '/:id', handlePatchPlaylist],
+    ['DELETE', '/:id', handleDeletePlaylist],
+  ],
+});

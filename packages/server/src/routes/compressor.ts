@@ -2,6 +2,7 @@ import type { RouteContext } from '../index';
 import { applyNodeLinkFilter, buildCompressorFilter } from '../lib/applyNodeLinkFilter';
 import { json } from '../lib/json';
 import { checkGuards } from '../lib/routeGuards';
+import { routeTable } from '../lib/routeTable';
 import { db, tables } from '../shared/db';
 
 interface CompressorPayload {
@@ -13,7 +14,11 @@ interface CompressorPayload {
   gain: number;
 }
 
-export async function handleCompressor(ctx: RouteContext, request: Request): Promise<Response> {
+async function handleCompressorRequest(
+  ctx: RouteContext,
+  request: Request,
+  _params: Record<string, string>
+): Promise<Response> {
   const guards = await checkGuards(ctx, { admin: true, permission: 'audio.manage' });
   if (guards instanceof Response) return guards;
 
@@ -69,3 +74,10 @@ export async function handleCompressor(ctx: RouteContext, request: Request): Pro
 
   return json({ enabled, threshold, ratio, attack, release, gain });
 }
+
+export const handleCompressor = routeTable('/api/settings/compressor', {
+  routes: [
+    ['GET', '/', handleCompressorRequest],
+    ['PATCH', '/', handleCompressorRequest],
+  ],
+});

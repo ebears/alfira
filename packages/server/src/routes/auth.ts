@@ -5,6 +5,7 @@ import type { RouteContext } from '../index';
 import { getGuildId } from '../lib/config';
 import { json } from '../lib/json';
 import { getClientIp } from '../lib/rateLimit';
+import { routeTable } from '../lib/routeTable';
 import { db, tables } from '../shared/db';
 import { logger } from '../shared/logger';
 
@@ -341,30 +342,21 @@ async function generateAndStoreTokens(
 // Route handlers
 // ---------------------------------------------------------------------------
 
-export async function handleAuth(ctx: RouteContext, request: Request): Promise<Response> {
-  const url = new URL(request.url);
-  const pathname = url.pathname;
+export const handleAuth = routeTable('/auth', {
+  routes: [
+    ['GET', '/login', handleLogin],
+    ['GET', '/callback', handleCallback],
+    ['POST', '/refresh', handleRefresh],
+    ['GET', '/me', handleMe],
+    ['POST', '/logout', handleLogout],
+  ],
+});
 
-  if (request.method === 'GET' && pathname === '/auth/login') {
-    return handleLogin(request);
-  }
-  if (request.method === 'GET' && pathname === '/auth/callback') {
-    return await handleCallback(request, url);
-  }
-  if (request.method === 'POST' && pathname === '/auth/refresh') {
-    return await handleRefresh(ctx);
-  }
-  if (request.method === 'GET' && pathname === '/auth/me') {
-    return await handleMe(ctx);
-  }
-  if (request.method === 'POST' && pathname === '/auth/logout') {
-    return await handleLogout(ctx);
-  }
-
-  return json({ error: 'Not Found' }, 404);
-}
-
-function handleLogin(request: Request): Response {
+function handleLogin(
+  _ctx: RouteContext,
+  request: Request,
+  _params: Record<string, string>
+): Response {
   const ip = getClientIp(request);
   if (!authRateLimit(ip)) {
     return json(
@@ -381,7 +373,12 @@ function handleLogin(request: Request): Response {
   return Response.redirect(`https://discord.com/oauth2/authorize?${params}`, 302);
 }
 
-async function handleCallback(request: Request, url: URL): Promise<Response> {
+async function handleCallback(
+  _ctx: RouteContext,
+  request: Request,
+  _params: Record<string, string>
+): Promise<Response> {
+  const url = new URL(request.url);
   const ip = getClientIp(request);
   if (!authRateLimit(ip)) {
     return json(
@@ -503,7 +500,11 @@ async function withRetry<T>(fn: () => Promise<T>, attempts = 3, baseDelayMs = 50
   throw lastErr;
 }
 
-async function handleRefresh(ctx: RouteContext): Promise<Response> {
+async function handleRefresh(
+  ctx: RouteContext,
+  _request: Request,
+  _params: Record<string, string>
+): Promise<Response> {
   const refreshToken = ctx.cookies[REFRESH_COOKIE_NAME];
   if (!refreshToken) {
     logger.warn('Auth refresh failed: no refresh token cookie present');
@@ -661,7 +662,11 @@ async function handleRefresh(ctx: RouteContext): Promise<Response> {
   return new Response(JSON.stringify({ user: payload }), { status: 200, headers });
 }
 
-async function handleMe(ctx: RouteContext): Promise<Response> {
+async function handleMe(
+  ctx: RouteContext,
+  _request: Request,
+  _params: Record<string, string>
+): Promise<Response> {
   if (!ctx.user) {
     return json({ error: 'Not authenticated. Please log in at /auth/login.' }, 401);
   }
@@ -675,7 +680,11 @@ async function handleMe(ctx: RouteContext): Promise<Response> {
   return json({ user: ctx.user });
 }
 
-async function handleLogout(ctx: RouteContext): Promise<Response> {
+async function handleLogout(
+  ctx: RouteContext,
+  _request: Request,
+  _params: Record<string, string>
+): Promise<Response> {
   const refreshToken = ctx.cookies[REFRESH_COOKIE_NAME];
   if (refreshToken) {
     try {

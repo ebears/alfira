@@ -5,6 +5,7 @@ import { json } from '../lib/json';
 import { sendRequestDm, sendRequestNotification } from '../lib/notifications';
 import { parsePagination } from '../lib/pagination';
 import { checkGuards } from '../lib/routeGuards';
+import { routeTable } from '../lib/routeTable';
 import { formatSong } from '../lib/serialization';
 import { emitSongAdded } from '../lib/socket';
 import { canonicalizeTags } from '../lib/tagCanonicalization';
@@ -573,8 +574,9 @@ async function handleGetRequests(ctx: RouteContext, request: Request): Promise<R
 async function handlePatchRequest(
   ctx: RouteContext,
   request: Request,
-  id: string
+  params: Record<string, string>
 ): Promise<Response> {
+  const { id } = params;
   const guards = await checkGuards(ctx, { admin: true });
   if (guards instanceof Response) return guards;
   const { user } = guards;
@@ -783,8 +785,9 @@ async function handlePatchRequest(
 async function handleDeleteRequest(
   ctx: RouteContext,
   _request: Request,
-  id: string
+  params: Record<string, string>
 ): Promise<Response> {
+  const { id } = params;
   const guards = await checkGuards(ctx);
   if (guards instanceof Response) return guards;
   const { user } = guards;
@@ -808,39 +811,12 @@ async function handleDeleteRequest(
   return new Response(null, { status: 204 });
 }
 
-// ---------------------------------------------------------------------------
-// Dispatcher
-// ---------------------------------------------------------------------------
-export async function handleRequests(ctx: RouteContext, request: Request): Promise<Response> {
-  const url = new URL(request.url);
-  const pathname = url.pathname;
-
-  // POST /api/requests/preview
-  if (request.method === 'POST' && pathname === '/api/requests/preview') {
-    return await handlePreviewRequest(ctx, request);
-  }
-
-  // GET /api/requests
-  if (request.method === 'GET' && pathname === '/api/requests') {
-    return await handleGetRequests(ctx, request);
-  }
-
-  // POST /api/requests
-  if (request.method === 'POST' && pathname === '/api/requests') {
-    return await handleCreateRequest(ctx, request);
-  }
-
-  // PATCH /api/requests/:id
-  if (request.method === 'PATCH' && pathname.startsWith('/api/requests/')) {
-    const id = pathname.slice('/api/requests/'.length);
-    return await handlePatchRequest(ctx, request, id);
-  }
-
-  // DELETE /api/requests/:id
-  if (request.method === 'DELETE' && pathname.startsWith('/api/requests/')) {
-    const id = pathname.slice('/api/requests/'.length);
-    return await handleDeleteRequest(ctx, request, id);
-  }
-
-  return json({ error: 'Not Found' }, 404);
-}
+export const handleRequests = routeTable('/api/requests', {
+  routes: [
+    ['POST', '/preview', handlePreviewRequest],
+    ['GET', '/', handleGetRequests],
+    ['POST', '/', handleCreateRequest],
+    ['PATCH', '/:id', handlePatchRequest],
+    ['DELETE', '/:id', handleDeleteRequest],
+  ],
+});
