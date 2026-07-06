@@ -30,6 +30,7 @@ import ConfirmModal from '../components/ConfirmModal';
 import FilterChips from '../components/FilterChips';
 import NotificationToast from '../components/NotificationToast';
 import { Button } from '../components/ui/Button';
+import { PageHeader } from '../components/ui/PageHeader';
 import { VirtualSongList } from '../components/VirtualSongList';
 import { useAdminView } from '../context/AdminViewContext';
 import { usePermissions } from '../context/PermissionsContext';
@@ -396,17 +397,11 @@ export default function SongsPage() {
 
   return (
     <div className="p-4 md:p-8">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6 md:mb-8">
-        <div>
-          <h1 className="font-display text-3xl md:text-4xl text-accent tracking-wider flex items-center gap-2">
-            <MusicNotesIcon size={28} weight="duotone" className="shrink-0 relative top-1" />
-            Songs
-          </h1>
-          <p className="font-mono text-xs text-muted mt-2">
-            Music library{hasLoaded ? ` • ${total} track${total !== 1 ? 's' : ''}` : ''}
-          </p>
-        </div>
+      <PageHeader
+        icon={MusicNotesIcon}
+        title="Songs"
+        subtitle={`Music library${hasLoaded ? ` • ${total} track${total !== 1 ? 's' : ''}` : ''}`}
+      >
         <span className="relative group">
           <QuestionIcon size={20} weight="duotone" className="text-muted cursor-help" />
           <span className="glass-tooltip absolute right-0 top-full mt-2 w-64 p-3 leading-relaxed">
@@ -415,7 +410,7 @@ export default function SongsPage() {
             permission.
           </span>
         </span>
-      </div>
+      </PageHeader>
 
       {/* Search bar + Sort + View toggle */}
       <div className="flex items-center gap-2 mb-3">

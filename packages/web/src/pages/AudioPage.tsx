@@ -1,6 +1,7 @@
 import { ArrowsDownUp, SlidersHorizontal } from '@phosphor-icons/react';
 import CompressorSection from '../components/settings/CompressorSection';
 import EqualizerSection from '../components/settings/EqualizerSection';
+import { PageHeader } from '../components/ui/PageHeader';
 import { useAdminView } from '../context/AdminViewContext';
 import { usePermissions } from '../context/PermissionsContext';
 
@@ -12,14 +13,11 @@ export default function AudioPage() {
 
   return (
     <div className="p-4 md:p-8">
-      {/* Page header */}
-      <div className="mb-6 md:mb-8">
-        <h1 className="font-display text-3xl md:text-4xl text-accent tracking-wider flex items-center gap-2">
-          <SlidersHorizontal size={28} weight="duotone" className="shrink-0 relative top-1" />
-          Audio
-        </h1>
-        <p className="font-mono text-xs text-muted mt-2">Equalizer and compressor settings</p>
-      </div>
+      <PageHeader
+        icon={SlidersHorizontal}
+        title="Audio"
+        subtitle="Equalizer and compressor settings"
+      />
 
       {!canManage ? (
         <div className="flex flex-col items-center justify-center py-20 text-center">

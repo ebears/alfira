@@ -6,6 +6,7 @@ import EmptyState from '../components/EmptyState';
 import { Button } from '../components/ui/Button';
 import Checkbox from '../components/ui/Checkbox';
 import { ErrorBanner } from '../components/ui/ErrorBanner';
+import { PageHeader } from '../components/ui/PageHeader';
 import RoleComboBox from '../components/ui/RoleComboBox';
 
 // ---------------------------------------------------------------------------
@@ -196,12 +197,7 @@ export default function PermissionsPage() {
   if (!data) {
     return (
       <div className="p-4 md:p-8">
-        <div className="mb-6 md:mb-8">
-          <h1 className="font-display text-3xl md:text-4xl text-accent tracking-wider flex items-center gap-2">
-            <ShieldCheckIcon size={28} weight="duotone" className="shrink-0 relative top-1" />
-            Permissions
-          </h1>
-        </div>
+        <PageHeader icon={ShieldCheckIcon} title="Permissions" />
         {error ? (
           <ErrorBanner message={error} />
         ) : (
@@ -214,16 +210,11 @@ export default function PermissionsPage() {
   // Render ----------------------------------------------------------------
   return (
     <div className="p-4 md:p-8">
-      {/* Page header */}
-      <div className="mb-6 md:mb-8">
-        <h1 className="font-display text-3xl md:text-4xl text-accent tracking-wider flex items-center gap-2">
-          <ShieldCheckIcon size={28} weight="duotone" className="shrink-0 relative top-1" />
-          Permissions
-        </h1>
-        <p className="font-mono text-xs text-muted mt-2">
-          Grant specific abilities to non-admin roles. Super-admins always have full access.
-        </p>
-      </div>
+      <PageHeader
+        icon={ShieldCheckIcon}
+        title="Permissions"
+        subtitle="Grant specific abilities to non-admin roles. Super-admins always have full access."
+      />
 
       {error && <ErrorBanner message={error} className="mb-4" />}
 
