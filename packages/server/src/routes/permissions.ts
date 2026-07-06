@@ -3,6 +3,7 @@ import type { RouteContext } from '../index';
 import { getGuildId } from '../lib/config';
 import { json } from '../lib/json';
 import { checkGuards } from '../lib/routeGuards';
+import { routeTable } from '../lib/routeTable';
 import { PERMISSION_CATEGORIES, PERMISSION_LABELS, type PermissionAction } from '../shared';
 import { db, tables } from '../shared/db';
 import { logger } from '../shared/logger';
@@ -53,7 +54,11 @@ async function fetchGuildRoles(): Promise<SetupRole[]> {
 // ---------------------------------------------------------------------------
 // GET /api/permissions
 // ---------------------------------------------------------------------------
-async function handleGetPermissions(ctx: RouteContext): Promise<Response> {
+async function handleGetPermissions(
+  ctx: RouteContext,
+  _request: Request,
+  _params: Record<string, string>
+): Promise<Response> {
   const guards = await checkGuards(ctx, { admin: true });
   if (guards instanceof Response) return guards;
 
@@ -95,7 +100,11 @@ async function handleGetPermissions(ctx: RouteContext): Promise<Response> {
 // PATCH /api/permissions
 // Body: { action: PermissionAction; roleIds: string[] }
 // ---------------------------------------------------------------------------
-async function handlePatchPermissions(ctx: RouteContext, request: Request): Promise<Response> {
+async function handlePatchPermissions(
+  ctx: RouteContext,
+  request: Request,
+  _params: Record<string, string>
+): Promise<Response> {
   const guards = await checkGuards(ctx, { admin: true });
   if (guards instanceof Response) return guards;
 
@@ -139,7 +148,11 @@ async function handlePatchPermissions(ctx: RouteContext, request: Request): Prom
 // ---------------------------------------------------------------------------
 // GET /api/permissions/me — returns permissions for the current user
 // ---------------------------------------------------------------------------
-async function handleGetMyPermissions(ctx: RouteContext): Promise<Response> {
+async function handleGetMyPermissions(
+  ctx: RouteContext,
+  _request: Request,
+  _params: Record<string, string>
+): Promise<Response> {
   const user = ctx.user;
   if (!user) {
     return json({ error: 'Not authenticated.' }, 401);
@@ -159,19 +172,10 @@ async function handleGetMyPermissions(ctx: RouteContext): Promise<Response> {
   return json({ permissions });
 }
 
-// ---------------------------------------------------------------------------
-// Dispatcher
-// ---------------------------------------------------------------------------
-export async function handlePermissions(ctx: RouteContext, request: Request): Promise<Response> {
-  const url = new URL(request.url);
-  const pathname = url.pathname;
-
-  // GET /api/permissions/me
-  if (request.method === 'GET' && pathname === '/api/permissions/me') {
-    return await handleGetMyPermissions(ctx);
-  }
-
-  if (request.method === 'GET') return await handleGetPermissions(ctx);
-  if (request.method === 'PATCH') return await handlePatchPermissions(ctx, request);
-  return json({ error: 'Not Found' }, 404);
-}
+export const handlePermissions = routeTable('/api/permissions', {
+  routes: [
+    ['GET', '/me', handleGetMyPermissions],
+    ['GET', '/', handleGetPermissions],
+    ['PATCH', '/', handlePatchPermissions],
+  ],
+});

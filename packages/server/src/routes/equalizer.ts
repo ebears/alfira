@@ -9,6 +9,7 @@ import {
 } from '../lib/eqBands';
 import { json } from '../lib/json';
 import { checkGuards } from '../lib/routeGuards';
+import { routeTable } from '../lib/routeTable';
 import { db, tables } from '../shared/db';
 
 interface EqualizerPayload {
@@ -16,7 +17,11 @@ interface EqualizerPayload {
   enabled: boolean;
 }
 
-async function handleEqualizerGet(ctx: RouteContext): Promise<Response> {
+async function handleEqualizerGet(
+  ctx: RouteContext,
+  _request: Request,
+  _params: Record<string, string>
+): Promise<Response> {
   const guards = await checkGuards(ctx, { admin: true, permission: 'audio.manage' });
   if (guards instanceof Response) return guards;
 
@@ -35,7 +40,11 @@ async function handleEqualizerGet(ctx: RouteContext): Promise<Response> {
   return json({ bands, enabled });
 }
 
-async function handleEqualizerPatch(ctx: RouteContext, request: Request): Promise<Response> {
+async function handleEqualizerPatch(
+  ctx: RouteContext,
+  request: Request,
+  _params: Record<string, string>
+): Promise<Response> {
   const guards = await checkGuards(ctx, { admin: true, permission: 'audio.manage' });
   if (guards instanceof Response) return guards;
 
@@ -80,12 +89,9 @@ async function handleEqualizerPatch(ctx: RouteContext, request: Request): Promis
   return json({ bands, enabled });
 }
 
-// ---------------------------------------------------------------------------
-// Dispatcher
-// ---------------------------------------------------------------------------
-
-export async function handleEqualizer(ctx: RouteContext, request: Request): Promise<Response> {
-  if (request.method === 'GET') return await handleEqualizerGet(ctx);
-  if (request.method === 'PATCH') return await handleEqualizerPatch(ctx, request);
-  return json({ error: 'Not Found' }, 404);
-}
+export const handleEqualizer = routeTable('/api/settings/equalizer', {
+  routes: [
+    ['GET', '/', handleEqualizerGet],
+    ['PATCH', '/', handleEqualizerPatch],
+  ],
+});
