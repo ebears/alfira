@@ -6,7 +6,12 @@ import { json } from '../lib/json';
 import { parsePagination } from '../lib/pagination';
 import { checkGuards } from '../lib/routeGuards';
 import { routeTable } from '../lib/routeTable';
-import { buildSongSearchClause, SOURCE_LIKE_PATTERNS } from '../lib/search';
+import {
+  buildSongFilterClause,
+  buildSongOrderBy,
+  buildSongSearchClause,
+  parseSongSortField,
+} from '../lib/search';
 import { formatSong } from '../lib/serialization';
 import { emitSongDeleted, emitSongUpdated } from '../lib/socket';
 import { reSyncPlaylistsForTags } from '../lib/syncPlaylistToTag';
@@ -22,65 +27,6 @@ import { db, tables } from '../shared/db';
 import { getPlayer } from '../startDiscord';
 
 const { song: songTable } = tables;
-
-const ALLOWED_SORTS = ['createdAt', 'title', 'artist', 'album', 'duration'] as const;
-type SortField = (typeof ALLOWED_SORTS)[number];
-
-// ---------------------------------------------------------------------------
-// Build a dynamic ORDER BY clause from sort field + direction.
-// ---------------------------------------------------------------------------
-function buildOrderByClause(
-  sortField: SortField,
-  sortOrder: 'ASC' | 'DESC'
-): ReturnType<typeof sql> {
-  switch (sortField) {
-    case 'title':
-      return sql`lower(title) ${sql.raw(sortOrder)}`;
-    case 'artist':
-      return sql`artist IS NULL, lower(artist) ${sql.raw(sortOrder)}`;
-    case 'album':
-      return sql`album IS NULL, lower(album) ${sql.raw(sortOrder)}`;
-    case 'duration':
-      return sql`duration ${sql.raw(sortOrder)}`;
-    default:
-      return sql`"createdAt" ${sql.raw(sortOrder)}`;
-  }
-}
-
-// ---------------------------------------------------------------------------
-// Build additional filter clauses for tags (AND) and sources (OR).
-// Returns a SQL fragment that can be AND-ed with the search clause, or
-// undefined when no filters are active.
-// ---------------------------------------------------------------------------
-function buildFilterClause(tags: string[], sources: string[]): ReturnType<typeof sql> | undefined {
-  const clauses: ReturnType<typeof sql>[] = [];
-
-  // Tags: AND — song must have every requested tag
-  for (const tag of tags) {
-    // Match JSON-quoted tag name for precision (avoids partial matches like
-    // "rock" matching "bedrock").
-    clauses.push(sql`lower(tags) LIKE lower(${`%"${tag}"%`})`);
-  }
-
-  // Sources: OR — song URL can match any of the requested sources
-  if (sources.length > 0) {
-    const sourceOrs: ReturnType<typeof sql>[] = [];
-    for (const source of sources) {
-      const patterns = SOURCE_LIKE_PATTERNS[source];
-      if (patterns) {
-        for (const pattern of patterns) {
-          sourceOrs.push(sql`"sourceUrl" LIKE ${pattern}`);
-        }
-      }
-    }
-    if (sourceOrs.length > 0) {
-      clauses.push(sql`(${sql.join(sourceOrs, sql` OR `)})`);
-    }
-  }
-
-  if (clauses.length === 0) return undefined;
-  return sql.join(clauses, sql` AND `);
-}
 
 // ---------------------------------------------------------------------------
 // POST /api/songs/bulk-delete — delete multiple songs at once.
@@ -314,9 +260,7 @@ async function handleGetSongs(ctx: RouteContext, request: Request): Promise<Resp
 
   // Sort
   const sortRaw = url.searchParams.get('sort') ?? 'createdAt';
-  const sortField: SortField = (ALLOWED_SORTS as readonly string[]).includes(sortRaw)
-    ? (sortRaw as SortField)
-    : 'createdAt';
+  const sortField = parseSongSortField(sortRaw) ?? 'createdAt';
   const sortOrder = url.searchParams.get('order') === 'asc' ? 'ASC' : 'DESC';
 
   // Filters
@@ -337,7 +281,7 @@ async function handleGetSongs(ctx: RouteContext, request: Request): Promise<Resp
 
   // Build WHERE clause — search text + tag/source filters
   const searchClause = buildSongSearchClause(search || undefined);
-  const filterClause = buildFilterClause(filterTags, filterSources);
+  const filterClause = buildSongFilterClause(filterTags, filterSources);
 
   let where: ReturnType<typeof sql> | undefined;
   if (searchClause && filterClause) {
@@ -348,7 +292,7 @@ async function handleGetSongs(ctx: RouteContext, request: Request): Promise<Resp
     where = filterClause;
   }
 
-  const orderBy = buildOrderByClause(sortField, sortOrder);
+  const orderBy = buildSongOrderBy(sortField, sortOrder);
 
   const [songs, countResult] = await Promise.all([
     db.select().from(songTable).where(where).orderBy(orderBy).offset(skip).limit(limit),
