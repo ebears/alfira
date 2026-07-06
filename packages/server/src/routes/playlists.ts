@@ -3,7 +3,7 @@ import type { RouteContext } from '../index';
 import { getUserDisplayName, resolveDisplayNames } from '../lib/displayName';
 import { json } from '../lib/json';
 import { parsePagination } from '../lib/pagination';
-import { canAccessPlaylist } from '../lib/playlistAccess';
+import { canAccessPlaylist, getPlaylistSongCount, requirePlaylist } from '../lib/playlistAccess';
 import { checkGuards } from '../lib/routeGuards';
 import { routeTable } from '../lib/routeTable';
 import {
@@ -18,45 +18,6 @@ import { validatePlaylistName } from '../lib/validation';
 import { db, tables } from '../shared/db';
 
 const { playlist: playlistTable, playlistSong: playlistSongTable } = tables;
-
-async function getPlaylistSongCount(playlistId: string): Promise<number> {
-  const result = await db
-    .select({ value: count() })
-    .from(playlistSongTable)
-    .where(eq(playlistSongTable.playlistId, playlistId));
-  return result[0]?.value ?? 0;
-}
-
-type PlaylistRow = {
-  id: string;
-  name: string;
-  createdBy: string;
-  isPrivate: boolean;
-  tagNameLower: string | null;
-  createdAt: Date;
-  _count?: { songs: number };
-};
-
-async function findPlaylistOr404(id: string, withCount = false): Promise<PlaylistRow | null> {
-  const [row] = await db
-    .select({
-      id: playlistTable.id,
-      name: playlistTable.name,
-      createdBy: playlistTable.createdBy,
-      isPrivate: playlistTable.isPrivate,
-      tagNameLower: playlistTable.tagNameLower,
-      createdAt: playlistTable.createdAt,
-    })
-    .from(playlistTable)
-    .where(eq(playlistTable.id, id))
-    .limit(1);
-  if (!row) return null;
-  if (withCount) {
-    const value = await getPlaylistSongCount(id);
-    return { ...row, _count: { songs: value } };
-  }
-  return row;
-}
 
 function formatPlaylist(pl: typeof playlistTable.$inferSelect, songCount?: number) {
   return {
@@ -249,15 +210,8 @@ async function handleGetPlaylist(
 
   const wantsCustomSort = sortField !== 'position';
 
-  const playlist = await findPlaylistOr404(id, true);
-  if (!playlist) {
-    return json({ error: 'Playlist not found.' }, 404);
-  }
-
-  const accessResult = canAccessPlaylist(playlist, user, adminView);
-  if (!accessResult.ok) {
-    return json({ error: accessResult.error }, 403);
-  }
+  const playlist = await requirePlaylist(id, user, adminView, true);
+  if (playlist instanceof Response) return playlist;
 
   // ── Custom sort path: join playlistSong ↔ song, sort + filter in one query ──
   if (wantsCustomSort || filterTags.length > 0 || filterSources.length > 0) {
@@ -435,16 +389,9 @@ async function handlePatchVisibility(
     return json({ error: 'isPrivate (boolean) is required.' }, 400);
   }
 
-  const existing = await findPlaylistOr404(id);
-  if (!existing) {
-    return json({ error: 'Playlist not found.' }, 404);
-  }
-
   const adminView = body.adminView === true;
-  const accessResult = canAccessPlaylist(existing, user, adminView);
-  if (!accessResult.ok) {
-    return json({ error: accessResult.error }, 403);
-  }
+  const existing = await requirePlaylist(id, user, adminView);
+  if (existing instanceof Response) return existing;
 
   const [updatedPlaylist] = await db
     .update(playlistTable)
@@ -482,15 +429,8 @@ async function handlePatchPlaylist(
     return json({ error: 'Invalid JSON body.' }, 400);
   }
 
-  const existing = await findPlaylistOr404(id);
-  if (!existing) {
-    return json({ error: 'Playlist not found.' }, 404);
-  }
-
-  const accessResult = canAccessPlaylist(existing, user, undefined);
-  if (!accessResult.ok) {
-    return json({ error: `Only the playlist owner or admins can rename this playlist.` }, 403);
-  }
+  const existing = await requirePlaylist(id, user);
+  if (existing instanceof Response) return existing;
 
   const data: Record<string, unknown> = {};
 
@@ -546,15 +486,8 @@ async function handleDeletePlaylist(
   if (guards instanceof Response) return guards;
   const { user } = guards;
 
-  const existing = await findPlaylistOr404(id);
-  if (!existing) {
-    return json({ error: 'Playlist not found.' }, 404);
-  }
-
-  const accessResult = canAccessPlaylist(existing, user, undefined);
-  if (!accessResult.ok) {
-    return json({ error: `Only the playlist owner or admins can delete this playlist.` }, 403);
-  }
+  const existing = await requirePlaylist(id, user);
+  if (existing instanceof Response) return existing;
 
   await db.delete(playlistTable).where(eq(playlistTable.id, id));
 
@@ -585,10 +518,8 @@ async function handleAddSong(
     return json({ error: 'songId is required.' }, 400);
   }
 
-  const playlist = await findPlaylistOr404(id);
-  if (!playlist) {
-    return json({ error: 'Playlist not found.' }, 404);
-  }
+  const playlist = await requirePlaylist(id, user);
+  if (playlist instanceof Response) return playlist;
 
   // Smart playlists are auto-managed — reject manual adds
   if (playlist.tagNameLower) {
@@ -600,14 +531,6 @@ async function handleAddSong(
           '" tag. Songs are added when tagged and cannot be added manually.',
       },
       409
-    );
-  }
-
-  const accessResult = canAccessPlaylist(playlist, user, undefined);
-  if (!accessResult.ok) {
-    return json(
-      { error: `Only the playlist owner or admins can add songs to this playlist.` },
-      403
     );
   }
 
@@ -679,15 +602,8 @@ async function handleRemoveSong(
   if (guards instanceof Response) return guards;
   const { user } = guards;
 
-  const playlist = await findPlaylistOr404(playlistId);
-  if (!playlist) {
-    return json({ error: 'Playlist not found.' }, 404);
-  }
-
-  const accessResult = canAccessPlaylist(playlist, user, undefined);
-  if (!accessResult.ok) {
-    return json({ error: `Only the playlist owner or admins can remove songs.` }, 403);
-  }
+  const playlist = await requirePlaylist(playlistId, user);
+  if (playlist instanceof Response) return playlist;
 
   const [entry] = await db
     .select()
@@ -742,15 +658,8 @@ async function handleBulkRemoveSongs(
   if (guards instanceof Response) return guards;
   const { user } = guards;
 
-  const playlist = await findPlaylistOr404(playlistId);
-  if (!playlist) {
-    return json({ error: 'Playlist not found.' }, 404);
-  }
-
-  const accessResult = canAccessPlaylist(playlist, user, undefined);
-  if (!accessResult.ok) {
-    return json({ error: `Only the playlist owner or admins can remove songs.` }, 403);
-  }
+  const playlist = await requirePlaylist(playlistId, user);
+  if (playlist instanceof Response) return playlist;
 
   let body: { songIds?: unknown };
   try {
