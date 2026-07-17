@@ -15,14 +15,15 @@ export default function SettingsToggle({
 }: SettingsToggleProps) {
   return (
     <div className={`flex items-start gap-4 ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}>
-      <div className="flex-1 min-w-0">
-        <p className="font-body text-sm font-medium text-fg">{label}</p>
-        {description && <p className="font-mono text-[11px] text-muted mt-0.5">{description}</p>}
+      <div className='flex-1 min-w-0'>
+        <p className='font-body text-sm font-medium text-fg'>{label}</p>
+        {description && <p className='font-mono text-[11px] text-muted mt-0.5'>{description}</p>}
       </div>
       <button
-        type="button"
-        role="switch"
+        type='button'
+        role='switch'
         aria-checked={checked}
+        aria-label={label}
         disabled={disabled}
         onClick={() => !disabled && onChange(!checked)}
         className={`relative shrink-0 w-11 h-6 rounded-full transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-accent/50 focus:ring-offset-2 focus:ring-offset-surface mt-1.5 ${

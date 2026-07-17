@@ -14,6 +14,7 @@ node_modules/
 # Build output
 # -----------------------------------------------
 dist/
+packages/web/public/index.css
 build/
 data/
 

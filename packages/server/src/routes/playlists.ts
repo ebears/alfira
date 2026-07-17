@@ -3,84 +3,21 @@ import type { RouteContext } from '../index';
 import { getUserDisplayName, resolveDisplayNames } from '../lib/displayName';
 import { json } from '../lib/json';
 import { parsePagination } from '../lib/pagination';
-import { canAccessPlaylist } from '../lib/playlistAccess';
-import { checkRateLimit, getClientIp, rateLimitResponse } from '../lib/rateLimit';
+import { canAccessPlaylist, getPlaylistSongCount, requirePlaylist } from '../lib/playlistAccess';
 import { checkGuards } from '../lib/routeGuards';
-import { buildSongSearchClause } from '../lib/search';
+import { routeTable } from '../lib/routeTable';
+import {
+  buildSongFilterClause,
+  buildSongOrderBy,
+  buildSongSearchClause,
+  parseSongSortField,
+} from '../lib/search';
 import { emitPlaylistUpdated } from '../lib/socket';
 import { syncPlaylistToTag } from '../lib/syncPlaylistToTag';
 import { validatePlaylistName } from '../lib/validation';
 import { db, tables } from '../shared/db';
 
 const { playlist: playlistTable, playlistSong: playlistSongTable } = tables;
-
-// ---------------------------------------------------------------------------
-// Source URL → LIKE patterns (mirrors songs.ts)
-// ---------------------------------------------------------------------------
-const SOURCE_LIKE_PATTERNS: Record<string, string[]> = {
-  youtube: ['%youtube.com%', '%youtu.be%'],
-  soundcloud: ['%soundcloud.com%'],
-  spotify: ['%spotify.com%'],
-  applemusic: ['%music.apple.com%'],
-  tidal: ['%tidal.com%'],
-  googledrive: ['%drive.google.com%'],
-};
-
-function buildSongOrderBy(field: string, direction: 'ASC' | 'DESC'): ReturnType<typeof sql> {
-  switch (field) {
-    case 'title':
-      return sql`lower(${tables.song.title}) ${sql.raw(direction)}`;
-    case 'artist':
-      return sql`${tables.song.artist} IS NULL, lower(${tables.song.artist}) ${sql.raw(direction)}`;
-    case 'album':
-      return sql`${tables.song.album} IS NULL, lower(${tables.song.album}) ${sql.raw(direction)}`;
-    case 'duration':
-      return sql`${tables.song.duration} ${sql.raw(direction)}`;
-    case 'createdAt':
-      return sql`${tables.song.createdAt} ${sql.raw(direction)}`;
-    default:
-      return sql`${tables.song.createdAt} ${sql.raw(direction)}`;
-  }
-}
-
-async function getPlaylistSongCount(playlistId: string): Promise<number> {
-  const result = await db
-    .select({ value: count() })
-    .from(playlistSongTable)
-    .where(eq(playlistSongTable.playlistId, playlistId));
-  return result[0]?.value ?? 0;
-}
-
-type PlaylistRow = {
-  id: string;
-  name: string;
-  createdBy: string;
-  isPrivate: boolean;
-  tagNameLower: string | null;
-  createdAt: Date;
-  _count?: { songs: number };
-};
-
-async function findPlaylistOr404(id: string, withCount = false): Promise<PlaylistRow | null> {
-  const [row] = await db
-    .select({
-      id: playlistTable.id,
-      name: playlistTable.name,
-      createdBy: playlistTable.createdBy,
-      isPrivate: playlistTable.isPrivate,
-      tagNameLower: playlistTable.tagNameLower,
-      createdAt: playlistTable.createdAt,
-    })
-    .from(playlistTable)
-    .where(eq(playlistTable.id, id))
-    .limit(1);
-  if (!row) return null;
-  if (withCount) {
-    const value = await getPlaylistSongCount(id);
-    return { ...row, _count: { songs: value } };
-  }
-  return row;
-}
 
 function formatPlaylist(pl: typeof playlistTable.$inferSelect, songCount?: number) {
   return {
@@ -235,8 +172,9 @@ async function handlePostPlaylist(ctx: RouteContext, request: Request): Promise<
 async function handleGetPlaylist(
   ctx: RouteContext,
   request: Request,
-  id: string
+  params: Record<string, string>
 ): Promise<Response> {
+  const { id } = params;
   const guards = await checkGuards(ctx);
   if (guards instanceof Response) return guards;
   const { user } = guards;
@@ -272,15 +210,8 @@ async function handleGetPlaylist(
 
   const wantsCustomSort = sortField !== 'position';
 
-  const playlist = await findPlaylistOr404(id, true);
-  if (!playlist) {
-    return json({ error: 'Playlist not found.' }, 404);
-  }
-
-  const accessResult = canAccessPlaylist(playlist, user, adminView);
-  if (!accessResult.ok) {
-    return json({ error: accessResult.error }, 403);
-  }
+  const playlist = await requirePlaylist(id, user, adminView, true);
+  if (playlist instanceof Response) return playlist;
 
   // ── Custom sort path: join playlistSong ↔ song, sort + filter in one query ──
   if (wantsCustomSort || filterTags.length > 0 || filterSources.length > 0) {
@@ -292,32 +223,27 @@ async function handleGetPlaylist(
       if (searchClause) songFilterClauses.push(searchClause);
     }
 
-    for (const tag of filterTags) {
-      songFilterClauses.push(sql`lower(${tables.song.tags}) LIKE lower(${`%"${tag}"%`})`);
-    }
-
-    if (filterSources.length > 0) {
-      const sourceOrs: ReturnType<typeof sql>[] = [];
-      for (const source of filterSources) {
-        const patterns = SOURCE_LIKE_PATTERNS[source];
-        if (patterns) {
-          for (const pattern of patterns) {
-            sourceOrs.push(sql`${tables.song.sourceUrl} LIKE ${pattern}`);
-          }
-        }
-      }
-      if (sourceOrs.length > 0) {
-        songFilterClauses.push(sql`(${sql.join(sourceOrs, sql` OR `)})`);
-      }
-    }
+    const tagSourceFilter = buildSongFilterClause(filterTags, filterSources, {
+      tags: tables.song.tags,
+      sourceUrl: tables.song.sourceUrl,
+    });
+    if (tagSourceFilter) songFilterClauses.push(tagSourceFilter);
 
     const joinWhere = and(
       eq(playlistSongTable.playlistId, id),
       ...(songFilterClauses.length > 0 ? [sql.join(songFilterClauses, sql` AND `)] : [])
     );
 
-    const orderBy = wantsCustomSort
-      ? buildSongOrderBy(sortField, sortOrder)
+    const songSortField = wantsCustomSort ? parseSongSortField(sortField) : null;
+    const orderBy = songSortField
+      ? buildSongOrderBy(songSortField, sortOrder, {
+          title: tables.song.title,
+          nickname: tables.song.nickname,
+          artist: tables.song.artist,
+          album: tables.song.album,
+          duration: tables.song.duration,
+          createdAt: tables.song.createdAt,
+        })
       : playlistSongTable.position;
 
     const [rows, countResult] = await Promise.all([
@@ -446,8 +372,9 @@ async function handleGetPlaylist(
 async function handlePatchVisibility(
   ctx: RouteContext,
   request: Request,
-  id: string
+  params: Record<string, string>
 ): Promise<Response> {
+  const { id } = params;
   const guards = await checkGuards(ctx);
   if (guards instanceof Response) return guards;
   const { user } = guards;
@@ -463,16 +390,9 @@ async function handlePatchVisibility(
     return json({ error: 'isPrivate (boolean) is required.' }, 400);
   }
 
-  const existing = await findPlaylistOr404(id);
-  if (!existing) {
-    return json({ error: 'Playlist not found.' }, 404);
-  }
-
   const adminView = body.adminView === true;
-  const accessResult = canAccessPlaylist(existing, user, adminView);
-  if (!accessResult.ok) {
-    return json({ error: accessResult.error }, 403);
-  }
+  const existing = await requirePlaylist(id, user, adminView);
+  if (existing instanceof Response) return existing;
 
   const [updatedPlaylist] = await db
     .update(playlistTable)
@@ -496,8 +416,9 @@ async function handlePatchVisibility(
 async function handlePatchPlaylist(
   ctx: RouteContext,
   request: Request,
-  id: string
+  params: Record<string, string>
 ): Promise<Response> {
+  const { id } = params;
   const guards = await checkGuards(ctx);
   if (guards instanceof Response) return guards;
   const { user } = guards;
@@ -509,15 +430,8 @@ async function handlePatchPlaylist(
     return json({ error: 'Invalid JSON body.' }, 400);
   }
 
-  const existing = await findPlaylistOr404(id);
-  if (!existing) {
-    return json({ error: 'Playlist not found.' }, 404);
-  }
-
-  const accessResult = canAccessPlaylist(existing, user, undefined);
-  if (!accessResult.ok) {
-    return json({ error: `Only the playlist owner or admins can rename this playlist.` }, 403);
-  }
+  const existing = await requirePlaylist(id, user);
+  if (existing instanceof Response) return existing;
 
   const data: Record<string, unknown> = {};
 
@@ -566,21 +480,15 @@ async function handlePatchPlaylist(
 async function handleDeletePlaylist(
   ctx: RouteContext,
   _request: Request,
-  id: string
+  params: Record<string, string>
 ): Promise<Response> {
+  const { id } = params;
   const guards = await checkGuards(ctx);
   if (guards instanceof Response) return guards;
   const { user } = guards;
 
-  const existing = await findPlaylistOr404(id);
-  if (!existing) {
-    return json({ error: 'Playlist not found.' }, 404);
-  }
-
-  const accessResult = canAccessPlaylist(existing, user, undefined);
-  if (!accessResult.ok) {
-    return json({ error: `Only the playlist owner or admins can delete this playlist.` }, 403);
-  }
+  const existing = await requirePlaylist(id, user);
+  if (existing instanceof Response) return existing;
 
   await db.delete(playlistTable).where(eq(playlistTable.id, id));
 
@@ -590,7 +498,12 @@ async function handleDeletePlaylist(
 // ---------------------------------------------------------------------------
 // POST /api/playlists/:id/songs — add a song to a playlist
 // ---------------------------------------------------------------------------
-async function handleAddSong(ctx: RouteContext, request: Request, id: string): Promise<Response> {
+async function handleAddSong(
+  ctx: RouteContext,
+  request: Request,
+  params: Record<string, string>
+): Promise<Response> {
+  const { id } = params;
   const guards = await checkGuards(ctx);
   if (guards instanceof Response) return guards;
   const { user } = guards;
@@ -606,29 +519,16 @@ async function handleAddSong(ctx: RouteContext, request: Request, id: string): P
     return json({ error: 'songId is required.' }, 400);
   }
 
-  const playlist = await findPlaylistOr404(id);
-  if (!playlist) {
-    return json({ error: 'Playlist not found.' }, 404);
-  }
+  const playlist = await requirePlaylist(id, user);
+  if (playlist instanceof Response) return playlist;
 
   // Smart playlists are auto-managed — reject manual adds
   if (playlist.tagNameLower) {
     return json(
       {
-        error:
-          'This playlist automatically tracks the "' +
-          playlist.tagNameLower +
-          '" tag. Songs are added when tagged and cannot be added manually.',
+        error: `This playlist automatically tracks the "${playlist.tagNameLower}" tag. Songs are added when tagged and cannot be added manually.`,
       },
       409
-    );
-  }
-
-  const accessResult = canAccessPlaylist(playlist, user, undefined);
-  if (!accessResult.ok) {
-    return json(
-      { error: `Only the playlist owner or admins can add songs to this playlist.` },
-      403
     );
   }
 
@@ -693,22 +593,15 @@ async function handleAddSong(ctx: RouteContext, request: Request, id: string): P
 async function handleRemoveSong(
   ctx: RouteContext,
   _request: Request,
-  playlistId: string,
-  songId: string
+  params: Record<string, string>
 ): Promise<Response> {
+  const { id: playlistId, songId } = params;
   const guards = await checkGuards(ctx);
   if (guards instanceof Response) return guards;
   const { user } = guards;
 
-  const playlist = await findPlaylistOr404(playlistId);
-  if (!playlist) {
-    return json({ error: 'Playlist not found.' }, 404);
-  }
-
-  const accessResult = canAccessPlaylist(playlist, user, undefined);
-  if (!accessResult.ok) {
-    return json({ error: `Only the playlist owner or admins can remove songs.` }, 403);
-  }
+  const playlist = await requirePlaylist(playlistId, user);
+  if (playlist instanceof Response) return playlist;
 
   const [entry] = await db
     .select()
@@ -756,21 +649,15 @@ async function handleRemoveSong(
 async function handleBulkRemoveSongs(
   ctx: RouteContext,
   request: Request,
-  playlistId: string
+  params: Record<string, string>
 ): Promise<Response> {
+  const { id: playlistId } = params;
   const guards = await checkGuards(ctx);
   if (guards instanceof Response) return guards;
   const { user } = guards;
 
-  const playlist = await findPlaylistOr404(playlistId);
-  if (!playlist) {
-    return json({ error: 'Playlist not found.' }, 404);
-  }
-
-  const accessResult = canAccessPlaylist(playlist, user, undefined);
-  if (!accessResult.ok) {
-    return json({ error: `Only the playlist owner or admins can remove songs.` }, 403);
-  }
+  const playlist = await requirePlaylist(playlistId, user);
+  if (playlist instanceof Response) return playlist;
 
   let body: { songIds?: unknown };
   try {
@@ -817,75 +704,17 @@ async function handleBulkRemoveSongs(
 }
 
 // ---------------------------------------------------------------------------
-// Dispatcher
-// ---------------------------------------------------------------------------
-
-export async function handlePlaylists(ctx: RouteContext, request: Request): Promise<Response> {
-  const url = new URL(request.url);
-  const pathname = url.pathname;
-
-  // Rate-limit mutation endpoints — 20 requests per 60s per IP.
-  if (request.method !== 'GET') {
-    const ip = getClientIp(request);
-    if (!checkRateLimit('playlists-mutations', ip, { windowMs: 60_000, maxRequests: 20 })) {
-      return rateLimitResponse(60);
-    }
-  }
-
-  // Strip /api/playlists prefix
-  const path = pathname.slice('/api/playlists'.length);
-  if (!path) {
-    if (request.method === 'GET') return await handleGetPlaylists(ctx, request);
-    if (request.method === 'POST') return await handlePostPlaylist(ctx, request);
-    return json({ error: 'Not Found' }, 404);
-  }
-
-  // /api/playlists/:id/songs/bulk-remove POST
-  const bulkRemoveMatch = path.match(/^\/([^/]+)\/songs\/bulk-remove$/);
-  if (bulkRemoveMatch && request.method === 'POST') {
-    const [, playlistId] = bulkRemoveMatch;
-    if (playlistId) {
-      return await handleBulkRemoveSongs(ctx, request, playlistId);
-    }
-  }
-
-  // /api/playlists/:id/songs/:songId DELETE
-  const songsMatch = path.match(/^\/([^/]+)\/songs\/([^/]+)$/);
-  if (songsMatch && request.method === 'DELETE') {
-    const [, playlistId, songId] = songsMatch;
-    if (playlistId && songId) {
-      return await handleRemoveSong(ctx, request, playlistId, songId);
-    }
-  }
-
-  // /api/playlists/:id/songs POST
-  const addSongMatch = path.match(/^\/([^/]+)\/songs$/);
-  if (addSongMatch && request.method === 'POST') {
-    const [, playlistId] = addSongMatch;
-    if (playlistId) {
-      return await handleAddSong(ctx, request, playlistId);
-    }
-  }
-
-  // /api/playlists/:id/visibility PATCH
-  const visibilityMatch = path.match(/^\/([^/]+)\/visibility$/);
-  if (visibilityMatch && request.method === 'PATCH') {
-    const [, playlistId] = visibilityMatch;
-    if (playlistId) {
-      return await handlePatchVisibility(ctx, request, playlistId);
-    }
-  }
-
-  // /api/playlists/:id GET, PATCH, DELETE
-  const idMatch = path.match(/^\/([^/]+)$/);
-  if (idMatch) {
-    const id = idMatch[1];
-    if (id) {
-      if (request.method === 'GET') return await handleGetPlaylist(ctx, request, id);
-      if (request.method === 'PATCH') return await handlePatchPlaylist(ctx, request, id);
-      if (request.method === 'DELETE') return await handleDeletePlaylist(ctx, request, id);
-    }
-  }
-
-  return json({ error: 'Not Found' }, 404);
-}
+export const handlePlaylists = routeTable('/api/playlists', {
+  rateLimit: { windowMs: 60_000, maxRequests: 20, bucket: 'playlists-mutations' },
+  routes: [
+    ['GET', '/', handleGetPlaylists],
+    ['POST', '/', handlePostPlaylist],
+    ['POST', '/:id/songs/bulk-remove', handleBulkRemoveSongs],
+    ['DELETE', '/:id/songs/:songId', handleRemoveSong],
+    ['POST', '/:id/songs', handleAddSong],
+    ['PATCH', '/:id/visibility', handlePatchVisibility],
+    ['GET', '/:id', handleGetPlaylist],
+    ['PATCH', '/:id', handlePatchPlaylist],
+    ['DELETE', '/:id', handleDeletePlaylist],
+  ],
+});

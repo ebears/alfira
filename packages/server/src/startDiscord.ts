@@ -274,7 +274,7 @@ export async function startDiscord(): Promise<void> {
   const client = new Client({
     // Provide a minimal getRC to avoid needing a seyfert.config file.
     // Locations are empty since we set events programmatically.
-    getRC: async () => ({
+    getRC: () => ({
       token: DISCORD_BOT_TOKEN,
       locations: { base: '' },
       intents,

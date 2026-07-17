@@ -2,6 +2,7 @@ import { eq, sql } from 'drizzle-orm';
 import type { RouteContext } from '../index';
 import { json } from '../lib/json';
 import { checkGuards } from '../lib/routeGuards';
+import { routeTable } from '../lib/routeTable';
 import { emitPlaylistUpdated } from '../lib/socket';
 import { db, tables } from '../shared/db';
 
@@ -10,7 +11,52 @@ const { tag: tagTable, song: songTable, playlist: playlistTable } = tables;
 const TAG_COLORS = ['orange', 'sky', 'emerald', 'amber', 'violet'] as const;
 type TagColor = (typeof TAG_COLORS)[number];
 
-async function handleGetTagSongs(ctx: RouteContext, nameLower: string): Promise<Response> {
+// ---------------------------------------------------------------------------
+// GET /api/tags — list all tags
+// ---------------------------------------------------------------------------
+async function handleGetTagsList(
+  ctx: RouteContext,
+  _request: Request,
+  _params: Record<string, string>
+): Promise<Response> {
+  const guards = await checkGuards(ctx);
+  if (guards instanceof Response) return guards;
+
+  const tags = await db
+    .select({
+      nameLower: tagTable.nameLower,
+      canonicalName: tagTable.canonicalName,
+      color: tagTable.color,
+    })
+    .from(tagTable)
+    .orderBy(tagTable.canonicalName)
+    .all();
+
+  return json({ tags });
+}
+
+// ---------------------------------------------------------------------------
+// GET /api/tags/:nameLower — get single tag
+// ---------------------------------------------------------------------------
+async function handleGetTag(
+  ctx: RouteContext,
+  _request: Request,
+  params: Record<string, string>
+): Promise<Response> {
+  const { nameLower } = params;
+  const guards = await checkGuards(ctx);
+  if (guards instanceof Response) return guards;
+  const [tag] = await db.select().from(tagTable).where(eq(tagTable.nameLower, nameLower)).limit(1);
+  if (!tag) return json({ error: 'Tag not found.' }, 404);
+  return json({ tag });
+}
+
+async function handleGetTagSongs(
+  ctx: RouteContext,
+  _request: Request,
+  params: Record<string, string>
+): Promise<Response> {
+  const { nameLower } = params;
   const guards = await checkGuards(ctx);
   if (guards instanceof Response) return guards;
 
@@ -27,9 +73,17 @@ async function handleGetTagSongs(ctx: RouteContext, nameLower: string): Promise<
 
 async function handlePatchTag(
   ctx: RouteContext,
-  nameLower: string,
-  body: Record<string, unknown>
+  request: Request,
+  params: Record<string, string>
 ): Promise<Response> {
+  const { nameLower } = params;
+
+  let body: Record<string, unknown>;
+  try {
+    body = (await request.json()) as typeof body;
+  } catch {
+    return json({ error: 'Invalid JSON body.' }, 400);
+  }
   const guards = await checkGuards(ctx, { admin: true, permission: 'tags.manage' });
   if (guards instanceof Response) return guards;
 
@@ -74,7 +128,12 @@ async function handlePatchTag(
   return json({ tag: updated });
 }
 
-async function handleDeleteTag(ctx: RouteContext, nameLower: string): Promise<Response> {
+async function handleDeleteTag(
+  ctx: RouteContext,
+  _request: Request,
+  params: Record<string, string>
+): Promise<Response> {
+  const { nameLower } = params;
   const guards = await checkGuards(ctx, { admin: true, permission: 'tags.manage' });
   if (guards instanceof Response) return guards;
 
@@ -134,73 +193,12 @@ async function handleDeleteTag(ctx: RouteContext, nameLower: string): Promise<Re
   return json({ success: true });
 }
 
-export async function handleTags(ctx: RouteContext, request: Request): Promise<Response> {
-  const url = new URL(request.url);
-  const pathname = url.pathname;
-
-  // GET /api/tags
-  if (request.method === 'GET' && pathname === '/api/tags') {
-    const guards = await checkGuards(ctx);
-    if (guards instanceof Response) return guards;
-
-    const tags = await db
-      .select({
-        nameLower: tagTable.nameLower,
-        canonicalName: tagTable.canonicalName,
-        color: tagTable.color,
-      })
-      .from(tagTable)
-      .orderBy(tagTable.canonicalName)
-      .all();
-
-    return json({ tags });
-  }
-
-  // GET /api/tags/:nameLower/songs — get all songs with this tag
-  if (request.method === 'GET' && pathname.match(/^\/api\/tags\/([^/]+)\/songs$/)) {
-    const match = pathname.match(/^\/api\/tags\/([^/]+)\/songs$/);
-    const nameLower = match?.[1];
-    if (!nameLower) return json({ error: 'Not Found' }, 404);
-    return handleGetTagSongs(ctx, nameLower);
-  }
-
-  // GET /api/tags/:nameLower — get single tag
-  if (request.method === 'GET' && pathname.startsWith('/api/tags/')) {
-    const nameLower = pathname.slice('/api/tags/'.length);
-    const guards = await checkGuards(ctx);
-    if (guards instanceof Response) return guards;
-    const [tag] = await db
-      .select()
-      .from(tagTable)
-      .where(eq(tagTable.nameLower, nameLower))
-      .limit(1);
-    if (!tag) return json({ error: 'Tag not found.' }, 404);
-    return json({ tag });
-  }
-
-  // PATCH /api/tags/:nameLower
-  if (request.method === 'PATCH' && pathname.startsWith('/api/tags/')) {
-    const nameLower = pathname.slice('/api/tags/'.length);
-    if (nameLower.includes('/')) {
-      return json({ error: 'Not Found' }, 404);
-    }
-    let body: Record<string, unknown>;
-    try {
-      body = (await request.json()) as typeof body;
-    } catch {
-      return json({ error: 'Invalid JSON body.' }, 400);
-    }
-    return handlePatchTag(ctx, nameLower, body);
-  }
-
-  // DELETE /api/tags/:nameLower
-  if (request.method === 'DELETE' && pathname.startsWith('/api/tags/')) {
-    const nameLower = pathname.slice('/api/tags/'.length);
-    if (nameLower.includes('/')) {
-      return json({ error: 'Not Found' }, 404);
-    }
-    return handleDeleteTag(ctx, nameLower);
-  }
-
-  return json({ error: 'Not Found' }, 404);
-}
+export const handleTags = routeTable('/api/tags', {
+  routes: [
+    ['GET', '/', handleGetTagsList],
+    ['GET', '/:nameLower/songs', handleGetTagSongs],
+    ['GET', '/:nameLower', handleGetTag],
+    ['PATCH', '/:nameLower', handlePatchTag],
+    ['DELETE', '/:nameLower', handleDeleteTag],
+  ],
+});

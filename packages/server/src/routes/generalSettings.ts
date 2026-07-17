@@ -2,6 +2,7 @@ import { eq } from 'drizzle-orm';
 import type { RouteContext } from '../index';
 import { json } from '../lib/json';
 import { checkGuards } from '../lib/routeGuards';
+import { routeTable } from '../lib/routeTable';
 import type { GeneralSettings } from '../shared';
 import { db, tables } from '../shared/db';
 import { SOURCE_DEFINITIONS } from '../startDiscord';
@@ -33,7 +34,11 @@ const SETTINGS_COLUMNS = {
 // ---------------------------------------------------------------------------
 // GET /api/settings/general
 // ---------------------------------------------------------------------------
-async function handleGetGeneral(ctx: RouteContext): Promise<Response> {
+async function handleGetGeneral(
+  ctx: RouteContext,
+  _request: Request,
+  _params: Record<string, string>
+): Promise<Response> {
   const guards = await checkGuards(ctx, { admin: true });
   if (guards instanceof Response) return guards;
 
@@ -77,7 +82,11 @@ interface GeneralSettingsPatch {
   enabledSources?: string;
 }
 
-async function handlePatchGeneral(ctx: RouteContext, request: Request): Promise<Response> {
+async function handlePatchGeneral(
+  ctx: RouteContext,
+  request: Request,
+  _params: Record<string, string>
+): Promise<Response> {
   const guards = await checkGuards(ctx, { admin: true });
   if (guards instanceof Response) return guards;
 
@@ -185,14 +194,9 @@ async function handlePatchGeneral(ctx: RouteContext, request: Request): Promise<
   return json(attachAvailableSources(row as Omit<GeneralSettings, 'availableSources'>));
 }
 
-// ---------------------------------------------------------------------------
-// Dispatcher
-// ---------------------------------------------------------------------------
-export async function handleGeneralSettings(
-  ctx: RouteContext,
-  request: Request
-): Promise<Response> {
-  if (request.method === 'GET') return await handleGetGeneral(ctx);
-  if (request.method === 'PATCH') return await handlePatchGeneral(ctx, request);
-  return json({ error: 'Not Found' }, 404);
-}
+export const handleGeneralSettings = routeTable('/api/settings/general', {
+  routes: [
+    ['GET', '/', handleGetGeneral],
+    ['PATCH', '/', handlePatchGeneral],
+  ],
+});

@@ -121,12 +121,13 @@ export default function EqualizerSection() {
   return (
     <div className={`space-y-4 ${dimmed ? 'opacity-40 pointer-events-none' : ''}`}>
       {/* Enabled toggle */}
-      <div className="flex items-center gap-3">
-        <span className="font-mono text-[11px] text-muted w-20 shrink-0">Enabled</span>
+      <div className='flex items-center gap-3'>
+        <span className='font-mono text-[11px] text-muted w-20 shrink-0'>Enabled</span>
         <button
-          type="button"
-          role="switch"
+          type='button'
+          role='switch'
           aria-checked={eqEnabled}
+          aria-label='Enable equalizer'
           onClick={() => setEqEnabled(!eqEnabled)}
           className={`relative shrink-0 w-9 h-5 rounded-full transition-colors cursor-pointer focus:outline-none focus:ring-2 focus:ring-accent/50 focus:ring-offset-2 focus:ring-offset-surface ${
             eqEnabled ? 'bg-accent' : 'bg-border'
@@ -141,25 +142,25 @@ export default function EqualizerSection() {
       </div>
 
       {/* EQ curve preview */}
-      <svg viewBox={`0 0 ${curvePath.W} ${curvePath.H}`} className="w-full h-14" aria-hidden="true">
+      <svg viewBox={`0 0 ${curvePath.W} ${curvePath.H}`} className='w-full h-14' aria-hidden='true'>
         <line
           x1={curvePath.pad}
           y1={curvePath.centerY}
           x2={curvePath.W - curvePath.pad}
           y2={curvePath.centerY}
-          stroke="var(--color-border)"
-          strokeWidth="1"
-          strokeDasharray="4 3"
+          stroke='var(--color-border)'
+          strokeWidth='1'
+          strokeDasharray='4 3'
         />
-        <polygon points={curvePath.fillPts} fill="var(--color-accent)" opacity="0.07" />
+        <polygon points={curvePath.fillPts} fill='var(--color-accent)' opacity='0.07' />
         <polyline
           points={curvePath.pts}
-          fill="none"
-          stroke="var(--color-accent)"
-          strokeWidth="1.5"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          opacity="0.7"
+          fill='none'
+          stroke='var(--color-accent)'
+          strokeWidth='1.5'
+          strokeLinecap='round'
+          strokeLinejoin='round'
+          opacity='0.7'
         />
       </svg>
 
@@ -168,18 +169,18 @@ export default function EqualizerSection() {
         className={`flex flex-wrap justify-center gap-2 md:flex-nowrap ${slidersDimmed ? 'opacity-40' : ''}`}
       >
         {bands.map((value, i) => (
-          // biome-ignore lint/suspicious/noArrayIndexKey: static UI elements with stable order
-          <div key={i} className="flex flex-col items-center gap-1 shrink-0">
-            <span className="font-mono text-[10px] text-muted">{FREQ_LABELS[i]}</span>
-            <div className="relative h-[120px] w-2">
+          // eslint-disable-next-line react/no-array-index-key -- static UI elements with stable order
+          <div key={i} className='flex flex-col items-center gap-1 shrink-0'>
+            <span className='font-mono text-[10px] text-muted'>{FREQ_LABELS[i]}</span>
+            <div className='relative h-[120px] w-2'>
               <input
-                type="range"
+                type='range'
                 min={0}
                 max={100}
                 step={1}
                 value={value}
                 onChange={(e) => updateBand(i, parseInt(e.target.value, 10))}
-                className="range-input"
+                className='range-input'
                 style={
                   {
                     writingMode: 'vertical-lr',
@@ -191,9 +192,9 @@ export default function EqualizerSection() {
                   } as React.CSSProperties
                 }
               />
-              <div className="absolute inset-x-0 top-1/2 h-px bg-border/50 pointer-events-none" />
+              <div className='absolute inset-x-0 top-1/2 h-px bg-border/50 pointer-events-none' />
             </div>
-            <span className="font-mono text-[10px] text-fg min-w-[2em] text-right">
+            <span className='font-mono text-[10px] text-fg min-w-[2em] text-right'>
               {gainDisplay(value)}
             </span>
           </div>
@@ -201,24 +202,24 @@ export default function EqualizerSection() {
       </div>
 
       {/* Actions */}
-      <div className="flex gap-2 pt-1 justify-end">
+      <div className='flex gap-2 pt-1 justify-end'>
         <Button
-          variant="primary"
-          size="icon"
+          variant='primary'
+          size='icon'
           onClick={handleSave}
           disabled={!hasChanges || saving}
           title={saving ? 'Saving…' : 'Save Changes'}
         >
-          <FloppyDisk size={16} weight="duotone" />
+          <FloppyDisk size={16} weight='duotone' />
         </Button>
         <Button
-          variant="inherit"
-          size="icon"
-          surface="elevated"
+          variant='inherit'
+          size='icon'
+          surface='elevated'
           onClick={handleReset}
-          title="Reset to Defaults"
+          title='Reset to Defaults'
         >
-          <ArrowCounterClockwise size={16} weight="duotone" />
+          <ArrowCounterClockwise size={16} weight='duotone' />
         </Button>
       </div>
     </div>

@@ -79,9 +79,9 @@ export function ContextMenuTrigger({
       ref={ref}
       variant={variant ?? 'inherit'}
       size={size ?? 'icon'}
-      aria-haspopup="true"
+      aria-haspopup='true'
       aria-expanded={isOpen}
-      title="More actions"
+      title='More actions'
       surface={surface ?? 'elevated'}
       style={style}
       onMouseDown={onMouseDown}
@@ -91,7 +91,7 @@ export function ContextMenuTrigger({
       }}
       className={`${className ?? ''} ${isOpen ? 'pressed text-accent' : ''}`}
     >
-      <DotsThreeOutlineVerticalIcon size={18} weight="duotone" />
+      <DotsThreeOutlineVerticalIcon size={18} weight='duotone' />
     </Button>
   );
 }
@@ -117,16 +117,21 @@ export function ContextMenu({
   const activeEditItem = activeEditItemId ? items.find((i) => i.id === activeEditItemId) : null;
   const activeEditSubmenu = activeEditItem?.editSubmenu ?? null;
 
-  const currentItems = activeSubmenu
-    ? activeSubmenu.items.map((item) => ({
-        id: item.id,
-        label: item.label,
-        icon: item.icon,
-        disabled: item.disabled,
-      }))
-    : activeEditItemId
-      ? []
-      : items;
+  const currentItems = (
+    activeSubmenu
+      ? activeSubmenu.items.map((item) => ({
+          id: item.id,
+          label: item.label,
+          icon: item.icon,
+          disabled: item.disabled,
+        }))
+      : activeEditItemId
+        ? []
+        : items
+  ) as { id: string; label: string; icon?: ReactNode; disabled?: boolean }[];
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- currentItems is derived from stable state, use via ref in callbacks
+  const currentItemsRef = useRef(currentItems);
+  currentItemsRef.current = currentItems;
 
   // Position calculation
   useEffect(() => {
@@ -233,7 +238,8 @@ export function ContextMenu({
   // Keyboard navigation
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent) => {
-      const enabledIndices = currentItems
+      const items = currentItemsRef.current;
+      const enabledIndices = items
         .map((item, i) => (!item.disabled ? i : -1))
         .filter((i) => i >= 0);
       if (enabledIndices.length === 0) return;
@@ -256,7 +262,7 @@ export function ContextMenu({
         triggerRef.current?.focus();
       }
     },
-    [currentItems, onClose, triggerRef]
+    [onClose, triggerRef]
   );
 
   if (!isOpen) return null;
@@ -264,14 +270,15 @@ export function ContextMenu({
   return createPortal(
     <div
       ref={menuRef}
-      role="menu"
-      aria-label="Song actions"
+      role='menu'
+      tabIndex={-1}
+      aria-label='Song actions'
       style={{ position: 'fixed', top: position.top, left: position.left }}
-      className="z-9999 min-w-48"
+      className='z-9999 min-w-48'
       onKeyDown={activeEditItemId ? undefined : handleKeyDown}
       onClick={(e) => e.stopPropagation()}
     >
-      <div className="glass-popover outline-2 outline-accent/20">
+      <div className='glass-popover outline-2 outline-accent/20'>
         {activeSubmenu ? (
           <SubmenuPanel
             config={activeSubmenu}
@@ -303,7 +310,7 @@ export function ContextMenu({
               return (
                 <div key={item.id}>
                   {(index > 0 || item.separatorBefore) && (
-                    <div className="border-b border-muted/50" />
+                    <div className='border-b border-muted/50' />
                   )}
                   <InfoRow item={item} />
                 </div>
@@ -311,7 +318,7 @@ export function ContextMenu({
             }
             return (
               <div key={item.id}>
-                {index > 0 && <div className="border-b border-muted/50" />}
+                {index > 0 && <div className='border-b border-muted/50' />}
                 <MenuItemButton
                   item={item}
                   onClick={() => {
@@ -344,11 +351,11 @@ export function ContextMenu({
 function InfoRow({ item }: { item: MenuItem }) {
   return (
     <div
-      role="presentation"
-      className="px-3 py-1.5 text-xs font-mono text-muted flex items-center gap-2"
+      role='presentation'
+      className='px-3 py-1.5 text-xs font-mono text-muted flex items-center gap-2'
     >
-      {item.icon && <span className="shrink-0">{item.icon}</span>}
-      <span className="truncate">{item.info?.label}</span>
+      {item.icon && <span className='shrink-0'>{item.icon}</span>}
+      <span className='truncate'>{item.info?.label}</span>
     </div>
   );
 }

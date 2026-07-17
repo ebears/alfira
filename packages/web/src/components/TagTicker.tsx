@@ -73,7 +73,8 @@ const TagTicker = memo(({ tags, isHovered: externalHovered }: TagTickerProps) =>
       // Replace animation with static transform at captured position
       el.style.animation = 'none';
       el.style.transform = `translateX(${x}px)`;
-      el.offsetHeight; // force layout
+      // eslint-disable-next-line @typescript-eslint/no-unused-expressions -- force layout reflow
+      el.offsetHeight;
 
       // Transition back to 0
       el.style.transition = 'transform 0.5s ease-out';
@@ -112,9 +113,10 @@ const TagTicker = memo(({ tags, isHovered: externalHovered }: TagTickerProps) =>
     : {};
 
   return (
+    // eslint-disable-next-line jsx-a11y/no-noninteractive-element-interactions -- hover state pauses ticker; marquee has dedicated role
     <div
-      role="marquee"
-      className="overflow-hidden py-0 max-w-[60%]"
+      role='marquee'
+      className='overflow-hidden py-0 max-w-[60%]'
       ref={outerRef}
       style={{
         ...(shouldScroll && {
@@ -130,7 +132,7 @@ const TagTicker = memo(({ tags, isHovered: externalHovered }: TagTickerProps) =>
         if (externalHovered === undefined) setIsHovered(false);
       }}
     >
-      <div className="flex gap-1" ref={innerRef} style={animationStyle}>
+      <div className='flex gap-1' ref={innerRef} style={animationStyle}>
         {renderTags('a')}
         {shouldScroll && renderTags('b')}
       </div>

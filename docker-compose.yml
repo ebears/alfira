@@ -1,59 +1,25 @@
-# ---------------------------------------------------------------------------
-# Development docker-compose — full stack
-#
-# Runs the server (API + bot merged) and the web front-end all inside Docker.
-# Source files are mounted as volumes so you can edit code without rebuilding:
-#
-# Server — edit packages/server/src, then `docker compose restart alfira`.
-# Web — edit packages/web/src, rebuild the image to see changes.
-#
-# First-time setup:
-#   cp .env.example .env
-#   fill in all values
-#
-# Usage:
-#   docker compose up --build          — build images and start all services
-#   docker compose up -d               — start in the background (after first build)
-#   docker compose down                — stop and remove containers
-#   docker compose down -v             — stop and wipe all data (clean slate)
-#   docker compose restart alfira       — reload the server after TypeScript changes
-# ---------------------------------------------------------------------------
-
 services:
   alfira:
-    build:
-      context: .
-      dockerfile: Dockerfile
-      target: dev
+    image: ghcr.io/ebears/alfira:latest
     restart: unless-stopped
     env_file:
-      # Local .env file provides Discord tokens, OAuth secrets, JWT secret, etc.
-      # Copy .env.example to .env and fill in real values before first run.
       - .env
     environment:
-      NODE_ENV: development
+      NODE_ENV: production
       DATABASE_URL: /data/alfira.db
     ports:
-      - "3001:3001"
+      - 3001:3001
     volumes:
-      # Live-mount server source files — restart the service to pick up changes.
-      - ./packages/server/src:/app/packages/server/src
-      # Mount .git so resolveVersion() can read the commit hash
-      - ./.git:/app/.git:ro
-      # Persistent SQLite database storage
-      - alfira-data:/data
+      - ./data:/data
     healthcheck:
       test:
         [
-          "CMD",
-          "bun",
-          "-e",
+          'CMD',
+          'bun',
+          '-e',
           "fetch('http://localhost:3001/health').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))",
         ]
       interval: 30s
       timeout: 10s
       retries: 3
       start_period: 40s
-
-volumes:
-  alfira-data:

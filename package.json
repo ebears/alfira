@@ -1,10 +1,11 @@
 {
   "name": "alfira-bot",
+  "version": "0.1.0",
   "private": true,
-  "packageManager": "bun@1.3.11",
   "workspaces": [
     "packages/*"
   ],
+  "type": "module",
   "scripts": {
     "dev": "bun run --filter @alfira-bot/server build && docker compose up --build",
     "web:build": "bun run --filter @alfira-bot/web build",
@@ -12,23 +13,25 @@
     "db:generate": "bun run --filter @alfira-bot/server db:generate",
     "db:studio": "bun run --filter @alfira-bot/server db:studio",
     "discord:unregister-commands": "bun run packages/server/src/utils/unregisterCommands.ts",
-    "lint": "biome lint .",
-    "lint:fix": "biome lint --write .",
-    "format": "biome format --write .",
-    "format:check": "biome format .",
-    "check": "biome check --write ."
+    "lint": "oxlint .",
+    "lint:fix": "oxlint --fix .",
+    "format": "oxfmt --write .",
+    "format:check": "oxfmt --check .",
+    "check": "oxlint . && oxfmt --check ."
+  },
+  "devDependencies": {
+    "@types/node": "25.6.0",
+    "oxfmt": "^0.59.0",
+    "oxlint": "^1.74.0",
+    "typescript": "7.0.2"
   },
   "overrides": {
+    "lodash": "4.17.23",
     "react": "19.2.7",
     "react-dom": "19.2.7",
     "serialize-javascript": "7.0.4",
     "undici": "6.24.0",
-    "lodash": "4.17.23",
     "ws": "8.21.0"
   },
-  "devDependencies": {
-    "@biomejs/biome": "2.5.2",
-    "@types/node": "25.6.0",
-    "typescript": "6.0.3"
-  }
+  "packageManager": "bun@1.3.11"
 }

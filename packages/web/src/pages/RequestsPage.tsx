@@ -6,6 +6,7 @@ import AddSongModal from '../components/AddSongModal';
 import { Button } from '../components/ui/Button';
 import Checkbox from '../components/ui/Checkbox';
 import { ErrorBanner } from '../components/ui/ErrorBanner';
+import { PageHeader } from '../components/ui/PageHeader';
 import VirtualRequestList from '../components/VirtualRequestList';
 import { useAdminView } from '../context/AdminViewContext';
 import { useAuth } from '../context/AuthContext';
@@ -88,55 +89,43 @@ export default function RequestsPage() {
   );
 
   // Redirect to history if pending is empty after the initial fetch completes.
-  // Detected by watching for items[] reference change (setItems always creates a
-  // new array). A mount guard skips the initial render + Strict Mode double-invoke.
+  // A mount guard skips the initial render + Strict Mode double-invoke.
   const mounted = useRef(false);
-  const prevItemsRef = useRef(items);
   useEffect(() => {
-    const itemsChanged = prevItemsRef.current !== items;
-    prevItemsRef.current = items;
-
     if (!mounted.current) {
       mounted.current = true;
       return;
     }
-    if (!itemsChanged) return;
     if (autoRedirected.current) return;
     if (tab === 'pending' && total === 0) {
       autoRedirected.current = true;
       setTab('closed');
     }
-  });
+  }, [items, tab, total]);
 
   const countLabel = hasLoaded ? `${total} request${total !== 1 ? 's' : ''}` : '—';
 
   return (
-    <div className="p-4 md:p-8">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6 md:mb-8">
-        <div>
-          <h1 className="font-display text-3xl md:text-4xl text-accent tracking-wider flex items-center gap-2">
-            <TrayIcon size={28} weight="duotone" className="shrink-0 relative top-1" />
-            Requests
-          </h1>
-          <p className="font-mono text-xs text-muted mt-2">
-            Submit & review requests{hasLoaded ? ` • ${countLabel}` : ''}
-          </p>
-        </div>
+    <div className='p-4 md:p-8'>
+      <PageHeader
+        icon={TrayIcon}
+        title='Requests'
+        subtitle={`Submit & review requests${hasLoaded ? ` • ${countLabel}` : ''}`}
+      >
         <Button
-          variant="primary"
+          variant='primary'
           onClick={() => setShowAddModal(true)}
           className={showAddModal ? 'pressed' : ''}
         >
           + Request Song
         </Button>
-      </div>
+      </PageHeader>
 
       {/* Tabs + filter */}
-      <div className="flex items-center gap-3 mb-4 md:mb-6">
-        <div className="flex gap-1 bg-elevated rounded-lg p-1">
+      <div className='flex items-center gap-3 mb-4 md:mb-6'>
+        <div className='flex gap-1 bg-elevated rounded-lg p-1'>
           <button
-            type="button"
+            type='button'
             onClick={() => {
               setTab('pending');
             }}
@@ -147,7 +136,7 @@ export default function RequestsPage() {
             Pending
           </button>
           <button
-            type="button"
+            type='button'
             onClick={() => {
               setTab('closed');
               setMineOnly(false);
@@ -161,14 +150,14 @@ export default function RequestsPage() {
         </div>
 
         {tab === 'pending' && (
-          <label className="flex items-center gap-2 cursor-pointer ml-auto">
+          <label className='flex items-center gap-2 cursor-pointer ml-auto'>
             <Checkbox checked={mineOnly} onChange={setMineOnly} />
-            <span className="font-mono text-xs text-muted">Only show my requests</span>
+            <span className='font-mono text-xs text-muted'>Only show my requests</span>
           </label>
         )}
       </div>
 
-      {actionError && <ErrorBanner message={actionError} className="mb-4 font-mono" />}
+      {actionError && <ErrorBanner message={actionError} className='mb-4 font-mono' />}
 
       {/* Virtualized request list */}
       <VirtualRequestList

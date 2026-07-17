@@ -136,7 +136,7 @@ async function wrappedFetch(
   options: RequestInit = {},
   retryCount = 0
 ): Promise<unknown> {
-  const makeRequest = async (): Promise<Response> =>
+  const makeRequest = (): Promise<Response> =>
     fetchWithTimeout(url, { ...options, credentials: 'include' });
 
   let response = await makeRequest();

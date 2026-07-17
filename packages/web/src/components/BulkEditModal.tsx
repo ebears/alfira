@@ -194,25 +194,24 @@ export default function BulkEditModal({ count, onApply, onClose, isApplying }: B
 
   return (
     <Backdrop onClose={onClose}>
-      {/* biome-ignore lint/a11y/useKeyWithClickEvents: modal container, keyboard not applicable */}
-      {/* biome-ignore lint/a11y/noStaticElementInteractions: modal container, keyboard not applicable */}
+      {/* eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-static-element-interactions -- modal container, keyboard not applicable */}
       <div
-        className="w-full max-w-md mx-4 p-6 glass-modal animate-fade-up max-h-[85vh] overflow-y-auto"
+        className='w-full max-w-md mx-4 p-6 glass-modal animate-fade-up max-h-[85vh] overflow-y-auto'
         onClick={(e) => e.stopPropagation()}
       >
-        <h2 className="font-display text-lg text-fg mb-1">Edit {count} songs</h2>
-        <p className="text-xs text-muted font-mono mb-4">
+        <h2 className='font-display text-lg text-fg mb-1'>Edit {count} songs</h2>
+        <p className='text-xs text-muted font-mono mb-4'>
           Fill in fields you want to change. Blank fields are left unchanged. Use clear to reset a
           field.
         </p>
 
-        <div className="flex flex-col gap-3">
+        <div className='flex flex-col gap-3'>
           {EDITABLE_FIELDS.map(({ key, label, placeholder }) => (
-            <div key={key} className="flex items-start gap-2">
-              <div className="flex-1">
+            <div key={key} className='flex items-start gap-2'>
+              <div className='flex-1'>
                 <label
                   htmlFor={`bulk-edit-${key}`}
-                  className="block font-mono text-[10px] text-muted uppercase mb-1"
+                  className='block font-mono text-[10px] text-muted uppercase mb-1'
                 >
                   {label}
                 </label>
@@ -253,20 +252,20 @@ export default function BulkEditModal({ count, onApply, onClose, isApplying }: B
                   disabled={clearFields.has(key)}
                 />
               </div>
-              <label className="flex flex-col items-center gap-0.5 shrink-0 pt-5 cursor-pointer">
+              <label className='flex flex-col items-center gap-0.5 shrink-0 pt-5 cursor-pointer'>
                 <input
-                  type="checkbox"
-                  className="sr-only peer"
+                  type='checkbox'
+                  className='sr-only peer'
                   checked={clearFields.has(key)}
                   onChange={() => toggleClear(key)}
                 />
-                <span className="text-[9px] font-mono uppercase text-muted peer-checked:text-danger transition-colors">
+                <span className='text-[9px] font-mono uppercase text-muted peer-checked:text-danger transition-colors'>
                   Clear
                 </span>
                 <EraserIcon
                   size={12}
-                  weight="duotone"
-                  className="text-muted peer-checked:text-danger transition-colors"
+                  weight='duotone'
+                  className='text-muted peer-checked:text-danger transition-colors'
                 />
               </label>
             </div>
@@ -274,16 +273,15 @@ export default function BulkEditModal({ count, onApply, onClose, isApplying }: B
 
           {/* Tags field */}
           <div>
-            <div className="flex items-start gap-2">
-              <div className="flex-1">
+            <div className='flex items-start gap-2'>
+              <div className='flex-1'>
                 <label
-                  htmlFor="bulk-edit-tags"
-                  className="block font-mono text-[10px] text-muted uppercase mb-1"
+                  htmlFor='bulk-edit-tags'
+                  className='block font-mono text-[10px] text-muted uppercase mb-1'
                 >
                   Tags
                 </label>
-                {/* biome-ignore lint/a11y/useKeyWithClickEvents: container click focuses inner input */}
-                {/* biome-ignore lint/a11y/noStaticElementInteractions: container click focuses inner input */}
+                {/* eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-static-element-interactions -- container click focuses inner input */}
                 <div
                   ref={tagAreaRef}
                   className={`input text-sm flex flex-wrap gap-1.5 items-center min-h-9.5 cursor-text relative${clearFields.has('tags') ? ' opacity-30 pointer-events-none' : ''}`}
@@ -301,22 +299,22 @@ export default function BulkEditModal({ count, onApply, onClose, isApplying }: B
                       >
                         {tag}
                         <button
-                          type="button"
-                          className="cursor-pointer opacity-60 hover:opacity-100"
+                          type='button'
+                          className='cursor-pointer opacity-60 hover:opacity-100'
                           onClick={(e) => {
                             e.stopPropagation();
                             removeTag(tag);
                           }}
                         >
-                          <XIcon size={10} weight="bold" />
+                          <XIcon size={10} weight='bold' />
                         </button>
                       </span>
                     );
                   })}
                   <input
                     ref={tagInputRef}
-                    id="bulk-edit-tags"
-                    className="bg-transparent outline-none flex-1 min-w-30 text-sm placeholder:text-faint py-0.5"
+                    id='bulk-edit-tags'
+                    className='bg-transparent outline-none flex-1 min-w-30 text-sm placeholder:text-faint py-0.5'
                     placeholder={
                       tags.length === 0 ? 'Type a tag and press Enter...' : 'Add another...'
                     }
@@ -332,37 +330,37 @@ export default function BulkEditModal({ count, onApply, onClose, isApplying }: B
                   />
                 </div>
               </div>
-              <label className="flex flex-col items-center gap-0.5 shrink-0 pt-5 cursor-pointer">
+              <label className='flex flex-col items-center gap-0.5 shrink-0 pt-5 cursor-pointer'>
                 <input
-                  type="checkbox"
-                  className="sr-only peer"
+                  type='checkbox'
+                  className='sr-only peer'
                   checked={clearFields.has('tags')}
                   onChange={() => toggleClear('tags')}
                 />
-                <span className="text-[9px] font-mono uppercase text-muted peer-checked:text-danger transition-colors">
+                <span className='text-[9px] font-mono uppercase text-muted peer-checked:text-danger transition-colors'>
                   Clear
                 </span>
                 <EraserIcon
                   size={12}
-                  weight="duotone"
-                  className="text-muted peer-checked:text-danger transition-colors"
+                  weight='duotone'
+                  className='text-muted peer-checked:text-danger transition-colors'
                 />
               </label>
             </div>
 
             {/* Tag suggestions dropdown */}
             {showDropdown && filtered.length > 0 && (
-              <div className="relative">
+              <div className='relative'>
                 <div
                   ref={tagDropdownRef}
-                  className="absolute top-1 left-0 right-0 glass-popover z-30 max-h-40"
+                  className='absolute top-1 left-0 right-0 glass-popover z-30 max-h-40'
                 >
                   {filtered.map((t, i) => {
                     const c = getTagColorClasses(t.canonicalName, t.color);
                     return (
                       <button
                         key={t.nameLower}
-                        type="button"
+                        type='button'
                         className={`w-full text-left px-3 py-1.5 text-sm transition-colors cursor-pointer ${
                           i === highlightedIdx
                             ? 'bg-accent/10 text-accent'
@@ -393,20 +391,20 @@ export default function BulkEditModal({ count, onApply, onClose, isApplying }: B
           </div>
 
           {/* Volume boost field */}
-          <div className="flex items-start gap-2">
-            <div className="flex-1">
+          <div className='flex items-start gap-2'>
+            <div className='flex-1'>
               <label
-                htmlFor="bulk-edit-volumeboost"
-                className="block font-mono text-[10px] text-muted uppercase mb-1"
+                htmlFor='bulk-edit-volumeboost'
+                className='block font-mono text-[10px] text-muted uppercase mb-1'
               >
                 Volume Boost (dB)
               </label>
-              <div className="flex items-center gap-3">
+              <div className='flex items-center gap-3'>
                 <input
-                  id="bulk-edit-volumeboost"
-                  className="input text-sm w-16 text-center disabled:opacity-30 disabled:cursor-not-allowed"
-                  placeholder="0"
-                  type="text"
+                  id='bulk-edit-volumeboost'
+                  className='input text-sm w-16 text-center disabled:opacity-30 disabled:cursor-not-allowed'
+                  placeholder='0'
+                  type='text'
                   value={volumeBoost}
                   onChange={(e) => {
                     const v = e.target.value;
@@ -424,9 +422,9 @@ export default function BulkEditModal({ count, onApply, onClose, isApplying }: B
                   }}
                   disabled={clearFields.has('volumeBoost')}
                 />
-                <span className="text-xs text-muted font-mono w-8 text-left">dB</span>
+                <span className='text-xs text-muted font-mono w-8 text-left'>dB</span>
                 <input
-                  type="range"
+                  type='range'
                   min={-100}
                   max={200}
                   value={volumeNumeric}
@@ -437,31 +435,31 @@ export default function BulkEditModal({ count, onApply, onClose, isApplying }: B
                 />
               </div>
             </div>
-            <label className="flex flex-col items-center gap-0.5 shrink-0 pt-5 cursor-pointer">
+            <label className='flex flex-col items-center gap-0.5 shrink-0 pt-5 cursor-pointer'>
               <input
-                type="checkbox"
-                className="sr-only peer"
+                type='checkbox'
+                className='sr-only peer'
                 checked={clearFields.has('volumeBoost')}
                 onChange={() => toggleClear('volumeBoost')}
               />
-              <span className="text-[9px] font-mono uppercase text-muted peer-checked:text-danger transition-colors">
+              <span className='text-[9px] font-mono uppercase text-muted peer-checked:text-danger transition-colors'>
                 Clear
               </span>
               <EraserIcon
                 size={12}
-                weight="duotone"
-                className="text-muted peer-checked:text-danger transition-colors"
+                weight='duotone'
+                className='text-muted peer-checked:text-danger transition-colors'
               />
             </label>
           </div>
         </div>
 
         {/* Actions */}
-        <div className="flex justify-end gap-2 mt-4">
-          <Button variant="inherit" surface="surface" onClick={onClose} className="text-xs">
+        <div className='flex justify-end gap-2 mt-4'>
+          <Button variant='inherit' surface='surface' onClick={onClose} className='text-xs'>
             Cancel
           </Button>
-          <Button variant="primary" onClick={handleApply} disabled={isApplying} className="text-xs">
+          <Button variant='primary' onClick={handleApply} disabled={isApplying} className='text-xs'>
             {isApplying ? 'Applying...' : `Apply to ${count} songs`}
           </Button>
         </div>

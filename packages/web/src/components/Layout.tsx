@@ -43,7 +43,7 @@ function LayoutContent() {
   };
 
   return (
-    <div className="flex h-full bg-surface">
+    <div className='flex h-full bg-surface'>
       {/* ------------------------------------------------------------------ */}
       {/* Mobile Navigation - visible on small screens */}
       {/* ------------------------------------------------------------------ */}
@@ -64,9 +64,9 @@ function LayoutContent() {
           }`}
         >
           {!collapsed && (
-            <div className="flex items-center gap-2 min-w-0">
+            <div className='flex items-center gap-2 min-w-0'>
               <button
-                type="button"
+                type='button'
                 onClick={toggleAdminView}
                 title={
                   user?.isAdmin
@@ -78,17 +78,17 @@ function LayoutContent() {
                 className={`flex items-center justify-center w-10 h-10 shrink-0 rounded border border-accent/30 bg-accent/10 self-end transition-opacity ${user?.isAdmin ? 'cursor-pointer hover:opacity-80' : 'cursor-default'}`}
               >
                 {isAdminView ? (
-                  <CraneTowerIcon size={24} weight="duotone" className="text-accent" />
+                  <CraneTowerIcon size={24} weight='duotone' className='text-accent' />
                 ) : (
-                  <GuitarIcon size={24} weight="duotone" className="text-accent" />
+                  <GuitarIcon size={24} weight='duotone' className='text-accent' />
                 )}
               </button>
-              <span className="font-display text-5xl text-accent tracking-wider">Alfira</span>
+              <span className='font-display text-5xl text-accent tracking-wider'>Alfira</span>
             </div>
           )}
           {collapsed && (
             <button
-              type="button"
+              type='button'
               onClick={toggleAdminView}
               className={`w-10 h-10 flex items-center justify-center shrink-0 rounded border border-accent/30 bg-accent/10 transition-opacity ${user?.isAdmin ? 'cursor-pointer hover:opacity-80' : 'cursor-default'}`}
               title={
@@ -100,9 +100,9 @@ function LayoutContent() {
               }
             >
               {isAdminView ? (
-                <CraneTowerIcon size={24} weight="duotone" className="text-accent" />
+                <CraneTowerIcon size={24} weight='duotone' className='text-accent' />
               ) : (
-                <GuitarIcon size={24} weight="duotone" className="text-accent" />
+                <GuitarIcon size={24} weight='duotone' className='text-accent' />
               )}
             </button>
           )}
@@ -110,12 +110,12 @@ function LayoutContent() {
 
         {/* Spacer between wordmark and nav */}
         {collapsed ? (
-          <div className="flex justify-center px-2">
-            <div className="w-full h-px bg-fg/20" />
+          <div className='flex justify-center px-2'>
+            <div className='w-full h-px bg-fg/20' />
           </div>
         ) : (
-          <div className="px-5">
-            <div className="h-px bg-fg/20" />
+          <div className='px-5'>
+            <div className='h-px bg-fg/20' />
           </div>
         )}
 
@@ -133,20 +133,20 @@ function LayoutContent() {
               }
               style={{ '--btn-surface': 'var(--color-elevated)' } as React.CSSProperties}
             >
-              {!collapsed && <span className="mr-auto">{label}</span>}
-              <Icon size={22} weight="duotone" />
+              {!collapsed && <span className='mr-auto'>{label}</span>}
+              <Icon size={22} weight='duotone' />
             </NavLink>
           ))}
           {isAdminView && ADMIN_NAV_ITEMS.length > 0 && (
             <>
               {/* Separator between user and admin nav items */}
               {collapsed ? (
-                <div className="flex justify-center px-2 py-1">
-                  <div className="w-6 h-px bg-fg/15" />
+                <div className='flex justify-center px-2 py-1'>
+                  <div className='w-6 h-px bg-fg/15' />
                 </div>
               ) : (
-                <div className="px-2 py-1">
-                  <div className="h-px bg-fg/15" />
+                <div className='px-2 py-1'>
+                  <div className='h-px bg-fg/15' />
                 </div>
               )}
               {ADMIN_NAV_ITEMS.map(({ to, label, icon: Icon }) => (
@@ -161,8 +161,8 @@ function LayoutContent() {
                   }
                   style={{ '--btn-surface': 'var(--color-elevated)' } as React.CSSProperties}
                 >
-                  {!collapsed && <span className="mr-auto">{label}</span>}
-                  <Icon size={22} weight="duotone" />
+                  {!collapsed && <span className='mr-auto'>{label}</span>}
+                  <Icon size={22} weight='duotone' />
                 </NavLink>
               ))}
             </>
@@ -179,13 +179,13 @@ function LayoutContent() {
               } ${connectionStatus === 'reconnecting' ? 'text-warning' : 'text-danger'}`}
             >
               {!collapsed && (
-                <span className="mr-auto text-sm text-fg/80">
+                <span className='mr-auto text-sm text-fg/80'>
                   {connectionStatus === 'reconnecting' ? 'Reconnecting...' : 'Disconnected'}
                 </span>
               )}
               <LinkBreakIcon
                 size={22}
-                weight="duotone"
+                weight='duotone'
                 className={connectionStatus === 'reconnecting' ? 'animate-pulse' : ''}
               />
             </div>
@@ -198,7 +198,7 @@ function LayoutContent() {
         {/* Collapse toggle */}
         <div className={collapsed ? 'flex justify-center px-2 pb-4' : 'px-3 pb-4'}>
           <button
-            type="button"
+            type='button'
             onClick={() => setCollapsed((c) => !c)}
             title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
             className={`flex items-center rounded-xl font-body transition-all duration-150 cursor-pointer w-full ${
@@ -206,19 +206,19 @@ function LayoutContent() {
             } btn-inherit`}
             style={{ '--btn-surface': 'var(--color-elevated)' } as React.CSSProperties}
           >
-            {!collapsed && <span className="mr-auto">Collapse</span>}
-            <CaretLeftIcon size={18} weight="duotone" className={collapsed ? 'rotate-180' : ''} />
+            {!collapsed && <span className='mr-auto'>Collapse</span>}
+            <CaretLeftIcon size={18} weight='duotone' className={collapsed ? 'rotate-180' : ''} />
           </button>
         </div>
 
         {/* Separator above user section */}
         {collapsed ? (
-          <div className="flex justify-center px-2">
-            <div className="w-full h-px bg-fg/20" />
+          <div className='flex justify-center px-2'>
+            <div className='w-full h-px bg-fg/20' />
           </div>
         ) : (
-          <div className="px-5">
-            <div className="h-px bg-fg/20" />
+          <div className='px-5'>
+            <div className='h-px bg-fg/20' />
           </div>
         )}
 
@@ -243,8 +243,8 @@ function QueueLayout() {
 
   return (
     <>
-      <div className="flex-1 flex flex-col min-w-0 pt-14 md:pt-0 overflow-hidden">
-        <main className="flex-1 overflow-y-auto pb-22 md:pb-20">
+      <div className='flex-1 flex flex-col min-w-0 pt-14 md:pt-0 overflow-hidden'>
+        <main className='flex-1 overflow-y-auto pb-22 md:pb-20'>
           <Outlet />
         </main>
         <NowPlayingBar />

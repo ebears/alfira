@@ -11,16 +11,16 @@ The bot and API run in a **single Bun process**. For detailed architecture (star
 
 ## Tech Stack
 
-| Component | Technology |
-|-----------|------------|
-| Runtime | Bun |
-| Language | TypeScript |
-| Discord | Seyfert v4 |
-| Audio | NodeLink (Lavalink v4) |
-| API | Bun native HTTP + WebSocket |
-| Database | SQLite + Drizzle ORM |
-| Frontend | React 19 + Tailwind CSS 4 |
-| Linting | Biome |
+| Component | Technology                  |
+| --------- | --------------------------- |
+| Runtime   | Bun                         |
+| Language  | TypeScript                  |
+| Discord   | Seyfert v4                  |
+| Audio     | NodeLink (Lavalink v4)      |
+| API       | Bun native HTTP + WebSocket |
+| Database  | SQLite + Drizzle ORM        |
+| Frontend  | React 19 + Tailwind CSS 4   |
+| Linting   | oxlint + oxfmt              |
 
 ## Development Commands
 
@@ -49,7 +49,7 @@ bun run format
 
 ## Code Style
 
-- Biome for linting and formatting
+- oxlint + oxfmt for linting and formatting
 - Run `bun run check` before committing
 - CI runs `bun run lint` — code must pass before merging
 
@@ -88,6 +88,7 @@ Every change follows this pipeline. The agent should guide the user through each
 7. **`/release`** — Batch accumulated `dev` changes into a release PR targeting `main`. Show pending commits, determine version if applicable, open the PR with a changelog.
 
 After a release merges to `main`, sync `dev` with `main` to keep history clean:
+
 ```bash
 git checkout dev && git merge main && git push origin dev
 ```
@@ -124,11 +125,13 @@ Use [Conventional Commits](https://www.conventionalcommits.org/) format:
 - Description should be lowercase, imperative mood, no trailing period
 
 A commit template is available at `.git-commit-template`. Enable it locally:
+
 ```bash
 git config commit.template .git-commit-template
 ```
 
 Examples:
+
 ```
 feat(server): add queue reordering endpoint
 fix(web): prevent scrubber thumb from sticking at 0

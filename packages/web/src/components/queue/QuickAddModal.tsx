@@ -44,27 +44,27 @@ export default function QuickAddModal({
 
   return (
     <Backdrop onClose={onClose}>
-      <div className="p-5 md:p-6 w-full max-w-sm mx-4 glass-modal animate-fade-up">
-        <h2 className="font-display text-2xl md:text-3xl text-fg tracking-wider mb-1">Quick Add</h2>
-        <p className="font-mono text-xs text-muted mb-4 md:mb-6">
+      <div className='p-5 md:p-6 w-full max-w-sm mx-4 glass-modal animate-fade-up'>
+        <h2 className='font-display text-2xl md:text-3xl text-fg tracking-wider mb-1'>Quick Add</h2>
+        <p className='font-mono text-xs text-muted mb-4 md:mb-6'>
           add a url to Up Next without saving to library
         </p>
 
-        <div className="space-y-4 mb-6">
+        <div className='space-y-4 mb-6'>
           <div>
-            <p className="font-mono text-xs text-muted mb-2 uppercase tracking-widest">
+            <p className='font-mono text-xs text-muted mb-2 uppercase tracking-widest'>
               Source URL
             </p>
             <input
-              type="text"
+              type='text'
               value={sourceUrl}
               onChange={(e) => {
                 setSourceUrl(e.target.value);
                 setError('');
                 setSuccessMsg('');
               }}
-              placeholder="https://..."
-              className="input w-full"
+              placeholder='https://...'
+              className='input w-full'
               disabled={submitting}
               onKeyDown={(e) => {
                 if (e.key === 'Enter' && sourceUrl.trim()) {
@@ -73,41 +73,41 @@ export default function QuickAddModal({
               }}
             />
             {isPlaylist && (
-              <label className="flex items-center gap-2 cursor-pointer mt-2">
+              <label className='flex items-center gap-2 cursor-pointer mt-2'>
                 <Checkbox
                   checked={importFullPlaylist}
                   onChange={setImportFullPlaylist}
                   disabled={submitting}
                 />
-                <span className="font-mono text-xs text-fg">Add all songs from playlist</span>
+                <span className='font-mono text-xs text-fg'>Add all songs from playlist</span>
               </label>
             )}
           </div>
         </div>
 
-        {successMsg && <p className="font-mono text-xs text-success mb-4">{successMsg}</p>}
-        {error && <p className="font-mono text-xs text-danger mb-4">{error}</p>}
+        {successMsg && <p className='font-mono text-xs text-success mb-4'>{successMsg}</p>}
+        {error && <p className='font-mono text-xs text-danger mb-4'>{error}</p>}
 
         {submitting && (
-          <p className="font-mono text-xs text-muted mb-4 flex items-center gap-2">
+          <p className='font-mono text-xs text-muted mb-4 flex items-center gap-2'>
             <Spinner />
             {importFullPlaylist ? 'Adding playlist...' : 'Adding...'}
           </p>
         )}
 
-        <div className="flex gap-2 justify-end">
+        <div className='flex gap-2 justify-end'>
           <Button
-            variant="inherit"
-            type="button"
+            variant='inherit'
+            type='button'
             onClick={onClose}
             disabled={submitting}
-            surface="surface"
+            surface='surface'
           >
             Cancel
           </Button>
           <Button
-            variant="primary"
-            type="button"
+            variant='primary'
+            type='button'
             onClick={handleSubmit}
             disabled={submitting || !sourceUrl.trim()}
           >

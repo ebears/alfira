@@ -1,26 +1,21 @@
 import type { Playlist, PlaylistDetail, Song, TagItem } from '@alfira-bot/server/shared';
 import type { FetchSongsOptions } from '@alfira-bot/server/shared/api';
 import { fetchTags, updatePlaylistTag } from '@alfira-bot/server/shared/api';
+import { useVirtualizedInfiniteScroll } from '../hooks/useVirtualizedInfiniteScroll';
+
+type PlaylistDetailMeta = Omit<PlaylistDetail, 'songs'>;
+
 import {
-  ArrowDownIcon,
-  ArrowUpIcon,
   BombIcon,
-  CaretDownIcon,
   CaretLeftIcon,
-  CheckSquareIcon,
-  FunnelIcon,
   GhostIcon,
-  ListIcon,
   LockIcon,
   LockOpenIcon,
-  MagnifyingGlassIcon,
   PencilSimple,
   PlayCircleIcon,
   PlayIcon,
   PlusCircleIcon,
   ShuffleIcon,
-  SortAscendingIcon,
-  SquaresFourIcon,
   TagIcon,
 } from '@phosphor-icons/react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -35,7 +30,6 @@ import {
   startPlayback,
   togglePlaylistVisibility,
 } from '../api/api';
-import AddFilterPopover from '../components/AddFilterPopover';
 import AddSongsModal from '../components/AddSongsModal';
 import BulkActionBar from '../components/BulkActionBar';
 import BulkEditModal from '../components/BulkEditModal';
@@ -43,7 +37,8 @@ import ConfirmModal from '../components/ConfirmModal';
 import type { MenuItem } from '../components/ContextMenu';
 import { ContextMenu, ContextMenuTrigger } from '../components/ContextMenu';
 import EmptyState from '../components/EmptyState';
-import FilterChips from '../components/FilterChips';
+import ListToolbar from '../components/ListToolbar';
+
 import NotificationToast from '../components/NotificationToast';
 
 import { Button } from '../components/ui/Button';
@@ -68,7 +63,6 @@ export default function PlaylistDetailPage() {
   const { user } = useAuth();
   const navigate = useNavigate();
 
-  const [playlistDetail, setPlaylistDetail] = useState<PlaylistDetail | null>(null);
   const [renameValue, setRenameValue] = useState('');
   const [renameSaving, setRenameSaving] = useState(false);
   const [showAddSongs, setShowAddSongs] = useState(false);
@@ -90,11 +84,6 @@ export default function PlaylistDetailPage() {
     { value: 'duration', label: 'Duration' },
   ] as const;
 
-  const isOwner = user?.discordId === playlistDetail?.createdBy;
-  const canEdit = isAdminView || isOwner || hasPermission('songs.edit');
-  const canBulk = canEdit;
-  const isSmart = !!playlistDetail?.tagNameLower;
-
   // Bulk selection
   const bulk = useBulkSelection();
   const [selectionMode, setSelectionMode] = useState(false);
@@ -108,65 +97,37 @@ export default function PlaylistDetailPage() {
 
   // Fetch tags for tag change submenu
   useEffect(() => {
-    if (canEdit) {
+    if (isAdminView || user?.discordId) {
       fetchTags()
         .then(setTags)
         .catch(() => {
           // Tags are non-critical — fail silently
         });
     }
-  }, [canEdit]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isAdminView, user?.discordId]);
 
   const { state: queueState } = usePlayerState();
 
-  // Refs for socket handlers
   const idRef = useRef(id);
   const isAdminViewRef = useRef(isAdminView);
   idRef.current = id;
   isAdminViewRef.current = isAdminView;
 
-  // Pagination state
-  const [currentPage, setCurrentPage] = useState(1);
-  const [hasMore, setHasMore] = useState(true);
-  const [totalSongs, setTotalSongs] = useState(0);
-  const [isLoading, setIsLoading] = useState(true);
-  const [isFetching, setIsFetching] = useState(false);
-  const [isError, setIsError] = useState(false);
+  // Search & filter state
   const [search, setSearch] = useState('');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>(() => {
     const saved = localStorage.getItem('alfira-playlist-detail-view');
     return saved === 'grid' ? 'grid' : 'list';
   });
-  const searchRef = useRef(search);
 
   // Sort & filter state
   const [sort, setSort] = useState('position');
   const [order, setOrder] = useState('desc');
   const [filterTags, setFilterTags] = useState<string[]>([]);
   const [filterSources, setFilterSources] = useState<string[]>([]);
-  const [sortOpen, setSortOpen] = useState(false);
-  const [filterPopoverOpen, setFilterPopoverOpen] = useState(false);
-  const sortRefEl = useRef<HTMLDivElement>(null);
-  const sortRef = useRef(sort);
-  const orderRef = useRef(order);
-  const filterTagsRef = useRef(filterTags);
-  const filterSourcesRef = useRef(filterSources);
 
-  // Keep refs in sync
-  useEffect(() => {
-    sortRef.current = sort;
-  }, [sort]);
-  useEffect(() => {
-    orderRef.current = order;
-  }, [order]);
-  useEffect(() => {
-    filterTagsRef.current = filterTags;
-  }, [filterTags]);
-  useEffect(() => {
-    filterSourcesRef.current = filterSources;
-  }, [filterSources]);
-
-  // Build stable fetch options for loadPage
+  // Build stable fetch options for the hook
   const songsOpts = useMemo<FetchSongsOptions>(() => {
     const opts: FetchSongsOptions = {};
     if (search) opts.search = search;
@@ -179,218 +140,147 @@ export default function PlaylistDetailPage() {
     return opts;
   }, [search, sort, order, filterTags, filterSources]);
 
-  // Close sort dropdown on outside click
-  useEffect(() => {
-    if (!sortOpen) return;
-    const handler = (e: MouseEvent) => {
-      if (sortRefEl.current && !sortRefEl.current.contains(e.target as Node)) {
-        setSortOpen(false);
+  // ── Comparator for re-sorting after real-time mutations ──────────────
+  type PS = PlaylistDetail['songs'][number];
+  const playlistSongCompareFn = useMemo(() => {
+    const dir = order === 'asc' ? 1 : -1;
+    return (a: PS, b: PS): number => {
+      switch (sort) {
+        case 'title': {
+          // Sort by display name: nickname if set, otherwise title
+          const aName = (a.song.nickname || a.song.title) ?? '';
+          const bName = (b.song.nickname || b.song.title) ?? '';
+          return dir * aName.localeCompare(bName, undefined, { sensitivity: 'base' });
+        }
+        case 'artist': {
+          const aArt = a.song.artist ?? '';
+          const bArt = b.song.artist ?? '';
+          if (!aArt && !bArt) return 0;
+          if (!aArt) return dir;
+          if (!bArt) return -dir;
+          return dir * aArt.localeCompare(bArt, undefined, { sensitivity: 'base' });
+        }
+        case 'album': {
+          const aAlb = a.song.album ?? '';
+          const bAlb = b.song.album ?? '';
+          if (!aAlb && !bAlb) return 0;
+          if (!aAlb) return dir;
+          if (!bAlb) return -dir;
+          return dir * aAlb.localeCompare(bAlb, undefined, { sensitivity: 'base' });
+        }
+        case 'duration':
+          return dir * ((a.song.duration ?? 0) - (b.song.duration ?? 0));
+        case 'createdAt':
+          return (
+            dir * (new Date(a.song.createdAt).getTime() - new Date(b.song.createdAt).getTime())
+          );
+        default:
+          // position — lower position first for asc, higher first for desc
+          return dir * (a.position - b.position);
       }
     };
-    document.addEventListener('mousedown', handler);
-    return () => document.removeEventListener('mousedown', handler);
-  }, [sortOpen]);
+  }, [sort, order]);
 
-  // Keep searchRef in sync with search state
-  useEffect(() => {
-    searchRef.current = search;
-  }, [search]);
+  // ── Infinite scroll with metadata ────────────────────────────────────
 
-  // Accumulated songs from all pages
-  const [songs, setSongs] = useState<PlaylistDetail['songs']>([]);
-
-  // IntersectionObserver ref for sentinel
-  const observerRef = useRef<IntersectionObserver | null>(null);
-
-  const loadPage = useCallback(
-    async (page: number, isInitial = false, isRefetch = false, searchQuery?: string) => {
-      if (!idRef.current) return;
-
-      if (isInitial) {
-        setIsLoading(true);
-        setSongs([]);
-      } else {
-        setIsFetching(true);
-      }
-      setIsError(false);
-
-      try {
-        const opts: FetchSongsOptions = searchQuery
-          ? {
-              search: searchQuery,
-              sort: sortRef.current,
-              order: orderRef.current,
-            }
-          : {
-              sort: sortRef.current,
-              order: orderRef.current,
-            };
-        const tags = filterTagsRef.current.join(',');
-        const sources = filterSourcesRef.current.join(',');
-        if (tags) opts.tags = tags;
-        if (sources) opts.source = sources;
-
-        const pl = await getPlaylistPage(
-          idRef.current,
-          isAdminViewRef.current,
-          page,
-          ITEMS_PER_PAGE,
-          opts
-        );
-
-        if (isInitial) {
-          setPlaylistDetail(pl);
-          setSongs(pl.songs);
-          setRenameValue(pl.name);
-          setTotalSongs(pl.pagination.total);
-        } else if (isRefetch) {
-          // Socket-triggered refetch: replace songs so we don't accumulate duplicates.
-          setSongs(pl.songs);
-          setPlaylistDetail(pl);
-          setTotalSongs(pl.pagination.total);
-        } else {
-          // User scroll: accumulate songs from the new page.
-          setSongs((prev) => [...prev, ...pl.songs]);
-          // Keep latest playlist metadata
-          setPlaylistDetail(pl);
-          setTotalSongs(pl.pagination.total);
-        }
-        setHasMore(pl.songs.length === ITEMS_PER_PAGE);
-      } catch {
-        setIsError(true);
-      } finally {
-        setIsLoading(false);
-        setIsFetching(false);
-      }
+  const {
+    items: songs,
+    metadata: playlistMeta,
+    isLoading,
+    isFetching,
+    isError,
+    hasMore,
+    total: totalSongs,
+    hasLoaded,
+    updateItem,
+    removeItem,
+    retry,
+    sentinelRef,
+    refetch,
+  } = useVirtualizedInfiniteScroll<
+    PlaylistDetail['songs'][number],
+    [string, boolean, FetchSongsOptions],
+    PlaylistDetailMeta
+  >({
+    fetchPage: async (page, limit, playlistId, adminView, opts) => {
+      const pl = await getPlaylistPage(playlistId, adminView, page, limit, opts);
+      return {
+        items: pl.songs,
+        hasMore: pl.songs.length === limit,
+        total: pl.pagination.total,
+        metadata: {
+          id: pl.id,
+          name: pl.name,
+          createdBy: pl.createdBy,
+          createdByDisplayName: pl.createdByDisplayName,
+          isPrivate: pl.isPrivate,
+          tagNameLower: pl.tagNameLower,
+          createdAt: pl.createdAt,
+        } as PlaylistDetailMeta,
+      };
     },
-    []
-  );
+    limit: ITEMS_PER_PAGE,
+    deps: [
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- route param is always defined
+      id!,
+      isAdminView,
+      songsOpts,
+    ],
+    compareFn: playlistSongCompareFn,
+  });
 
-  const handleOrderToggle = useCallback(() => {
-    const next = orderRef.current === 'asc' ? 'desc' : 'asc';
-    orderRef.current = next;
-    setOrder(next);
-    setCurrentPage(1);
-    setSongs([]);
-    setIsError(false);
-    void loadPage(1, false, false, searchRef.current);
-  }, [loadPage]);
+  // Derive PlaylistDetail for JSX — metadata from the hook, songs from items
+  const playlistDetail = playlistMeta
+    ? ({
+        ...playlistMeta,
+        songs,
+      } as PlaylistDetail)
+    : null;
 
-  const handleSortChange = useCallback(
-    (newSort: string) => {
-      if (newSort === sortRef.current) {
-        handleOrderToggle();
-      } else {
-        // When switching to a text field, default to ascending (A-Z)
-        const newOrder =
-          newSort === 'createdAt' || newSort === 'position' || newSort === 'duration'
-            ? 'desc'
-            : 'asc';
-        sortRef.current = newSort;
-        setSort(newSort);
-        if (newOrder !== orderRef.current) {
-          orderRef.current = newOrder;
-          setOrder(newOrder);
-        }
-        setSortOpen(false);
-        setCurrentPage(1);
-        setSongs([]);
-        setIsError(false);
-        void loadPage(1, false, false, searchRef.current);
-      }
-    },
-    [loadPage, handleOrderToggle]
-  );
+  // Stable ref for callbacks — avoids playlistDetail changing every render
+  const playlistDetailRef = useRef(playlistDetail);
+  playlistDetailRef.current = playlistDetail;
 
-  const handleRemoveTag = useCallback(
-    (tag: string) => {
-      const next = filterTagsRef.current.filter((t) => t !== tag);
-      filterTagsRef.current = next;
-      setFilterTags(next);
-      setCurrentPage(1);
-      setSongs([]);
-      setIsError(false);
-      void loadPage(1, false, false, searchRef.current);
-    },
-    [loadPage]
-  );
+  const isOwner = user?.discordId === playlistDetail?.createdBy;
+  const canEdit = isAdminView || isOwner || hasPermission('songs.edit');
+  const canBulk = canEdit;
+  const isSmart = !!playlistDetail?.tagNameLower;
 
-  const handleRemoveSource = useCallback(
-    (source: string) => {
-      const next = filterSourcesRef.current.filter((s) => s !== source);
-      filterSourcesRef.current = next;
-      setFilterSources(next);
-      setCurrentPage(1);
-      setSongs([]);
-      setIsError(false);
-      void loadPage(1, false, false, searchRef.current);
-    },
-    [loadPage]
-  );
-
-  const handleAddTag = useCallback(
-    (tag: string) => {
-      const normalized = tag.toLowerCase();
-      const next = filterTagsRef.current.includes(normalized)
-        ? filterTagsRef.current
-        : [...filterTagsRef.current, normalized];
-      filterTagsRef.current = next;
-      setFilterTags(next);
-      setCurrentPage(1);
-      setSongs([]);
-      setIsError(false);
-      void loadPage(1, false, false, searchRef.current);
-    },
-    [loadPage]
-  );
-
-  const handleAddSource = useCallback(
-    (source: string) => {
-      const next = filterSourcesRef.current.includes(source)
-        ? filterSourcesRef.current
-        : [...filterSourcesRef.current, source];
-      filterSourcesRef.current = next;
-      setFilterSources(next);
-      setCurrentPage(1);
-      setSongs([]);
-      setIsError(false);
-      void loadPage(1, false, false, searchRef.current);
-    },
-    [loadPage]
-  );
-
-  // Initial load
-  useEffect(() => {
-    void loadPage(1, true);
-  }, [loadPage]);
-
-  // Socket: playlist updated (rename, visibility, song count changes)
+  // ── Socket: playlist updated (rename, visibility, song count changes) ──
   useEffect(() => {
     const handlePlaylistUpdated = (updated: Playlist) => {
       if (updated.id !== idRef.current) return;
-      // Refetch current page to get updated playlist + songs
-      void loadPage(currentPage, false, true);
+      refetch();
     };
-
     const offUpdated = onSocketEvent('playlists:updated', handlePlaylistUpdated);
-
     return () => {
       offUpdated();
     };
-  }, [currentPage, loadPage]);
+  }, [refetch]);
 
-  // Stable callback to update a single song in the list (mirrors useVirtualizedInfiniteScroll.updateItem)
-  const updateSong = useCallback((song: Song) => {
-    setSongs((prev) => prev.map((ps) => (ps.songId === song.id ? { ...ps, song } : ps)));
-  }, []);
+  // ── Socket: song edited — update in real-time ────────────────────────
+  const songsRef = useRef(songs);
+  songsRef.current = songs;
 
-  // Socket: song edited — update in real-time
   useEffect(() => {
-    const offSongUpdated = onSocketEvent('songs:updated', updateSong);
+    const handleSongUpdated = (song: Song) => {
+      const match = songsRef.current.find((ps) => ps.songId === song.id);
+      if (match) {
+        updateItem({ ...match, song });
+      }
+    };
+    const offSongUpdated = onSocketEvent('songs:updated', handleSongUpdated);
     return () => {
       offSongUpdated();
     };
-  }, [updateSong]);
+  }, [updateItem]);
+
+  // Set initial rename value when metadata loads
+  useEffect(() => {
+    if (playlistMeta?.name) {
+      setRenameValue(playlistMeta.name);
+    }
+  }, [playlistMeta?.name]);
 
   const handleRenameSave = async () => {
     if (!playlistDetail || !renameValue.trim() || renameValue.trim() === playlistDetail.name) {
@@ -399,8 +289,8 @@ export default function PlaylistDetailPage() {
     }
     setRenameSaving(true);
     try {
-      const updated = await renamePlaylist(playlistDetail.id, renameValue.trim());
-      setPlaylistDetail((p) => (p ? { ...p, name: updated.name } : p));
+      await renamePlaylist(playlistDetail.id, renameValue.trim());
+      refetch();
     } finally {
       setRenameSaving(false);
       setRenameValue('');
@@ -409,24 +299,14 @@ export default function PlaylistDetailPage() {
 
   const handleRemoveSong = async (songId: string) => {
     if (!playlistDetail) return;
-
-    const prevLength = songs.length;
+    const junction = songsRef.current.find((ps) => ps.songId === songId);
+    if (!junction) {
+      setRemoveId(null);
+      return;
+    }
     try {
       await removeSongFromPlaylist(playlistDetail.id, songId);
-      setSongs((prev) => prev.filter((ps) => ps.songId !== songId));
-
-      // Refill if we dropped below a page
-      if (prevLength === ITEMS_PER_PAGE && hasMore && idRef.current) {
-        getPlaylistPage(
-          idRef.current,
-          isAdminViewRef.current,
-          currentPage + 1,
-          ITEMS_PER_PAGE,
-          songsOpts
-        ).then((pl) => {
-          setSongs((prev) => [...prev, ...pl.songs].slice(0, ITEMS_PER_PAGE * currentPage));
-        });
-      }
+      removeItem(junction.id);
     } finally {
       setRemoveId(null);
     }
@@ -438,16 +318,23 @@ export default function PlaylistDetailPage() {
   }, []);
 
   const executeBulkRemove = useCallback(async () => {
-    if (!playlistDetail || bulk.count === 0) return;
+    const pd = playlistDetailRef.current;
+    if (!pd || bulk.count === 0) return;
     setBulkRemoveConfirm(false);
     setBulkRemoving(true);
     try {
       const allIds = [...bulk.selectedIds];
+      // Map song IDs to junction IDs before the API call
+      const junctionIds = allIds
+        .map((songId) => songsRef.current.find((ps) => ps.songId === songId)?.id)
+        .filter((id): id is string => id !== undefined);
       const chunkSize = 500;
       for (let i = 0; i < allIds.length; i += chunkSize) {
-        await bulkRemoveSongsFromPlaylist(playlistDetail.id, allIds.slice(i, i + chunkSize));
+        await bulkRemoveSongsFromPlaylist(pd.id, allIds.slice(i, i + chunkSize));
       }
-      setSongs((prev) => prev.filter((ps) => !bulk.selectedIds.has(ps.songId)));
+      for (const junctionId of junctionIds) {
+        removeItem(junctionId);
+      }
       notify(`Removed ${allIds.length} song${allIds.length !== 1 ? 's' : ''}`, 'success');
     } catch (err: unknown) {
       notify(apiErrorMessage(err, 'Failed to remove songs.'), 'error', 5000);
@@ -456,7 +343,7 @@ export default function PlaylistDetailPage() {
       bulk.clearAll();
       setSelectionMode(false);
     }
-  }, [playlistDetail, bulk, notify]);
+  }, [bulk, notify, removeItem]);
 
   const handleBulkEdit = useCallback(
     async (data: import('@alfira-bot/server/shared/api').BulkEditData) => {
@@ -495,7 +382,7 @@ export default function PlaylistDetailPage() {
         !playlistDetail.isPrivate,
         isAdminView
       );
-      setPlaylistDetail((p) => (p ? { ...p, isPrivate: updated.isPrivate } : p));
+      refetch();
       notify(updated.isPrivate ? 'Playlist set to private' : 'Playlist set to public', 'success');
     } catch (err: unknown) {
       notify(apiErrorMessage(err, 'Could not toggle visibility.'), 'error', 5000);
@@ -508,11 +395,12 @@ export default function PlaylistDetailPage() {
       mode: 'sequential' | 'random' = 'sequential',
       { throwErrors = false }: { throwErrors?: boolean } = {}
     ) => {
-      if (!playlistDetail) return;
+      const pd = playlistDetailRef.current;
+      if (!pd) return;
       setPlayingSongId(songId);
       try {
         await startPlayback({
-          playlistId: playlistDetail.id,
+          playlistId: pd.id,
           mode,
           loop: queueState.loopMode,
           startFromSongId: songId,
@@ -526,65 +414,66 @@ export default function PlaylistDetailPage() {
         setPlayingSongId(null);
       }
     },
-    [playlistDetail, queueState.loopMode, notify]
+    [queueState.loopMode, notify]
   );
 
   const handleConvertToRegular = useCallback(async () => {
-    if (!playlistDetail) return;
+    const pd = playlistDetailRef.current;
+    if (!pd) return;
     try {
-      await updatePlaylistTag(playlistDetail.id, null);
-      setPlaylistDetail((p) => (p ? { ...p, tagNameLower: null } : p));
-      void loadPage(currentPage, false, true);
+      await updatePlaylistTag(pd.id, null);
+      refetch();
       notify('Playlist converted to regular playlist', 'success');
     } catch (err: unknown) {
       notify(apiErrorMessage(err, 'Could not convert playlist.'), 'error', 5000);
     }
-  }, [playlistDetail, currentPage, loadPage, notify]);
+  }, [refetch, notify]);
 
   const handleChangeTag = useCallback(
     async (tagNameLower: string) => {
-      if (!playlistDetail) return;
+      const pd = playlistDetailRef.current;
+      if (!pd) return;
       try {
-        const updated = await updatePlaylistTag(playlistDetail.id, tagNameLower);
-        setPlaylistDetail((p) => (p ? { ...p, tagNameLower: updated.tagNameLower ?? null } : p));
-        void loadPage(currentPage, false, true);
+        await updatePlaylistTag(pd.id, tagNameLower);
+        refetch();
         notify('Playlist tag updated', 'success');
       } catch (err: unknown) {
         notify(apiErrorMessage(err, 'Could not update playlist tag.'), 'error', 5000);
       }
     },
-    [playlistDetail, currentPage, loadPage, notify]
+    [refetch, notify]
   );
 
   const handleMakeSmart = useCallback(
     async (tagNameLower: string) => {
-      if (!playlistDetail) return;
+      const pd = playlistDetailRef.current;
+      if (!pd) return;
       setTagSmartConfirm(null);
       try {
-        const updated = await updatePlaylistTag(playlistDetail.id, tagNameLower);
-        setPlaylistDetail((p) => (p ? { ...p, tagNameLower: updated.tagNameLower ?? null } : p));
-        void loadPage(currentPage, false, true);
+        await updatePlaylistTag(pd.id, tagNameLower);
+        refetch();
         notify('Playlist now tracking tag', 'success');
       } catch (err: unknown) {
         notify(apiErrorMessage(err, 'Could not update playlist tag.'), 'error', 5000);
       }
     },
-    [playlistDetail, currentPage, loadPage, notify]
+    [refetch, notify]
   );
 
   const handleAddPlaylistToQueue = useCallback(async () => {
-    if (!playlistDetail) return;
+    const pd = playlistDetailRef.current;
+    if (!pd) return;
     try {
       await startPlayback({
-        playlistId: playlistDetail.id,
+        playlistId: pd.id,
         mode: 'sequential',
         loop: queueState.loopMode,
       });
-      notify(`Added "${playlistDetail.name}" to queue`, 'success');
+      notify(`Added "${pd.name}" to queue`, 'success');
     } catch (err: unknown) {
       notify(apiErrorMessage(err, 'Could not add to queue.'), 'error', 5000);
     }
-  }, [playlistDetail, queueState.loopMode, notify]);
+  }, [queueState.loopMode, notify]);
 
   const tagSubmenuItems = tags.map((tag) => ({
     id: tag.nameLower,
@@ -595,7 +484,7 @@ export default function PlaylistDetailPage() {
     {
       id: 'add-to-queue',
       label: 'Add to Queue',
-      icon: <PlusCircleIcon size={14} weight="duotone" />,
+      icon: <PlusCircleIcon size={14} weight='duotone' />,
       disabled: songs.length === 0,
       onClick: handleAddPlaylistToQueue,
     },
@@ -604,7 +493,7 @@ export default function PlaylistDetailPage() {
           {
             id: 'rename',
             label: 'Rename',
-            icon: <PencilSimple size={14} weight="duotone" />,
+            icon: <PencilSimple size={14} weight='duotone' />,
             editSubmenu: {
               title: 'Rename',
               value: renameValue,
@@ -619,9 +508,9 @@ export default function PlaylistDetailPage() {
             id: 'toggle-visibility',
             label: playlistDetail?.isPrivate ? 'Make Public' : 'Make Private',
             icon: playlistDetail?.isPrivate ? (
-              <LockOpenIcon size={14} weight="duotone" />
+              <LockOpenIcon size={14} weight='duotone' />
             ) : (
-              <LockIcon size={14} weight="duotone" />
+              <LockIcon size={14} weight='duotone' />
             ),
             onClick: handleToggleVisibility,
           } as MenuItem,
@@ -630,7 +519,7 @@ export default function PlaylistDetailPage() {
                 {
                   id: 'change-tag',
                   label: 'Change Tracked Tag',
-                  icon: <TagIcon size={14} weight="duotone" />,
+                  icon: <TagIcon size={14} weight='duotone' />,
                   submenu: {
                     title: 'Track Tag',
                     items: tagSubmenuItems,
@@ -641,7 +530,7 @@ export default function PlaylistDetailPage() {
                 {
                   id: 'convert-regular',
                   label: 'Convert to Regular Playlist',
-                  icon: <PlayCircleIcon size={14} weight="duotone" />,
+                  icon: <PlayCircleIcon size={14} weight='duotone' />,
                   onClick: handleConvertToRegular,
                 } as MenuItem,
               ]
@@ -649,13 +538,13 @@ export default function PlaylistDetailPage() {
                 {
                   id: 'add-songs',
                   label: 'Add Songs',
-                  icon: <PlayCircleIcon size={14} weight="duotone" />,
+                  icon: <PlayCircleIcon size={14} weight='duotone' />,
                   onClick: () => setShowAddSongs(true),
                 } as MenuItem,
                 {
                   id: 'make-smart',
                   label: 'Track a Tag',
-                  icon: <TagIcon size={14} weight="duotone" />,
+                  icon: <TagIcon size={14} weight='duotone' />,
                   submenu: {
                     title: 'Track Tag',
                     items: tagSubmenuItems,
@@ -667,7 +556,7 @@ export default function PlaylistDetailPage() {
           {
             id: 'delete',
             label: 'Delete',
-            icon: <BombIcon size={14} weight="duotone" />,
+            icon: <BombIcon size={14} weight='duotone' />,
             danger: true,
             onClick: () => setDeleteConfirm(true),
           } as MenuItem,
@@ -675,76 +564,35 @@ export default function PlaylistDetailPage() {
       : []),
   ];
 
-  const loadMore = useCallback(() => {
-    const nextPage = currentPage + 1;
-    setCurrentPage(nextPage);
-    void loadPage(nextPage, false, false, searchRef.current);
-  }, [currentPage, loadPage]);
-
-  const retry = useCallback(() => {
-    void loadPage(currentPage, false, false, searchRef.current);
-  }, [currentPage, loadPage]);
-
-  // IntersectionObserver for infinite scroll
-  const sentinelRef = useCallback(
-    (el: HTMLDivElement | null) => {
-      if (observerRef.current) {
-        observerRef.current.disconnect();
-        observerRef.current = null;
-      }
-
-      if (!el) return;
-
-      observerRef.current = new IntersectionObserver(
-        (entries) => {
-          if (entries[0]?.isIntersecting && !isFetching && hasMore) {
-            loadMore();
-          }
-        },
-        { rootMargin: '300px' }
-      );
-
-      observerRef.current.observe(el);
-    },
-    [isFetching, hasMore, loadMore]
-  );
-
-  // Cleanup observer on unmount
-  useEffect(() => {
-    return () => {
-      observerRef.current?.disconnect();
-    };
-  }, []);
-
-  if (isLoading) return <DetailSkeleton />;
+  if (isLoading || !hasLoaded) return <DetailSkeleton />;
   if (!playlistDetail) return null;
 
   // Extract plain songs from PlaylistDetailSong[]
   const songItems: Song[] = songs.map((ps) => ps.song);
 
   return (
-    <div className="p-4 md:p-8">
+    <div className='p-4 md:p-8'>
       {/* Back */}
       <Button
-        variant="inherit"
-        surface="surface"
+        variant='inherit'
+        surface='surface'
         onClick={() => navigate('/playlists')}
-        className="flex items-center gap-1.5 font-mono text-xs mb-4 md:mb-6 min-h-11 md:min-h-0"
+        className='flex items-center gap-1.5 font-mono text-xs mb-4 md:mb-6 min-h-11 md:min-h-0'
       >
-        <CaretLeftIcon size={16} weight="duotone" className="md:w-3.5 md:h-3.5" />
+        <CaretLeftIcon size={16} weight='duotone' className='md:w-3.5 md:h-3.5' />
         playlists
       </Button>
 
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-start justify-between mb-6 md:mb-8 gap-4">
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 flex-wrap">
-            <h1 className="font-display text-3xl md:text-4xl text-fg tracking-wider">
+      <div className='flex flex-col sm:flex-row sm:items-start justify-between mb-6 md:mb-8 gap-4'>
+        <div className='flex-1 min-w-0'>
+          <div className='flex items-center gap-2 flex-wrap'>
+            <h1 className='font-display text-3xl md:text-4xl text-fg tracking-wider'>
               {playlistDetail.name}
             </h1>
             {playlistDetail.isPrivate && (
-              <span className="text-muted text-sm" title="Private playlist">
-                <GhostIcon size={14} weight="duotone" className="inline mr-1" />
+              <span className='text-muted text-sm' title='Private playlist'>
+                <GhostIcon size={14} weight='duotone' className='inline mr-1' />
                 private
               </span>
             )}
@@ -758,16 +606,16 @@ export default function PlaylistDetailPage() {
                     className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-xs font-medium ${colors.bg} ${colors.text}`}
                     title={`Auto-tracking all songs tagged "${displayName}"`}
                   >
-                    <TagIcon size={12} weight="duotone" />
+                    <TagIcon size={12} weight='duotone' />
                     {displayName}
                   </span>
                 );
               })()}
           </div>
-          <p className="font-mono text-xs text-muted mt-2">
+          <p className='font-mono text-xs text-muted mt-2'>
             {songItems.length} {songItems.length === 1 ? 'track' : 'tracks'}
             {playlistDetail.tagNameLower ? (
-              <span className="text-accent"> • auto-tracked</span>
+              <span className='text-accent'> • auto-tracked</span>
             ) : (
               <>
                 {' • '}
@@ -779,35 +627,35 @@ export default function PlaylistDetailPage() {
           </p>
         </div>
 
-        <div className="flex gap-2 shrink-0 items-center">
+        <div className='flex gap-2 shrink-0 items-center'>
           <Button
-            variant="secondary"
-            className="rounded-full!"
+            variant='secondary'
+            className='rounded-full!'
             onClick={() => {
               void handlePlayFromSong(songs[0]?.songId, 'random');
             }}
             disabled={songItems.length === 0}
-            title="Shuffle"
+            title='Shuffle'
           >
-            <ShuffleIcon size={18} weight="duotone" />
+            <ShuffleIcon size={18} weight='duotone' />
           </Button>
           <Button
-            variant="primary"
-            className="text-xs flex items-center gap-1.5"
+            variant='primary'
+            className='text-xs flex items-center gap-1.5'
             onClick={() => {
               void handlePlayFromSong(songs[0]?.songId, 'sequential');
             }}
             disabled={songItems.length === 0}
           >
-            <PlayIcon size={14} weight="duotone" /> Play
+            <PlayIcon size={14} weight='duotone' /> Play
           </Button>
           <ContextMenuTrigger
             ref={menuTriggerRef}
             onToggle={() => setMenuOpen((v) => !v)}
             isOpen={menuOpen}
-            surface="surface"
-            size="default"
-            className="rounded-full!"
+            surface='surface'
+            size='default'
+            className='rounded-full!'
           />
           {menuOpen && (
             <ContextMenu
@@ -820,176 +668,55 @@ export default function PlaylistDetailPage() {
         </div>
       </div>
 
-      {/* Search, sort, filter, and view toggle */}
-      <div className="flex items-center gap-2 mb-3">
-        <div className="relative flex-1">
-          <MagnifyingGlassIcon
-            className="absolute left-3 top-1/2 -translate-y-1/2 text-faint w-4 h-4 md:w-3.5 md:h-3.5"
-            weight="duotone"
-          />
-          <input
-            className="input pl-10"
-            placeholder="Search by title, nickname, artist, album, or tag..."
-            value={search}
-            onChange={(e) => {
-              const value = e.target.value;
-              setSearch(value);
-              setCurrentPage(1);
-              setSongs([]);
-              setIsFetching(true);
-              setIsError(false);
-              void loadPage(1, false, false, value);
-            }}
-          />
-        </div>
-
-        {/* Select toggle (only visible to users with bulk permissions) */}
-        {canBulk && (
-          <Button
-            variant="inherit"
-            surface="surface"
-            onClick={() => {
-              if (selectionMode) bulk.clearAll();
-              setSelectionMode((v) => !v);
-            }}
-            className={`flex items-center gap-1.5 px-2.5 ${
-              selectionMode ? 'pressed text-accent' : ''
-            }`}
-            title={selectionMode ? 'Exit selection mode' : 'Select songs'}
-          >
-            <CheckSquareIcon size={16} weight="duotone" />
-          </Button>
-        )}
-
-        {/* Add filter button */}
-        <Button
-          variant="inherit"
-          surface="surface"
-          onClick={() => setFilterPopoverOpen(true)}
-          className={`flex items-center gap-1.5 px-2.5 ${
-            filterTags.length > 0 || filterSources.length > 0 ? 'pressed text-accent' : ''
-          }`}
-          title={`Filter${filterTags.length > 0 || filterSources.length > 0 ? ` (${filterTags.length + filterSources.length} active)` : ''}`}
-        >
-          <FunnelIcon size={16} weight="duotone" />
-        </Button>
-
-        {/* Sort dropdown */}
-        <div className="relative" ref={sortRefEl}>
-          <Button
-            variant="inherit"
-            surface="surface"
-            onClick={() => setSortOpen((v) => !v)}
-            className={`flex items-center gap-1.5 px-2.5 ${
-              sortOpen || sort !== 'position' || order !== 'desc' ? 'pressed text-accent' : ''
-            }`}
-            title={`Sort by ${SORT_OPTIONS.find((o) => o.value === sort)?.label ?? 'Playlist Order'} (${order === 'asc' ? 'ascending' : 'descending'})`}
-          >
-            <SortAscendingIcon size={16} weight="duotone" />
-            <CaretDownIcon size={10} weight="fill" className="text-faint" />
-          </Button>
-
-          {sortOpen && (
-            <div className="absolute right-0 top-full mt-1.5 w-48 glass-popover z-20 py-1 origin-top-right">
-              {SORT_OPTIONS.map((opt) => {
-                const isActive = sort === opt.value;
-                return (
-                  <button
-                    key={opt.value}
-                    type="button"
-                    className={`w-full flex items-center justify-between px-3 py-2 text-sm font-body transition-colors ${
-                      isActive
-                        ? 'text-accent bg-accent/5'
-                        : 'text-fg hover:bg-surface active:bg-surface/80'
-                    }`}
-                    onClick={() => handleSortChange(opt.value)}
-                  >
-                    <span>{opt.label}</span>
-                    {isActive && (
-                      <button
-                        type="button"
-                        className="cursor-pointer p-0.5 rounded hover:bg-black/10 dark:hover:bg-white/10 transition-colors"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleOrderToggle();
-                        }}
-                        title={order === 'asc' ? 'Switch to descending' : 'Switch to ascending'}
-                      >
-                        {(() => {
-                          const isTextField =
-                            sort === 'title' || sort === 'artist' || sort === 'album';
-                          const showDown = isTextField ? order === 'asc' : order !== 'asc';
-                          return showDown ? (
-                            <ArrowDownIcon size={14} weight="bold" />
-                          ) : (
-                            <ArrowUpIcon size={14} weight="bold" />
-                          );
-                        })()}
-                      </button>
-                    )}
-                  </button>
-                );
-              })}
-            </div>
-          )}
-        </div>
-
-        {/* View toggle */}
-        <div className="flex gap-1 bg-elevated rounded-lg p-1 shrink-0">
-          <button
-            type="button"
-            onClick={() => {
-              setViewMode('list');
-              localStorage.setItem('alfira-playlist-detail-view', 'list');
-            }}
-            className={`px-2 py-1.5 rounded-md transition-colors cursor-pointer ${
-              viewMode === 'list' ? 'bg-accent text-elevated' : 'text-muted hover:text-fg'
-            }`}
-            title="List view"
-          >
-            <ListIcon size={18} weight="duotone" />
-          </button>
-          <button
-            type="button"
-            onClick={() => {
-              setViewMode('grid');
-              localStorage.setItem('alfira-playlist-detail-view', 'grid');
-            }}
-            className={`px-2 py-1.5 rounded-md transition-colors cursor-pointer ${
-              viewMode === 'grid' ? 'bg-accent text-elevated' : 'text-muted hover:text-fg'
-            }`}
-            title="Grid view"
-          >
-            <SquaresFourIcon size={18} weight="duotone" />
-          </button>
-        </div>
-      </div>
-
-      {/* Active filter chips */}
-      {(filterTags.length > 0 || filterSources.length > 0) && (
-        <div className="mb-2">
-          <FilterChips
-            tags={filterTags}
-            sources={filterSources}
-            onRemoveTag={handleRemoveTag}
-            onRemoveSource={handleRemoveSource}
-          />
-        </div>
-      )}
+      <ListToolbar
+        searchValue={search}
+        onSearchChange={setSearch}
+        searchPlaceholder='Search by title, nickname, artist, album, or tag...'
+        sortOptions={[...SORT_OPTIONS]}
+        sort={sort}
+        order={order as 'asc' | 'desc'}
+        onSortChange={(field, newOrder) => {
+          setSort(field);
+          setOrder(newOrder);
+        }}
+        defaultSort='position'
+        textSortFields={['title', 'artist', 'album']}
+        filterTags={filterTags}
+        filterSources={filterSources}
+        onAddTag={(tag) => {
+          const normalized = tag.toLowerCase();
+          setFilterTags((prev) => (prev.includes(normalized) ? prev : [...prev, normalized]));
+        }}
+        onRemoveTag={(tag) => setFilterTags((prev) => prev.filter((t) => t !== tag))}
+        onAddSource={(s) => setFilterSources((prev) => (prev.includes(s) ? prev : [...prev, s]))}
+        onRemoveSource={(s) => setFilterSources((prev) => prev.filter((x) => x !== s))}
+        showBulkToggle={canBulk}
+        selectionMode={selectionMode}
+        onToggleSelectionMode={() => {
+          if (selectionMode) bulk.clearAll();
+          setSelectionMode((v) => !v);
+        }}
+        showViewToggle
+        viewMode={viewMode}
+        onViewModeChange={(m) => {
+          setViewMode(m);
+          localStorage.setItem('alfira-playlist-detail-view', m);
+        }}
+      />
 
       {/* Song list */}
       {songItems.length === 0 && !isLoading ? (
         isSmart ? (
           <EmptyState
-            title="No Songs Yet"
+            title='No Songs Yet'
             message={`This playlist tracks the "${tags.find((t) => t.nameLower === playlistDetail.tagNameLower)?.canonicalName ?? playlistDetail.tagNameLower}" tag. Tag some songs to populate it.`}
           />
         ) : (
           <EmptyState
-            title="Empty Playlist"
+            title='Empty Playlist'
             isAdmin={canEdit}
             onAdd={() => setShowAddSongs(true)}
-            addLabel="add some songs"
+            addLabel='add some songs'
           />
         )
       ) : (
@@ -1019,8 +746,8 @@ export default function PlaylistDetailPage() {
           selectionMode={selectionMode}
           isSelected={bulk.isSelected}
           onToggleSelect={bulk.toggle}
-          emptyTitle="No Songs"
-          emptyMessage="Add songs to this playlist"
+          emptyTitle='No Songs'
+          emptyMessage='Add songs to this playlist'
         />
       )}
 
@@ -1030,7 +757,7 @@ export default function PlaylistDetailPage() {
           playlist={playlistDetail}
           onClose={() => setShowAddSongs(false)}
           onAdded={() => {
-            void loadPage(currentPage, false);
+            refetch();
             setShowAddSongs(false);
           }}
         />
@@ -1041,43 +768,43 @@ export default function PlaylistDetailPage() {
       )}
       {bulkRemoveConfirm && (
         <ConfirmModal
-          title="Remove Songs"
+          title='Remove Songs'
           message={
             <>
               Remove{' '}
-              <span className="text-fg font-semibold">
+              <span className='text-fg font-semibold'>
                 {bulk.count} song{bulk.count !== 1 ? 's' : ''}
               </span>{' '}
               from this playlist? The songs won&lsquo;t be deleted from the library.
             </>
           }
-          confirmLabel="Remove"
+          confirmLabel='Remove'
           onConfirm={executeBulkRemove}
           onCancel={() => setBulkRemoveConfirm(false)}
         />
       )}
       {removeId && (
         <ConfirmModal
-          title="Remove Song"
+          title='Remove Song'
           message={
             <>
               Remove{' '}
-              <span className="text-fg font-semibold">
+              <span className='text-fg font-semibold'>
                 "{songs.find((ps) => ps.songId === removeId)?.song?.title}"
               </span>{' '}
               from this playlist? The song won't be deleted from the library.
             </>
           }
-          confirmLabel="Remove"
+          confirmLabel='Remove'
           onConfirm={() => handleRemoveSong(removeId)}
           onCancel={() => setRemoveId(null)}
         />
       )}
       {deleteConfirm && (
         <ConfirmModal
-          title="Delete Playlist"
-          message="This playlist will be permanently deleted. This cannot be undone."
-          confirmLabel="Delete"
+          title='Delete Playlist'
+          message='This playlist will be permanently deleted. This cannot be undone.'
+          confirmLabel='Delete'
           onConfirm={() => {
             setDeleteConfirm(false);
             handleDeletePlaylist();
@@ -1087,33 +814,20 @@ export default function PlaylistDetailPage() {
       )}
       {tagSmartConfirm && (
         <ConfirmModal
-          title="Track a Tag"
+          title='Track a Tag'
           message={
             <>
               This will convert the playlist to auto-track the "
-              <span className="text-fg font-semibold">
+              <span className='text-fg font-semibold'>
                 {tags.find((t) => t.nameLower === tagSmartConfirm)?.canonicalName ??
                   tagSmartConfirm}
               </span>
               " tag. All current songs not matching this tag will be removed.
             </>
           }
-          confirmLabel="Convert"
+          confirmLabel='Convert'
           onConfirm={() => handleMakeSmart(tagSmartConfirm)}
           onCancel={() => setTagSmartConfirm(null)}
-        />
-      )}
-
-      {/* Add Filter popover */}
-      {filterPopoverOpen && (
-        <AddFilterPopover
-          activeTags={filterTags}
-          activeSources={filterSources}
-          onAddTag={handleAddTag}
-          onRemoveTag={handleRemoveTag}
-          onAddSource={handleAddSource}
-          onRemoveSource={handleRemoveSource}
-          onClose={() => setFilterPopoverOpen(false)}
         />
       )}
 
@@ -1125,7 +839,7 @@ export default function PlaylistDetailPage() {
           totalCount={totalSongs}
           canDelete={canEdit}
           canTag={canEdit}
-          deleteLabel="Remove selected"
+          deleteLabel='Remove selected'
           onDelete={handleBulkRemove}
           onTag={() => setBulkEditingOpen(true)}
           onSelectAll={() => bulk.selectAll(songItems.map((s) => s.id))}
@@ -1152,16 +866,16 @@ export default function PlaylistDetailPage() {
 // ---------------------------------------------------------------------------
 function DetailSkeleton() {
   return (
-    <div className="p-8">
-      <div className="skeleton h-3 w-20 mb-6 rounded" />
-      <div className="skeleton h-12 w-64 mb-2 rounded" />
-      <div className="skeleton h-3 w-24 mb-8 rounded" />
+    <div className='p-8'>
+      <div className='skeleton h-3 w-20 mb-6 rounded' />
+      <div className='skeleton h-12 w-64 mb-2 rounded' />
+      <div className='skeleton h-3 w-24 mb-8 rounded' />
       {Array.from({ length: 5 }).map((_, i) => (
-        <div key={`skeleton-${i}`} className="flex items-center gap-4 py-3">
-          <div className="skeleton w-6 h-3 rounded" />
-          <div className="skeleton w-10 h-7 rounded" />
-          <div className="skeleton h-3 flex-1 rounded" />
-          <div className="skeleton h-3 w-12 rounded" />
+        <div key={`skeleton-${i}`} className='flex items-center gap-4 py-3'>
+          <div className='skeleton w-6 h-3 rounded' />
+          <div className='skeleton w-10 h-7 rounded' />
+          <div className='skeleton h-3 flex-1 rounded' />
+          <div className='skeleton h-3 w-12 rounded' />
         </div>
       ))}
     </div>

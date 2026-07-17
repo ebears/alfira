@@ -5,8 +5,8 @@ import { json } from '../lib/json';
 import { lavalink } from '../lib/lavalink';
 import { requirePlayer, requirePlaying } from '../lib/player';
 import { canAccessPlaylist } from '../lib/playlistAccess';
-import { checkRateLimit, getClientIp, rateLimitResponse } from '../lib/rateLimit';
 import { checkGuards } from '../lib/routeGuards';
+import { routeTable } from '../lib/routeTable';
 import {
   clampMaxVideos,
   fetchPlaylistMetadata,
@@ -30,7 +30,11 @@ const { song: songTable } = tables;
 // ---------------------------------------------------------------------------
 // GET /api/player/queue — returns current queue state
 // ---------------------------------------------------------------------------
-function handleGetQueue(ctx: RouteContext): Response {
+function handleGetQueue(
+  ctx: RouteContext,
+  _request: Request,
+  _params: Record<string, string>
+): Response {
   const guards = checkGuards(ctx);
   if (guards instanceof Response) return guards;
 
@@ -136,7 +140,11 @@ async function handlePlay(ctx: RouteContext, request: Request): Promise<Response
 // ---------------------------------------------------------------------------
 // POST /api/player/skip — skip current song
 // ---------------------------------------------------------------------------
-async function handleSkip(ctx: RouteContext): Promise<Response> {
+async function handleSkip(
+  ctx: RouteContext,
+  _request: Request,
+  _params: Record<string, string>
+): Promise<Response> {
   const guards = await checkGuards(ctx, { voice: true });
   if (guards instanceof Response) return guards;
 
@@ -150,7 +158,11 @@ async function handleSkip(ctx: RouteContext): Promise<Response> {
 // ---------------------------------------------------------------------------
 // POST /api/player/leave — stop and disconnect
 // ---------------------------------------------------------------------------
-async function handleLeave(ctx: RouteContext): Promise<Response> {
+async function handleLeave(
+  ctx: RouteContext,
+  _request: Request,
+  _params: Record<string, string>
+): Promise<Response> {
   const guards = await checkGuards(ctx, { voice: true });
   if (guards instanceof Response) return guards;
 
@@ -195,7 +207,11 @@ async function handleLoop(ctx: RouteContext, request: Request): Promise<Response
 // ---------------------------------------------------------------------------
 // POST /api/player/shuffle — shuffle queue (admin only)
 // ---------------------------------------------------------------------------
-async function handleShuffle(ctx: RouteContext): Promise<Response> {
+async function handleShuffle(
+  ctx: RouteContext,
+  _request: Request,
+  _params: Record<string, string>
+): Promise<Response> {
   const guards = await checkGuards(ctx, { admin: true, voice: true, permission: 'queue.manage' });
   if (guards instanceof Response) return guards;
 
@@ -212,7 +228,11 @@ async function handleShuffle(ctx: RouteContext): Promise<Response> {
 // ---------------------------------------------------------------------------
 // POST /api/player/unshuffle — restore original queue order (admin only)
 // ---------------------------------------------------------------------------
-async function handleUnshuffle(ctx: RouteContext): Promise<Response> {
+async function handleUnshuffle(
+  ctx: RouteContext,
+  _request: Request,
+  _params: Record<string, string>
+): Promise<Response> {
   const guards = await checkGuards(ctx, { admin: true, voice: true, permission: 'queue.manage' });
   if (guards instanceof Response) return guards;
 
@@ -343,7 +363,11 @@ async function handleQuickAddPlaylist(ctx: RouteContext, request: Request): Prom
 // ---------------------------------------------------------------------------
 // POST /api/player/pause-toggle — pause/resume
 // ---------------------------------------------------------------------------
-async function handlePauseToggle(ctx: RouteContext): Promise<Response> {
+async function handlePauseToggle(
+  ctx: RouteContext,
+  _request: Request,
+  _params: Record<string, string>
+): Promise<Response> {
   const guards = await checkGuards(ctx, { voice: true });
   if (guards instanceof Response) return guards;
 
@@ -384,7 +408,11 @@ async function handleSeek(ctx: RouteContext, request: Request): Promise<Response
 // ---------------------------------------------------------------------------
 // POST /api/player/clear — clear queue (admin only)
 // ---------------------------------------------------------------------------
-async function handleClear(ctx: RouteContext): Promise<Response> {
+async function handleClear(
+  ctx: RouteContext,
+  _request: Request,
+  _params: Record<string, string>
+): Promise<Response> {
   const guards = await checkGuards(ctx, { admin: true, voice: true, permission: 'queue.manage' });
   if (guards instanceof Response) return guards;
 
@@ -463,8 +491,9 @@ async function handleOverride(ctx: RouteContext, request: Request): Promise<Resp
 async function handleRemoveFromQueue(
   ctx: RouteContext,
   _request: Request,
-  songId: string
+  params: Record<string, string>
 ): Promise<Response> {
+  const { songId } = params;
   const guards = await checkGuards(ctx, { admin: true, voice: true, permission: 'queue.manage' });
   if (guards instanceof Response) return guards;
 
@@ -486,8 +515,9 @@ async function handleRemoveFromQueue(
 async function handlePromoteSong(
   ctx: RouteContext,
   _request: Request,
-  songId: string
+  params: Record<string, string>
 ): Promise<Response> {
+  const { songId } = params;
   const guards = await checkGuards(ctx, { admin: true, voice: true, permission: 'queue.manage' });
   if (guards instanceof Response) return guards;
 
@@ -509,8 +539,9 @@ async function handlePromoteSong(
 async function handleDemoteSong(
   ctx: RouteContext,
   _request: Request,
-  songId: string
+  params: Record<string, string>
 ): Promise<Response> {
+  const { songId } = params;
   const guards = await checkGuards(ctx, { admin: true, voice: true, permission: 'queue.manage' });
   if (guards instanceof Response) return guards;
 
@@ -570,56 +601,26 @@ async function handleReorderQueue(ctx: RouteContext, request: Request): Promise<
 // Dispatcher
 // ---------------------------------------------------------------------------
 
-export async function handlePlayer(ctx: RouteContext, request: Request): Promise<Response> {
-  const url = new URL(request.url);
-  const pathname = url.pathname;
-
-  // Strip /api/player prefix
-  const path = pathname.slice('/api/player'.length);
-
-  // Rate-limit mutation endpoints — 30 requests per 60s per IP.
-  // GET /queue is exempt to allow the UI to poll freely.
-  if (request.method !== 'GET') {
-    const ip = getClientIp(request);
-    if (!checkRateLimit('player-mutations', ip, { windowMs: 60_000, maxRequests: 30 })) {
-      return rateLimitResponse(60);
-    }
-  }
-
-  if (path === '/queue' && request.method === 'GET') return await handleGetQueue(ctx);
-  // Static paths checked before dynamic /queue/:songId
-  if (path === '/queue/reorder' && request.method === 'PATCH')
-    return await handleReorderQueue(ctx, request);
-  // Dynamic: /queue/:songId/promote
-  if (path.startsWith('/queue/') && path.endsWith('/promote') && request.method === 'POST') {
-    const songId = path.slice('/queue/'.length, -'/promote'.length);
-    if (songId.length > 0) return await handlePromoteSong(ctx, request, songId);
-  }
-  // Dynamic: /queue/:songId/demote
-  if (path.startsWith('/queue/') && path.endsWith('/demote') && request.method === 'POST') {
-    const songId = path.slice('/queue/'.length, -'/demote'.length);
-    if (songId.length > 0) return await handleDemoteSong(ctx, request, songId);
-  }
-  // Dynamic: /queue/:songId
-  if (path.startsWith('/queue/') && request.method === 'DELETE') {
-    const songId = path.slice('/queue/'.length);
-    if (songId.length > 0) return await handleRemoveFromQueue(ctx, request, songId);
-  }
-  if (path === '/play' && request.method === 'POST') return await handlePlay(ctx, request);
-  if (path === '/skip' && request.method === 'POST') return await handleSkip(ctx);
-  if (path === '/leave' && request.method === 'POST') return await handleLeave(ctx);
-  if (path === '/loop' && request.method === 'POST') return await handleLoop(ctx, request);
-  if (path === '/shuffle' && request.method === 'POST') return await handleShuffle(ctx);
-  if (path === '/unshuffle' && request.method === 'POST') return await handleUnshuffle(ctx);
-  if (path === '/quick-add' && request.method === 'POST') return await handleQuickAdd(ctx, request);
-  if (path === '/quick-add-playlist' && request.method === 'POST')
-    return await handleQuickAddPlaylist(ctx, request);
-  if (path === '/pause-toggle' && request.method === 'POST') return await handlePauseToggle(ctx);
-  if (path === '/seek' && request.method === 'POST') return await handleSeek(ctx, request);
-  if (path === '/clear' && request.method === 'POST') return await handleClear(ctx);
-  if (path === '/add-to-priority' && request.method === 'POST')
-    return await handleAddToPriority(ctx, request);
-  if (path === '/override' && request.method === 'POST') return await handleOverride(ctx, request);
-
-  return json({ error: 'Not Found' }, 404);
-}
+export const handlePlayer = routeTable('/api/player', {
+  rateLimit: { windowMs: 60_000, maxRequests: 30, bucket: 'player-mutations' },
+  routes: [
+    ['GET', '/queue', handleGetQueue],
+    ['PATCH', '/queue/reorder', handleReorderQueue],
+    ['POST', '/queue/:songId/promote', handlePromoteSong],
+    ['POST', '/queue/:songId/demote', handleDemoteSong],
+    ['DELETE', '/queue/:songId', handleRemoveFromQueue],
+    ['POST', '/add-to-priority', handleAddToPriority],
+    ['POST', '/clear', handleClear],
+    ['POST', '/leave', handleLeave],
+    ['POST', '/loop', handleLoop],
+    ['POST', '/override', handleOverride],
+    ['POST', '/pause-toggle', handlePauseToggle],
+    ['POST', '/play', handlePlay],
+    ['POST', '/quick-add', handleQuickAdd],
+    ['POST', '/quick-add-playlist', handleQuickAddPlaylist],
+    ['POST', '/seek', handleSeek],
+    ['POST', '/shuffle', handleShuffle],
+    ['POST', '/skip', handleSkip],
+    ['POST', '/unshuffle', handleUnshuffle],
+  ],
+});

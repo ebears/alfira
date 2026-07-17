@@ -88,12 +88,13 @@ export default function CompressorSection() {
 
   return (
     <div className={`space-y-3 ${dimmed ? 'opacity-40 pointer-events-none' : ''}`}>
-      <div className="flex items-center gap-3">
-        <span className="font-mono text-[11px] text-muted w-20 shrink-0">Enabled</span>
+      <div className='flex items-center gap-3'>
+        <span className='font-mono text-[11px] text-muted w-20 shrink-0'>Enabled</span>
         <button
-          type="button"
-          role="switch"
+          type='button'
+          role='switch'
           aria-checked={values.enabled}
+          aria-label='Enable compressor'
           onClick={() => setValues((v) => ({ ...v, enabled: !v.enabled }))}
           className={`relative shrink-0 w-9 h-5 rounded-full transition-colors cursor-pointer focus:outline-none focus:ring-2 focus:ring-accent/50 focus:ring-offset-2 focus:ring-offset-surface ${
             values.enabled ? 'bg-accent' : 'bg-border'
@@ -109,9 +110,9 @@ export default function CompressorSection() {
 
       <div className={`space-y-2 ${!values.enabled ? 'opacity-40' : ''}`}>
         {SLIDERS.map(({ key, label, min, max, step, unit }) => (
-          <div key={key} className="flex items-center gap-3">
-            <span className="font-mono text-[11px] text-muted w-20 shrink-0">{label}</span>
-            <span className="font-mono text-[11px] text-fg w-16 shrink-0">
+          <div key={key} className='flex items-center gap-3'>
+            <span className='font-mono text-[11px] text-muted w-20 shrink-0'>{label}</span>
+            <span className='font-mono text-[11px] text-fg w-16 shrink-0'>
               {key === 'ratio'
                 ? `${values[key].toFixed(1)}:1`
                 : key === 'gain'
@@ -119,13 +120,13 @@ export default function CompressorSection() {
                   : `${values[key]} ${unit}`}
             </span>
             <input
-              type="range"
+              type='range'
               min={min}
               max={max}
               step={step}
               value={values[key]}
               onChange={(e) => updateValue(key, parseFloat(e.target.value))}
-              className="flex-1 range-input range-input-h"
+              className='flex-1 range-input range-input-h'
               style={
                 {
                   ['--range-pct' as string]: `${((values[key] - min) / (max - min)) * 100}%`,
@@ -136,24 +137,24 @@ export default function CompressorSection() {
         ))}
       </div>
 
-      <div className="flex gap-2 pt-1 justify-end">
+      <div className='flex gap-2 pt-1 justify-end'>
         <Button
-          variant="primary"
-          size="icon"
+          variant='primary'
+          size='icon'
           onClick={handleSave}
           disabled={!hasChanges || saving}
           title={saving ? 'Saving…' : 'Save Changes'}
         >
-          <FloppyDisk size={16} weight="duotone" />
+          <FloppyDisk size={16} weight='duotone' />
         </Button>
         <Button
-          variant="inherit"
-          size="icon"
-          surface="elevated"
+          variant='inherit'
+          size='icon'
+          surface='elevated'
           onClick={handleReset}
-          title="Reset to Defaults"
+          title='Reset to Defaults'
         >
-          <ArrowCounterClockwise size={16} weight="duotone" />
+          <ArrowCounterClockwise size={16} weight='duotone' />
         </Button>
       </div>
     </div>

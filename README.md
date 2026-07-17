@@ -121,12 +121,12 @@ Alfira only needs Docker.
 
 ```bash
 # 1. Grab the compose file and env
-curl -o docker-compose.yml https://raw.githubusercontent.com/ebears/alfira/main/docker-compose.prod.yml && curl -o .env https://raw.githubusercontent.com/ebears/alfira/main/.env.example
+curl -o docker-compose.yml https://raw.githubusercontent.com/ebears/alfira/main/docker-compose.yml && curl -o .env https://raw.githubusercontent.com/ebears/alfira/main/.env.example
 
 # 2. Edit .env with your preferred editor (vi / nano / vim / emacs / micro / code / zed)
 vi .env
 
-# 3. Start the stack — web UI at http://localhost:8180
+# 3. Start the stack — web UI at http://localhost:3001
 docker compose up -d
 
 # 4. Open the web UI, log in with Discord, and complete the setup wizard.
@@ -136,13 +136,12 @@ See the **[Installation Guide](docs/installation.md)** for full details.
 
 ## Documentation
 
-| Document | Description |
-|----------|-------------|
+| Document                                       | Description                                   |
+| ---------------------------------------------- | --------------------------------------------- |
 | **[Installation Guide](docs/installation.md)** | Setup, environment variables, Docker commands |
-| **[Philosophy](docs/philosophy.md)** | Design principles guiding the project |
-| **[Tech Stack](docs/tech-stack.md)** | Technology stack and project structure |
-| **[Biome Setup](docs/biome-setup.md)** | Editor setup for Biome linting and formatting |
-| **[Troubleshooting](docs/troubleshooting.md)** | Common issues and solutions |
+| **[Philosophy](docs/philosophy.md)**           | Design principles guiding the project         |
+| **[Tech Stack](docs/tech-stack.md)**           | Technology stack and project structure        |
+| **[Troubleshooting](docs/troubleshooting.md)** | Common issues and solutions                   |
 
 ## License
 

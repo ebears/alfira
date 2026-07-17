@@ -33,7 +33,7 @@ export function CreatePlaylistSubmitButton({
 }) {
   const { pending } = useFormStatus();
   return (
-    <Button variant="primary" type="submit" disabled={disabled || pending}>
+    <Button variant='primary' type='submit' disabled={disabled || pending}>
       {children}
     </Button>
   );

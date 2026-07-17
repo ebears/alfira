@@ -1,15 +1,20 @@
-import { and, eq, inArray, sql } from 'drizzle-orm';
+import { eq, inArray, sql } from 'drizzle-orm';
 import type { RouteContext } from '../index';
 import { getGuildId } from '../lib/config';
 import { resolveDisplayNames } from '../lib/displayName';
 import { json } from '../lib/json';
 import { parsePagination } from '../lib/pagination';
-import { checkRateLimit, getClientIp, rateLimitResponse } from '../lib/rateLimit';
 import { checkGuards } from '../lib/routeGuards';
-import { buildSongSearchClause } from '../lib/search';
+import { routeTable } from '../lib/routeTable';
+import {
+  buildSongFilterClause,
+  buildSongOrderBy,
+  buildSongSearchClause,
+  parseSongSortField,
+} from '../lib/search';
 import { formatSong } from '../lib/serialization';
-import { emitPlaylistUpdated, emitSongDeleted, emitSongUpdated } from '../lib/socket';
-import { syncPlaylistToTag } from '../lib/syncPlaylistToTag';
+import { emitSongDeleted, emitSongUpdated } from '../lib/socket';
+import { reSyncPlaylistsForTags } from '../lib/syncPlaylistToTag';
 import { canonicalizeTags } from '../lib/tagCanonicalization';
 import {
   validateArtworkUrl,
@@ -21,79 +26,7 @@ import {
 import { db, tables } from '../shared/db';
 import { getPlayer } from '../startDiscord';
 
-const { song: songTable, playlist: playlistTable, playlistSong: playlistSongTable } = tables;
-
-// ---------------------------------------------------------------------------
-// Source URL → LIKE patterns for server-side source filtering.
-// Must mirror the web's HOST_TO_SOURCE map in packages/web/src/utils/source.ts.
-// ---------------------------------------------------------------------------
-const SOURCE_LIKE_PATTERNS: Record<string, string[]> = {
-  youtube: ['%youtube.com%', '%youtu.be%'],
-  soundcloud: ['%soundcloud.com%'],
-  spotify: ['%spotify.com%'],
-  applemusic: ['%music.apple.com%'],
-  tidal: ['%tidal.com%'],
-  googledrive: ['%drive.google.com%'],
-};
-
-const ALLOWED_SORTS = ['createdAt', 'title', 'artist', 'album', 'duration'] as const;
-type SortField = (typeof ALLOWED_SORTS)[number];
-
-// ---------------------------------------------------------------------------
-// Build a dynamic ORDER BY clause from sort field + direction.
-// ---------------------------------------------------------------------------
-function buildOrderByClause(
-  sortField: SortField,
-  sortOrder: 'ASC' | 'DESC'
-): ReturnType<typeof sql> {
-  switch (sortField) {
-    case 'title':
-      return sql`lower(title) ${sql.raw(sortOrder)}`;
-    case 'artist':
-      return sql`artist IS NULL, lower(artist) ${sql.raw(sortOrder)}`;
-    case 'album':
-      return sql`album IS NULL, lower(album) ${sql.raw(sortOrder)}`;
-    case 'duration':
-      return sql`duration ${sql.raw(sortOrder)}`;
-    default:
-      return sql`"createdAt" ${sql.raw(sortOrder)}`;
-  }
-}
-
-// ---------------------------------------------------------------------------
-// Build additional filter clauses for tags (AND) and sources (OR).
-// Returns a SQL fragment that can be AND-ed with the search clause, or
-// undefined when no filters are active.
-// ---------------------------------------------------------------------------
-function buildFilterClause(tags: string[], sources: string[]): ReturnType<typeof sql> | undefined {
-  const clauses: ReturnType<typeof sql>[] = [];
-
-  // Tags: AND — song must have every requested tag
-  for (const tag of tags) {
-    // Match JSON-quoted tag name for precision (avoids partial matches like
-    // "rock" matching "bedrock").
-    clauses.push(sql`lower(tags) LIKE lower(${`%"${tag}"%`})`);
-  }
-
-  // Sources: OR — song URL can match any of the requested sources
-  if (sources.length > 0) {
-    const sourceOrs: ReturnType<typeof sql>[] = [];
-    for (const source of sources) {
-      const patterns = SOURCE_LIKE_PATTERNS[source];
-      if (patterns) {
-        for (const pattern of patterns) {
-          sourceOrs.push(sql`"sourceUrl" LIKE ${pattern}`);
-        }
-      }
-    }
-    if (sourceOrs.length > 0) {
-      clauses.push(sql`(${sql.join(sourceOrs, sql` OR `)})`);
-    }
-  }
-
-  if (clauses.length === 0) return undefined;
-  return sql.join(clauses, sql` AND `);
-}
+const { song: songTable } = tables;
 
 // ---------------------------------------------------------------------------
 // POST /api/songs/bulk-delete — delete multiple songs at once.
@@ -179,41 +112,7 @@ async function handleBulkTag(ctx: RouteContext, request: Request): Promise<Respo
 
   // If tags changed, re-sync any smart playlists tracking affected tags
   if (newTags.length > 0) {
-    const affectedPlaylists = await db
-      .select({ id: playlistTable.id, tagNameLower: playlistTable.tagNameLower })
-      .from(playlistTable)
-      .where(
-        and(
-          sql`${playlistTable.tagNameLower} IS NOT NULL`,
-          inArray(
-            playlistTable.tagNameLower,
-            newTags.map((t) => t.toLowerCase())
-          )
-        )
-      );
-
-    for (const pl of affectedPlaylists) {
-      if (pl.tagNameLower) {
-        await syncPlaylistToTag(pl.id);
-        const [updatedPl] = await db
-          .select()
-          .from(playlistTable)
-          .where(eq(playlistTable.id, pl.id))
-          .limit(1);
-        if (updatedPl) {
-          const songCountResult = await db
-            .select({ count: sql<number>`count(*)` })
-            .from(playlistSongTable)
-            .where(eq(playlistSongTable.playlistId, pl.id));
-          const count = songCountResult[0]?.count ?? 0;
-          emitPlaylistUpdated({
-            ...updatedPl,
-            createdAt: updatedPl.createdAt.toISOString(),
-            _count: { songs: count },
-          });
-        }
-      }
-    }
+    await reSyncPlaylistsForTags(newTags.map((t) => t.toLowerCase()));
   }
 
   return json({ updated: updatedSongs.length, tags: newTags });
@@ -319,44 +218,7 @@ async function handleBulkEdit(ctx: RouteContext, request: Request): Promise<Resp
 
   // If tags changed, re-sync any smart playlists tracking affected tags
   if ('tags' in data) {
-    const tagValues = (data.tags as string[]) ?? [];
-    if (tagValues.length > 0) {
-      const affectedPlaylists = await db
-        .select({ id: playlistTable.id, tagNameLower: playlistTable.tagNameLower })
-        .from(playlistTable)
-        .where(
-          and(
-            sql`${playlistTable.tagNameLower} IS NOT NULL`,
-            inArray(
-              playlistTable.tagNameLower,
-              tagValues.map((t) => t.toLowerCase())
-            )
-          )
-        );
-
-      for (const pl of affectedPlaylists) {
-        if (pl.tagNameLower) {
-          await syncPlaylistToTag(pl.id);
-          const [updatedPl] = await db
-            .select()
-            .from(playlistTable)
-            .where(eq(playlistTable.id, pl.id))
-            .limit(1);
-          if (updatedPl) {
-            const songCountResult = await db
-              .select({ count: sql<number>`count(*)` })
-              .from(playlistSongTable)
-              .where(eq(playlistSongTable.playlistId, pl.id));
-            const count = songCountResult[0]?.count ?? 0;
-            emitPlaylistUpdated({
-              ...updatedPl,
-              createdAt: updatedPl.createdAt.toISOString(),
-              _count: { songs: count },
-            });
-          }
-        }
-      }
-    }
+    await reSyncPlaylistsForTags(((data.tags as string[]) ?? []).map((t) => t.toLowerCase()));
   }
 
   // Update the player cache for any of the edited songs that are currently
@@ -398,9 +260,7 @@ async function handleGetSongs(ctx: RouteContext, request: Request): Promise<Resp
 
   // Sort
   const sortRaw = url.searchParams.get('sort') ?? 'createdAt';
-  const sortField: SortField = (ALLOWED_SORTS as readonly string[]).includes(sortRaw)
-    ? (sortRaw as SortField)
-    : 'createdAt';
+  const sortField = parseSongSortField(sortRaw) ?? 'createdAt';
   const sortOrder = url.searchParams.get('order') === 'asc' ? 'ASC' : 'DESC';
 
   // Filters
@@ -421,7 +281,7 @@ async function handleGetSongs(ctx: RouteContext, request: Request): Promise<Resp
 
   // Build WHERE clause — search text + tag/source filters
   const searchClause = buildSongSearchClause(search || undefined);
-  const filterClause = buildFilterClause(filterTags, filterSources);
+  const filterClause = buildSongFilterClause(filterTags, filterSources);
 
   let where: ReturnType<typeof sql> | undefined;
   if (searchClause && filterClause) {
@@ -432,11 +292,14 @@ async function handleGetSongs(ctx: RouteContext, request: Request): Promise<Resp
     where = filterClause;
   }
 
-  const orderBy = buildOrderByClause(sortField, sortOrder);
+  const orderBy = buildSongOrderBy(sortField, sortOrder);
 
   const [songs, countResult] = await Promise.all([
     db.select().from(songTable).where(where).orderBy(orderBy).offset(skip).limit(limit),
-    db.select({ count: sql<number>`count(*)` }).from(songTable).where(where),
+    db
+      .select({ count: sql<number>`count(*)` })
+      .from(songTable)
+      .where(where),
   ]);
   const total = parseInt(String(countResult[0]?.count ?? 0), 10);
 
@@ -465,8 +328,9 @@ async function handleGetSongs(ctx: RouteContext, request: Request): Promise<Resp
 async function handleDeleteSong(
   ctx: RouteContext,
   _request: Request,
-  id: string
+  params: Record<string, string>
 ): Promise<Response> {
+  const { id } = params;
   const guards = await checkGuards(ctx, { admin: true, permission: 'songs.delete' });
   if (guards instanceof Response) return guards;
 
@@ -486,7 +350,12 @@ async function handleDeleteSong(
 // ---------------------------------------------------------------------------
 // PATCH /api/songs/:id — update song fields. Admin only.
 // ---------------------------------------------------------------------------
-async function handlePatchSong(ctx: RouteContext, request: Request, id: string): Promise<Response> {
+async function handlePatchSong(
+  ctx: RouteContext,
+  request: Request,
+  params: Record<string, string>
+): Promise<Response> {
+  const { id } = params;
   const guards = await checkGuards(ctx, { admin: true, permission: 'songs.edit' });
   if (guards instanceof Response) return guards;
 
@@ -562,43 +431,8 @@ async function handlePatchSong(ctx: RouteContext, request: Request, id: string):
     const newTagsLower = new Set(
       ((data.tags as string[]) ?? []).map((t: string) => t.toLowerCase())
     );
-
-    // Find all smart playlists whose tagNameLower is in the old or new tag set
-    const affectedTags = new Set([...oldTagsLower, ...newTagsLower]);
-    if (affectedTags.size > 0) {
-      const affectedPlaylists = await db
-        .select({ id: playlistTable.id, tagNameLower: playlistTable.tagNameLower })
-        .from(playlistTable)
-        .where(
-          and(
-            sql`${playlistTable.tagNameLower} IS NOT NULL`,
-            inArray(playlistTable.tagNameLower, [...affectedTags])
-          )
-        );
-
-      for (const pl of affectedPlaylists) {
-        if (pl.tagNameLower) {
-          await syncPlaylistToTag(pl.id);
-          const [updatedPl] = await db
-            .select()
-            .from(playlistTable)
-            .where(eq(playlistTable.id, pl.id))
-            .limit(1);
-          if (updatedPl) {
-            const songCountResult = await db
-              .select({ count: sql<number>`count(*)` })
-              .from(playlistSongTable)
-              .where(eq(playlistSongTable.playlistId, pl.id));
-            const count = songCountResult[0]?.count ?? 0;
-            emitPlaylistUpdated({
-              ...updatedPl,
-              createdAt: updatedPl.createdAt.toISOString(),
-              _count: { songs: count },
-            });
-          }
-        }
-      }
-    }
+    const affectedTags = [...new Set([...oldTagsLower, ...newTagsLower])];
+    await reSyncPlaylistsForTags(affectedTags);
   }
 
   // Update the song in the GuildPlayer's cache (currentSong, priorityQueue,
@@ -628,54 +462,14 @@ async function handlePatchSong(ctx: RouteContext, request: Request, id: string):
   return json(formatSong(updatedSong));
 }
 
-// ---------------------------------------------------------------------------
-// Dispatcher
-// ---------------------------------------------------------------------------
-
-export async function handleSongs(ctx: RouteContext, request: Request): Promise<Response> {
-  const url = new URL(request.url);
-  const pathname = url.pathname;
-
-  // Rate-limit mutation endpoints — 20 requests per 60s per IP.
-  // GET is exempt to allow the UI to fetch pages freely.
-  if (request.method !== 'GET') {
-    const ip = getClientIp(request);
-    if (!checkRateLimit('songs-mutations', ip, { windowMs: 60_000, maxRequests: 20 })) {
-      return rateLimitResponse(60);
-    }
-  }
-
-  // GET /api/songs
-  if (request.method === 'GET' && pathname === '/api/songs') {
-    return await handleGetSongs(ctx, request);
-  }
-
-  // POST /api/songs/bulk-delete
-  if (request.method === 'POST' && pathname === '/api/songs/bulk-delete') {
-    return await handleBulkDelete(ctx, request);
-  }
-
-  // POST /api/songs/bulk-tag
-  if (request.method === 'POST' && pathname === '/api/songs/bulk-tag') {
-    return await handleBulkTag(ctx, request);
-  }
-
-  // POST /api/songs/bulk-edit
-  if (request.method === 'POST' && pathname === '/api/songs/bulk-edit') {
-    return await handleBulkEdit(ctx, request);
-  }
-
-  // DELETE /api/songs/:id
-  if (request.method === 'DELETE' && pathname.startsWith('/api/songs/')) {
-    const id = pathname.slice('/api/songs/'.length);
-    return await handleDeleteSong(ctx, request, id);
-  }
-
-  // PATCH /api/songs/:id
-  if (request.method === 'PATCH' && pathname.startsWith('/api/songs/')) {
-    const id = pathname.slice('/api/songs/'.length);
-    return await handlePatchSong(ctx, request, id);
-  }
-
-  return json({ error: 'Not Found' }, 404);
-}
+export const handleSongs = routeTable('/api/songs', {
+  rateLimit: { windowMs: 60_000, maxRequests: 20, bucket: 'songs-mutations' },
+  routes: [
+    ['GET', '/', handleGetSongs],
+    ['POST', '/bulk-delete', handleBulkDelete],
+    ['POST', '/bulk-tag', handleBulkTag],
+    ['POST', '/bulk-edit', handleBulkEdit],
+    ['DELETE', '/:id', handleDeleteSong],
+    ['PATCH', '/:id', handlePatchSong],
+  ],
+});

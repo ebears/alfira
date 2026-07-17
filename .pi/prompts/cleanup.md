@@ -1,6 +1,6 @@
 ---
 description: Search for cleanup opportunities — unused, redundant, or repeated code
-argument-hint: "[area to focus on]"
+argument-hint: '[area to focus on]'
 ---
 
 Search for a cleanup opportunity in the repo. $1

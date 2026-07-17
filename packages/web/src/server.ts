@@ -57,6 +57,8 @@ Bun.serve({
         '.png': 'image/png',
         '.svg': 'image/svg+xml',
         '.ico': 'image/x-icon',
+        '.woff2': 'font/woff2',
+        '.ttf': 'font/ttf',
       };
       const ext = filePath.slice(filePath.lastIndexOf('.'));
       return new Response(file, {

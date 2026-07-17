@@ -24,7 +24,4 @@ export type {
   SongRequestTrack,
   User,
 } from './types';
-export {
-  PERMISSION_CATEGORIES,
-  PERMISSION_LABELS,
-} from './types';
+export { PERMISSION_CATEGORIES, PERMISSION_LABELS } from './types';

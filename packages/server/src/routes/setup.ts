@@ -3,6 +3,7 @@ import type { RouteContext } from '../index';
 import { refreshGuildId } from '../lib/config';
 import { json } from '../lib/json';
 import { checkGuards } from '../lib/routeGuards';
+import { routeTable } from '../lib/routeTable';
 import type { SetupChannel, SetupGuild, SetupRole } from '../shared';
 import { db, tables } from '../shared/db';
 import { logger } from '../shared/logger';
@@ -19,7 +20,11 @@ function botHeaders(): Record<string, string> {
 // GET /api/setup/status
 // Public — the frontend needs this to decide whether to show the wizard.
 // ---------------------------------------------------------------------------
-async function handleGetStatus(): Promise<Response> {
+async function handleGetStatus(
+  _ctx: RouteContext,
+  _request: Request,
+  _params: Record<string, string>
+): Promise<Response> {
   try {
     const row = await db
       .select({
@@ -71,7 +76,11 @@ async function handleGetStatus(): Promise<Response> {
 // GET /api/setup/guilds
 // Setup-mode guard — returns guilds the bot is a member of.
 // ---------------------------------------------------------------------------
-async function handleGetGuilds(ctx: RouteContext): Promise<Response> {
+async function handleGetGuilds(
+  ctx: RouteContext,
+  _request: Request,
+  _params: Record<string, string>
+): Promise<Response> {
   const guards = await checkGuards(ctx, { setupMode: true });
   if (guards instanceof Response) return guards;
 
@@ -108,7 +117,12 @@ async function handleGetGuilds(ctx: RouteContext): Promise<Response> {
 // GET /api/setup/roles?guildId=...
 // Setup-mode guard — returns roles for a specific guild.
 // ---------------------------------------------------------------------------
-async function handleGetRoles(ctx: RouteContext, url: URL): Promise<Response> {
+async function handleGetRoles(
+  ctx: RouteContext,
+  request: Request,
+  _params: Record<string, string>
+): Promise<Response> {
+  const url = new URL(request.url);
   const guards = await checkGuards(ctx, { setupMode: true });
   if (guards instanceof Response) return guards;
 
@@ -154,7 +168,12 @@ async function handleGetRoles(ctx: RouteContext, url: URL): Promise<Response> {
 // GET /api/setup/channels?guildId=...
 // Setup-mode guard — returns text channels for a specific guild.
 // ---------------------------------------------------------------------------
-async function handleGetChannels(ctx: RouteContext, url: URL): Promise<Response> {
+async function handleGetChannels(
+  ctx: RouteContext,
+  request: Request,
+  _params: Record<string, string>
+): Promise<Response> {
+  const url = new URL(request.url);
   const guards = await checkGuards(ctx, { setupMode: true });
   if (guards instanceof Response) return guards;
 
@@ -198,7 +217,11 @@ async function handleGetChannels(ctx: RouteContext, url: URL): Promise<Response>
 // POST /api/setup/complete
 // Setup-mode guard — saves the configuration and marks setup as done.
 // ---------------------------------------------------------------------------
-async function handlePostComplete(ctx: RouteContext, request: Request): Promise<Response> {
+async function handlePostComplete(
+  ctx: RouteContext,
+  request: Request,
+  _params: Record<string, string>
+): Promise<Response> {
   const guards = await checkGuards(ctx, { setupMode: true });
   if (guards instanceof Response) return guards;
 
@@ -304,24 +327,13 @@ async function handlePostComplete(ctx: RouteContext, request: Request): Promise<
   }
 }
 
-// ---------------------------------------------------------------------------
-// Dispatcher
-// ---------------------------------------------------------------------------
-export async function handleSetup(ctx: RouteContext, request: Request): Promise<Response> {
-  const url = new URL(request.url);
-  const path = url.pathname.slice('/api/setup'.length);
-
-  if (path === '' || path === '/') {
-    if (request.method === 'GET') return await handleGetStatus();
-    return json({ error: 'Method Not Allowed' }, 405);
-  }
-
-  if (path === '/status' && request.method === 'GET') return await handleGetStatus();
-  if (path === '/guilds' && request.method === 'GET') return await handleGetGuilds(ctx);
-  if (path === '/roles' && request.method === 'GET') return await handleGetRoles(ctx, url);
-  if (path === '/channels' && request.method === 'GET') return await handleGetChannels(ctx, url);
-  if (path === '/complete' && request.method === 'POST')
-    return await handlePostComplete(ctx, request);
-
-  return json({ error: 'Not Found' }, 404);
-}
+export const handleSetup = routeTable('/api/setup', {
+  routes: [
+    ['GET', '/', handleGetStatus],
+    ['GET', '/status', handleGetStatus],
+    ['GET', '/guilds', handleGetGuilds],
+    ['GET', '/roles', handleGetRoles],
+    ['GET', '/channels', handleGetChannels],
+    ['POST', '/complete', handlePostComplete],
+  ],
+});

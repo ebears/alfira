@@ -1,5 +1,6 @@
-import { eq, sql } from 'drizzle-orm';
+import { and, eq, inArray, sql } from 'drizzle-orm';
 import { db, tables } from '../shared/db';
+import { emitPlaylistUpdated } from './socket';
 
 const { playlistSong: playlistSongTable, playlist: playlistTable, song: songTable } = tables;
 
@@ -43,4 +44,44 @@ export async function syncPlaylistToTag(
   });
 
   return playlist;
+}
+
+/**
+ * Re-sync all smart playlists that track any of the given tag names.
+ * Called after song tag mutations (bulk tag, bulk edit, single patch).
+ */
+export async function reSyncPlaylistsForTags(tagNamesLower: string[]): Promise<void> {
+  if (tagNamesLower.length === 0) return;
+
+  const affectedPlaylists = await db
+    .select({ id: playlistTable.id, tagNameLower: playlistTable.tagNameLower })
+    .from(playlistTable)
+    .where(
+      and(
+        sql`${playlistTable.tagNameLower} IS NOT NULL`,
+        inArray(playlistTable.tagNameLower, tagNamesLower)
+      )
+    );
+
+  for (const pl of affectedPlaylists) {
+    if (!pl.tagNameLower) continue;
+    await syncPlaylistToTag(pl.id);
+    const [updatedPl] = await db
+      .select()
+      .from(playlistTable)
+      .where(eq(playlistTable.id, pl.id))
+      .limit(1);
+    if (!updatedPl) continue;
+
+    const [{ count }] = await db
+      .select({ count: sql<number>`count(*)` })
+      .from(playlistSongTable)
+      .where(eq(playlistSongTable.playlistId, pl.id));
+
+    emitPlaylistUpdated({
+      ...updatedPl,
+      createdAt: updatedPl.createdAt.toISOString(),
+      _count: { songs: count ?? 0 },
+    });
+  }
 }

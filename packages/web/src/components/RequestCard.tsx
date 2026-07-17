@@ -38,40 +38,40 @@ export const RequestCard = memo(function RequestCard({
   const dateLabel = new Date(req.createdAt).toLocaleDateString();
 
   return (
-    <Card className="rounded-xl flex items-center gap-4 p-4">
+    <Card className='rounded-xl flex items-center gap-4 p-4'>
       {/* Thumbnail */}
       {thumbnailUrl ? (
         <ArtworkImage
           src={thumbnailUrl}
-          alt=""
-          className="w-14 h-14 rounded-lg shrink-0 border border-border"
+          alt=''
+          className='w-14 h-14 rounded-lg shrink-0 border border-border'
         />
       ) : (
-        <div className="w-14 h-14 rounded-lg bg-muted/20 shrink-0 flex items-center justify-center">
-          <span className="text-muted text-xs font-mono">{isPlaylist ? 'PL' : 'TR'}</span>
+        <div className='w-14 h-14 rounded-lg bg-muted/20 shrink-0 flex items-center justify-center'>
+          <span className='text-muted text-xs font-mono'>{isPlaylist ? 'PL' : 'TR'}</span>
         </div>
       )}
 
       {/* Info */}
-      <div className="flex-1 min-w-0">
-        <p className="font-body text-sm text-fg truncate">{req.title}</p>
-        <div className="flex items-center gap-1.5 mt-0.5">
+      <div className='flex-1 min-w-0'>
+        <p className='font-body text-sm text-fg truncate'>{req.title}</p>
+        <div className='flex items-center gap-1.5 mt-0.5'>
           {req.sourceName && req.sourceName !== 'playlist' && (
             <SourceIcon sourceKey={req.sourceName} />
           )}
-          <span className="font-mono text-[10px] text-muted">{formatDuration(req.duration)}</span>
+          <span className='font-mono text-[10px] text-muted'>{formatDuration(req.duration)}</span>
           {isPlaylist && req.playlistData && (
-            <span className="font-mono text-[10px] text-muted">
+            <span className='font-mono text-[10px] text-muted'>
               · {req.playlistData.videoCount} tracks
             </span>
           )}
-          <span className="font-mono text-[10px] text-muted">
+          <span className='font-mono text-[10px] text-muted'>
             · {req.requestedByDisplayName ?? req.requestedBy}
           </span>
-          <span className="font-mono text-[10px] text-faint">· {dateLabel}</span>
+          <span className='font-mono text-[10px] text-faint'>· {dateLabel}</span>
         </div>
         {!isPending && req.reviewedBy && (
-          <p className="font-mono text-[10px] text-muted mt-0.5">
+          <p className='font-mono text-[10px] text-muted mt-0.5'>
             Reviewed {req.closedAt ? new Date(req.closedAt).toLocaleDateString() : ''}
           </p>
         )}
@@ -88,34 +88,34 @@ export const RequestCard = memo(function RequestCard({
 
       {/* Actions */}
       {isPending && (
-        <div className="flex items-center gap-2 shrink-0">
+        <div className='flex items-center gap-2 shrink-0'>
           {isOwn && (
             <Button
-              variant="inherit"
+              variant='inherit'
               onClick={() => onCancel(req.id)}
-              surface="elevated"
-              title="Cancel request"
+              surface='elevated'
+              title='Cancel request'
             >
-              <TrashIcon size={16} weight="duotone" className="text-muted" />
+              <TrashIcon size={16} weight='duotone' className='text-muted' />
             </Button>
           )}
           {isAdmin && (
             <>
               <Button
-                variant="inherit"
+                variant='inherit'
                 onClick={() => onApprove(req.id)}
-                surface="elevated"
-                title="Approve"
+                surface='elevated'
+                title='Approve'
               >
-                <CheckCircleIcon size={16} weight="duotone" className="text-emerald-400" />
+                <CheckCircleIcon size={16} weight='duotone' className='text-emerald-400' />
               </Button>
               <Button
-                variant="inherit"
+                variant='inherit'
                 onClick={() => onDeny(req.id)}
-                surface="elevated"
-                title="Deny"
+                surface='elevated'
+                title='Deny'
               >
-                <XCircleIcon size={16} weight="duotone" className="text-danger" />
+                <XCircleIcon size={16} weight='duotone' className='text-danger' />
               </Button>
             </>
           )}

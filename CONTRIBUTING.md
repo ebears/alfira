@@ -22,11 +22,11 @@ See [AGENTS.md](../AGENTS.md) for the full git workflow and commit conventions.
 
 The main dev command is `bun run dev`, which builds the server dist/ locally and then starts all services with Docker.
 
-| What Changed | Action |
-|--------------|--------|
-| Any of the above | `bun run dev` — rebuilds server dist/ and restarts Docker |
-| `packages/web/src/**` | Run `bun run web:build` locally to rebuild the UI, then `docker compose restart alfira` |
-| `packages/server/src/**` | `docker compose restart alfira` (source is live-mounted) |
+| What Changed             | Action                                                                                  |
+| ------------------------ | --------------------------------------------------------------------------------------- |
+| Any of the above         | `bun run dev` — rebuilds server dist/ and restarts Docker                               |
+| `packages/web/src/**`    | Run `bun run web:build` locally to rebuild the UI, then `docker compose restart alfira` |
+| `packages/server/src/**` | `docker compose restart alfira` (source is live-mounted)                                |
 
 ## Database Migrations
 
@@ -50,7 +50,7 @@ docker compose up --build
 
 ## Code Quality
 
-The project uses [Biome](https://biomejs.dev/) for linting and formatting.
+The project uses [oxlint](https://oxc.rs/) and [oxfmt](https://oxc.rs/) for linting and formatting.
 
 ```bash
 # Lint + format check with auto-fix (recommended before committing)
@@ -63,13 +63,13 @@ bun run lint:fix
 bun run format
 ```
 
-CI runs `bun run lint` in the typecheck workflow — your code must pass before merging. See the [Biome Setup](docs/biome-setup.md) doc for configuration details.
+CI runs `bun run lint` in the typecheck workflow — your code must pass before merging.
 
 ## Editor Tooling
 
 The repo includes preconfigured settings for a couple of tools (optional — use whatever you prefer):
 
-- **Zed** (`.zed/`) — Biome integration, TypeScript inlay hints, Markdown formatting, and task shortcuts for common dev commands
+- **Zed** (`.zed/`) — oxlint/oxfmt integration, TypeScript inlay hints, Markdown formatting, and task shortcuts for common dev commands
 - **Pi** (`.pi/`) — Prompt templates and extensions for the project's development pipeline (plan, verify, submit, release)
 
 If you use Zed or Pi, you'll get a pre-tuned experience out of the box. Nothing is enforced — these are just defaults for convenience.

@@ -15,17 +15,19 @@ description: SQLite + Drizzle ORM schema, homegrown migration runner, query patt
 
 There are **two** database handles — know which to use:
 
-| Client | Import | Type | Use case |
-|--------|--------|------|----------|
-| `$client` | `shared/db` | Raw `bun:sqlite` Database | Migration runner (`$client.run()`, `$client.query()`), synchronous |
-| `db` | `shared/db` | Drizzle instance | All application queries (`db.select()`, `db.insert()`, etc.), async |
+| Client    | Import      | Type                      | Use case                                                            |
+| --------- | ----------- | ------------------------- | ------------------------------------------------------------------- |
+| `$client` | `shared/db` | Raw `bun:sqlite` Database | Migration runner (`$client.run()`, `$client.query()`), synchronous  |
+| `db`      | `shared/db` | Drizzle instance          | All application queries (`db.select()`, `db.insert()`, etc.), async |
 
 Never mix them — use `db` for application code, `$client` only for migrations and schema introspection.
 
 ## Schema (`packages/server/src/shared/db/schema.ts`)
 
 ### `Song` table
+
 Primary music entity. Key columns:
+
 - `id` — UUID primary key (auto-generated via `$defaultFn`)
 - `sourceUrl` + `sourceId` — both unique, identify the source track
 - `tags` — JSON array of tag name strings (being migrated to `Tag` table)
@@ -33,23 +35,29 @@ Primary music entity. Key columns:
 - `createdAt` — timestamp_ms, auto-set to `new Date()`
 
 ### `Playlist` table
+
 - `name`, `createdBy`, `isPrivate` (boolean, default false)
 - `tagNameLower` — links to `Tag.nameLower` for auto-generated playlists
 - `createdAt` — timestamp_ms, auto-set to `new Date()`
 
 ### `PlaylistSong` join table
+
 - Links songs to playlists at a specific `position`
 - Compound unique constraint on `(playlistId, songId)`
 - Index on `(playlistId, position)` for ordered retrieval
 
 ### `Tag` table
+
 Normalized tag storage (migrated from `Song.tags` JSON). Key columns:
+
 - `nameLower` — unique, lowercase tag name (used for lookups)
 - `canonicalName` — display name with original casing
 - `color` — optional hex color
 
 ### `guildSettings` table
+
 Single-row table (always `id = 1`). Holds:
+
 - **Compressor:** 5 columns (enabled, threshold, ratio, attack, release, gain)
 - **Equalizer:** 15 columns (`eqBand0` through `eqBand14`, range 0-100)
 - **Admin:** `guildId`, `adminRoleIds` (comma-separated string), `setupCompleted`, `voiceIdleTimeoutMinutes`
@@ -57,7 +65,9 @@ Single-row table (always `id = 1`). Holds:
 - **Misc:** `afkNotificationChannelId`, `requestNotificationChannelId`, `notifyOnApproved`, `notifyOnDenied`, `publicUrl`
 
 ### `songRequest` table
+
 Tracks pending/approved/denied song requests. Key columns:
+
 - `sourceUrl` + `sourceId` — identifies the source track
 - `title`, `thumbnailUrl`, `artist`, `artworkUrl`, `sourceName` — track metadata
 - `type` — `'track'` or `'playlist'`
@@ -68,9 +78,11 @@ Tracks pending/approved/denied song requests. Key columns:
 - `createdAt` / `closedAt` — timestamps
 
 ### `RefreshToken` table
+
 OAuth2 refresh tokens: `tokenHash` (unique), `discordId`, `expiresAt`. Index on `discordId`.
 
 ### `rolePermission` table
+
 Composite primary key `(action, roleId)`.
 
 ## Migration Runner (`index.ts::runMigrations()`)
@@ -93,6 +105,7 @@ bun run db:migrate     # Run them (standalone, not via the server)
 ## Tag Migration (`lib/ensureTagsMigrated.ts`)
 
 Migrates from the old `Song.tags` JSON array pattern to the normalized `Tag` table:
+
 1. Reads all songs with non-empty `tags`
 2. For each unique tag name: creates a `Tag` row if it doesn't exist
 3. Does NOT remove `Song.tags` column (backward compatible)
@@ -104,6 +117,7 @@ Ensures consistent tag casing: the first encounter of a tag name (case-insensiti
 ## Query Patterns
 
 **Drizzle queries (use `db`):**
+
 ```typescript
 import { db } from './shared/db';
 import { song, eq } from './shared/db/schema'; // hypothetical
@@ -112,12 +126,14 @@ const songs = await db.select().from(song).where(eq(song.id, id));
 ```
 
 **Raw queries (only for migrations, use `$client`):**
+
 ```typescript
 $client.run('CREATE TABLE IF NOT EXISTS ...');
 $client.query('SELECT hash FROM "__drizzle_migrations" WHERE hash = ?').get(hash);
 ```
 
 **Singleton guild settings pattern:**
+
 ```typescript
 // Always id = 1
 const settings = await db.select().from(guildSettings).where(eq(guildSettings.id, 1)).get();

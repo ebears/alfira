@@ -1,19 +1,7 @@
 import type { Playlist, Song } from '@alfira-bot/server/shared';
 import type { FetchSongsOptions } from '@alfira-bot/server/shared/api';
-import {
-  ArrowDownIcon,
-  ArrowUpIcon,
-  CaretDownIcon,
-  CheckSquareIcon,
-  FunnelIcon,
-  ListIcon,
-  MagnifyingGlassIcon,
-  MusicNotesIcon,
-  QuestionIcon,
-  SortAscendingIcon,
-  SquaresFourIcon,
-} from '@phosphor-icons/react';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { MusicNotesIcon, QuestionIcon } from '@phosphor-icons/react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import {
   bulkDeleteSongs,
@@ -23,13 +11,14 @@ import {
   getSongsPage,
   startPlayback,
 } from '../api/api';
-import AddFilterPopover from '../components/AddFilterPopover';
 import BulkActionBar from '../components/BulkActionBar';
 import BulkEditModal from '../components/BulkEditModal';
 import ConfirmModal from '../components/ConfirmModal';
-import FilterChips from '../components/FilterChips';
+import ListToolbar from '../components/ListToolbar';
+
 import NotificationToast from '../components/NotificationToast';
-import { Button } from '../components/ui/Button';
+
+import { PageHeader } from '../components/ui/PageHeader';
 import { VirtualSongList } from '../components/VirtualSongList';
 import { useAdminView } from '../context/AdminViewContext';
 import { usePermissions } from '../context/PermissionsContext';
@@ -66,13 +55,6 @@ export default function SongsPage() {
   const { handleAddToQueue, notification } = useAddToQueue();
   const { notify } = useNotification();
   const handleSetDeleteId = useCallback((id: string | null) => setDeleteId(id), []);
-
-  // Sort dropdown state
-  const [sortOpen, setSortOpen] = useState(false);
-  const sortRef = useRef<HTMLDivElement>(null);
-
-  // Add filter popover state
-  const [filterPopoverOpen, setFilterPopoverOpen] = useState(false);
 
   // Bulk selection
   const bulk = useBulkSelection();
@@ -111,14 +93,6 @@ export default function SongsPage() {
     [searchParams]
   );
 
-  // Local search input mirrors URL param
-  const [searchInput, setSearchInput] = useState(search);
-
-  // Sync search input ← URL (e.g. on browser back/forward)
-  useEffect(() => {
-    setSearchInput(search);
-  }, [search]);
-
   const updateParam = useCallback(
     (key: string, value: string | null) => {
       setSearchParams(
@@ -135,105 +109,6 @@ export default function SongsPage() {
       );
     },
     [setSearchParams]
-  );
-
-  // Debounced search → URL
-  const searchTimerRef = useRef<ReturnType<typeof setTimeout>>(undefined);
-  const handleSearchChange = useCallback(
-    (value: string) => {
-      setSearchInput(value);
-      if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
-      searchTimerRef.current = setTimeout(() => {
-        updateParam('search', value || null);
-      }, 250);
-    },
-    [updateParam]
-  );
-
-  // ── Sort handlers ───────────────────────────────────────────────────
-  const handleOrderToggle = useCallback(() => {
-    updateParam('order', order === 'asc' ? null : 'asc');
-  }, [order, updateParam]);
-
-  const handleSortChange = useCallback(
-    (newSort: SortField) => {
-      if (newSort === sort) {
-        handleOrderToggle();
-      } else {
-        // When switching to a text field, default to ascending (A-Z).
-        // Update both params atomically — React Router's setSearchParams
-        // sees the same URL for each callback, so two calls would race.
-        const newOrder = newSort === 'createdAt' || newSort === 'duration' ? 'desc' : 'asc';
-        setSearchParams(
-          (prev) => {
-            const next = new URLSearchParams(prev);
-            if (newSort === 'createdAt') {
-              next.delete('sort');
-            } else {
-              next.set('sort', newSort);
-            }
-            if (newOrder === 'asc') {
-              next.set('order', 'asc');
-            } else {
-              next.delete('order');
-            }
-            return next;
-          },
-          { replace: true }
-        );
-      }
-      setSortOpen(false);
-    },
-    [sort, setSearchParams, handleOrderToggle]
-  );
-
-  // Close sort dropdown on outside click
-  useEffect(() => {
-    if (!sortOpen) return;
-    const handler = (e: MouseEvent) => {
-      if (sortRef.current && !sortRef.current.contains(e.target as Node)) {
-        setSortOpen(false);
-      }
-    };
-    document.addEventListener('mousedown', handler);
-    return () => document.removeEventListener('mousedown', handler);
-  }, [sortOpen]);
-
-  // ── Filter handlers ─────────────────────────────────────────────────
-  const handleRemoveTag = useCallback(
-    (tag: string) => {
-      const next = filterTags.filter((t) => t !== tag);
-      updateParam('tags', next.length > 0 ? next.join(',') : null);
-    },
-    [filterTags, updateParam]
-  );
-
-  const handleRemoveSource = useCallback(
-    (source: string) => {
-      const next = filterSources.filter((s) => s !== source);
-      updateParam('source', next.length > 0 ? next.join(',') : null);
-    },
-    [filterSources, updateParam]
-  );
-
-  const handleAddTag = useCallback(
-    (tag: string) => {
-      // Normalize to lowercase for consistency
-      const normalized = tag.toLowerCase();
-      if (filterTags.includes(normalized)) return;
-      const next = [...filterTags, normalized];
-      updateParam('tags', next.join(','));
-    },
-    [filterTags, updateParam]
-  );
-
-  const handleAddSource = useCallback(
-    (source: string) => {
-      if (filterSources.includes(source)) return;
-      const next = [...filterSources, source];
-      updateParam('source', next.join(','));
-    },
-    [filterSources, updateParam]
   );
 
   // ── Build stable fetch options for the infinite scroll hook ─────────
@@ -258,6 +133,43 @@ export default function SongsPage() {
         /* Silently ignore playlist fetch error */
       });
   }, [isAdminView]);
+
+  // ── Comparator for re-sorting after real-time mutations ──────────────
+  const songCompareFn = useMemo(() => {
+    const dir = order === 'asc' ? 1 : -1;
+    return (a: Song, b: Song): number => {
+      switch (sort) {
+        case 'title': {
+          // Sort by display name: nickname if set, otherwise title
+          const aName = (a.nickname || a.title) ?? '';
+          const bName = (b.nickname || b.title) ?? '';
+          return dir * aName.localeCompare(bName, undefined, { sensitivity: 'base' });
+        }
+        case 'artist': {
+          const aArt = a.artist ?? '';
+          const bArt = b.artist ?? '';
+          // nulls last, regardless of direction
+          if (!aArt && !bArt) return 0;
+          if (!aArt) return dir;
+          if (!bArt) return -dir;
+          return dir * aArt.localeCompare(bArt, undefined, { sensitivity: 'base' });
+        }
+        case 'album': {
+          const aAlb = a.album ?? '';
+          const bAlb = b.album ?? '';
+          if (!aAlb && !bAlb) return 0;
+          if (!aAlb) return dir;
+          if (!bAlb) return -dir;
+          return dir * aAlb.localeCompare(bAlb, undefined, { sensitivity: 'base' });
+        }
+        case 'duration':
+          return dir * ((a.duration ?? 0) - (b.duration ?? 0));
+        default:
+          // createdAt — newest first for desc, oldest first for asc
+          return dir * (new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+      }
+    };
+  }, [sort, order]);
 
   // ── Infinite scroll ─────────────────────────────────────────────────
   const {
@@ -284,6 +196,7 @@ export default function SongsPage() {
     },
     limit: ITEMS_PER_PAGE,
     deps: [songsOpts],
+    compareFn: songCompareFn,
   });
 
   // ── Real-time socket wiring ─────────────────────────────────────────
@@ -392,179 +305,81 @@ export default function SongsPage() {
     [queueState.loopMode, notify]
   );
 
-  const isGrid = viewMode === 'grid';
-
   return (
-    <div className="p-4 md:p-8">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6 md:mb-8">
-        <div>
-          <h1 className="font-display text-3xl md:text-4xl text-accent tracking-wider flex items-center gap-2">
-            <MusicNotesIcon size={28} weight="duotone" className="shrink-0 relative top-1" />
-            Songs
-          </h1>
-          <p className="font-mono text-xs text-muted mt-2">
-            Music library{hasLoaded ? ` • ${total} track${total !== 1 ? 's' : ''}` : ''}
-          </p>
-        </div>
-        <span className="relative group">
-          <QuestionIcon size={20} weight="duotone" className="text-muted cursor-help" />
-          <span className="glass-tooltip absolute right-0 top-full mt-2 w-64 p-3 leading-relaxed">
-            Songs are added through the <span className="text-accent">Requests</span> page. Submit a
+    <div className='p-4 md:p-8'>
+      <PageHeader
+        icon={MusicNotesIcon}
+        title='Songs'
+        subtitle={`Music library${hasLoaded ? ` • ${total} track${total !== 1 ? 's' : ''}` : ''}`}
+      >
+        <span className='relative group'>
+          <QuestionIcon size={20} weight='duotone' className='text-muted cursor-help' />
+          <span className='glass-tooltip absolute right-0 top-full mt-2 w-64 p-3 leading-relaxed'>
+            Songs are added through the <span className='text-accent'>Requests</span> page. Submit a
             URL there — admins review and approve it, or it&rsquo;s added instantly if you have
             permission.
           </span>
         </span>
-      </div>
+      </PageHeader>
 
-      {/* Search bar + Sort + View toggle */}
-      <div className="flex items-center gap-2 mb-3">
-        <div className="relative flex-1">
-          <MagnifyingGlassIcon
-            className="absolute left-3 top-1/2 -translate-y-1/2 text-faint w-4 h-4 md:w-3.5 md:h-3.5"
-            weight="duotone"
-          />
-          <input
-            className="input pl-10"
-            placeholder="Search by title, nickname, artist, album, or tag..."
-            value={searchInput}
-            onChange={(e) => handleSearchChange(e.target.value)}
-          />
-        </div>
-
-        {/* Select toggle (only visible to users with bulk permissions) */}
-        {canBulk && (
-          <Button
-            variant="inherit"
-            surface="surface"
-            onClick={() => {
-              if (selectionMode) bulk.clearAll();
-              setSelectionMode((v) => !v);
-            }}
-            className={`flex items-center gap-1.5 px-2.5 ${
-              selectionMode ? 'pressed text-accent' : ''
-            }`}
-            title={selectionMode ? 'Exit selection mode' : 'Select songs'}
-          >
-            <CheckSquareIcon size={16} weight="duotone" />
-          </Button>
-        )}
-
-        {/* Add filter button */}
-        <Button
-          variant="inherit"
-          surface="surface"
-          onClick={() => setFilterPopoverOpen(true)}
-          className={`flex items-center gap-1.5 px-2.5 ${
-            filterTags.length > 0 || filterSources.length > 0 ? 'pressed text-accent' : ''
-          }`}
-          title={`Filter${filterTags.length > 0 || filterSources.length > 0 ? ` (${filterTags.length + filterSources.length} active)` : ''}`}
-        >
-          <FunnelIcon size={16} weight="duotone" />
-        </Button>
-
-        {/* Sort dropdown */}
-        <div className="relative" ref={sortRef}>
-          <Button
-            variant="inherit"
-            surface="surface"
-            onClick={() => setSortOpen((v) => !v)}
-            className={`flex items-center gap-1.5 px-2.5 ${
-              sortOpen || sort !== 'createdAt' || order !== 'desc' ? 'pressed text-accent' : ''
-            }`}
-            title={`Sort by ${SORT_OPTIONS.find((o) => o.value === sort)?.label ?? 'Date Added'} (${order === 'asc' ? 'ascending' : 'descending'})`}
-          >
-            <SortAscendingIcon size={16} weight="duotone" />
-            <CaretDownIcon size={10} weight="fill" className="text-faint" />
-          </Button>
-
-          {sortOpen && (
-            <div className="absolute right-0 top-full mt-1.5 w-48 glass-popover z-20 py-1 origin-top-right">
-              {SORT_OPTIONS.map((opt) => {
-                const isActive = sort === opt.value;
-                return (
-                  <button
-                    key={opt.value}
-                    type="button"
-                    className={`w-full flex items-center justify-between px-3 py-2 text-sm font-body transition-colors ${
-                      isActive
-                        ? 'text-accent bg-accent/5'
-                        : 'text-fg hover:bg-surface active:bg-surface/80'
-                    }`}
-                    onClick={() => handleSortChange(opt.value)}
-                  >
-                    <span>{opt.label}</span>
-                    {isActive && (
-                      <button
-                        type="button"
-                        className="cursor-pointer p-0.5 rounded hover:bg-black/10 dark:hover:bg-white/10 transition-colors"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleOrderToggle();
-                        }}
-                        title={order === 'asc' ? 'Switch to descending' : 'Switch to ascending'}
-                      >
-                        {(() => {
-                          const isTextField =
-                            sort === 'title' || sort === 'artist' || sort === 'album';
-                          const showDown = isTextField ? order === 'asc' : order !== 'asc';
-                          return showDown ? (
-                            <ArrowDownIcon size={14} weight="bold" />
-                          ) : (
-                            <ArrowUpIcon size={14} weight="bold" />
-                          );
-                        })()}
-                      </button>
-                    )}
-                  </button>
-                );
-              })}
-            </div>
-          )}
-        </div>
-
-        {/* View toggle */}
-        <div className="flex gap-1 bg-elevated rounded-lg p-1">
-          <button
-            type="button"
-            onClick={() => {
-              setViewMode('list');
-              localStorage.setItem('alfira-library-view', 'list');
-            }}
-            className={`px-3 py-1.5 rounded-md text-sm font-body transition-colors cursor-pointer ${
-              !isGrid ? 'bg-accent text-elevated' : 'text-muted hover:text-fg'
-            }`}
-            title="List view"
-          >
-            <ListIcon size={18} weight="duotone" />
-          </button>
-          <button
-            type="button"
-            onClick={() => {
-              setViewMode('grid');
-              localStorage.setItem('alfira-library-view', 'grid');
-            }}
-            className={`px-2 py-1.5 rounded-md transition-colors cursor-pointer ${
-              isGrid ? 'bg-accent text-elevated' : 'text-muted hover:text-fg'
-            }`}
-            title="Grid view"
-          >
-            <SquaresFourIcon size={18} weight="duotone" />
-          </button>
-        </div>
-      </div>
-
-      {/* Active filter chips — only shown when filters are active */}
-      {(filterTags.length > 0 || filterSources.length > 0) && (
-        <div className="mb-2">
-          <FilterChips
-            tags={filterTags}
-            sources={filterSources}
-            onRemoveTag={handleRemoveTag}
-            onRemoveSource={handleRemoveSource}
-          />
-        </div>
-      )}
+      <ListToolbar
+        searchValue={search}
+        onSearchChange={(v) => updateParam('search', v || null)}
+        searchPlaceholder='Search by title, nickname, artist, album, or tag...'
+        sortOptions={SORT_OPTIONS}
+        sort={sort}
+        order={order as 'asc' | 'desc'}
+        onSortChange={(field, newOrder) => {
+          setSearchParams(
+            (prev) => {
+              const next = new URLSearchParams(prev);
+              if (field === 'createdAt') {
+                next.delete('sort');
+              } else {
+                next.set('sort', field);
+              }
+              if (newOrder === 'asc') {
+                next.set('order', 'asc');
+              } else {
+                next.delete('order');
+              }
+              return next;
+            },
+            { replace: true }
+          );
+        }}
+        defaultSort='createdAt'
+        textSortFields={['title', 'artist', 'album']}
+        filterTags={filterTags}
+        filterSources={filterSources}
+        onAddTag={(tag) => {
+          const normalized = tag.toLowerCase();
+          if (filterTags.includes(normalized)) return;
+          updateParam('tags', [...filterTags, normalized].join(','));
+        }}
+        onRemoveTag={(tag) =>
+          updateParam('tags', filterTags.filter((t) => t !== tag).join(',') || null)
+        }
+        onAddSource={(s) => {
+          if (filterSources.includes(s)) return;
+          updateParam('source', [...filterSources, s].join(','));
+        }}
+        onRemoveSource={(s) =>
+          updateParam('source', filterSources.filter((x) => x !== s).join(',') || null)
+        }
+        showBulkToggle={canBulk}
+        selectionMode={selectionMode}
+        onToggleSelectionMode={() => {
+          if (selectionMode) bulk.clearAll();
+          setSelectionMode((v) => !v);
+        }}
+        showViewToggle
+        viewMode={viewMode}
+        onViewModeChange={(m) => {
+          setViewMode(m);
+          localStorage.setItem('alfira-library-view', m);
+        }}
+      />
 
       {/* Content */}
       <VirtualSongList
@@ -598,19 +413,6 @@ export default function SongsPage() {
         }
       />
 
-      {/* ── Add Filter popover ────────────────────────────────── */}
-      {filterPopoverOpen && (
-        <AddFilterPopover
-          activeTags={filterTags}
-          activeSources={filterSources}
-          onAddTag={handleAddTag}
-          onRemoveTag={handleRemoveTag}
-          onAddSource={handleAddSource}
-          onRemoveSource={handleRemoveSource}
-          onClose={() => setFilterPopoverOpen(false)}
-        />
-      )}
-
       {/* Modals */}
       {deleteId && (
         <DeleteConfirmDialog
@@ -622,17 +424,17 @@ export default function SongsPage() {
 
       {bulkDeleteConfirm && (
         <ConfirmModal
-          title="Delete Songs"
+          title='Delete Songs'
           message={
             <>
               Permanently delete{' '}
-              <span className="text-fg font-semibold">
+              <span className='text-fg font-semibold'>
                 {bulk.count} song{bulk.count !== 1 ? 's' : ''}
               </span>{' '}
               from the library? This cannot be undone.
             </>
           }
-          confirmLabel="Delete"
+          confirmLabel='Delete'
           onConfirm={executeBulkDelete}
           onCancel={() => setBulkDeleteConfirm(false)}
         />
@@ -684,17 +486,17 @@ function DeleteConfirmDialog({
   if (!song) return null;
   return (
     <ConfirmModal
-      title="Delete Song"
+      title='Delete Song'
       message={
         <>
-          Remove <span className="text-fg font-semibold">"{song.nickname || song.title}"</span> from
+          Remove <span className='text-fg font-semibold'>"{song.nickname || song.title}"</span> from
           the library?{' '}
-          <span className="font-mono text-xs text-danger/70">
+          <span className='font-mono text-xs text-danger/70'>
             this will remove it from all playlists too.
           </span>
         </>
       }
-      confirmLabel="Delete"
+      confirmLabel='Delete'
       onConfirm={onConfirm}
       onCancel={onCancel}
     />

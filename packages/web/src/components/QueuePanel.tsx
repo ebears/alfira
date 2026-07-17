@@ -235,7 +235,7 @@ export default function QueuePanel({
       items.push({
         id: 'quick-add',
         label: 'Quick Add',
-        icon: <PlusCircleIcon size={14} weight="duotone" />,
+        icon: <PlusCircleIcon size={14} weight='duotone' />,
         onClick: () => setShowQuickAdd(true),
       });
     }
@@ -243,7 +243,7 @@ export default function QueuePanel({
       items.push({
         id: 'override',
         label: 'Override',
-        icon: <PlayIcon size={14} weight="duotone" />,
+        icon: <PlayIcon size={14} weight='duotone' />,
         danger: true,
         onClick: () => setShowOverride(true),
       });
@@ -252,7 +252,7 @@ export default function QueuePanel({
       items.push({
         id: 'clear-queue',
         label: 'Clear Queue',
-        icon: <BombIcon size={14} weight="duotone" />,
+        icon: <BombIcon size={14} weight='duotone' />,
         danger: true,
         disabled: clearBusy || isQueueEmpty,
         onClick: () => setClearConfirm(true),
@@ -263,7 +263,7 @@ export default function QueuePanel({
 
   if (loading) {
     return (
-      <div className="flex flex-col h-full">
+      <div className='flex flex-col h-full'>
         <PanelHeader
           triggerRef={triggerRef}
           menuOpen={menuOpen}
@@ -271,18 +271,18 @@ export default function QueuePanel({
           mobileQuickControls={mobileQuickControls}
           showActions={false}
         />
-        <div className="flex-1 p-4 space-y-3">
-          <div className="skeleton h-5 w-48 rounded" />
-          <div className="skeleton h-12 w-full rounded" />
-          <div className="skeleton h-12 w-full rounded" />
-          <div className="skeleton h-12 w-full rounded" />
+        <div className='flex-1 p-4 space-y-3'>
+          <div className='skeleton h-5 w-48 rounded' />
+          <div className='skeleton h-12 w-full rounded' />
+          <div className='skeleton h-12 w-full rounded' />
+          <div className='skeleton h-12 w-full rounded' />
         </div>
       </div>
     );
   }
 
   return (
-    <div className="flex flex-col h-full">
+    <div className='flex flex-col h-full'>
       <PanelHeader
         triggerRef={triggerRef}
         menuOpen={menuOpen}
@@ -292,7 +292,7 @@ export default function QueuePanel({
       />
 
       {/* Fixed content: Now Playing */}
-      <div className="p-4 space-y-4 shrink-0">
+      <div className='p-4 space-y-4 shrink-0'>
         {currentSong ? (
           <NowPlayingCard
             song={currentSong}
@@ -305,8 +305,8 @@ export default function QueuePanel({
 
         {/* Empty state */}
         {virtualItems.length === 0 && (
-          <div className="py-8 text-center">
-            <p className="font-mono text-[11px] text-faint">queue is empty</p>
+          <div className='py-8 text-center'>
+            <p className='font-mono text-[11px] text-faint'>queue is empty</p>
           </div>
         )}
       </div>
@@ -315,7 +315,7 @@ export default function QueuePanel({
       {virtualItems.length > 0 && (
         <div
           ref={scrollRef}
-          className="flex-1 overflow-y-auto px-4 pb-4 min-h-0"
+          className='flex-1 overflow-y-auto px-4 pb-4 min-h-0'
           style={{
             WebkitMaskImage:
               'linear-gradient(to bottom, black 0%, black calc(100% - 40px), transparent 100%)',
@@ -348,18 +348,18 @@ export default function QueuePanel({
                     }}
                   >
                     {item.variant === 'priority' ? (
-                      <h2 className="font-display text-lg text-fg tracking-wider">
-                        <LightningIcon size={16} weight="duotone" className="inline mr-1" />
+                      <h2 className='font-display text-lg text-fg tracking-wider'>
+                        <LightningIcon size={16} weight='duotone' className='inline mr-1' />
                         Up Next
-                        <span className="ml-2 font-mono text-xs text-accent normal-case tracking-normal">
+                        <span className='ml-2 font-mono text-xs text-accent normal-case tracking-normal'>
                           {priorityQueue.length}
                         </span>
                       </h2>
                     ) : (
-                      <h2 className="font-display text-lg text-fg tracking-wider">
+                      <h2 className='font-display text-lg text-fg tracking-wider'>
                         Queue
                         {queue.length > 0 && (
-                          <span className="ml-2 font-mono text-xs text-muted normal-case tracking-normal">
+                          <span className='ml-2 font-mono text-xs text-muted normal-case tracking-normal'>
                             {queue.length}
                           </span>
                         )}
@@ -374,7 +374,7 @@ export default function QueuePanel({
                   key={item.key}
                   data-index={virtualRow.index}
                   ref={virtualizer.measureElement}
-                  className="pb-1"
+                  className='pb-1'
                   style={{
                     position: 'absolute',
                     top: 0,
@@ -410,7 +410,7 @@ export default function QueuePanel({
           isOpen={menuOpen}
           onClose={() => setMenuOpen(false)}
           triggerRef={triggerRef}
-          align="right"
+          align='right'
         />
       )}
 
@@ -438,9 +438,9 @@ export default function QueuePanel({
       {clearConfirm &&
         createPortal(
           <ConfirmModal
-            title="Clear Queue"
-            message="All songs in the queue will be removed. This cannot be undone."
-            confirmLabel="Clear"
+            title='Clear Queue'
+            message='All songs in the queue will be removed. This cannot be undone.'
+            confirmLabel='Clear'
             onConfirm={async () => {
               setClearConfirm(false);
               await handleClear();
@@ -494,7 +494,7 @@ const QueueSongItem = memo(function QueueSongItem({
     items.push({
       id: 'remove',
       label: 'Remove',
-      icon: <TrashIcon size={14} weight="duotone" />,
+      icon: <TrashIcon size={14} weight='duotone' />,
       danger: true,
       onClick: () => onRemove(song.id),
     });
@@ -504,7 +504,7 @@ const QueueSongItem = memo(function QueueSongItem({
       items.push({
         id: 'promote',
         label: 'Promote to Up Next',
-        icon: <LightningIcon size={14} weight="duotone" />,
+        icon: <LightningIcon size={14} weight='duotone' />,
         onClick: () => onPromote(song.id),
       });
     }
@@ -514,7 +514,7 @@ const QueueSongItem = memo(function QueueSongItem({
       items.push({
         id: 'demote',
         label: 'Demote to Queue',
-        icon: <ListIcon size={14} weight="duotone" />,
+        icon: <ListIcon size={14} weight='duotone' />,
         onClick: () => onDemote(song.id),
       });
     }
@@ -524,28 +524,28 @@ const QueueSongItem = memo(function QueueSongItem({
       items.push({
         id: 'move-up',
         label: 'Move Up',
-        icon: <ArrowUpIcon size={14} weight="duotone" />,
+        icon: <ArrowUpIcon size={14} weight='duotone' />,
         disabled: isFirst,
         onClick: () => onMoveUp(targetQueue, song.id, isPriority ? 'priority' : 'queue'),
       });
       items.push({
         id: 'move-down',
         label: 'Move Down',
-        icon: <ArrowDownIcon size={14} weight="duotone" />,
+        icon: <ArrowDownIcon size={14} weight='duotone' />,
         disabled: isLast,
         onClick: () => onMoveDown(targetQueue, song.id, isPriority ? 'priority' : 'queue'),
       });
       items.push({
         id: 'move-top',
         label: 'Move to Top',
-        icon: <ArrowLineUpIcon size={14} weight="duotone" />,
+        icon: <ArrowLineUpIcon size={14} weight='duotone' />,
         disabled: isFirst,
         onClick: () => onMoveToTop(targetQueue, song.id, isPriority ? 'priority' : 'queue'),
       });
       items.push({
         id: 'move-bottom',
         label: 'Move to Bottom',
-        icon: <ArrowLineDownIcon size={14} weight="duotone" />,
+        icon: <ArrowLineDownIcon size={14} weight='duotone' />,
         disabled: isLast,
         onClick: () => onMoveToBottom(targetQueue, song.id, isPriority ? 'priority' : 'queue'),
       });
@@ -572,8 +572,8 @@ const QueueSongItem = memo(function QueueSongItem({
   const sourceKey = useMemo(() => getSourceKey(song.sourceUrl), [song.sourceUrl]);
 
   return (
-    <div className="rounded-lg overflow-hidden" style={{ background: 'var(--color-base)' }}>
-      <div className="flex items-center gap-3 px-3 py-2 group">
+    <div className='rounded-lg overflow-hidden' style={{ background: 'var(--color-base)' }}>
+      <div className='flex items-center gap-3 px-3 py-2 group'>
         {/* Index */}
         <span
           className={`font-mono text-[10px] w-4 text-right shrink-0 ${accent ? 'text-accent' : 'text-faint'}`}
@@ -582,45 +582,45 @@ const QueueSongItem = memo(function QueueSongItem({
         </span>
 
         {/* Thumbnail */}
-        <div className="overflow-hidden w-10 h-10 rounded border border-border shrink-0 bg-elevated">
+        <div className='overflow-hidden w-10 h-10 rounded border border-border shrink-0 bg-elevated'>
           <ArtworkImage
             src={song.artwork ?? song.thumbnailUrl}
             alt={song.nickname || song.title}
-            className="w-full h-full"
-            imageClassName="scale-[1.33]"
+            className='w-full h-full'
+            imageClassName='scale-[1.33]'
           />
         </div>
 
         {/* Info */}
-        <div className="flex-1 min-w-0 flex flex-col justify-center gap-0.5">
-          <p className="text-xs font-semibold text-fg leading-tight flex items-center gap-1.5 min-w-0">
-            <MusicNoteIcon size={13} weight="fill" className="shrink-0 text-muted" />
-            <span className="truncate">{song.nickname || song.title}</span>
+        <div className='flex-1 min-w-0 flex flex-col justify-center gap-0.5'>
+          <p className='text-xs font-semibold text-fg leading-tight flex items-center gap-1.5 min-w-0'>
+            <MusicNoteIcon size={13} weight='fill' className='shrink-0 text-muted' />
+            <span className='truncate'>{song.nickname || song.title}</span>
           </p>
-          <div className="flex items-center gap-2 text-[11px] text-muted min-w-0">
+          <div className='flex items-center gap-2 text-[11px] text-muted min-w-0'>
             {song.artist && (
-              <span className="max-w-[16ch] flex items-center gap-1 min-w-0">
-                <UserIcon size={12} weight="fill" className="shrink-0" />
-                <span className="truncate">{song.artist}</span>
+              <span className='max-w-[16ch] flex items-center gap-1 min-w-0'>
+                <UserIcon size={12} weight='fill' className='shrink-0' />
+                <span className='truncate'>{song.artist}</span>
               </span>
             )}
-            <DurationBadge seconds={song.duration} className="text-[11px]" />
+            <DurationBadge seconds={song.duration} className='text-[11px]' />
           </div>
-          <div className="flex items-center gap-2 text-[11px] text-muted min-w-0">
+          <div className='flex items-center gap-2 text-[11px] text-muted min-w-0'>
             {sourceKey && (
-              <span className="flex items-center shrink-0 [&_svg]:w-3.5 [&_svg]:h-3.5">
+              <span className='flex items-center shrink-0 [&_svg]:w-3.5 [&_svg]:h-3.5'>
                 <SourceIcon sourceKey={sourceKey} />
               </span>
             )}
-            <span className="max-w-[16ch] flex items-center gap-1 min-w-0">
-              <UserCircleIcon size={12} weight="fill" className="shrink-0" />
-              <span className="truncate">{song.requestedBy}</span>
+            <span className='max-w-[16ch] flex items-center gap-1 min-w-0'>
+              <UserCircleIcon size={12} weight='fill' className='shrink-0' />
+              <span className='truncate'>{song.requestedBy}</span>
             </span>
           </div>
         </div>
 
         {/* Badges */}
-        <div className="flex items-center gap-2 shrink-0">
+        <div className='flex items-center gap-2 shrink-0'>
           <VolumeBoostBadge volumeBoost={song.volumeBoost} />
         </div>
 
@@ -628,19 +628,19 @@ const QueueSongItem = memo(function QueueSongItem({
         {canManage && (
           <Button
             ref={triggerRef}
-            variant="inherit"
-            surface="base"
-            size="icon"
-            aria-haspopup="true"
+            variant='inherit'
+            surface='base'
+            size='icon'
+            aria-haspopup='true'
             aria-expanded={menuOpen}
-            aria-label="Song actions"
+            aria-label='Song actions'
             className={`opacity-0 group-hover:opacity-100 transition-opacity shrink-0 w-6 h-6 ${menuOpen ? 'pressed text-accent opacity-100' : 'text-muted hover:text-fg'}`}
             onClick={(e) => {
               e.stopPropagation();
               setMenuOpen((prev) => !prev);
             }}
           >
-            <DotsThreeOutlineVerticalIcon size={14} weight="duotone" />
+            <DotsThreeOutlineVerticalIcon size={14} weight='duotone' />
           </Button>
         )}
       </div>
@@ -650,7 +650,7 @@ const QueueSongItem = memo(function QueueSongItem({
           isOpen={menuOpen}
           onClose={() => setMenuOpen(false)}
           triggerRef={triggerRef}
-          align="right"
+          align='right'
         />
       )}
     </div>
@@ -675,42 +675,42 @@ const PanelHeader = memo(function PanelHeader({
   const loopIcon =
     mqc && isLoopActive ? (
       mqc.loopMode === 'song' ? (
-        <RepeatOnceIcon size={16} weight="fill" />
+        <RepeatOnceIcon size={16} weight='fill' />
       ) : (
-        <RepeatIcon size={16} weight="fill" />
+        <RepeatIcon size={16} weight='fill' />
       )
     ) : (
-      <RepeatIcon size={16} weight="duotone" />
+      <RepeatIcon size={16} weight='duotone' />
     );
 
   return (
-    <div className="flex items-center justify-between px-4 py-3 border-b border-border shrink-0">
-      <h1 className="font-display text-3xl text-accent tracking-wider flex items-center gap-2">
-        <QueueIcon size={24} weight="duotone" className="shrink-0 relative top-1" />
+    <div className='flex items-center justify-between px-4 py-3 border-b border-border shrink-0'>
+      <h1 className='font-display text-3xl text-accent tracking-wider flex items-center gap-2'>
+        <QueueIcon size={24} weight='duotone' className='shrink-0 relative top-1' />
         Queue
       </h1>
-      <div className="flex items-center gap-1">
+      <div className='flex items-center gap-1'>
         {mqc && (
           <>
             <Button
-              variant="inherit"
-              surface="base"
-              size="icon"
+              variant='inherit'
+              surface='base'
+              size='icon'
               onClick={mqc.onSkip}
               disabled={!mqc.currentSong || mqc.skipBusy}
-              title="Skip"
-              className="text-muted hover:text-fg disabled:opacity-50"
+              title='Skip'
+              className='text-muted hover:text-fg disabled:opacity-50'
             >
               {mqc.skipBusy ? (
-                <CircleNotchIcon size={18} weight="bold" className="animate-spin" />
+                <CircleNotchIcon size={18} weight='bold' className='animate-spin' />
               ) : (
-                <SkipForwardIcon size={20} weight="duotone" />
+                <SkipForwardIcon size={20} weight='duotone' />
               )}
             </Button>
             <Button
-              variant="inherit"
-              surface="base"
-              size="icon"
+              variant='inherit'
+              surface='base'
+              size='icon'
               onClick={mqc.onCycleLoop}
               disabled={!mqc.currentSong || mqc.loopBusy}
               title={`Loop: ${mqc.loopMode}`}
@@ -721,15 +721,15 @@ const PanelHeader = memo(function PanelHeader({
               }`}
             >
               {mqc.loopBusy ? (
-                <CircleNotchIcon size={18} weight="bold" className="animate-spin" />
+                <CircleNotchIcon size={18} weight='bold' className='animate-spin' />
               ) : (
                 loopIcon
               )}
             </Button>
             <Button
-              variant="inherit"
-              surface="base"
-              size="icon"
+              variant='inherit'
+              surface='base'
+              size='icon'
               onClick={mqc.onShuffleToggle}
               disabled={!mqc.currentSong || mqc.shuffleBusy}
               title={mqc.isShuffled ? 'Unshuffle queue' : 'Shuffle queue'}
@@ -740,7 +740,7 @@ const PanelHeader = memo(function PanelHeader({
               }`}
             >
               {mqc.shuffleBusy ? (
-                <CircleNotchIcon size={18} weight="bold" className="animate-spin" />
+                <CircleNotchIcon size={18} weight='bold' className='animate-spin' />
               ) : (
                 <ShuffleIcon size={20} weight={mqc.isShuffled ? 'fill' : 'duotone'} />
               )}
@@ -750,17 +750,17 @@ const PanelHeader = memo(function PanelHeader({
         {showActions && (
           <Button
             ref={triggerRef}
-            variant="inherit"
-            size="icon"
-            type="button"
-            aria-haspopup="true"
+            variant='inherit'
+            size='icon'
+            type='button'
+            aria-haspopup='true'
             aria-expanded={menuOpen}
-            title="More actions"
-            surface="elevated"
+            title='More actions'
+            surface='elevated'
             className={`${menuOpen ? 'pressed text-accent' : ''}`}
             onClick={onToggleMenu}
           >
-            <DotsThreeOutlineVerticalIcon size={18} weight="duotone" />
+            <DotsThreeOutlineVerticalIcon size={18} weight='duotone' />
           </Button>
         )}
       </div>
@@ -780,42 +780,42 @@ const NowPlayingCard = memo(function NowPlayingCard({
   const sourceKey = useMemo(() => getSourceKey(song.sourceUrl), [song.sourceUrl]);
 
   return (
-    <div className="card overflow-hidden" style={{ background: 'var(--color-base)' }}>
-      <div className="flex gap-4 p-4">
+    <div className='card overflow-hidden' style={{ background: 'var(--color-base)' }}>
+      <div className='flex gap-4 p-4'>
         {/* Artwork */}
-        <div className="relative shrink-0 overflow-hidden rounded-xl bg-elevated">
+        <div className='relative shrink-0 overflow-hidden rounded-xl bg-elevated'>
           <ArtworkImage
             src={song.artwork ?? song.thumbnailUrl}
             alt={song.nickname || song.title}
-            className="w-20 h-20 rounded-xl border border-border"
-            imageClassName="scale-[1.33]"
+            className='w-20 h-20 rounded-xl border border-border'
+            imageClassName='scale-[1.33]'
           />
         </div>
 
         {/* Info */}
-        <div className="flex-1 flex flex-col justify-center min-w-0 gap-1.5">
+        <div className='flex-1 flex flex-col justify-center min-w-0 gap-1.5'>
           <a
             href={song.sourceUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-xs font-semibold text-fg hover:text-accent leading-tight flex items-center gap-1.5 min-w-0"
+            target='_blank'
+            rel='noopener noreferrer'
+            className='text-xs font-semibold text-fg hover:text-accent leading-tight flex items-center gap-1.5 min-w-0'
           >
-            <MusicNoteIcon size={13} weight="fill" className="shrink-0 text-muted" />
-            <span className="truncate">{song.nickname || song.title}</span>
+            <MusicNoteIcon size={13} weight='fill' className='shrink-0 text-muted' />
+            <span className='truncate'>{song.nickname || song.title}</span>
           </a>
-          <div className="flex items-center gap-2 text-[11px] text-muted min-w-0">
+          <div className='flex items-center gap-2 text-[11px] text-muted min-w-0'>
             {song.artist && (
-              <span className="max-w-[16ch] flex items-center gap-1 min-w-0">
-                <UserIcon size={12} weight="fill" className="shrink-0" />
-                <span className="truncate">{song.artist}</span>
+              <span className='max-w-[16ch] flex items-center gap-1 min-w-0'>
+                <UserIcon size={12} weight='fill' className='shrink-0' />
+                <span className='truncate'>{song.artist}</span>
               </span>
             )}
-            <span className="max-w-[16ch] flex items-center gap-1 min-w-0">
-              <UserCircleIcon size={12} weight="fill" className="shrink-0" />
-              <span className="truncate">{song.requestedBy}</span>
+            <span className='max-w-[16ch] flex items-center gap-1 min-w-0'>
+              <UserCircleIcon size={12} weight='fill' className='shrink-0' />
+              <span className='truncate'>{song.requestedBy}</span>
             </span>
             {sourceKey && (
-              <span className="flex items-center shrink-0 [&_svg]:w-3.5 [&_svg]:h-3.5">
+              <span className='flex items-center shrink-0 [&_svg]:w-3.5 [&_svg]:h-3.5'>
                 <SourceIcon sourceKey={sourceKey} />
               </span>
             )}
@@ -823,17 +823,17 @@ const NowPlayingCard = memo(function NowPlayingCard({
           </div>
 
           {/* Progress */}
-          <div className="mt-1">
-            <div className="relative h-1.5 w-full bg-elevated rounded-full overflow-hidden">
+          <div className='mt-1'>
+            <div className='relative h-1.5 w-full bg-elevated rounded-full overflow-hidden'>
               <div
                 ref={registerProgress}
-                className="absolute inset-y-0 left-0 bg-accent rounded-full"
+                className='absolute inset-y-0 left-0 bg-accent rounded-full'
                 style={{ width: '0%' }}
               />
             </div>
-            <div className="flex justify-between mt-1">
-              <span className="font-mono text-[10px] text-muted">{formatDuration(elapsed)}</span>
-              <span className="font-mono text-[10px] text-muted">
+            <div className='flex justify-between mt-1'>
+              <span className='font-mono text-[10px] text-muted'>{formatDuration(elapsed)}</span>
+              <span className='font-mono text-[10px] text-muted'>
                 {formatDuration(song.duration)}
               </span>
             </div>
@@ -848,14 +848,14 @@ const IdleCard = memo(function IdleCard() {
   const [Icon] = useState(getRandomIdleIcon);
   return (
     <div
-      className="card flex items-center justify-center py-8"
+      className='card flex items-center justify-center py-8'
       style={{ background: 'var(--color-base)' }}
     >
-      <div className="text-center">
-        <div className="w-12 h-12 rounded-full bg-elevated border border-border flex items-center justify-center mx-auto mb-3">
-          <Icon size={20} weight="duotone" className="text-faint" />
+      <div className='text-center'>
+        <div className='w-12 h-12 rounded-full bg-elevated border border-border flex items-center justify-center mx-auto mb-3'>
+          <Icon size={20} weight='duotone' className='text-faint' />
         </div>
-        <p className="font-display text-xl text-faint tracking-wider mb-1">Nothing Playing</p>
+        <p className='font-display text-xl text-faint tracking-wider mb-1'>Nothing Playing</p>
       </div>
     </div>
   );

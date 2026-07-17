@@ -7,22 +7,22 @@ on:
   push:
     branches: [main, dev]
     paths-ignore:
-      - "docs/**"
-      - "**.md"
-      - ".zed/**"
-      - ".pi/**"
-      - "LICENSE"
-      - ".git-commit-template"
-      - ".env.example"
+      - 'docs/**'
+      - '**.md'
+      - '.zed/**'
+      - '.pi/**'
+      - 'LICENSE'
+      - '.git-commit-template'
+      - '.env.example'
   pull_request:
     paths-ignore:
-      - "docs/**"
-      - "**.md"
-      - ".zed/**"
-      - ".pi/**"
-      - "LICENSE"
-      - ".git-commit-template"
-      - ".env.example"
+      - 'docs/**'
+      - '**.md'
+      - '.zed/**'
+      - '.pi/**'
+      - 'LICENSE'
+      - '.git-commit-template'
+      - '.env.example'
   workflow_dispatch:
 
 concurrency:
@@ -46,11 +46,9 @@ jobs:
           exit-code: 1
 
       - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2
-        with:
-          cache: true
       - name: Install dependencies
         run: bun install --frozen-lockfile
-      - name: Lint (Biome)
+      - name: Lint (oxlint)
         run: bun run lint
       - name: Build server
         run: bun run --filter @alfira-bot/server build
