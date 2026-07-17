@@ -181,25 +181,22 @@ function handleVoiceStateUpdate(data: unknown): void {
     const guildPlayer = getPlayer(guildId);
     const botChannelId = guildPlayer?.getVoiceId();
 
-    if (botChannelId && oldChannelId === botChannelId && lavalink.isGuildConnected(guildId)) {
-      let wasHuman: boolean;
-      if (isBot) {
-        wasHuman = false;
-      } else {
-        // Check if they were tracked as human in the bot's channel.
-        wasHuman = (humanVoiceMembers.get(botChannelId)?.has(userId) ?? false) || !isBot;
-        // For a leaving event, the raw payload's member.user.bot is reliable.
-        wasHuman = !(d.member?.user?.bot === true);
-      }
+    if (
+      botChannelId &&
+      oldChannelId === botChannelId &&
+      lavalink.isGuildConnected(guildId) &&
+      guildPlayer
+    ) {
+      const wasHuman = !isBot;
 
       if (wasHuman) {
         const channelMembers = humanVoiceMembers.get(botChannelId);
         const humanCount = channelMembers?.size ?? 0;
 
         if (humanCount === 0) {
-          const player = getPlayer(guildId);
-          if (player?.getCurrentSong() && player.isPlaying()) {
-            player.togglePause();
+          humanVoiceMembers.delete(botChannelId);
+          if (guildPlayer.getCurrentSong() && guildPlayer.isPlaying()) {
+            guildPlayer.togglePause();
             logger.info({ guildId }, "Auto-paused: no humans left in the bot's voice channel.");
           }
         }
