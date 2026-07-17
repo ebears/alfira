@@ -7,6 +7,39 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.1] - 2026-07-19
+
+### Added
+
+- **Context menu submenu arrows** — Context menu items that open a submenu now show a chevron indicator arrow (#621).
+
+### Changed
+
+- **Tooling migration** — Switched from Biome to oxlint + oxfmt for linting and formatting (#651, #652, #653).
+- **TypeScript 7.0** — Upgraded to TypeScript 7.0.2 with sourcemaps and explicit no-emit for the web build (#648, #649).
+- **Self-hosted fonts** — Fonts are now self-hosted and preloaded to eliminate flash of unstyled text (FOUT) (#650).
+- **Codebase refactoring** — Extracted reusable components and utilities across server and web to reduce duplication:
+  - `ListToolbar`, `PageHeader`, and `VirtualList` shell components extracted from repeated markup (#647, #634, #631).
+  - `requirePlaylist` guard, `reSyncPlaylistsForTags`, and shared song query builders extracted on the server (#636, #628, #635).
+  - Shared route table and `matchPath` helper replace regex-based routing (#633, #632).
+  - Infinite scroll hook generalized with metadata support (#629).
+- **Docker Compose** — Simplified compose files and fixed naming convention (#626).
+- **CI/CD** — GitHub Releases now auto-generate from changelog notes on tag push (#625).
+
+### Fixed
+
+- Songs now sort by display name instead of raw title, matching the displayed value (#654).
+- Removed broken `softprops/action-gh-release` step from the release workflow (#617).
+
+### Dependencies
+
+- Bumped `seyfert` from 4.3.0 to 5.0.0 (#637)
+- Bumped `@tanstack/react-virtual` from 3.14.2 to 3.14.5 (#638)
+- Bumped `@types/node` from 25.5.2 to 25.9.4 (#640)
+- Bumped `tailwindcss` from 4.3.1 to 4.3.2 (#639)
+- Bumped `@tailwindcss/cli` from 4.3.1 to 4.3.2 (#641)
+- Bumped GitHub Actions: `codeql-action`, `setup-buildx-action`, `metadata-action`, `login-action` to latest
+
 ## [0.1.0] - 2026-07-05
 
 ### Added
@@ -75,5 +108,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - UI actions now properly gated by granular permissions rather than a simple admin check.
 - Inherited pointer cursor on modal cards.
 
-[Unreleased]: https://github.com/ebears/alfira/compare/v0.1.0...dev
+[Unreleased]: https://github.com/ebears/alfira/compare/v0.1.1...dev
+[0.1.1]: https://github.com/ebears/alfira/releases/tag/v0.1.1
 [0.1.0]: https://github.com/ebears/alfira/releases/tag/v0.1.0
