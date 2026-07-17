@@ -1,6 +1,6 @@
 ---
 description: Stage changes, create a feature branch, commit with semantic message, push, and open a PR
-argument-hint: "[optional commit description]"
+argument-hint: '[optional commit description]'
 ---
 
 Follow these steps exactly, reporting progress as you go.

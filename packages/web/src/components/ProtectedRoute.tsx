@@ -9,20 +9,20 @@ export default function ProtectedRoute({ children }: { children: React.ReactNode
 
   if (loading) {
     return (
-      <div className="h-full flex items-center justify-center bg-elevated">
-        <div className="flex flex-col items-center gap-3">
-          <Spinner size="lg" />
-          <span className="font-mono text-xs text-muted">connecting</span>
+      <div className='h-full flex items-center justify-center bg-elevated'>
+        <div className='flex flex-col items-center gap-3'>
+          <Spinner size='lg' />
+          <span className='font-mono text-xs text-muted'>connecting</span>
         </div>
       </div>
     );
   }
 
-  if (!user) return <Navigate to="/login" replace />;
+  if (!user) return <Navigate to='/login' replace />;
 
   // During first-run setup, lock all routes except /setup.
   if (user.isSetupAdmin && location.pathname !== '/setup') {
-    return <Navigate to="/setup" replace />;
+    return <Navigate to='/setup' replace />;
   }
 
   return <>{children}</>;

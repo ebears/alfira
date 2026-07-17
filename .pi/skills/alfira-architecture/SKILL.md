@@ -53,6 +53,7 @@ GuildPlayer (player state change)
 ```
 
 Key facts:
+
 - The bot never directly holds WebSocket connections — all goes through `lib/socket.ts`
 - Clients authenticate via session cookie on WebSocket upgrade (`/ws` endpoint in `index.ts`)
 - The client never sends messages — it's receive-only
@@ -86,6 +87,7 @@ Always use the shared API service for API calls rather than raw `fetch`.
 ## Security Headers
 
 Defined in `index.ts` as `SECURITY_HEADERS` constant, applied to all API responses via `setSecurityHeaders()`:
+
 - `Content-Security-Policy: default-src 'none'`
 - `X-Content-Type-Options: nosniff`
 - `X-Frame-Options: DENY`

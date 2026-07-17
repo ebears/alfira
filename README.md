@@ -136,13 +136,13 @@ See the **[Installation Guide](docs/installation.md)** for full details.
 
 ## Documentation
 
-| Document | Description |
-|----------|-------------|
+| Document                                       | Description                                   |
+| ---------------------------------------------- | --------------------------------------------- |
 | **[Installation Guide](docs/installation.md)** | Setup, environment variables, Docker commands |
-| **[Philosophy](docs/philosophy.md)** | Design principles guiding the project |
-| **[Tech Stack](docs/tech-stack.md)** | Technology stack and project structure |
-| **[Biome Setup](docs/biome-setup.md)** | Editor setup for Biome linting and formatting |
-| **[Troubleshooting](docs/troubleshooting.md)** | Common issues and solutions |
+| **[Philosophy](docs/philosophy.md)**           | Design principles guiding the project         |
+| **[Tech Stack](docs/tech-stack.md)**           | Technology stack and project structure        |
+| **[Biome Setup](docs/biome-setup.md)**         | Editor setup for Biome linting and formatting |
+| **[Troubleshooting](docs/troubleshooting.md)** | Common issues and solutions                   |
 
 ## License
 

@@ -18,7 +18,7 @@ export const VolumeBoostBadge = memo(function VolumeBoostBadge({
       className={`flex items-center gap-0.5 text-xs ${className}`}
       style={{ color: isBoost ? '#22c55e' : '#eab308' }}
     >
-      <HeadphonesIcon size={11} weight="fill" className="shrink-0" />
+      <HeadphonesIcon size={11} weight='fill' className='shrink-0' />
       {isBoost ? '+' : ''}
       {volumeBoost}%
     </span>

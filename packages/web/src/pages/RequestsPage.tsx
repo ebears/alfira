@@ -112,14 +112,14 @@ export default function RequestsPage() {
   const countLabel = hasLoaded ? `${total} request${total !== 1 ? 's' : ''}` : '—';
 
   return (
-    <div className="p-4 md:p-8">
+    <div className='p-4 md:p-8'>
       <PageHeader
         icon={TrayIcon}
-        title="Requests"
+        title='Requests'
         subtitle={`Submit & review requests${hasLoaded ? ` • ${countLabel}` : ''}`}
       >
         <Button
-          variant="primary"
+          variant='primary'
           onClick={() => setShowAddModal(true)}
           className={showAddModal ? 'pressed' : ''}
         >
@@ -128,10 +128,10 @@ export default function RequestsPage() {
       </PageHeader>
 
       {/* Tabs + filter */}
-      <div className="flex items-center gap-3 mb-4 md:mb-6">
-        <div className="flex gap-1 bg-elevated rounded-lg p-1">
+      <div className='flex items-center gap-3 mb-4 md:mb-6'>
+        <div className='flex gap-1 bg-elevated rounded-lg p-1'>
           <button
-            type="button"
+            type='button'
             onClick={() => {
               setTab('pending');
             }}
@@ -142,7 +142,7 @@ export default function RequestsPage() {
             Pending
           </button>
           <button
-            type="button"
+            type='button'
             onClick={() => {
               setTab('closed');
               setMineOnly(false);
@@ -156,14 +156,14 @@ export default function RequestsPage() {
         </div>
 
         {tab === 'pending' && (
-          <label className="flex items-center gap-2 cursor-pointer ml-auto">
+          <label className='flex items-center gap-2 cursor-pointer ml-auto'>
             <Checkbox checked={mineOnly} onChange={setMineOnly} />
-            <span className="font-mono text-xs text-muted">Only show my requests</span>
+            <span className='font-mono text-xs text-muted'>Only show my requests</span>
           </label>
         )}
       </div>
 
-      {actionError && <ErrorBanner message={actionError} className="mb-4 font-mono" />}
+      {actionError && <ErrorBanner message={actionError} className='mb-4 font-mono' />}
 
       {/* Virtualized request list */}
       <VirtualRequestList

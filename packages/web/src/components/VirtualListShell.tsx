@@ -48,7 +48,7 @@ export const VirtualListShell = memo(function VirtualListShell({
   return (
     <div
       ref={containerRef}
-      className="relative"
+      className='relative'
       style={{ opacity: 0, transition: 'opacity 120ms ease' }}
     >
       {showSkeleton && skeleton}
@@ -62,7 +62,7 @@ export const VirtualListShell = memo(function VirtualListShell({
             isError={isError}
             onRetry={onRetry}
           />
-          {endSpacer && !isFetching && !isError && !hasMore && <div className="h-4" />}
+          {endSpacer && !isFetching && !isError && !hasMore && <div className='h-4' />}
         </>
       )}
     </div>

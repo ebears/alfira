@@ -1,7 +1,7 @@
 @custom-variant light ([data-mode="light"] &);
 @custom-variant dark ([data-mode="dark"] &);
 
-@import "tailwindcss";
+@import 'tailwindcss';
 
 /* ============================================
    SELF-HOSTED FONTS
@@ -10,94 +10,98 @@
    ============================================ */
 
 @font-face {
-    font-family: "Cherry Bomb One";
-    font-style: normal;
-    font-weight: 400;
-    font-display: swap;
-    src: url(/fonts/cherry-bomb-one-400-latin.woff2) format("woff2");
+  font-family: 'Cherry Bomb One';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url(/fonts/cherry-bomb-one-400-latin.woff2) format('woff2');
 }
 
 @font-face {
-    font-family: "Chiron GoRound TC";
-    font-style: normal;
-    font-weight: 400;
-    font-display: swap;
-    src: url(/fonts/chiron-go-round-tc-400-latin.woff2) format("woff2");
+  font-family: 'Chiron GoRound TC';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url(/fonts/chiron-go-round-tc-400-latin.woff2) format('woff2');
 }
 
 @font-face {
-    font-family: "JetBrains Mono";
-    font-style: normal;
-    font-weight: 400;
-    font-display: swap;
-    src: url(/fonts/jetbrains-mono-400-latin.woff2) format("woff2");
+  font-family: 'JetBrains Mono';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url(/fonts/jetbrains-mono-400-latin.woff2) format('woff2');
 }
 
 @font-face {
-    font-family: "JetBrains Mono";
-    font-style: normal;
-    font-weight: 500;
-    font-display: swap;
-    src: url(/fonts/jetbrains-mono-500-latin.woff2) format("woff2");
+  font-family: 'JetBrains Mono';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url(/fonts/jetbrains-mono-500-latin.woff2) format('woff2');
 }
 
 @keyframes fadeUp {
-    0% {
-        opacity: 0;
-        transform: translateY(12px);
-    }
-    100% {
-        opacity: 1;
-        transform: translateY(0);
-    }
+  0% {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 @keyframes slideInRight {
-    0% {
-        transform: translateX(100%);
-    }
-    100% {
-        transform: translateX(0);
-    }
+  0% {
+    transform: translateX(100%);
+  }
+  100% {
+    transform: translateX(0);
+  }
 }
 
 @keyframes slideUp {
-    0% {
-        transform: translateY(100%);
-    }
-    100% {
-        transform: translateY(0);
-    }
+  0% {
+    transform: translateY(100%);
+  }
+  100% {
+    transform: translateY(0);
+  }
 }
 
 @keyframes skeleton-appear {
-    to {
-        opacity: 1;
-    }
+  to {
+    opacity: 1;
+  }
 }
 
 @keyframes shimmer {
-    0% {
-        background-position: -400px 0;
-    }
-    100% {
-        background-position: 400px 0;
-    }
+  0% {
+    background-position: -400px 0;
+  }
+  100% {
+    background-position: 400px 0;
+  }
 }
 
 @keyframes pulseGentle {
-    0%,
-    100% {
-        opacity: 1;
-    }
-    50% {
-        opacity: 0.55;
-    }
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.55;
+  }
 }
 
 @keyframes ticker-scroll {
-    from { transform: translateX(0); }
-    to { transform: translateX(-50%); }
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
 }
 
 /* ============================================
@@ -107,1227 +111,1204 @@
    ============================================ */
 
 /* ── Artificer · Neutral (no hue tint — for users who prefer a clean M3-free palette) ── */
-[data-color-theme="artificer"] {
-    --color-accent: #8b5cf6;
-    --color-accent-secondary: #7c3aed;
+[data-color-theme='artificer'] {
+  --color-accent: #8b5cf6;
+  --color-accent-secondary: #7c3aed;
 
-    &[data-mode="dark"] {
-        --color-surface: #18181a;
-        --color-base: #2c2c2e;
-        --color-elevated: #202022;
-        --color-border: #323236;
-        --color-fg: #f0f0f0;
-        --color-muted: #808088;
-        --color-faint: #404048;
-        --color-foreground: #262628;
-        --color-foreground-muted: #121214;
-    }
+  &[data-mode='dark'] {
+    --color-surface: #18181a;
+    --color-base: #2c2c2e;
+    --color-elevated: #202022;
+    --color-border: #323236;
+    --color-fg: #f0f0f0;
+    --color-muted: #808088;
+    --color-faint: #404048;
+    --color-foreground: #262628;
+    --color-foreground-muted: #121214;
+  }
 
-    &[data-mode="light"] {
-        --color-surface: #f6f6f6;
-        --color-base: #dedede;
-        --color-elevated: #ececec;
-        --color-border: #d0d0d0;
-        --color-fg: #1a1a1a;
-        --color-muted: #5c5c5c;
-        --color-faint: #969696;
-        --color-foreground: #f0f0f0;
-        --color-foreground-muted: #d8d8d8;
-    }
+  &[data-mode='light'] {
+    --color-surface: #f6f6f6;
+    --color-base: #dedede;
+    --color-elevated: #ececec;
+    --color-border: #d0d0d0;
+    --color-fg: #1a1a1a;
+    --color-muted: #5c5c5c;
+    --color-faint: #969696;
+    --color-foreground: #f0f0f0;
+    --color-foreground-muted: #d8d8d8;
+  }
 }
 
 /* ── Barbarian · Blood on Iron (red accent on cool steel-blue surfaces — rage against cold steel) ── */
-[data-color-theme="barbarian"] {
-    --color-accent: #dc2626;
-    --color-accent-secondary: #b91c1c;
+[data-color-theme='barbarian'] {
+  --color-accent: #dc2626;
+  --color-accent-secondary: #b91c1c;
 
-    &[data-mode="dark"] {
-        --color-surface: #14161c;
-        --color-base: #242630;
-        --color-elevated: #1a1b24;
-        --color-border: #2c3040;
-        --color-fg: #e8eaf4;
-        --color-muted: #6870a0;
-        --color-faint: #303850;
-        --color-foreground: #1e202c;
-        --color-foreground-muted: #0c0e14;
-    }
+  &[data-mode='dark'] {
+    --color-surface: #14161c;
+    --color-base: #242630;
+    --color-elevated: #1a1b24;
+    --color-border: #2c3040;
+    --color-fg: #e8eaf4;
+    --color-muted: #6870a0;
+    --color-faint: #303850;
+    --color-foreground: #1e202c;
+    --color-foreground-muted: #0c0e14;
+  }
 
-    &[data-mode="light"] {
-        --color-surface: #f4f5fa;
-        --color-base: #cccedc;
-        --color-elevated: #e2e4f0;
-        --color-border: #c0c2d2;
-        --color-fg: #0e1018;
-        --color-muted: #485068;
-        --color-faint: #8890b0;
-        --color-foreground: #e6e8f4;
-        --color-foreground-muted: #ced0de;
-    }
+  &[data-mode='light'] {
+    --color-surface: #f4f5fa;
+    --color-base: #cccedc;
+    --color-elevated: #e2e4f0;
+    --color-border: #c0c2d2;
+    --color-fg: #0e1018;
+    --color-muted: #485068;
+    --color-faint: #8890b0;
+    --color-foreground: #e6e8f4;
+    --color-foreground-muted: #ced0de;
+  }
 }
 
 /* ── Bard · Magenta Rose ── */
-[data-color-theme="bard"] {
-    --color-accent: #db2777;
-    --color-accent-secondary: #9d174d;
+[data-color-theme='bard'] {
+  --color-accent: #db2777;
+  --color-accent-secondary: #9d174d;
 
-    &[data-mode="dark"] {
-        --color-surface: #181218;
-        --color-base: #2c2026;
-        --color-elevated: #20161c;
-        --color-border: #342630;
-        --color-fg: #f0e4ea;
-        --color-muted: #866676;
-        --color-faint: #462636;
-        --color-foreground: #261a20;
-        --color-foreground-muted: #100a10;
-    }
+  &[data-mode='dark'] {
+    --color-surface: #181218;
+    --color-base: #2c2026;
+    --color-elevated: #20161c;
+    --color-border: #342630;
+    --color-fg: #f0e4ea;
+    --color-muted: #866676;
+    --color-faint: #462636;
+    --color-foreground: #261a20;
+    --color-foreground-muted: #100a10;
+  }
 
-    &[data-mode="light"] {
-        --color-surface: #faf5f6;
-        --color-base: #e4d0d8;
-        --color-elevated: #f2e6ea;
-        --color-border: #d8c2cc;
-        --color-fg: #1c0c12;
-        --color-muted: #5e3846;
-        --color-faint: #a06e7c;
-        --color-foreground: #f2e8ec;
-        --color-foreground-muted: #dcd0d6;
-    }
+  &[data-mode='light'] {
+    --color-surface: #faf5f6;
+    --color-base: #e4d0d8;
+    --color-elevated: #f2e6ea;
+    --color-border: #d8c2cc;
+    --color-fg: #1c0c12;
+    --color-muted: #5e3846;
+    --color-faint: #a06e7c;
+    --color-foreground: #f2e8ec;
+    --color-foreground-muted: #dcd0d6;
+  }
 }
 
 /* ── Cleric · Sky on Coral (sky-blue accent on warm peach surfaces — divine light at dawn) ── */
-[data-color-theme="cleric"] {
-    --color-accent: #84cc16;
-    --color-accent-secondary: #65a30d;
+[data-color-theme='cleric'] {
+  --color-accent: #84cc16;
+  --color-accent-secondary: #65a30d;
 
-    &[data-mode="dark"] {
-        --color-surface: #1a1416;
-        --color-base: #2a1c20;
-        --color-elevated: #201618;
-        --color-border: #36262a;
-        --color-fg: #f0e6e8;
-        --color-muted: #866470;
-        --color-faint: #462a34;
-        --color-foreground: #22181c;
-        --color-foreground-muted: #100a0c;
-    }
+  &[data-mode='dark'] {
+    --color-surface: #1a1416;
+    --color-base: #2a1c20;
+    --color-elevated: #201618;
+    --color-border: #36262a;
+    --color-fg: #f0e6e8;
+    --color-muted: #866470;
+    --color-faint: #462a34;
+    --color-foreground: #22181c;
+    --color-foreground-muted: #100a0c;
+  }
 
-    &[data-mode="light"] {
-        --color-surface: #faf5f3;
-        --color-base: #e2d0ca;
-        --color-elevated: #f0e4de;
-        --color-border: #d6c4bc;
-        --color-fg: #1a0e0a;
-        --color-muted: #5a3a34;
-        --color-faint: #9e7670;
-        --color-foreground: #f2e6e2;
-        --color-foreground-muted: #dcd0c8;
-    }
+  &[data-mode='light'] {
+    --color-surface: #faf5f3;
+    --color-base: #e2d0ca;
+    --color-elevated: #f0e4de;
+    --color-border: #d6c4bc;
+    --color-fg: #1a0e0a;
+    --color-muted: #5a3a34;
+    --color-faint: #9e7670;
+    --color-foreground: #f2e6e2;
+    --color-foreground-muted: #dcd0c8;
+  }
 }
 
 /* ── Druid · Rose + Sage (pink accent on earthy green surfaces — the signature duo-tone clash) ── */
-[data-color-theme="druid"] {
-    --color-accent: #f43f5e;
-    --color-accent-secondary: #be123c;
+[data-color-theme='druid'] {
+  --color-accent: #f43f5e;
+  --color-accent-secondary: #be123c;
 
-    &[data-mode="dark"] {
-        --color-surface: #111611;
-        --color-base: #242a24;
-        --color-elevated: #181e18;
-        --color-border: #2c342c;
-        --color-fg: #e4eee2;
-        --color-muted: #587a52;
-        --color-faint: #264426;
-        --color-foreground: #1e221e;
-        --color-foreground-muted: #0a100a;
-    }
+  &[data-mode='dark'] {
+    --color-surface: #111611;
+    --color-base: #242a24;
+    --color-elevated: #181e18;
+    --color-border: #2c342c;
+    --color-fg: #e4eee2;
+    --color-muted: #587a52;
+    --color-faint: #264426;
+    --color-foreground: #1e221e;
+    --color-foreground-muted: #0a100a;
+  }
 
-    &[data-mode="light"] {
-        --color-surface: #f5f8f3;
-        --color-base: #d0decc;
-        --color-elevated: #e4f0e2;
-        --color-border: #c4d4c0;
-        --color-fg: #0e140c;
-        --color-muted: #3c5834;
-        --color-faint: #7a9470;
-        --color-foreground: #e8f2e6;
-        --color-foreground-muted: #d0dcc8;
-    }
+  &[data-mode='light'] {
+    --color-surface: #f5f8f3;
+    --color-base: #d0decc;
+    --color-elevated: #e4f0e2;
+    --color-border: #c4d4c0;
+    --color-fg: #0e140c;
+    --color-muted: #3c5834;
+    --color-faint: #7a9470;
+    --color-foreground: #e8f2e6;
+    --color-foreground-muted: #d0dcc8;
+  }
 }
 
 /* ── Fighter · Forged Bronze ── */
-[data-color-theme="fighter"] {
-    --color-accent: #d97706;
-    --color-accent-secondary: #92400e;
+[data-color-theme='fighter'] {
+  --color-accent: #d97706;
+  --color-accent-secondary: #92400e;
 
-    &[data-mode="dark"] {
-        --color-surface: #17110b;
-        --color-base: #2a2016;
-        --color-elevated: #1e1610;
-        --color-border: #342a1e;
-        --color-fg: #eee6d8;
-        --color-muted: #82704a;
-        --color-faint: #443624;
-        --color-foreground: #221a12;
-        --color-foreground-muted: #0e0a08;
-    }
+  &[data-mode='dark'] {
+    --color-surface: #17110b;
+    --color-base: #2a2016;
+    --color-elevated: #1e1610;
+    --color-border: #342a1e;
+    --color-fg: #eee6d8;
+    --color-muted: #82704a;
+    --color-faint: #443624;
+    --color-foreground: #221a12;
+    --color-foreground-muted: #0e0a08;
+  }
 
-    &[data-mode="light"] {
-        --color-surface: #faf6ef;
-        --color-base: #ded0bc;
-        --color-elevated: #eee4d2;
-        --color-border: #d4c4ae;
-        --color-fg: #1a1008;
-        --color-muted: #564228;
-        --color-faint: #9c845e;
-        --color-foreground: #f0e6d4;
-        --color-foreground-muted: #dcd0be;
-    }
+  &[data-mode='light'] {
+    --color-surface: #faf6ef;
+    --color-base: #ded0bc;
+    --color-elevated: #eee4d2;
+    --color-border: #d4c4ae;
+    --color-fg: #1a1008;
+    --color-muted: #564228;
+    --color-faint: #9c845e;
+    --color-foreground: #f0e6d4;
+    --color-foreground-muted: #dcd0be;
+  }
 }
 
 /* ── Monk · Teal + Warm Stone (cool teal accent on warm sandstone — balance / harmony duo-tone) ── */
-[data-color-theme="monk"] {
-    --color-accent: #14b8a6;
-    --color-accent-secondary: #0f766e;
+[data-color-theme='monk'] {
+  --color-accent: #14b8a6;
+  --color-accent-secondary: #0f766e;
 
-    &[data-mode="dark"] {
-        --color-surface: #151412;
-        --color-base: #282420;
-        --color-elevated: #1c1a16;
-        --color-border: #322e28;
-        --color-fg: #e8eae2;
-        --color-muted: #60765c;
-        --color-faint: #2a3e28;
-        --color-foreground: #201e1a;
-        --color-foreground-muted: #0c0c08;
-    }
+  &[data-mode='dark'] {
+    --color-surface: #151412;
+    --color-base: #282420;
+    --color-elevated: #1c1a16;
+    --color-border: #322e28;
+    --color-fg: #e8eae2;
+    --color-muted: #60765c;
+    --color-faint: #2a3e28;
+    --color-foreground: #201e1a;
+    --color-foreground-muted: #0c0c08;
+  }
 
-    &[data-mode="light"] {
-        --color-surface: #f7f6f2;
-        --color-base: #dad8cc;
-        --color-elevated: #eceadf;
-        --color-border: #cfcdc0;
-        --color-fg: #14140c;
-        --color-muted: #4c543c;
-        --color-faint: #8c8c78;
-        --color-foreground: #eeecde;
-        --color-foreground-muted: #d6d4c4;
-    }
+  &[data-mode='light'] {
+    --color-surface: #f7f6f2;
+    --color-base: #dad8cc;
+    --color-elevated: #eceadf;
+    --color-border: #cfcdc0;
+    --color-fg: #14140c;
+    --color-muted: #4c543c;
+    --color-faint: #8c8c78;
+    --color-foreground: #eeecde;
+    --color-foreground-muted: #d6d4c4;
+  }
 }
 
 /* ── Paladin · Holy Gold (bright gold accent on warm ivory — radiant oath / divine light duo-tone) ── */
-[data-color-theme="paladin"] {
-    --color-accent: #eab308;
-    --color-accent-secondary: #a16207;
+[data-color-theme='paladin'] {
+  --color-accent: #eab308;
+  --color-accent-secondary: #a16207;
 
-    &[data-mode="dark"] {
-        --color-surface: #161410;
-        --color-base: #2a2618;
-        --color-elevated: #1c1a14;
-        --color-border: #363020;
-        --color-fg: #f0e8d8;
-        --color-muted: #867246;
-        --color-faint: #464028;
-        --color-foreground: #222016;
-        --color-foreground-muted: #0e0c08;
-    }
+  &[data-mode='dark'] {
+    --color-surface: #161410;
+    --color-base: #2a2618;
+    --color-elevated: #1c1a14;
+    --color-border: #363020;
+    --color-fg: #f0e8d8;
+    --color-muted: #867246;
+    --color-faint: #464028;
+    --color-foreground: #222016;
+    --color-foreground-muted: #0e0c08;
+  }
 
-    &[data-mode="light"] {
-        --color-surface: #faf8ef;
-        --color-base: #e0d8b2;
-        --color-elevated: #f0e8c8;
-        --color-border: #d4cca4;
-        --color-fg: #1a1208;
-        --color-muted: #564826;
-        --color-faint: #9c8c5a;
-        --color-foreground: #f2eacc;
-        --color-foreground-muted: #ded4b8;
-    }
+  &[data-mode='light'] {
+    --color-surface: #faf8ef;
+    --color-base: #e0d8b2;
+    --color-elevated: #f0e8c8;
+    --color-border: #d4cca4;
+    --color-fg: #1a1208;
+    --color-muted: #564826;
+    --color-faint: #9c8c5a;
+    --color-foreground: #f2eacc;
+    --color-foreground-muted: #ded4b8;
+  }
 }
 
 /* ── Ranger · Emerald Earth ── */
-[data-color-theme="ranger"] {
-    --color-accent: #16a34a;
-    --color-accent-secondary: #15803d;
+[data-color-theme='ranger'] {
+  --color-accent: #16a34a;
+  --color-accent-secondary: #15803d;
 
-    &[data-mode="dark"] {
-        --color-surface: #111710;
-        --color-base: #242820;
-        --color-elevated: #181e14;
-        --color-border: #2e3228;
-        --color-fg: #e2eee0;
-        --color-muted: #547a48;
-        --color-faint: #244222;
-        --color-foreground: #1c2218;
-        --color-foreground-muted: #0a0e08;
-    }
+  &[data-mode='dark'] {
+    --color-surface: #111710;
+    --color-base: #242820;
+    --color-elevated: #181e14;
+    --color-border: #2e3228;
+    --color-fg: #e2eee0;
+    --color-muted: #547a48;
+    --color-faint: #244222;
+    --color-foreground: #1c2218;
+    --color-foreground-muted: #0a0e08;
+  }
 
-    &[data-mode="light"] {
-        --color-surface: #f4f8f2;
-        --color-base: #ccdcc8;
-        --color-elevated: #e2f0de;
-        --color-border: #c0d0bc;
-        --color-fg: #0c140a;
-        --color-muted: #385832;
-        --color-faint: #74946c;
-        --color-foreground: #e6f2e2;
-        --color-foreground-muted: #cedcc8;
-    }
+  &[data-mode='light'] {
+    --color-surface: #f4f8f2;
+    --color-base: #ccdcc8;
+    --color-elevated: #e2f0de;
+    --color-border: #c0d0bc;
+    --color-fg: #0c140a;
+    --color-muted: #385832;
+    --color-faint: #74946c;
+    --color-foreground: #e6f2e2;
+    --color-foreground-muted: #cedcc8;
+  }
 }
 
 /* ── Rogue · Indigo Night (gold standard — cool violet surfaces, everything from one hue family) ── */
-[data-color-theme="rogue"] {
-    --color-accent: #6366f1;
-    --color-accent-secondary: #4f46e5;
+[data-color-theme='rogue'] {
+  --color-accent: #6366f1;
+  --color-accent-secondary: #4f46e5;
 
-    &[data-mode="dark"] {
-        --color-surface: #16161e;
-        --color-base: #2a2a34;
-        --color-elevated: #1c1c26;
-        --color-border: #30303e;
-        --color-fg: #e8e8f4;
-        --color-muted: #686898;
-        --color-faint: #303048;
-        --color-foreground: #22222c;
-        --color-foreground-muted: #0e0e14;
-    }
+  &[data-mode='dark'] {
+    --color-surface: #16161e;
+    --color-base: #2a2a34;
+    --color-elevated: #1c1c26;
+    --color-border: #30303e;
+    --color-fg: #e8e8f4;
+    --color-muted: #686898;
+    --color-faint: #303048;
+    --color-foreground: #22222c;
+    --color-foreground-muted: #0e0e14;
+  }
 
-    &[data-mode="light"] {
-        --color-surface: #f6f6fa;
-        --color-base: #d2d2e2;
-        --color-elevated: #e6e6f2;
-        --color-border: #c8c8dc;
-        --color-fg: #0e0e18;
-        --color-muted: #484868;
-        --color-faint: #9090b0;
-        --color-foreground: #eaeaf4;
-        --color-foreground-muted: #d0d0e0;
-    }
+  &[data-mode='light'] {
+    --color-surface: #f6f6fa;
+    --color-base: #d2d2e2;
+    --color-elevated: #e6e6f2;
+    --color-border: #c8c8dc;
+    --color-fg: #0e0e18;
+    --color-muted: #484868;
+    --color-faint: #9090b0;
+    --color-foreground: #eaeaf4;
+    --color-foreground-muted: #d0d0e0;
+  }
 }
 
 /* ── Sorcerer · Crimson Shadow ── */
-[data-color-theme="sorcerer"] {
-    --color-accent: #e11d48;
-    --color-accent-secondary: #be123c;
+[data-color-theme='sorcerer'] {
+  --color-accent: #e11d48;
+  --color-accent-secondary: #be123c;
 
-    &[data-mode="dark"] {
-        --color-surface: #171013;
-        --color-base: #2a1c22;
-        --color-elevated: #1e1418;
-        --color-border: #36242e;
-        --color-fg: #f0e4e8;
-        --color-muted: #865866;
-        --color-faint: #462836;
-        --color-foreground: #22161c;
-        --color-foreground-muted: #0e0a0c;
-    }
+  &[data-mode='dark'] {
+    --color-surface: #171013;
+    --color-base: #2a1c22;
+    --color-elevated: #1e1418;
+    --color-border: #36242e;
+    --color-fg: #f0e4e8;
+    --color-muted: #865866;
+    --color-faint: #462836;
+    --color-foreground: #22161c;
+    --color-foreground-muted: #0e0a0c;
+  }
 
-    &[data-mode="light"] {
-        --color-surface: #faf4f6;
-        --color-base: #e8c8d0;
-        --color-elevated: #f2dee4;
-        --color-border: #dcbac4;
-        --color-fg: #1a0a0e;
-        --color-muted: #5e2c38;
-        --color-faint: #a46474;
-        --color-foreground: #f4e2e8;
-        --color-foreground-muted: #dcc8d0;
-    }
+  &[data-mode='light'] {
+    --color-surface: #faf4f6;
+    --color-base: #e8c8d0;
+    --color-elevated: #f2dee4;
+    --color-border: #dcbac4;
+    --color-fg: #1a0a0e;
+    --color-muted: #5e2c38;
+    --color-faint: #a46474;
+    --color-foreground: #f4e2e8;
+    --color-foreground-muted: #dcc8d0;
+  }
 }
 
 /* ── Warlock · Arcane Violet ── */
-[data-color-theme="warlock"] {
-    --color-accent: #a855f7;
-    --color-accent-secondary: #7e22ce;
+[data-color-theme='warlock'] {
+  --color-accent: #a855f7;
+  --color-accent-secondary: #7e22ce;
 
-    &[data-mode="dark"] {
-        --color-surface: #15111b;
-        --color-base: #28202e;
-        --color-elevated: #1c1622;
-        --color-border: #32283a;
-        --color-fg: #ece6f4;
-        --color-muted: #7e60a0;
-        --color-faint: #3e2860;
-        --color-foreground: #201826;
-        --color-foreground-muted: #0e0a14;
-    }
+  &[data-mode='dark'] {
+    --color-surface: #15111b;
+    --color-base: #28202e;
+    --color-elevated: #1c1622;
+    --color-border: #32283a;
+    --color-fg: #ece6f4;
+    --color-muted: #7e60a0;
+    --color-faint: #3e2860;
+    --color-foreground: #201826;
+    --color-foreground-muted: #0e0a14;
+  }
 
-    &[data-mode="light"] {
-        --color-surface: #f8f5fb;
-        --color-base: #dacee8;
-        --color-elevated: #ece2f4;
-        --color-border: #d2c4e0;
-        --color-fg: #160c1a;
-        --color-muted: #563670;
-        --color-faint: #9674b0;
-        --color-foreground: #eee4f6;
-        --color-foreground-muted: #d8cce4;
-    }
+  &[data-mode='light'] {
+    --color-surface: #f8f5fb;
+    --color-base: #dacee8;
+    --color-elevated: #ece2f4;
+    --color-border: #d2c4e0;
+    --color-fg: #160c1a;
+    --color-muted: #563670;
+    --color-faint: #9674b0;
+    --color-foreground: #eee4f6;
+    --color-foreground-muted: #d8cce4;
+  }
 }
 
 /* ── Wizard · Arcane on Parchment (blue accent on warm amber surfaces — arcane fire on ancient tomes) ── */
-[data-color-theme="wizard"] {
-    --color-accent: #3b82f6;
-    --color-accent-secondary: #1d4ed8;
+[data-color-theme='wizard'] {
+  --color-accent: #3b82f6;
+  --color-accent-secondary: #1d4ed8;
 
-    &[data-mode="dark"] {
-        --color-surface: #18130e;
-        --color-base: #2c2014;
-        --color-elevated: #201810;
-        --color-border: #382c1e;
-        --color-fg: #f2e6d4;
-        --color-muted: #887048;
-        --color-faint: #483824;
-        --color-foreground: #221a12;
-        --color-foreground-muted: #0c0a06;
-    }
+  &[data-mode='dark'] {
+    --color-surface: #18130e;
+    --color-base: #2c2014;
+    --color-elevated: #201810;
+    --color-border: #382c1e;
+    --color-fg: #f2e6d4;
+    --color-muted: #887048;
+    --color-faint: #483824;
+    --color-foreground: #221a12;
+    --color-foreground-muted: #0c0a06;
+  }
 
-    &[data-mode="light"] {
-        --color-surface: #faf6ee;
-        --color-base: #dcd0b8;
-        --color-elevated: #f0e6d0;
-        --color-border: #d4c4a8;
-        --color-fg: #1a1006;
-        --color-muted: #584426;
-        --color-faint: #9c885c;
-        --color-foreground: #f0e8d8;
-        --color-foreground-muted: #dcd4c0;
-    }
+  &[data-mode='light'] {
+    --color-surface: #faf6ee;
+    --color-base: #dcd0b8;
+    --color-elevated: #f0e6d0;
+    --color-border: #d4c4a8;
+    --color-fg: #1a1006;
+    --color-muted: #584426;
+    --color-faint: #9c885c;
+    --color-foreground: #f0e8d8;
+    --color-foreground-muted: #dcd4c0;
+  }
 }
 
 @theme {
-    /* Theme color tokens — values come from data-color-theme selectors above */
-    --color-accent: var(--color-accent);
-    --color-accent-muted: color-mix(in srgb, var(--color-accent) 55%, var(--color-muted));
-    --color-accent-secondary: var(--color-accent-secondary);
-    --color-accent-foreground: color-mix(in srgb, var(--color-accent) 70%, var(--color-foreground));
-    --color-danger: #ef4444;
-    --color-warning: #f59e0b;
-    --color-discord: #5865F2;
-    --color-surface: var(--color-surface);
-    --color-base: var(--color-base);
-    --color-elevated: var(--color-elevated);
-    --color-border: var(--color-border);
-    --color-fg: var(--color-fg);
-    --color-muted: var(--color-muted);
-    --color-faint: var(--color-faint);
-    --color-foreground: var(--color-foreground);
-    --color-foreground-muted: var(--color-foreground-muted);
-    /* Fonts */
-    --font-display: "Cherry Bomb One", regular;
-    --font-body: "Chiron GoRound TC", regular;
-    --font-mono: "JetBrains Mono", monospace;
-    /* Animations */
-    --animate-fade-up: fadeUp 0.3s ease forwards;
-    --animate-slide-in-right: slideInRight 0.3s ease forwards;
-    --animate-slide-up: slideUp 0.3s ease forwards;
-    --animate-pulse-gentle: pulseGentle 2.4s ease-in-out infinite;
-    /* Clay radius tokens — consistent "pebble" proportions */
-    --clay-radius-sm: 9px;
-    --clay-radius-md: 12px;
-    --clay-radius-lg: 14px;
-    /* Clay highlight — top-light gradient endpoint */
-    --clay-highlight: color-mix(in srgb, var(--color-elevated) 65%, white);
-    /* Clay elevation tokens — 4 deliberate depth levels */
-    --clay-shadow-resting:
-        0 2px 0 0 color-mix(in srgb, var(--color-surface) 60%, black),
-        inset 0 2px 3px 0 rgba(0, 0, 0, 0.15),
-        inset 0 1px 1px 0 rgba(255, 255, 255, 0.04);
-    --clay-shadow-lifted:
-        0 3px 0 0 color-mix(in srgb, var(--color-surface) 60%, black),
-        inset 0 2px 3px 0 rgba(0, 0, 0, 0.15),
-        inset 0 1px 1px 0 rgba(255, 255, 255, 0.04);
-    --clay-shadow-raised:
-        0 4px 0 0 color-mix(in srgb, var(--color-surface) 60%, black),
-        inset 0 2px 3px 0 rgba(0, 0, 0, 0.15),
-        inset 0 1px 1px 0 rgba(255, 255, 255, 0.04);
-    --clay-shadow-floating:
-        0 2px 0 0 color-mix(in srgb, var(--color-surface) 60%, black),
-        inset 0 2px 3px 0 rgba(0, 0, 0, 0.15),
-        inset 0 1px 1px 0 rgba(255, 255, 255, 0.04);
-    --clay-shadow-flat:
-        inset 0 1px 3px 0 rgba(0, 0, 0, 0.15),
-        inset 0 1px 1px 0 rgba(0, 0, 0, 0.1);
-    --clay-shadow-sunken:
-        inset 0 2px 5px 0 rgba(0, 0, 0, 0.2),
-        inset 0 1px 3px 0 rgba(0, 0, 0, 0.15),
-        inset 0 0 0 1px rgba(0, 0, 0, 0.05);
-    --clay-shadow-sidebar: 4px 0 0 0 color-mix(in srgb, var(--color-surface) 60%, black);
-    --clay-shadow-player: 0 -4px 0 0 color-mix(in srgb, var(--color-surface) 60%, black);
+  /* Theme color tokens — values come from data-color-theme selectors above */
+  --color-accent: var(--color-accent);
+  --color-accent-muted: color-mix(in srgb, var(--color-accent) 55%, var(--color-muted));
+  --color-accent-secondary: var(--color-accent-secondary);
+  --color-accent-foreground: color-mix(in srgb, var(--color-accent) 70%, var(--color-foreground));
+  --color-danger: #ef4444;
+  --color-warning: #f59e0b;
+  --color-discord: #5865f2;
+  --color-surface: var(--color-surface);
+  --color-base: var(--color-base);
+  --color-elevated: var(--color-elevated);
+  --color-border: var(--color-border);
+  --color-fg: var(--color-fg);
+  --color-muted: var(--color-muted);
+  --color-faint: var(--color-faint);
+  --color-foreground: var(--color-foreground);
+  --color-foreground-muted: var(--color-foreground-muted);
+  /* Fonts */
+  --font-display: 'Cherry Bomb One', regular;
+  --font-body: 'Chiron GoRound TC', regular;
+  --font-mono: 'JetBrains Mono', monospace;
+  /* Animations */
+  --animate-fade-up: fadeUp 0.3s ease forwards;
+  --animate-slide-in-right: slideInRight 0.3s ease forwards;
+  --animate-slide-up: slideUp 0.3s ease forwards;
+  --animate-pulse-gentle: pulseGentle 2.4s ease-in-out infinite;
+  /* Clay radius tokens — consistent "pebble" proportions */
+  --clay-radius-sm: 9px;
+  --clay-radius-md: 12px;
+  --clay-radius-lg: 14px;
+  /* Clay highlight — top-light gradient endpoint */
+  --clay-highlight: color-mix(in srgb, var(--color-elevated) 65%, white);
+  /* Clay elevation tokens — 4 deliberate depth levels */
+  --clay-shadow-resting:
+    0 2px 0 0 color-mix(in srgb, var(--color-surface) 60%, black),
+    inset 0 2px 3px 0 rgba(0, 0, 0, 0.15), inset 0 1px 1px 0 rgba(255, 255, 255, 0.04);
+  --clay-shadow-lifted:
+    0 3px 0 0 color-mix(in srgb, var(--color-surface) 60%, black),
+    inset 0 2px 3px 0 rgba(0, 0, 0, 0.15), inset 0 1px 1px 0 rgba(255, 255, 255, 0.04);
+  --clay-shadow-raised:
+    0 4px 0 0 color-mix(in srgb, var(--color-surface) 60%, black),
+    inset 0 2px 3px 0 rgba(0, 0, 0, 0.15), inset 0 1px 1px 0 rgba(255, 255, 255, 0.04);
+  --clay-shadow-floating:
+    0 2px 0 0 color-mix(in srgb, var(--color-surface) 60%, black),
+    inset 0 2px 3px 0 rgba(0, 0, 0, 0.15), inset 0 1px 1px 0 rgba(255, 255, 255, 0.04);
+  --clay-shadow-flat: inset 0 1px 3px 0 rgba(0, 0, 0, 0.15), inset 0 1px 1px 0 rgba(0, 0, 0, 0.1);
+  --clay-shadow-sunken:
+    inset 0 2px 5px 0 rgba(0, 0, 0, 0.2), inset 0 1px 3px 0 rgba(0, 0, 0, 0.15),
+    inset 0 0 0 1px rgba(0, 0, 0, 0.05);
+  --clay-shadow-sidebar: 4px 0 0 0 color-mix(in srgb, var(--color-surface) 60%, black);
+  --clay-shadow-player: 0 -4px 0 0 color-mix(in srgb, var(--color-surface) 60%, black);
 }
 
 /* Light mode: add soft blur to clay shadows for depth on lighter surfaces */
-[data-mode="light"] {
-    --clay-shadow-resting:
-        0 2px 0 0 color-mix(in srgb, var(--color-surface) 60%, black),
-        0 3px 6px -2px rgba(0, 0, 0, 0.12),
-        0 -4px 8px -4px rgba(0, 0, 0, 0.14);
-    --clay-shadow-lifted:
-        0 3px 0 0 color-mix(in srgb, var(--color-surface) 60%, black),
-        0 4px 10px -2px rgba(0, 0, 0, 0.14),
-        0 -5px 10px -4px rgba(0, 0, 0, 0.16);
-    --clay-shadow-raised:
-        0 4px 0 0 color-mix(in srgb, var(--color-surface) 60%, black),
-        0 5px 12px -2px rgba(0, 0, 0, 0.16),
-        0 -6px 14px -4px rgba(0, 0, 0, 0.18);
-    --clay-shadow-floating:
-        0 2px 0 0 color-mix(in srgb, var(--color-surface) 60%, black),
-        0 8px 16px -4px rgba(0, 0, 0, 0.2),
-        0 -9px 18px -6px rgba(0, 0, 0, 0.20);
-    --clay-shadow-sidebar: 4px 0 16px -4px rgba(0, 0, 0, 0.2);
-    --clay-shadow-player: 0 -4px 16px -4px rgba(0, 0, 0, 0.2);
+[data-mode='light'] {
+  --clay-shadow-resting:
+    0 2px 0 0 color-mix(in srgb, var(--color-surface) 60%, black),
+    0 3px 6px -2px rgba(0, 0, 0, 0.12), 0 -4px 8px -4px rgba(0, 0, 0, 0.14);
+  --clay-shadow-lifted:
+    0 3px 0 0 color-mix(in srgb, var(--color-surface) 60%, black),
+    0 4px 10px -2px rgba(0, 0, 0, 0.14), 0 -5px 10px -4px rgba(0, 0, 0, 0.16);
+  --clay-shadow-raised:
+    0 4px 0 0 color-mix(in srgb, var(--color-surface) 60%, black),
+    0 5px 12px -2px rgba(0, 0, 0, 0.16), 0 -6px 14px -4px rgba(0, 0, 0, 0.18);
+  --clay-shadow-floating:
+    0 2px 0 0 color-mix(in srgb, var(--color-surface) 60%, black),
+    0 8px 16px -4px rgba(0, 0, 0, 0.2), 0 -9px 18px -6px rgba(0, 0, 0, 0.2);
+  --clay-shadow-sidebar: 4px 0 16px -4px rgba(0, 0, 0, 0.2);
+  --clay-shadow-player: 0 -4px 16px -4px rgba(0, 0, 0, 0.2);
 }
 
 @layer base {
-    * {
-        box-sizing: border-box;
-    }
+  * {
+    box-sizing: border-box;
+  }
 
-    html,
-    body,
-    #root {
-        height: 100%;
-    }
+  html,
+  body,
+  #root {
+    height: 100%;
+  }
 
-    /* Shared button state tokens */
-    :root {
-        --btn-transform-hover: translateY(-1px);
-        --btn-transform-active: translateY(4px);
-        --btn-transform-active-sm: translateY(2px);
-        --btn-transform-active-md: translateY(3px);
-        --btn-scale-active: 0.99;
-    }
+  /* Shared button state tokens */
+  :root {
+    --btn-transform-hover: translateY(-1px);
+    --btn-transform-active: translateY(4px);
+    --btn-transform-active-sm: translateY(2px);
+    --btn-transform-active-md: translateY(3px);
+    --btn-scale-active: 0.99;
+  }
 
-    body {
-        background-color: var(--color-base);
-        color: var(--color-fg);
-        font-family: var(--font-body);
-        -webkit-font-smoothing: antialiased;
-        text-rendering: optimizeLegibility;
-        font-variant-ligatures: common-ligatures;
-        transition:
-            background-color 0.3s ease,
-            color 0.3s ease;
-        /* Prevent horizontal scroll on mobile */
-        overflow-x: hidden;
-    }
+  body {
+    background-color: var(--color-base);
+    color: var(--color-fg);
+    font-family: var(--font-body);
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+    font-variant-ligatures: common-ligatures;
+    transition:
+      background-color 0.3s ease,
+      color 0.3s ease;
+    /* Prevent horizontal scroll on mobile */
+    overflow-x: hidden;
+  }
 
-    /* Safe area insets for mobile devices */
-    .safe-area-top {
-        padding-top: env(safe-area-inset-top, 0);
-    }
-    .safe-area-bottom {
-        padding-bottom: env(safe-area-inset-bottom, 0);
-    }
+  /* Safe area insets for mobile devices */
+  .safe-area-top {
+    padding-top: env(safe-area-inset-top, 0);
+  }
+  .safe-area-bottom {
+    padding-bottom: env(safe-area-inset-bottom, 0);
+  }
 
-    ::-webkit-scrollbar {
-        width: 6px;
-        height: 6px;
-    }
-    ::-webkit-scrollbar-track {
-        background: transparent;
-    }
-    ::-webkit-scrollbar-thumb {
-        background: var(--color-faint);
-        border-radius: 3px;
-    }
-    ::-webkit-scrollbar-thumb:hover {
-        background: var(--color-muted);
-    }
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: var(--color-faint);
+    border-radius: 3px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: var(--color-muted);
+  }
 }
 
 @layer components {
-    .skeleton {
-        opacity: 0;
-        background: linear-gradient(
-            90deg,
-            var(--color-elevated) 25%,
-            var(--color-border) 50%,
-            var(--color-elevated) 75%
-        );
-        background-size: 400px 100%;
-        animation:
-            skeleton-appear 0s 0.2s forwards,
-            shimmer 1.4s 0.2s infinite linear;
-        border-radius: 4px;
-    }
+  .skeleton {
+    opacity: 0;
+    background: linear-gradient(
+      90deg,
+      var(--color-elevated) 25%,
+      var(--color-border) 50%,
+      var(--color-elevated) 75%
+    );
+    background-size: 400px 100%;
+    animation:
+      skeleton-appear 0s 0.2s forwards,
+      shimmer 1.4s 0.2s infinite linear;
+    border-radius: 4px;
+  }
 
-    .btn-primary {
-        @apply font-body text-sm px-4 py-2.5 md:py-2
+  .btn-primary {
+    @apply font-body text-sm px-4 py-2.5 md:py-2
            transition-all duration-150 cursor-pointer disabled:opacity-40
            disabled:cursor-not-allowed min-h-11 md:min-h-0;
-        border-radius: var(--clay-radius-lg);
-        color: var(--color-fg);
-        background: color-mix(in srgb, var(--color-accent) 95%, white);
-        box-shadow:
-            0 2px 0 0 color-mix(in srgb, var(--color-accent) 100%, black 35%),
-            inset 0 2px 3px 0 rgba(0, 0, 0, 0.15),
-            inset 0 1px 1px 0 rgba(255, 255, 255, 0.04);
-    }
-    .btn-primary:hover {
-        transform: var(--btn-transform-hover);
-        background: color-mix(in srgb, var(--color-accent) 88%, white);
-        box-shadow:
-            0 4px 0 0 color-mix(in srgb, var(--color-accent) 100%, black 35%),
-            inset 0 2px 3px 0 rgba(0, 0, 0, 0.15),
-            inset 0 1px 1px 0 rgba(255, 255, 255, 0.04);
-    }
-    .btn-primary:active {
-        transform: var(--btn-transform-active-md);
-        scale: var(--btn-scale-active);
-        background: var(--color-accent);
-        box-shadow:
-            0 1px 0 0 color-mix(in srgb, var(--color-accent) 100%, black 20%),
-            inset 0 2px 3px 0 rgba(0, 0, 0, 0.15);
-    }
-    .btn-primary.pressed {
-        transform: var(--btn-transform-active-md);
-        scale: var(--btn-scale-active);
-        background: color-mix(in srgb, var(--color-accent) 75%, black);
-        box-shadow: inset 0 2px 3px 0 rgba(0, 0, 0, 0.2);
-    }
+    border-radius: var(--clay-radius-lg);
+    color: var(--color-fg);
+    background: color-mix(in srgb, var(--color-accent) 95%, white);
+    box-shadow:
+      0 2px 0 0 color-mix(in srgb, var(--color-accent) 100%, black 35%),
+      inset 0 2px 3px 0 rgba(0, 0, 0, 0.15),
+      inset 0 1px 1px 0 rgba(255, 255, 255, 0.04);
+  }
+  .btn-primary:hover {
+    transform: var(--btn-transform-hover);
+    background: color-mix(in srgb, var(--color-accent) 88%, white);
+    box-shadow:
+      0 4px 0 0 color-mix(in srgb, var(--color-accent) 100%, black 35%),
+      inset 0 2px 3px 0 rgba(0, 0, 0, 0.15),
+      inset 0 1px 1px 0 rgba(255, 255, 255, 0.04);
+  }
+  .btn-primary:active {
+    transform: var(--btn-transform-active-md);
+    scale: var(--btn-scale-active);
+    background: var(--color-accent);
+    box-shadow:
+      0 1px 0 0 color-mix(in srgb, var(--color-accent) 100%, black 20%),
+      inset 0 2px 3px 0 rgba(0, 0, 0, 0.15);
+  }
+  .btn-primary.pressed {
+    transform: var(--btn-transform-active-md);
+    scale: var(--btn-scale-active);
+    background: color-mix(in srgb, var(--color-accent) 75%, black);
+    box-shadow: inset 0 2px 3px 0 rgba(0, 0, 0, 0.2);
+  }
 
-    /* Light mode: solid bottom shadow for visible depth on light backgrounds */
-    [data-mode="light"] .btn-primary {
-        background: color-mix(in srgb, var(--color-accent) 85%, white);
-        box-shadow:
-            0 2px 0 0 color-mix(in srgb, var(--color-accent) 100%, black 25%),
-            0 2px 4px rgba(0, 0, 0, 0.08),
-            0 0 0 1px rgba(0, 0, 0, 0.04);
-    }
-    [data-mode="light"] .btn-primary:hover {
-        background: color-mix(in srgb, var(--color-accent) 75%, white);
-        box-shadow:
-            0 3px 0 0 color-mix(in srgb, var(--color-accent) 100%, black 25%),
-            0 3px 6px rgba(0, 0, 0, 0.1),
-            0 0 0 1px rgba(0, 0, 0, 0.06);
-    }
-    [data-mode="light"] .btn-primary:active {
-        background: var(--color-accent);
-        box-shadow:
-            0 1px 0 0 color-mix(in srgb, var(--color-accent) 100%, black 15%),
-            inset 0 2px 3px 0 rgba(0, 0, 0, 0.08);
-    }
-    [data-mode="light"] .btn-primary.pressed {
-        background: color-mix(in srgb, var(--color-accent) 80%, black);
-        box-shadow: inset 0 2px 3px 0 rgba(0, 0, 0, 0.15);
-    }
+  /* Light mode: solid bottom shadow for visible depth on light backgrounds */
+  [data-mode='light'] .btn-primary {
+    background: color-mix(in srgb, var(--color-accent) 85%, white);
+    box-shadow:
+      0 2px 0 0 color-mix(in srgb, var(--color-accent) 100%, black 25%),
+      0 2px 4px rgba(0, 0, 0, 0.08),
+      0 0 0 1px rgba(0, 0, 0, 0.04);
+  }
+  [data-mode='light'] .btn-primary:hover {
+    background: color-mix(in srgb, var(--color-accent) 75%, white);
+    box-shadow:
+      0 3px 0 0 color-mix(in srgb, var(--color-accent) 100%, black 25%),
+      0 3px 6px rgba(0, 0, 0, 0.1),
+      0 0 0 1px rgba(0, 0, 0, 0.06);
+  }
+  [data-mode='light'] .btn-primary:active {
+    background: var(--color-accent);
+    box-shadow:
+      0 1px 0 0 color-mix(in srgb, var(--color-accent) 100%, black 15%),
+      inset 0 2px 3px 0 rgba(0, 0, 0, 0.08);
+  }
+  [data-mode='light'] .btn-primary.pressed {
+    background: color-mix(in srgb, var(--color-accent) 80%, black);
+    box-shadow: inset 0 2px 3px 0 rgba(0, 0, 0, 0.15);
+  }
 
-    .btn-primary-secondary {
-        @apply font-body text-sm px-4 py-2.5 md:py-2
+  .btn-primary-secondary {
+    @apply font-body text-sm px-4 py-2.5 md:py-2
            transition-all duration-150 cursor-pointer disabled:opacity-40
            disabled:cursor-not-allowed min-h-11 md:min-h-0;
-        border-radius: var(--clay-radius-lg);
-        color: var(--color-fg);
-        background: color-mix(in srgb, var(--color-accent-secondary) 95%, white);
-        box-shadow:
-            0 2px 0 0 color-mix(in srgb, var(--color-accent-secondary) 100%, black 35%),
-            inset 0 2px 3px 0 rgba(0, 0, 0, 0.15),
-            inset 0 1px 1px 0 rgba(255, 255, 255, 0.04);
-    }
-    .btn-primary-secondary:hover {
-        transform: var(--btn-transform-hover);
-        background: color-mix(in srgb, var(--color-accent-secondary) 88%, white);
-        box-shadow:
-            0 4px 0 0 color-mix(in srgb, var(--color-accent-secondary) 100%, black 35%),
-            inset 0 2px 3px 0 rgba(0, 0, 0, 0.15),
-            inset 0 1px 1px 0 rgba(255, 255, 255, 0.04);
-    }
-    .btn-primary-secondary:active {
-        transform: var(--btn-transform-active-md);
-        scale: var(--btn-scale-active);
-        background: var(--color-accent-secondary);
-        box-shadow:
-            0 1px 0 0 color-mix(in srgb, var(--color-accent-secondary) 100%, black 20%),
-            inset 0 2px 3px 0 rgba(0, 0, 0, 0.15);
-    }
-    .btn-primary-secondary.pressed {
-        transform: var(--btn-transform-active-md);
-        scale: var(--btn-scale-active);
-        background: color-mix(in srgb, var(--color-accent-secondary) 75%, black);
-        box-shadow: inset 0 2px 3px 0 rgba(0, 0, 0, 0.2);
-    }
+    border-radius: var(--clay-radius-lg);
+    color: var(--color-fg);
+    background: color-mix(in srgb, var(--color-accent-secondary) 95%, white);
+    box-shadow:
+      0 2px 0 0 color-mix(in srgb, var(--color-accent-secondary) 100%, black 35%),
+      inset 0 2px 3px 0 rgba(0, 0, 0, 0.15),
+      inset 0 1px 1px 0 rgba(255, 255, 255, 0.04);
+  }
+  .btn-primary-secondary:hover {
+    transform: var(--btn-transform-hover);
+    background: color-mix(in srgb, var(--color-accent-secondary) 88%, white);
+    box-shadow:
+      0 4px 0 0 color-mix(in srgb, var(--color-accent-secondary) 100%, black 35%),
+      inset 0 2px 3px 0 rgba(0, 0, 0, 0.15),
+      inset 0 1px 1px 0 rgba(255, 255, 255, 0.04);
+  }
+  .btn-primary-secondary:active {
+    transform: var(--btn-transform-active-md);
+    scale: var(--btn-scale-active);
+    background: var(--color-accent-secondary);
+    box-shadow:
+      0 1px 0 0 color-mix(in srgb, var(--color-accent-secondary) 100%, black 20%),
+      inset 0 2px 3px 0 rgba(0, 0, 0, 0.15);
+  }
+  .btn-primary-secondary.pressed {
+    transform: var(--btn-transform-active-md);
+    scale: var(--btn-scale-active);
+    background: color-mix(in srgb, var(--color-accent-secondary) 75%, black);
+    box-shadow: inset 0 2px 3px 0 rgba(0, 0, 0, 0.2);
+  }
 
-    [data-mode="light"] .btn-primary-secondary {
-        background: color-mix(in srgb, var(--color-accent-secondary) 85%, white);
-        box-shadow:
-            0 2px 0 0 color-mix(in srgb, var(--color-accent-secondary) 100%, black 25%),
-            0 2px 4px rgba(0, 0, 0, 0.08),
-            0 0 0 1px rgba(0, 0, 0, 0.04);
-    }
-    [data-mode="light"] .btn-primary-secondary:hover {
-        background: color-mix(in srgb, var(--color-accent-secondary) 75%, white);
-        box-shadow:
-            0 3px 0 0 color-mix(in srgb, var(--color-accent-secondary) 100%, black 25%),
-            0 3px 6px rgba(0, 0, 0, 0.1),
-            0 0 0 1px rgba(0, 0, 0, 0.06);
-    }
-    [data-mode="light"] .btn-primary-secondary:active {
-        background: var(--color-accent-secondary);
-        box-shadow:
-            0 1px 0 0 color-mix(in srgb, var(--color-accent-secondary) 100%, black 15%),
-            inset 0 2px 3px 0 rgba(0, 0, 0, 0.08);
-    }
-    [data-mode="light"] .btn-primary-secondary.pressed {
-        background: color-mix(in srgb, var(--color-accent-secondary) 80%, black);
-        box-shadow: inset 0 2px 3px 0 rgba(0, 0, 0, 0.15);
-    }
+  [data-mode='light'] .btn-primary-secondary {
+    background: color-mix(in srgb, var(--color-accent-secondary) 85%, white);
+    box-shadow:
+      0 2px 0 0 color-mix(in srgb, var(--color-accent-secondary) 100%, black 25%),
+      0 2px 4px rgba(0, 0, 0, 0.08),
+      0 0 0 1px rgba(0, 0, 0, 0.04);
+  }
+  [data-mode='light'] .btn-primary-secondary:hover {
+    background: color-mix(in srgb, var(--color-accent-secondary) 75%, white);
+    box-shadow:
+      0 3px 0 0 color-mix(in srgb, var(--color-accent-secondary) 100%, black 25%),
+      0 3px 6px rgba(0, 0, 0, 0.1),
+      0 0 0 1px rgba(0, 0, 0, 0.06);
+  }
+  [data-mode='light'] .btn-primary-secondary:active {
+    background: var(--color-accent-secondary);
+    box-shadow:
+      0 1px 0 0 color-mix(in srgb, var(--color-accent-secondary) 100%, black 15%),
+      inset 0 2px 3px 0 rgba(0, 0, 0, 0.08);
+  }
+  [data-mode='light'] .btn-primary-secondary.pressed {
+    background: color-mix(in srgb, var(--color-accent-secondary) 80%, black);
+    box-shadow: inset 0 2px 3px 0 rgba(0, 0, 0, 0.15);
+  }
 
-    .btn-primary-surface {
-        @apply font-body text-sm px-4 py-2.5 md:py-2
+  .btn-primary-surface {
+    @apply font-body text-sm px-4 py-2.5 md:py-2
            transition-all duration-150 cursor-pointer disabled:opacity-40
            disabled:cursor-not-allowed min-h-11 md:min-h-0;
-        border-radius: var(--clay-radius-lg);
-        color: var(--color-fg);
-        background: linear-gradient(
-            180deg,
-            color-mix(in srgb, var(--color-surface) 85%, white) 0%,
-            var(--color-surface) 100%
-        );
-        box-shadow:
-            0 3px 0 0
-                color-mix(in srgb, var(--color-surface) 60%, black),
-            0 4px 8px -2px rgba(0, 0, 0, 0.3),
-            inset 0 1px 1px 0 rgba(255, 255, 255, 0.08);
-    }
-    .btn-primary-surface:hover {
-        transform: var(--btn-transform-hover);
-        background: linear-gradient(
-            180deg,
-            color-mix(in srgb, var(--color-surface) 70%, white) 0%,
-            var(--color-surface) 100%
-        );
-        box-shadow:
-            0 4px 0 0
-                color-mix(in srgb, var(--color-surface) 60%, black),
-            0 6px 12px -2px rgba(0, 0, 0, 0.35),
-            inset 0 1px 1px 0 rgba(255, 255, 255, 0.08);
-    }
-    .btn-primary-surface:active {
-        transform: var(--btn-transform-active);
-        scale: var(--btn-scale-active);
-        box-shadow:
-            0 1px 0 0 color-mix(in srgb, var(--color-surface) 60%, black),
-            inset 0 2px 3px 0 rgba(0, 0, 0, 0.15);
-    }
-    .btn-primary-surface.pressed {
-        transform: var(--btn-transform-active);
-        scale: var(--btn-scale-active);
-        box-shadow: inset 0 2px 4px 0 rgba(0, 0, 0, 0.25);
-    }
+    border-radius: var(--clay-radius-lg);
+    color: var(--color-fg);
+    background: linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--color-surface) 85%, white) 0%,
+      var(--color-surface) 100%
+    );
+    box-shadow:
+      0 3px 0 0 color-mix(in srgb, var(--color-surface) 60%, black),
+      0 4px 8px -2px rgba(0, 0, 0, 0.3),
+      inset 0 1px 1px 0 rgba(255, 255, 255, 0.08);
+  }
+  .btn-primary-surface:hover {
+    transform: var(--btn-transform-hover);
+    background: linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--color-surface) 70%, white) 0%,
+      var(--color-surface) 100%
+    );
+    box-shadow:
+      0 4px 0 0 color-mix(in srgb, var(--color-surface) 60%, black),
+      0 6px 12px -2px rgba(0, 0, 0, 0.35),
+      inset 0 1px 1px 0 rgba(255, 255, 255, 0.08);
+  }
+  .btn-primary-surface:active {
+    transform: var(--btn-transform-active);
+    scale: var(--btn-scale-active);
+    box-shadow:
+      0 1px 0 0 color-mix(in srgb, var(--color-surface) 60%, black),
+      inset 0 2px 3px 0 rgba(0, 0, 0, 0.15);
+  }
+  .btn-primary-surface.pressed {
+    transform: var(--btn-transform-active);
+    scale: var(--btn-scale-active);
+    box-shadow: inset 0 2px 4px 0 rgba(0, 0, 0, 0.25);
+  }
 
-    .btn-inherit {
-        @apply font-body text-sm px-4 py-2.5 md:py-2
+  .btn-inherit {
+    @apply font-body text-sm px-4 py-2.5 md:py-2
            transition-all duration-150 cursor-pointer disabled:opacity-40
            disabled:cursor-not-allowed min-h-11 md:min-h-0;
-        border-radius: var(--clay-radius-lg);
-        color: var(--color-fg);
-    }
+    border-radius: var(--clay-radius-lg);
+    color: var(--color-fg);
+  }
 
-    /* Dark mode: inherit uses 3px/5px bottom shadow (vs primary's 2px/4px)
+  /* Dark mode: inherit uses 3px/5px bottom shadow (vs primary's 2px/4px)
        to compensate for surface-colored shadows being less visually
        prominent than accent-colored shadows on dark backgrounds. */
-    .btn-inherit {
-        background: color-mix(in srgb, var(--btn-surface) 95%, white);
-        box-shadow:
-            0 3px 0 0 color-mix(in srgb, var(--btn-surface) 100%, black 35%),
-            inset 0 2px 3px 0 rgba(0, 0, 0, 0.15),
-            inset 0 1px 1px 0 rgba(255, 255, 255, 0.04);
-    }
-    .btn-inherit:hover {
-        transform: var(--btn-transform-hover);
-        background: color-mix(in srgb, var(--btn-surface) 88%, white);
-        box-shadow:
-            0 5px 0 0 color-mix(in srgb, var(--btn-surface) 100%, black 35%),
-            inset 0 2px 3px 0 rgba(0, 0, 0, 0.15),
-            inset 0 1px 1px 0 rgba(255, 255, 255, 0.04);
-    }
-    .btn-inherit:active {
-        transform: var(--btn-transform-active-md);
-        scale: var(--btn-scale-active);
-        background: var(--btn-surface);
-        box-shadow:
-            0 1px 0 0 color-mix(in srgb, var(--btn-surface) 100%, black 20%),
-            inset 0 2px 3px 0 rgba(0, 0, 0, 0.15);
-    }
-    .btn-inherit.pressed {
-        transform: var(--btn-transform-active-md);
-        scale: var(--btn-scale-active);
-        background: color-mix(in srgb, var(--btn-surface) 75%, black);
-        box-shadow: inset 0 2px 3px 0 rgba(0, 0, 0, 0.2);
-        color: var(--color-accent);
-    }
+  .btn-inherit {
+    background: color-mix(in srgb, var(--btn-surface) 95%, white);
+    box-shadow:
+      0 3px 0 0 color-mix(in srgb, var(--btn-surface) 100%, black 35%),
+      inset 0 2px 3px 0 rgba(0, 0, 0, 0.15),
+      inset 0 1px 1px 0 rgba(255, 255, 255, 0.04);
+  }
+  .btn-inherit:hover {
+    transform: var(--btn-transform-hover);
+    background: color-mix(in srgb, var(--btn-surface) 88%, white);
+    box-shadow:
+      0 5px 0 0 color-mix(in srgb, var(--btn-surface) 100%, black 35%),
+      inset 0 2px 3px 0 rgba(0, 0, 0, 0.15),
+      inset 0 1px 1px 0 rgba(255, 255, 255, 0.04);
+  }
+  .btn-inherit:active {
+    transform: var(--btn-transform-active-md);
+    scale: var(--btn-scale-active);
+    background: var(--btn-surface);
+    box-shadow:
+      0 1px 0 0 color-mix(in srgb, var(--btn-surface) 100%, black 20%),
+      inset 0 2px 3px 0 rgba(0, 0, 0, 0.15);
+  }
+  .btn-inherit.pressed {
+    transform: var(--btn-transform-active-md);
+    scale: var(--btn-scale-active);
+    background: color-mix(in srgb, var(--btn-surface) 75%, black);
+    box-shadow: inset 0 2px 3px 0 rgba(0, 0, 0, 0.2);
+    color: var(--color-accent);
+  }
 
-    /* Light mode: solid bottom shadow for visible depth on light backgrounds */
-    [data-mode="light"] .btn-inherit {
-        background: var(--btn-surface);
-        box-shadow:
-            0 2px 0 0 color-mix(in srgb, var(--btn-surface) 80%, black),
-            0 2px 4px rgba(0, 0, 0, 0.08),
-            0 0 0 1px rgba(0, 0, 0, 0.04);
-    }
-    [data-mode="light"] .btn-inherit:hover {
-        background: color-mix(in srgb, var(--btn-surface) 92%, white);
-        box-shadow:
-            0 3px 0 0 color-mix(in srgb, var(--btn-surface) 80%, black),
-            0 3px 6px rgba(0, 0, 0, 0.1),
-            0 0 0 1px rgba(0, 0, 0, 0.06);
-    }
-    [data-mode="light"] .btn-inherit:active {
-        background: color-mix(in srgb, var(--btn-surface) 95%, black);
-        box-shadow:
-            0 1px 0 0 color-mix(in srgb, var(--btn-surface) 100%, black 15%),
-            inset 0 2px 3px 0 rgba(0, 0, 0, 0.08);
-    }
-    [data-mode="light"] .btn-inherit.pressed {
-        background: color-mix(in srgb, var(--btn-surface) 90%, black);
-        box-shadow: inset 0 2px 3px 0 rgba(0, 0, 0, 0.15);
-        color: var(--color-accent);
-    }
+  /* Light mode: solid bottom shadow for visible depth on light backgrounds */
+  [data-mode='light'] .btn-inherit {
+    background: var(--btn-surface);
+    box-shadow:
+      0 2px 0 0 color-mix(in srgb, var(--btn-surface) 80%, black),
+      0 2px 4px rgba(0, 0, 0, 0.08),
+      0 0 0 1px rgba(0, 0, 0, 0.04);
+  }
+  [data-mode='light'] .btn-inherit:hover {
+    background: color-mix(in srgb, var(--btn-surface) 92%, white);
+    box-shadow:
+      0 3px 0 0 color-mix(in srgb, var(--btn-surface) 80%, black),
+      0 3px 6px rgba(0, 0, 0, 0.1),
+      0 0 0 1px rgba(0, 0, 0, 0.06);
+  }
+  [data-mode='light'] .btn-inherit:active {
+    background: color-mix(in srgb, var(--btn-surface) 95%, black);
+    box-shadow:
+      0 1px 0 0 color-mix(in srgb, var(--btn-surface) 100%, black 15%),
+      inset 0 2px 3px 0 rgba(0, 0, 0, 0.08);
+  }
+  [data-mode='light'] .btn-inherit.pressed {
+    background: color-mix(in srgb, var(--btn-surface) 90%, black);
+    box-shadow: inset 0 2px 3px 0 rgba(0, 0, 0, 0.15);
+    color: var(--color-accent);
+  }
 
-    .btn-danger {
-        @apply font-body text-sm px-4 py-2.5 md:py-2
+  .btn-danger {
+    @apply font-body text-sm px-4 py-2.5 md:py-2
            transition-all duration-150 cursor-pointer disabled:opacity-40
            disabled:cursor-not-allowed min-h-11 md:min-h-0;
-        border-radius: var(--clay-radius-lg);
-        color: #fff;
-        background: color-mix(in srgb, var(--color-danger) 95%, white);
-        box-shadow:
-            0 2px 0 0 color-mix(in srgb, var(--color-danger) 100%, black 35%),
-            inset 0 2px 3px 0 rgba(0, 0, 0, 0.15),
-            inset 0 1px 1px 0 rgba(255, 255, 255, 0.04);
-    }
-    .btn-danger:hover {
-        transform: var(--btn-transform-hover);
-        background: color-mix(in srgb, var(--color-danger) 88%, white);
-        box-shadow:
-            0 4px 0 0 color-mix(in srgb, var(--color-danger) 100%, black 35%),
-            inset 0 2px 3px 0 rgba(0, 0, 0, 0.15),
-            inset 0 1px 1px 0 rgba(255, 255, 255, 0.04);
-    }
-    .btn-danger:active {
-        transform: var(--btn-transform-active-md);
-        scale: var(--btn-scale-active);
-        background: var(--color-danger);
-        box-shadow:
-            0 1px 0 0 color-mix(in srgb, var(--color-danger) 100%, black 20%),
-            inset 0 2px 3px 0 rgba(0, 0, 0, 0.15);
-    }
-    .btn-danger.pressed {
-        transform: var(--btn-transform-active-md);
-        scale: var(--btn-scale-active);
-        background: color-mix(in srgb, var(--color-danger) 75%, black);
-        box-shadow: inset 0 2px 3px 0 rgba(0, 0, 0, 0.2);
-    }
+    border-radius: var(--clay-radius-lg);
+    color: #fff;
+    background: color-mix(in srgb, var(--color-danger) 95%, white);
+    box-shadow:
+      0 2px 0 0 color-mix(in srgb, var(--color-danger) 100%, black 35%),
+      inset 0 2px 3px 0 rgba(0, 0, 0, 0.15),
+      inset 0 1px 1px 0 rgba(255, 255, 255, 0.04);
+  }
+  .btn-danger:hover {
+    transform: var(--btn-transform-hover);
+    background: color-mix(in srgb, var(--color-danger) 88%, white);
+    box-shadow:
+      0 4px 0 0 color-mix(in srgb, var(--color-danger) 100%, black 35%),
+      inset 0 2px 3px 0 rgba(0, 0, 0, 0.15),
+      inset 0 1px 1px 0 rgba(255, 255, 255, 0.04);
+  }
+  .btn-danger:active {
+    transform: var(--btn-transform-active-md);
+    scale: var(--btn-scale-active);
+    background: var(--color-danger);
+    box-shadow:
+      0 1px 0 0 color-mix(in srgb, var(--color-danger) 100%, black 20%),
+      inset 0 2px 3px 0 rgba(0, 0, 0, 0.15);
+  }
+  .btn-danger.pressed {
+    transform: var(--btn-transform-active-md);
+    scale: var(--btn-scale-active);
+    background: color-mix(in srgb, var(--color-danger) 75%, black);
+    box-shadow: inset 0 2px 3px 0 rgba(0, 0, 0, 0.2);
+  }
 
-    [data-mode="light"] .btn-danger {
-        color: #fff;
-        background: var(--color-danger);
-        box-shadow:
-            0 2px 0 0 color-mix(in srgb, var(--color-danger) 80%, black),
-            0 2px 4px rgba(0, 0, 0, 0.08),
-            0 0 0 1px rgba(0, 0, 0, 0.04);
-    }
-    [data-mode="light"] .btn-danger:hover {
-        background: color-mix(in srgb, var(--color-danger) 92%, white);
-        box-shadow:
-            0 3px 0 0 color-mix(in srgb, var(--color-danger) 80%, black),
-            0 3px 6px rgba(0, 0, 0, 0.1),
-            0 0 0 1px rgba(0, 0, 0, 0.06);
-    }
-    [data-mode="light"] .btn-danger:active {
-        background: color-mix(in srgb, var(--color-danger) 95%, black);
-        box-shadow:
-            0 1px 0 0 color-mix(in srgb, var(--color-danger) 100%, black 15%),
-            inset 0 2px 3px 0 rgba(0, 0, 0, 0.08);
-    }
-    [data-mode="light"] .btn-danger.pressed {
-        background: color-mix(in srgb, var(--color-danger) 90%, black);
-        box-shadow: inset 0 2px 3px 0 rgba(0, 0, 0, 0.15);
-    }
+  [data-mode='light'] .btn-danger {
+    color: #fff;
+    background: var(--color-danger);
+    box-shadow:
+      0 2px 0 0 color-mix(in srgb, var(--color-danger) 80%, black),
+      0 2px 4px rgba(0, 0, 0, 0.08),
+      0 0 0 1px rgba(0, 0, 0, 0.04);
+  }
+  [data-mode='light'] .btn-danger:hover {
+    background: color-mix(in srgb, var(--color-danger) 92%, white);
+    box-shadow:
+      0 3px 0 0 color-mix(in srgb, var(--color-danger) 80%, black),
+      0 3px 6px rgba(0, 0, 0, 0.1),
+      0 0 0 1px rgba(0, 0, 0, 0.06);
+  }
+  [data-mode='light'] .btn-danger:active {
+    background: color-mix(in srgb, var(--color-danger) 95%, black);
+    box-shadow:
+      0 1px 0 0 color-mix(in srgb, var(--color-danger) 100%, black 15%),
+      inset 0 2px 3px 0 rgba(0, 0, 0, 0.08);
+  }
+  [data-mode='light'] .btn-danger.pressed {
+    background: color-mix(in srgb, var(--color-danger) 90%, black);
+    box-shadow: inset 0 2px 3px 0 rgba(0, 0, 0, 0.15);
+  }
 
-    .btn-discord {
-        @apply font-body text-sm px-4 py-2.5 md:py-2 transition-all duration-150 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed min-h-11 md:min-h-0;
-        border-radius: var(--clay-radius-lg);
-        color: #fff;
-        background: color-mix(in srgb, var(--color-discord) 95%, white);
-        box-shadow:
-            0 2px 0 0 color-mix(in srgb, var(--color-discord) 100%, black 35%),
-            inset 0 2px 3px 0 rgba(0, 0, 0, 0.15),
-            inset 0 1px 1px 0 rgba(255, 255, 255, 0.04);
-    }
-    .btn-discord:hover {
-        transform: var(--btn-transform-hover);
-        background: color-mix(in srgb, var(--color-discord) 88%, white);
-        box-shadow:
-            0 4px 0 0 color-mix(in srgb, var(--color-discord) 100%, black 35%),
-            inset 0 2px 3px 0 rgba(0, 0, 0, 0.15),
-            inset 0 1px 1px 0 rgba(255, 255, 255, 0.04);
-    }
-    .btn-discord:active {
-        transform: var(--btn-transform-active-md);
-        scale: var(--btn-scale-active);
-        background: var(--color-discord);
-        box-shadow:
-            0 1px 0 0 color-mix(in srgb, var(--color-discord) 100%, black 20%),
-            inset 0 2px 3px 0 rgba(0, 0, 0, 0.15);
-    }
-    .btn-discord.pressed {
-        transform: var(--btn-transform-active-md);
-        scale: var(--btn-scale-active);
-        background: color-mix(in srgb, var(--color-discord) 75%, black);
-        box-shadow: inset 0 2px 3px 0 rgba(0, 0, 0, 0.2);
-    }
+  .btn-discord {
+    @apply font-body text-sm px-4 py-2.5 md:py-2 transition-all duration-150 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed min-h-11 md:min-h-0;
+    border-radius: var(--clay-radius-lg);
+    color: #fff;
+    background: color-mix(in srgb, var(--color-discord) 95%, white);
+    box-shadow:
+      0 2px 0 0 color-mix(in srgb, var(--color-discord) 100%, black 35%),
+      inset 0 2px 3px 0 rgba(0, 0, 0, 0.15),
+      inset 0 1px 1px 0 rgba(255, 255, 255, 0.04);
+  }
+  .btn-discord:hover {
+    transform: var(--btn-transform-hover);
+    background: color-mix(in srgb, var(--color-discord) 88%, white);
+    box-shadow:
+      0 4px 0 0 color-mix(in srgb, var(--color-discord) 100%, black 35%),
+      inset 0 2px 3px 0 rgba(0, 0, 0, 0.15),
+      inset 0 1px 1px 0 rgba(255, 255, 255, 0.04);
+  }
+  .btn-discord:active {
+    transform: var(--btn-transform-active-md);
+    scale: var(--btn-scale-active);
+    background: var(--color-discord);
+    box-shadow:
+      0 1px 0 0 color-mix(in srgb, var(--color-discord) 100%, black 20%),
+      inset 0 2px 3px 0 rgba(0, 0, 0, 0.15);
+  }
+  .btn-discord.pressed {
+    transform: var(--btn-transform-active-md);
+    scale: var(--btn-scale-active);
+    background: color-mix(in srgb, var(--color-discord) 75%, black);
+    box-shadow: inset 0 2px 3px 0 rgba(0, 0, 0, 0.2);
+  }
 
-    /* Light mode: solid bottom shadow for visible depth on light backgrounds */
-    [data-mode="light"] .btn-discord {
-        background: color-mix(in srgb, var(--color-discord) 85%, white);
-        box-shadow:
-            0 2px 0 0 color-mix(in srgb, var(--color-discord) 100%, black 25%),
-            0 2px 4px rgba(0, 0, 0, 0.08),
-            0 0 0 1px rgba(0, 0, 0, 0.04);
-    }
-    [data-mode="light"] .btn-discord:hover {
-        background: color-mix(in srgb, var(--color-discord) 75%, white);
-        box-shadow:
-            0 3px 0 0 color-mix(in srgb, var(--color-discord) 100%, black 25%),
-            0 3px 6px rgba(0, 0, 0, 0.1),
-            0 0 0 1px rgba(0, 0, 0, 0.06);
-    }
-    [data-mode="light"] .btn-discord:active {
-        background: var(--color-discord);
-        box-shadow:
-            0 1px 0 0 color-mix(in srgb, var(--color-discord) 100%, black 15%),
-            inset 0 2px 3px 0 rgba(0, 0, 0, 0.08);
-    }
-    [data-mode="light"] .btn-discord.pressed {
-        background: color-mix(in srgb, var(--color-discord) 80%, black);
-        box-shadow: inset 0 2px 3px 0 rgba(0, 0, 0, 0.15);
-    }
-    .input {
-        @apply text-fg font-mono text-sm px-3 py-3 md:py-2 outline-none focus:border-accent/60 transition-all duration-200 placeholder:text-faint w-full;
-        border-radius: var(--clay-radius-md);
-        background: linear-gradient(
-            180deg,
-            var(--color-elevated) 0%,
-            color-mix(in srgb, var(--color-elevated) 90%, black) 100%
-        );
-        border: 1px solid transparent;
-        box-shadow:
-            var(--clay-shadow-flat),
-            inset 0 1px 0 0 rgba(255, 255, 255, 0.06);
-    }
-    .input:focus {
-        box-shadow:
-            var(--clay-shadow-flat),
-            0 0 0 2px color-mix(in srgb, var(--color-accent) 25%, transparent);
-    }
-    .input:focus-within {
-        border-color: color-mix(in srgb, var(--color-accent) 60%, transparent);
-        box-shadow:
-            var(--clay-shadow-flat),
-            0 0 0 2px color-mix(in srgb, var(--color-accent) 25%, transparent);
-    }
+  /* Light mode: solid bottom shadow for visible depth on light backgrounds */
+  [data-mode='light'] .btn-discord {
+    background: color-mix(in srgb, var(--color-discord) 85%, white);
+    box-shadow:
+      0 2px 0 0 color-mix(in srgb, var(--color-discord) 100%, black 25%),
+      0 2px 4px rgba(0, 0, 0, 0.08),
+      0 0 0 1px rgba(0, 0, 0, 0.04);
+  }
+  [data-mode='light'] .btn-discord:hover {
+    background: color-mix(in srgb, var(--color-discord) 75%, white);
+    box-shadow:
+      0 3px 0 0 color-mix(in srgb, var(--color-discord) 100%, black 25%),
+      0 3px 6px rgba(0, 0, 0, 0.1),
+      0 0 0 1px rgba(0, 0, 0, 0.06);
+  }
+  [data-mode='light'] .btn-discord:active {
+    background: var(--color-discord);
+    box-shadow:
+      0 1px 0 0 color-mix(in srgb, var(--color-discord) 100%, black 15%),
+      inset 0 2px 3px 0 rgba(0, 0, 0, 0.08);
+  }
+  [data-mode='light'] .btn-discord.pressed {
+    background: color-mix(in srgb, var(--color-discord) 80%, black);
+    box-shadow: inset 0 2px 3px 0 rgba(0, 0, 0, 0.15);
+  }
+  .input {
+    @apply text-fg font-mono text-sm px-3 py-3 md:py-2 outline-none focus:border-accent/60 transition-all duration-200 placeholder:text-faint w-full;
+    border-radius: var(--clay-radius-md);
+    background: linear-gradient(
+      180deg,
+      var(--color-elevated) 0%,
+      color-mix(in srgb, var(--color-elevated) 90%, black) 100%
+    );
+    border: 1px solid transparent;
+    box-shadow:
+      var(--clay-shadow-flat),
+      inset 0 1px 0 0 rgba(255, 255, 255, 0.06);
+  }
+  .input:focus {
+    box-shadow:
+      var(--clay-shadow-flat),
+      0 0 0 2px color-mix(in srgb, var(--color-accent) 25%, transparent);
+  }
+  .input:focus-within {
+    border-color: color-mix(in srgb, var(--color-accent) 60%, transparent);
+    box-shadow:
+      var(--clay-shadow-flat),
+      0 0 0 2px color-mix(in srgb, var(--color-accent) 25%, transparent);
+  }
 
-    .card {
-        @apply overflow-hidden transition-all duration-200;
-        border-radius: var(--clay-radius-lg);
-        background: linear-gradient(
-            180deg,
-            var(--clay-highlight) 0%,
-            var(--color-surface) 100%
-        );
-        box-shadow: var(--clay-shadow-resting);
-        border-bottom: 3px solid
-            color-mix(in srgb, var(--color-surface) 70%, black);
-    }
+  .card {
+    @apply overflow-hidden transition-all duration-200;
+    border-radius: var(--clay-radius-lg);
+    background: linear-gradient(180deg, var(--clay-highlight) 0%, var(--color-surface) 100%);
+    box-shadow: var(--clay-shadow-resting);
+    border-bottom: 3px solid color-mix(in srgb, var(--color-surface) 70%, black);
+  }
 
-    .btn-icon-primary {
-        @apply w-11 h-11 md:w-10 md:h-10 flex items-center justify-center
+  .btn-icon-primary {
+    @apply w-11 h-11 md:w-10 md:h-10 flex items-center justify-center
            transition-all duration-150 cursor-pointer disabled:opacity-40
            disabled:cursor-not-allowed;
-        border-radius: var(--clay-radius-md);
-        color: var(--color-fg);
-        background: color-mix(in srgb, var(--color-accent) 92%, white);
-        box-shadow:
-            0 1px 0 0 color-mix(in srgb, var(--color-accent) 100%, black 35%),
-            0 2px 4px -1px rgba(0, 0, 0, 0.2),
-            inset 0 1px 1px 0 rgba(0, 0, 0, 0.15),
-            inset 0 1px 1px 0 rgba(255, 255, 255, 0.04);
-    }
-    .btn-icon-primary:hover {
-        transform: var(--btn-transform-hover);
-        background: color-mix(in srgb, var(--color-accent) 88%, white);
-        box-shadow:
-            0 2px 0 0 color-mix(in srgb, var(--color-accent) 100%, black 35%),
-            0 3px 6px -1px rgba(0, 0, 0, 0.25),
-            inset 0 1px 1px 0 rgba(255, 255, 255, 0.04);
-    }
-    .btn-icon-primary:active {
-        transform: var(--btn-transform-active-sm);
-        scale: var(--btn-scale-active);
-        background: var(--color-accent);
-        box-shadow: inset 0 2px 3px 0 rgba(0, 0, 0, 0.2);
-    }
-    .btn-icon-primary.pressed {
-        transform: var(--btn-transform-active-sm);
-        background: color-mix(in srgb, var(--color-accent) 80%, black);
-        box-shadow: inset 0 2px 3px 0 rgba(0, 0, 0, 0.2);
-    }
+    border-radius: var(--clay-radius-md);
+    color: var(--color-fg);
+    background: color-mix(in srgb, var(--color-accent) 92%, white);
+    box-shadow:
+      0 1px 0 0 color-mix(in srgb, var(--color-accent) 100%, black 35%),
+      0 2px 4px -1px rgba(0, 0, 0, 0.2),
+      inset 0 1px 1px 0 rgba(0, 0, 0, 0.15),
+      inset 0 1px 1px 0 rgba(255, 255, 255, 0.04);
+  }
+  .btn-icon-primary:hover {
+    transform: var(--btn-transform-hover);
+    background: color-mix(in srgb, var(--color-accent) 88%, white);
+    box-shadow:
+      0 2px 0 0 color-mix(in srgb, var(--color-accent) 100%, black 35%),
+      0 3px 6px -1px rgba(0, 0, 0, 0.25),
+      inset 0 1px 1px 0 rgba(255, 255, 255, 0.04);
+  }
+  .btn-icon-primary:active {
+    transform: var(--btn-transform-active-sm);
+    scale: var(--btn-scale-active);
+    background: var(--color-accent);
+    box-shadow: inset 0 2px 3px 0 rgba(0, 0, 0, 0.2);
+  }
+  .btn-icon-primary.pressed {
+    transform: var(--btn-transform-active-sm);
+    background: color-mix(in srgb, var(--color-accent) 80%, black);
+    box-shadow: inset 0 2px 3px 0 rgba(0, 0, 0, 0.2);
+  }
 
-    [data-mode="light"] .btn-icon-primary {
-        background: color-mix(in srgb, var(--color-accent) 85%, white);
-        box-shadow:
-            0 1px 0 0 color-mix(in srgb, var(--color-accent) 100%, black 25%),
-            0 1px 3px rgba(0, 0, 0, 0.08),
-            0 0 0 1px rgba(0, 0, 0, 0.04);
-    }
-    [data-mode="light"] .btn-icon-primary:hover {
-        background: color-mix(in srgb, var(--color-accent) 75%, white);
-        box-shadow:
-            0 2px 0 0 color-mix(in srgb, var(--color-accent) 100%, black 25%),
-            0 2px 4px rgba(0, 0, 0, 0.1),
-            0 0 0 1px rgba(0, 0, 0, 0.06);
-    }
-    [data-mode="light"] .btn-icon-primary:active {
-        background: var(--color-accent);
-        box-shadow: inset 0 2px 3px 0 rgba(0, 0, 0, 0.1);
-    }
-    [data-mode="light"] .btn-icon-primary.pressed {
-        background: color-mix(in srgb, var(--color-accent) 80%, black);
-        box-shadow: inset 0 2px 3px 0 rgba(0, 0, 0, 0.15);
-    }
+  [data-mode='light'] .btn-icon-primary {
+    background: color-mix(in srgb, var(--color-accent) 85%, white);
+    box-shadow:
+      0 1px 0 0 color-mix(in srgb, var(--color-accent) 100%, black 25%),
+      0 1px 3px rgba(0, 0, 0, 0.08),
+      0 0 0 1px rgba(0, 0, 0, 0.04);
+  }
+  [data-mode='light'] .btn-icon-primary:hover {
+    background: color-mix(in srgb, var(--color-accent) 75%, white);
+    box-shadow:
+      0 2px 0 0 color-mix(in srgb, var(--color-accent) 100%, black 25%),
+      0 2px 4px rgba(0, 0, 0, 0.1),
+      0 0 0 1px rgba(0, 0, 0, 0.06);
+  }
+  [data-mode='light'] .btn-icon-primary:active {
+    background: var(--color-accent);
+    box-shadow: inset 0 2px 3px 0 rgba(0, 0, 0, 0.1);
+  }
+  [data-mode='light'] .btn-icon-primary.pressed {
+    background: color-mix(in srgb, var(--color-accent) 80%, black);
+    box-shadow: inset 0 2px 3px 0 rgba(0, 0, 0, 0.15);
+  }
 
-    .btn-icon-primary-secondary {
-        @apply w-11 h-11 md:w-10 md:h-10 flex items-center justify-center
+  .btn-icon-primary-secondary {
+    @apply w-11 h-11 md:w-10 md:h-10 flex items-center justify-center
            transition-all duration-150 cursor-pointer disabled:opacity-40
            disabled:cursor-not-allowed;
-        border-radius: var(--clay-radius-md);
-        color: var(--color-fg);
-        background: color-mix(in srgb, var(--color-accent-secondary) 92%, white);
-        box-shadow:
-            0 1px 0 0 color-mix(in srgb, var(--color-accent-secondary) 100%, black 35%),
-            0 2px 4px -1px rgba(0, 0, 0, 0.2),
-            inset 0 1px 1px 0 rgba(0, 0, 0, 0.15),
-            inset 0 1px 1px 0 rgba(255, 255, 255, 0.04);
-    }
-    .btn-icon-primary-secondary:hover {
-        transform: var(--btn-transform-hover);
-        background: color-mix(in srgb, var(--color-accent-secondary) 88%, white);
-        box-shadow:
-            0 2px 0 0 color-mix(in srgb, var(--color-accent-secondary) 100%, black 35%),
-            0 3px 6px -1px rgba(0, 0, 0, 0.25),
-            inset 0 1px 1px 0 rgba(255, 255, 255, 0.04);
-    }
-    .btn-icon-primary-secondary:active {
-        transform: var(--btn-transform-active-sm);
-        scale: var(--btn-scale-active);
-        background: var(--color-accent-secondary);
-        box-shadow: inset 0 2px 3px 0 rgba(0, 0, 0, 0.2);
-    }
-    .btn-icon-primary-secondary.pressed {
-        transform: var(--btn-transform-active-sm);
-        background: color-mix(in srgb, var(--color-accent-secondary) 80%, black);
-        box-shadow: inset 0 2px 3px 0 rgba(0, 0, 0, 0.2);
-    }
+    border-radius: var(--clay-radius-md);
+    color: var(--color-fg);
+    background: color-mix(in srgb, var(--color-accent-secondary) 92%, white);
+    box-shadow:
+      0 1px 0 0 color-mix(in srgb, var(--color-accent-secondary) 100%, black 35%),
+      0 2px 4px -1px rgba(0, 0, 0, 0.2),
+      inset 0 1px 1px 0 rgba(0, 0, 0, 0.15),
+      inset 0 1px 1px 0 rgba(255, 255, 255, 0.04);
+  }
+  .btn-icon-primary-secondary:hover {
+    transform: var(--btn-transform-hover);
+    background: color-mix(in srgb, var(--color-accent-secondary) 88%, white);
+    box-shadow:
+      0 2px 0 0 color-mix(in srgb, var(--color-accent-secondary) 100%, black 35%),
+      0 3px 6px -1px rgba(0, 0, 0, 0.25),
+      inset 0 1px 1px 0 rgba(255, 255, 255, 0.04);
+  }
+  .btn-icon-primary-secondary:active {
+    transform: var(--btn-transform-active-sm);
+    scale: var(--btn-scale-active);
+    background: var(--color-accent-secondary);
+    box-shadow: inset 0 2px 3px 0 rgba(0, 0, 0, 0.2);
+  }
+  .btn-icon-primary-secondary.pressed {
+    transform: var(--btn-transform-active-sm);
+    background: color-mix(in srgb, var(--color-accent-secondary) 80%, black);
+    box-shadow: inset 0 2px 3px 0 rgba(0, 0, 0, 0.2);
+  }
 
-    [data-mode="light"] .btn-icon-primary-secondary {
-        background: color-mix(in srgb, var(--color-accent-secondary) 85%, white);
-        box-shadow:
-            0 1px 0 0 color-mix(in srgb, var(--color-accent-secondary) 100%, black 25%),
-            0 1px 3px rgba(0, 0, 0, 0.08),
-            0 0 0 1px rgba(0, 0, 0, 0.04);
-    }
-    [data-mode="light"] .btn-icon-primary-secondary:hover {
-        background: color-mix(in srgb, var(--color-accent-secondary) 75%, white);
-        box-shadow:
-            0 2px 0 0 color-mix(in srgb, var(--color-accent-secondary) 100%, black 25%),
-            0 2px 4px rgba(0, 0, 0, 0.1),
-            0 0 0 1px rgba(0, 0, 0, 0.06);
-    }
-    [data-mode="light"] .btn-icon-primary-secondary:active {
-        background: var(--color-accent-secondary);
-        box-shadow: inset 0 2px 3px 0 rgba(0, 0, 0, 0.1);
-    }
-    [data-mode="light"] .btn-icon-primary-secondary.pressed {
-        background: color-mix(in srgb, var(--color-accent-secondary) 80%, black);
-        box-shadow: inset 0 2px 3px 0 rgba(0, 0, 0, 0.15);
-    }
+  [data-mode='light'] .btn-icon-primary-secondary {
+    background: color-mix(in srgb, var(--color-accent-secondary) 85%, white);
+    box-shadow:
+      0 1px 0 0 color-mix(in srgb, var(--color-accent-secondary) 100%, black 25%),
+      0 1px 3px rgba(0, 0, 0, 0.08),
+      0 0 0 1px rgba(0, 0, 0, 0.04);
+  }
+  [data-mode='light'] .btn-icon-primary-secondary:hover {
+    background: color-mix(in srgb, var(--color-accent-secondary) 75%, white);
+    box-shadow:
+      0 2px 0 0 color-mix(in srgb, var(--color-accent-secondary) 100%, black 25%),
+      0 2px 4px rgba(0, 0, 0, 0.1),
+      0 0 0 1px rgba(0, 0, 0, 0.06);
+  }
+  [data-mode='light'] .btn-icon-primary-secondary:active {
+    background: var(--color-accent-secondary);
+    box-shadow: inset 0 2px 3px 0 rgba(0, 0, 0, 0.1);
+  }
+  [data-mode='light'] .btn-icon-primary-secondary.pressed {
+    background: color-mix(in srgb, var(--color-accent-secondary) 80%, black);
+    box-shadow: inset 0 2px 3px 0 rgba(0, 0, 0, 0.15);
+  }
 
-    .btn-icon-primary-surface {
-        @apply w-11 h-11 md:w-10 md:h-10 flex items-center justify-center
+  .btn-icon-primary-surface {
+    @apply w-11 h-11 md:w-10 md:h-10 flex items-center justify-center
            transition-all duration-150 cursor-pointer disabled:opacity-40
            disabled:cursor-not-allowed;
-        border-radius: var(--clay-radius-md);
-        background: linear-gradient(
-            180deg,
-            color-mix(in srgb, var(--icon-btn-accent) 75%, white) 0%,
-            var(--icon-btn-accent) 100%
-        );
-        box-shadow:
-            0 1px 0 0 var(--icon-btn-shadow),
-            0 2px 4px -1px rgba(0, 0, 0, 0.2),
-            inset 0 1px 1px 0 rgba(255, 255, 255, 0.08);
-        --icon-btn-accent: var(--color-surface);
-        --icon-btn-shadow: color-mix(
-            in srgb,
-            var(--color-surface) 100%,
-            black 35%
-        );
-    }
-    .btn-icon-primary-surface:hover {
-        transform: var(--btn-transform-hover);
-        background: linear-gradient(
-            180deg,
-            color-mix(in srgb, var(--icon-btn-accent) 65%, white) 0%,
-            var(--icon-btn-accent) 100%
-        );
-        box-shadow:
-            0 2px 0 0 var(--icon-btn-shadow),
-            0 3px 6px -1px rgba(0, 0, 0, 0.25),
-            inset 0 1px 1px 0 rgba(255, 255, 255, 0.08);
-    }
-    .btn-icon-primary-surface:active {
-        transform: var(--btn-transform-active-sm);
-        scale: var(--btn-scale-active);
-        box-shadow: inset 0 2px 3px 0 rgba(0, 0, 0, 0.2);
-    }
-    .btn-icon-primary-surface.pressed {
-        transform: var(--btn-transform-active-sm);
-        background: linear-gradient(
-            180deg,
-            var(--icon-btn-accent) 0%,
-            color-mix(in srgb, var(--icon-btn-accent) 85%, black) 100%
-        );
-        box-shadow: inset 0 2px 3px 0 rgba(0, 0, 0, 0.2);
-    }
+    border-radius: var(--clay-radius-md);
+    background: linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--icon-btn-accent) 75%, white) 0%,
+      var(--icon-btn-accent) 100%
+    );
+    box-shadow:
+      0 1px 0 0 var(--icon-btn-shadow),
+      0 2px 4px -1px rgba(0, 0, 0, 0.2),
+      inset 0 1px 1px 0 rgba(255, 255, 255, 0.08);
+    --icon-btn-accent: var(--color-surface);
+    --icon-btn-shadow: color-mix(in srgb, var(--color-surface) 100%, black 35%);
+  }
+  .btn-icon-primary-surface:hover {
+    transform: var(--btn-transform-hover);
+    background: linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--icon-btn-accent) 65%, white) 0%,
+      var(--icon-btn-accent) 100%
+    );
+    box-shadow:
+      0 2px 0 0 var(--icon-btn-shadow),
+      0 3px 6px -1px rgba(0, 0, 0, 0.25),
+      inset 0 1px 1px 0 rgba(255, 255, 255, 0.08);
+  }
+  .btn-icon-primary-surface:active {
+    transform: var(--btn-transform-active-sm);
+    scale: var(--btn-scale-active);
+    box-shadow: inset 0 2px 3px 0 rgba(0, 0, 0, 0.2);
+  }
+  .btn-icon-primary-surface.pressed {
+    transform: var(--btn-transform-active-sm);
+    background: linear-gradient(
+      180deg,
+      var(--icon-btn-accent) 0%,
+      color-mix(in srgb, var(--icon-btn-accent) 85%, black) 100%
+    );
+    box-shadow: inset 0 2px 3px 0 rgba(0, 0, 0, 0.2);
+  }
 
-    .btn-icon-inherit {
-        @apply w-11 h-11 md:w-10 md:h-10 flex items-center justify-center
+  .btn-icon-inherit {
+    @apply w-11 h-11 md:w-10 md:h-10 flex items-center justify-center
            transition-all duration-150 cursor-pointer disabled:opacity-40
            disabled:cursor-not-allowed;
-        border-radius: var(--clay-radius-md);
-        color: var(--color-fg);
-    }
+    border-radius: var(--clay-radius-md);
+    color: var(--color-fg);
+  }
 
-    /* Dark mode: lighten surface with white mix */
-    .btn-icon-inherit {
-        background: color-mix(in srgb, var(--btn-surface) 92%, white);
-        box-shadow:
-            0 1px 0 0 color-mix(in srgb, var(--color-surface) 60%, black),
-            0 2px 4px -1px rgba(0, 0, 0, 0.2),
-            inset 0 1px 1px 0 rgba(0, 0, 0, 0.15),
-            inset 0 1px 1px 0 rgba(255, 255, 255, 0.04);
-    }
-    .btn-icon-inherit:hover {
-        transform: var(--btn-transform-hover);
-        background: color-mix(in srgb, var(--btn-surface) 88%, white);
-        box-shadow:
-            0 2px 0 0 color-mix(in srgb, var(--color-surface) 60%, black),
-            0 3px 6px -1px rgba(0, 0, 0, 0.25),
-            inset 0 2px 3px 0 rgba(0, 0, 0, 0.20),
-            inset 0 1px 1px 0 rgba(255, 255, 255, 0.05);
-    }
-    .btn-icon-inherit:active {
-        transform: var(--btn-transform-active-sm);
-        scale: var(--btn-scale-active);
-        background: var(--btn-surface);
-        box-shadow: inset 0 2px 3px 0 rgba(0, 0, 0, 0.2);
-    }
-    .btn-icon-inherit.pressed {
-        transform: var(--btn-transform-active-sm);
-        background: color-mix(in srgb, var(--btn-surface) 80%, black);
-        box-shadow: inset 0 2px 3px 0 rgba(0, 0, 0, 0.2);
-    }
+  /* Dark mode: lighten surface with white mix */
+  .btn-icon-inherit {
+    background: color-mix(in srgb, var(--btn-surface) 92%, white);
+    box-shadow:
+      0 1px 0 0 color-mix(in srgb, var(--color-surface) 60%, black),
+      0 2px 4px -1px rgba(0, 0, 0, 0.2),
+      inset 0 1px 1px 0 rgba(0, 0, 0, 0.15),
+      inset 0 1px 1px 0 rgba(255, 255, 255, 0.04);
+  }
+  .btn-icon-inherit:hover {
+    transform: var(--btn-transform-hover);
+    background: color-mix(in srgb, var(--btn-surface) 88%, white);
+    box-shadow:
+      0 2px 0 0 color-mix(in srgb, var(--color-surface) 60%, black),
+      0 3px 6px -1px rgba(0, 0, 0, 0.25),
+      inset 0 2px 3px 0 rgba(0, 0, 0, 0.2),
+      inset 0 1px 1px 0 rgba(255, 255, 255, 0.05);
+  }
+  .btn-icon-inherit:active {
+    transform: var(--btn-transform-active-sm);
+    scale: var(--btn-scale-active);
+    background: var(--btn-surface);
+    box-shadow: inset 0 2px 3px 0 rgba(0, 0, 0, 0.2);
+  }
+  .btn-icon-inherit.pressed {
+    transform: var(--btn-transform-active-sm);
+    background: color-mix(in srgb, var(--btn-surface) 80%, black);
+    box-shadow: inset 0 2px 3px 0 rgba(0, 0, 0, 0.2);
+  }
 
-    /* Light mode: distinguish via shadow + border */
-    [data-mode="light"] .btn-icon-inherit {
-        background: var(--btn-surface);
-        box-shadow:
-            0 1px 0 0 color-mix(in srgb, var(--btn-surface) 80%, black),
-            0 1px 3px rgba(0, 0, 0, 0.08),
-            0 0 0 1px rgba(0, 0, 0, 0.04);
-    }
-    [data-mode="light"] .btn-icon-inherit:hover {
-        background: color-mix(in srgb, var(--btn-surface) 92%, white);
-        box-shadow:
-            0 2px 0 0 color-mix(in srgb, var(--btn-surface) 80%, black),
-            0 2px 4px rgba(0, 0, 0, 0.1),
-            0 0 0 1px rgba(0, 0, 0, 0.06);
-    }
-    [data-mode="light"] .btn-icon-inherit:active {
-        background: color-mix(in srgb, var(--btn-surface) 95%, black);
-        box-shadow: inset 0 2px 3px 0 rgba(0, 0, 0, 0.1);
-    }
-    [data-mode="light"] .btn-icon-inherit.pressed {
-        background: color-mix(in srgb, var(--btn-surface) 90%, black);
-        box-shadow: inset 0 2px 3px 0 rgba(0, 0, 0, 0.15);
-    }
+  /* Light mode: distinguish via shadow + border */
+  [data-mode='light'] .btn-icon-inherit {
+    background: var(--btn-surface);
+    box-shadow:
+      0 1px 0 0 color-mix(in srgb, var(--btn-surface) 80%, black),
+      0 1px 3px rgba(0, 0, 0, 0.08),
+      0 0 0 1px rgba(0, 0, 0, 0.04);
+  }
+  [data-mode='light'] .btn-icon-inherit:hover {
+    background: color-mix(in srgb, var(--btn-surface) 92%, white);
+    box-shadow:
+      0 2px 0 0 color-mix(in srgb, var(--btn-surface) 80%, black),
+      0 2px 4px rgba(0, 0, 0, 0.1),
+      0 0 0 1px rgba(0, 0, 0, 0.06);
+  }
+  [data-mode='light'] .btn-icon-inherit:active {
+    background: color-mix(in srgb, var(--btn-surface) 95%, black);
+    box-shadow: inset 0 2px 3px 0 rgba(0, 0, 0, 0.1);
+  }
+  [data-mode='light'] .btn-icon-inherit.pressed {
+    background: color-mix(in srgb, var(--btn-surface) 90%, black);
+    box-shadow: inset 0 2px 3px 0 rgba(0, 0, 0, 0.15);
+  }
 
-    .btn-icon-danger {
-        @apply w-11 h-11 md:w-10 md:h-10 flex items-center justify-center
+  .btn-icon-danger {
+    @apply w-11 h-11 md:w-10 md:h-10 flex items-center justify-center
            transition-all duration-150 cursor-pointer disabled:opacity-40
            disabled:cursor-not-allowed;
-        border-radius: var(--clay-radius-md);
-        background: linear-gradient(
-            180deg,
-            color-mix(in srgb, var(--icon-btn-accent) 80%, white) 0%,
-            var(--icon-btn-accent) 100%
-        );
-        box-shadow:
-            0 1px 0 0 var(--icon-btn-shadow),
-            0 2px 4px -1px rgba(0, 0, 0, 0.2),
-            inset 0 1px 1px 0 rgba(255, 255, 255, 0.08);
-        --icon-btn-accent: var(--color-danger);
-        --icon-btn-shadow: color-mix(in srgb, var(--color-danger) 50%, black);
-    }
-    .btn-icon-danger:hover {
-        transform: var(--btn-transform-hover);
-        background: linear-gradient(
-            180deg,
-            color-mix(in srgb, var(--icon-btn-accent) 70%, white) 0%,
-            var(--icon-btn-accent) 100%
-        );
-        box-shadow:
-            0 2px 0 0 var(--icon-btn-shadow),
-            0 3px 6px -1px rgba(0, 0, 0, 0.25),
-            inset 0 1px 1px 0 rgba(255, 255, 255, 0.08);
-    }
-    .btn-icon-danger:active {
-        transform: var(--btn-transform-active-sm);
-        scale: var(--btn-scale-active);
-        box-shadow: inset 0 2px 3px 0 rgba(0, 0, 0, 0.2);
-    }
-    .btn-icon-danger.pressed {
-        transform: var(--btn-transform-active-sm);
-        scale: var(--btn-scale-active);
-        box-shadow: inset 0 2px 3px 0 rgba(0, 0, 0, 0.2);
-    }
-
+    border-radius: var(--clay-radius-md);
+    background: linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--icon-btn-accent) 80%, white) 0%,
+      var(--icon-btn-accent) 100%
+    );
+    box-shadow:
+      0 1px 0 0 var(--icon-btn-shadow),
+      0 2px 4px -1px rgba(0, 0, 0, 0.2),
+      inset 0 1px 1px 0 rgba(255, 255, 255, 0.08);
+    --icon-btn-accent: var(--color-danger);
+    --icon-btn-shadow: color-mix(in srgb, var(--color-danger) 50%, black);
+  }
+  .btn-icon-danger:hover {
+    transform: var(--btn-transform-hover);
+    background: linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--icon-btn-accent) 70%, white) 0%,
+      var(--icon-btn-accent) 100%
+    );
+    box-shadow:
+      0 2px 0 0 var(--icon-btn-shadow),
+      0 3px 6px -1px rgba(0, 0, 0, 0.25),
+      inset 0 1px 1px 0 rgba(255, 255, 255, 0.08);
+  }
+  .btn-icon-danger:active {
+    transform: var(--btn-transform-active-sm);
+    scale: var(--btn-scale-active);
+    box-shadow: inset 0 2px 3px 0 rgba(0, 0, 0, 0.2);
+  }
+  .btn-icon-danger.pressed {
+    transform: var(--btn-transform-active-sm);
+    scale: var(--btn-scale-active);
+    box-shadow: inset 0 2px 3px 0 rgba(0, 0, 0, 0.2);
+  }
 }
 
 @utility clay-resting {
-    box-shadow: var(--clay-shadow-resting);
+  box-shadow: var(--clay-shadow-resting);
 }
 @utility clay-raised {
-    box-shadow: var(--clay-shadow-raised);
+  box-shadow: var(--clay-shadow-raised);
 }
 @utility clay-floating {
-    box-shadow: var(--clay-shadow-floating);
+  box-shadow: var(--clay-shadow-floating);
 }
 @utility clay-flat {
-    box-shadow: var(--clay-shadow-flat);
+  box-shadow: var(--clay-shadow-flat);
 }
 @utility clay-inset {
-    background: linear-gradient(
-        180deg,
-        var(--color-elevated) 0%,
-        color-mix(in srgb, var(--color-elevated) 90%, black) 100%
-    );
-    box-shadow:
-        var(--clay-shadow-flat),
-        inset 0 1px 0 0 rgba(255, 255, 255, 0.06);
+  background: linear-gradient(
+    180deg,
+    var(--color-elevated) 0%,
+    color-mix(in srgb, var(--color-elevated) 90%, black) 100%
+  );
+  box-shadow:
+    var(--clay-shadow-flat),
+    inset 0 1px 0 0 rgba(255, 255, 255, 0.06);
 }
 @utility glass-panel {
   background:
@@ -1335,19 +1316,19 @@
       135deg,
       rgba(255, 255, 255, 0.04) 0%,
       rgba(255, 255, 255, 0.015) 40%,
-      rgba(255, 255, 255, 0.00) 100%
+      rgba(255, 255, 255, 0) 100%
     ),
     color-mix(in srgb, var(--color-base) 86%, transparent);
   backdrop-filter: blur(24px);
   -webkit-backdrop-filter: blur(24px);
 }
-[data-mode="light"] .glass-panel {
+[data-mode='light'] .glass-panel {
   background:
     linear-gradient(
       135deg,
       rgba(255, 255, 255, 0.06) 0%,
       rgba(255, 255, 255, 0.025) 50%,
-      rgba(255, 255, 255, 0.00) 100%
+      rgba(255, 255, 255, 0) 100%
     ),
     color-mix(in srgb, var(--color-base) 92%, transparent);
 }
@@ -1381,150 +1362,154 @@
 }
 
 @utility clay-sidebar-edge {
-    box-shadow: var(--clay-shadow-sidebar);
+  box-shadow: var(--clay-shadow-sidebar);
 }
 @utility clay-player-edge {
-    box-shadow: var(--clay-shadow-player);
+  box-shadow: var(--clay-shadow-player);
 }
 
 .expand-panel {
-    max-height: 0px;
-    overflow: hidden;
-    transition: max-height 0.3s ease;
+  max-height: 0px;
+  overflow: hidden;
+  transition: max-height 0.3s ease;
 }
 .expand-panel.expanded {
-    max-height: 600px;
+  max-height: 600px;
 }
 .expand-panel .expand-panel-content {
-    transition: opacity 0.25s ease, visibility 0s linear 0s;
-    visibility: visible;
+  transition:
+    opacity 0.25s ease,
+    visibility 0s linear 0s;
+  visibility: visible;
 }
-.expand-panel .expand-panel-content[data-closing="true"] {
-    opacity: 0;
-    visibility: hidden;
-    transition: opacity 0.25s ease, visibility 0s linear 0.25s;
+.expand-panel .expand-panel-content[data-closing='true'] {
+  opacity: 0;
+  visibility: hidden;
+  transition:
+    opacity 0.25s ease,
+    visibility 0s linear 0.25s;
 }
 
 /* Volume range input — fill track using accent color up to thumb position */
 .volume-range-input {
-    appearance: none;
-    -webkit-appearance: none;
-    flex: 1;
-    height: 6px;
-    border-radius: 3px;
-    background: linear-gradient(
-        to right,
-        var(--color-accent) 0%,
-        var(--color-accent) var(--volume-pct, 50%),
-        var(--color-border) var(--volume-pct, 50%),
-        var(--color-border) 100%
-    );
-    outline: none;
-    cursor: pointer;
+  appearance: none;
+  -webkit-appearance: none;
+  flex: 1;
+  height: 6px;
+  border-radius: 3px;
+  background: linear-gradient(
+    to right,
+    var(--color-accent) 0%,
+    var(--color-accent) var(--volume-pct, 50%),
+    var(--color-border) var(--volume-pct, 50%),
+    var(--color-border) 100%
+  );
+  outline: none;
+  cursor: pointer;
 }
 .volume-range-input::-webkit-slider-thumb {
-    -webkit-appearance: none;
-    width: 14px;
-    height: 14px;
-    border-radius: 50%;
-    background: var(--color-surface);
-    border: 2px solid var(--color-accent);
-    cursor: pointer;
+  -webkit-appearance: none;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--color-surface);
+  border: 2px solid var(--color-accent);
+  cursor: pointer;
 }
 .volume-range-input::-moz-range-thumb {
-    width: 14px;
-    height: 14px;
-    border-radius: 50%;
-    background: var(--color-surface);
-    border: 2px solid var(--color-accent);
-    cursor: pointer;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--color-surface);
+  border: 2px solid var(--color-accent);
+  cursor: pointer;
 }
 
 /* Range input — base: strips native appearance, custom thumb */
 .range-input {
-    appearance: none;
-    -webkit-appearance: none;
-    cursor: pointer;
+  appearance: none;
+  -webkit-appearance: none;
+  cursor: pointer;
 }
 .range-input::-webkit-slider-thumb {
-    -webkit-appearance: none;
-    width: 14px;
-    height: 14px;
-    border-radius: 50%;
-    background: var(--color-accent);
-    border: 2px solid var(--color-surface);
-    cursor: pointer;
+  -webkit-appearance: none;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--color-accent);
+  border: 2px solid var(--color-surface);
+  cursor: pointer;
 }
 .range-input::-moz-range-thumb {
-    width: 14px;
-    height: 14px;
-    border-radius: 50%;
-    background: var(--color-accent);
-    border: 2px solid var(--color-surface);
-    cursor: pointer;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--color-accent);
+  border: 2px solid var(--color-surface);
+  cursor: pointer;
 }
 
 /* Horizontal range input — accent fill up to thumb, theme border for rest */
 .range-input-h {
-    height: 6px;
-    border-radius: 3px;
-    background: linear-gradient(
-        to right,
-        var(--color-accent) 0%,
-        var(--color-accent) var(--range-pct, 50%),
-        var(--color-border) var(--range-pct, 50%),
-        var(--color-border) 100%
-    );
+  height: 6px;
+  border-radius: 3px;
+  background: linear-gradient(
+    to right,
+    var(--color-accent) 0%,
+    var(--color-accent) var(--range-pct, 50%),
+    var(--color-border) var(--range-pct, 50%),
+    var(--color-border) 100%
+  );
 }
 
 .scrubber-range-input {
-    appearance: none;
-    -webkit-appearance: none;
-    background: transparent;
-    pointer-events: all;
+  appearance: none;
+  -webkit-appearance: none;
+  background: transparent;
+  pointer-events: all;
 }
 
 .scrubber-range-input::-webkit-slider-runnable-track {
-    appearance: none;
-    height: 100%;
-    background: transparent;
+  appearance: none;
+  height: 100%;
+  background: transparent;
 }
 
 .scrubber-range-input::-webkit-slider-thumb {
-    appearance: none;
-    width: 14px;
-    height: 14px;
-    border-radius: 50%;
-    background: var(--color-surface);
-    border: 2px solid var(--color-accent);
-    cursor: pointer;
-    margin-top: 0;
-    transform: translateY(-50%);
-    position: absolute;
-    top: 50%;
-    pointer-events: none;
+  appearance: none;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--color-surface);
+  border: 2px solid var(--color-accent);
+  cursor: pointer;
+  margin-top: 0;
+  transform: translateY(-50%);
+  position: absolute;
+  top: 50%;
+  pointer-events: none;
 }
 
 .scrubber-range-input::-moz-range-track {
-    appearance: none;
-    height: 100%;
-    background: transparent;
+  appearance: none;
+  height: 100%;
+  background: transparent;
 }
 
 .scrubber-range-input::-moz-range-thumb {
-    appearance: none;
-    width: 14px;
-    height: 14px;
-    border-radius: 50%;
-    background: var(--color-surface);
-    border: 2px solid var(--color-accent);
-    cursor: pointer;
-    pointer-events: none;
+  appearance: none;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--color-surface);
+  border: 2px solid var(--color-accent);
+  cursor: pointer;
+  pointer-events: none;
 }
 
 /* Custom scrubber thumb — positioned via left % instead of native range input */
 .scrubber-thumb {
-    width: 14px;
-    height: 14px;
-    margin-left: -7px;
+  width: 14px;
+  height: 14px;
+  margin-left: -7px;
 }

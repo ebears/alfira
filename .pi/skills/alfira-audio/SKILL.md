@@ -30,13 +30,13 @@ connect(url, auth, userId)
 
 ### WebSocket opcodes
 
-| Opcode | Handler |
-|--------|---------|
-| `ready` | Stores `sessionId`, resolves connect promise |
-| `playerUpdate` | Updates per-guild `connected` state |
-| `event: TrackStartEvent` | Sets guild `playing = true` |
-| `event: TrackEndEvent` | Sets guild `playing = false`, emits `trackEnd` event with reason |
-| `event: TrackExceptionEvent` | Sets guild `playing = false`, emits `trackError` event |
+| Opcode                        | Handler                                                                 |
+| ----------------------------- | ----------------------------------------------------------------------- |
+| `ready`                       | Stores `sessionId`, resolves connect promise                            |
+| `playerUpdate`                | Updates per-guild `connected` state                                     |
+| `event: TrackStartEvent`      | Sets guild `playing = true`                                             |
+| `event: TrackEndEvent`        | Sets guild `playing = false`, emits `trackEnd` event with reason        |
+| `event: TrackExceptionEvent`  | Sets guild `playing = false`, emits `trackError` event                  |
 | `event: WebSocketClosedEvent` | Sets guild `connected = false`, `playing = false`, emits `socketClosed` |
 
 ### TrackEnd reasons
@@ -46,6 +46,7 @@ connect(url, auth, userId)
 ### Guild state tracking
 
 Each guild tracks `{ connected: boolean, playing: boolean }`. Available via:
+
 - `lavalink.isGuildConnected(guildId)`
 - `lavalink.isGuildPlaying(guildId)`
 - `lavalink.markConnected(guildId, connected)`
@@ -66,6 +67,7 @@ Similarly: `onTrackError(guildId, handler)`, `onSocketClosed(guildId, handler)`.
 ## GuildPlayer (`packages/server/src/GuildPlayer.ts`)
 
 Per-guild audio player state machine. Manages:
+
 - Queue (array of `QueuedSong`)
 - Current song + playback position
 - Loop mode (`off` | `song` | `queue`)
@@ -104,6 +106,7 @@ Player control is done via NodeLink's REST API (not WebSocket):
 ## Filters
 
 Filter application is in `lib/applyNodeLinkFilter.ts`. Supports:
+
 - **Equalizer:** 15-band (0-14), each band 0-100 (midpoint 50), mapped to NodeLink's ±0.25 range
 - **Compressor:** Threshold (-60 to 0 dB), ratio (1-20), attack (0-100ms), release (10-1000ms), gain (0-24 dB)
 

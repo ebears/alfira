@@ -17,8 +17,8 @@ export const PlayButton = memo(function PlayButton({
 }: PlayButtonProps) {
   return (
     <Button
-      variant="primary"
-      size="icon"
+      variant='primary'
+      size='icon'
       onMouseDown={(e) => {
         e.preventDefault();
         e.stopPropagation();
@@ -32,9 +32,9 @@ export const PlayButton = memo(function PlayButton({
       title={title}
     >
       {isPlaying ? (
-        <CircleNotchIcon size={22} weight="bold" className="animate-spin" />
+        <CircleNotchIcon size={22} weight='bold' className='animate-spin' />
       ) : (
-        <PlayIcon size={22} weight="duotone" />
+        <PlayIcon size={22} weight='duotone' />
       )}
     </Button>
   );

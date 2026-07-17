@@ -159,26 +159,26 @@ export default function AdminSection() {
   if (!loaded) return null;
 
   return (
-    <div className="space-y-6">
+    <div className='space-y-6'>
       {error && <ErrorBanner message={error} />}
 
       {successMsg && (
-        <div className="p-3 rounded-lg bg-accent/10 border border-accent/20 text-accent text-sm">
+        <div className='p-3 rounded-lg bg-accent/10 border border-accent/20 text-accent text-sm'>
           {successMsg}
         </div>
       )}
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div className='grid grid-cols-1 md:grid-cols-2 gap-6'>
         {/* Admin Roles */}
-        <div className="md:col-span-2 lg:col-span-1 space-y-2">
-          <h3 className="font-mono text-[11px] text-muted uppercase tracking-wider">Admin Roles</h3>
-          <p className="text-xs text-muted">
+        <div className='md:col-span-2 lg:col-span-1 space-y-2'>
+          <h3 className='font-mono text-[11px] text-muted uppercase tracking-wider'>Admin Roles</h3>
+          <p className='text-xs text-muted'>
             Users with these roles can manage songs, control playback, and access admin settings.
           </p>
           {roles.length === 0 ? (
-            <p className="text-xs text-muted italic">No roles loaded.</p>
+            <p className='text-xs text-muted italic'>No roles loaded.</p>
           ) : (
-            <div className="space-y-1.5 max-h-48 lg:max-h-72 overflow-y-auto">
+            <div className='space-y-1.5 max-h-48 lg:max-h-72 overflow-y-auto'>
               {roles.map((r) => (
                 <label
                   key={r.id}
@@ -193,16 +193,16 @@ export default function AdminSection() {
                     onChange={() => toggleRole(r.id)}
                   />
                   <span
-                    className="w-2.5 h-2.5 rounded-full shrink-0"
+                    className='w-2.5 h-2.5 rounded-full shrink-0'
                     style={{
                       backgroundColor: r.color
                         ? `#${r.color.toString(16).padStart(6, '0')}`
                         : 'var(--color-muted)',
                     }}
                   />
-                  <span className="text-sm text-fg">{r.name}</span>
+                  <span className='text-sm text-fg'>{r.name}</span>
                   {selectedRoleIdSet.size === 1 && selectedRoleIdSet.has(r.id) && (
-                    <span className="text-xs text-muted ml-auto">(must keep at least one)</span>
+                    <span className='text-xs text-muted ml-auto'>(must keep at least one)</span>
                   )}
                 </label>
               ))}
@@ -211,20 +211,20 @@ export default function AdminSection() {
         </div>
 
         {/* Music Sources */}
-        <div className="md:col-span-2 lg:col-span-1 space-y-2 border-t border-muted/10 pt-5 lg:border-t-0 lg:pt-0">
-          <div className="flex items-center gap-2">
-            <MusicNotesIcon size={14} weight="duotone" className="text-muted" />
-            <h3 className="font-mono text-[11px] text-muted uppercase tracking-wider">
+        <div className='md:col-span-2 lg:col-span-1 space-y-2 border-t border-muted/10 pt-5 lg:border-t-0 lg:pt-0'>
+          <div className='flex items-center gap-2'>
+            <MusicNotesIcon size={14} weight='duotone' className='text-muted' />
+            <h3 className='font-mono text-[11px] text-muted uppercase tracking-wider'>
               Music Sources
             </h3>
           </div>
-          <p className="text-xs text-muted">
+          <p className='text-xs text-muted'>
             Choose which music platforms Alfira can play from. At least one must be enabled.
           </p>
           {availableSources.length === 0 ? (
-            <p className="text-xs text-muted italic">No sources available.</p>
+            <p className='text-xs text-muted italic'>No sources available.</p>
           ) : (
-            <div className="space-y-1.5">
+            <div className='space-y-1.5'>
               {availableSources.map((source) => (
                 <>
                   <label
@@ -239,26 +239,26 @@ export default function AdminSection() {
                       checked={selectedSourceKeySet.has(source.key)}
                       onChange={() => toggleSource(source.key)}
                     />
-                    <SourceIcon sourceKey={source.key} className="shrink-0" />
-                    <span className="text-sm text-fg">{source.displayName}</span>
+                    <SourceIcon sourceKey={source.key} className='shrink-0' />
+                    <span className='text-sm text-fg'>{source.displayName}</span>
                     {source.helpText && (
-                      <span className="relative group">
+                      <span className='relative group'>
                         <QuestionIcon
                           size={14}
-                          weight="duotone"
-                          className="text-muted cursor-help"
+                          weight='duotone'
+                          className='text-muted cursor-help'
                         />
-                        <span className="glass-tooltip absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-56 p-2">
+                        <span className='glass-tooltip absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-56 p-2'>
                           {source.helpText}
                         </span>
                       </span>
                     )}
                     {selectedSourceKeySet.size === 1 && selectedSourceKeySet.has(source.key) && (
-                      <span className="text-xs text-muted ml-auto">(must keep at least one)</span>
+                      <span className='text-xs text-muted ml-auto'>(must keep at least one)</span>
                     )}
                   </label>
                   {source.requiresCredentials && selectedSourceKeySet.has(source.key) && (
-                    <p className="text-xs text-warning ml-9">
+                    <p className='text-xs text-warning ml-9'>
                       This source requires credentials to be configured via environment variables
                       before it can play music.
                     </p>
@@ -270,23 +270,23 @@ export default function AdminSection() {
         </div>
 
         {/* AFK Notification Channel */}
-        <div className="space-y-2 border-t border-muted/10 pt-5">
-          <div className="flex items-center gap-2">
-            <MegaphoneIcon size={14} weight="duotone" className="text-muted" />
-            <h3 className="font-mono text-[11px] text-muted uppercase tracking-wider">
+        <div className='space-y-2 border-t border-muted/10 pt-5'>
+          <div className='flex items-center gap-2'>
+            <MegaphoneIcon size={14} weight='duotone' className='text-muted' />
+            <h3 className='font-mono text-[11px] text-muted uppercase tracking-wider'>
               AFK Notification Channel
             </h3>
           </div>
-          <p className="text-xs text-muted">
+          <p className='text-xs text-muted'>
             Alfira posts a message here when it leaves a voice channel due to inactivity.
           </p>
           {channels.length > 0 ? (
             <select
               value={afkNotificationChannelId ?? ''}
               onChange={(e) => setAfkNotificationChannelId(e.target.value || null)}
-              className="w-full px-3 py-2 rounded-lg bg-base border border-border text-fg text-sm focus:outline-none focus:border-accent transition-colors cursor-pointer"
+              className='w-full px-3 py-2 rounded-lg bg-base border border-border text-fg text-sm focus:outline-none focus:border-accent transition-colors cursor-pointer'
             >
-              <option value="">— Disabled —</option>
+              <option value=''>— Disabled —</option>
               {channels.map((c) => (
                 <option key={c.id} value={c.id}>
                   # {c.name}
@@ -294,28 +294,28 @@ export default function AdminSection() {
               ))}
             </select>
           ) : (
-            <p className="text-xs text-muted italic">No channels loaded.</p>
+            <p className='text-xs text-muted italic'>No channels loaded.</p>
           )}
         </div>
 
         {/* Request Notification Channel */}
-        <div className="space-y-2 border-t border-muted/10 pt-5">
-          <div className="flex items-center gap-2">
-            <MegaphoneIcon size={14} weight="duotone" className="text-muted" />
-            <h3 className="font-mono text-[11px] text-muted uppercase tracking-wider">
+        <div className='space-y-2 border-t border-muted/10 pt-5'>
+          <div className='flex items-center gap-2'>
+            <MegaphoneIcon size={14} weight='duotone' className='text-muted' />
+            <h3 className='font-mono text-[11px] text-muted uppercase tracking-wider'>
               Song Request Notifications
             </h3>
           </div>
-          <p className="text-xs text-muted">
+          <p className='text-xs text-muted'>
             Alfira posts here when new song requests are submitted.
           </p>
           {channels.length > 0 ? (
             <select
               value={requestNotificationChannelId ?? ''}
               onChange={(e) => setRequestNotificationChannelId(e.target.value || null)}
-              className="w-full px-3 py-2 rounded-lg bg-base border border-border text-fg text-sm focus:outline-none focus:border-accent transition-colors cursor-pointer"
+              className='w-full px-3 py-2 rounded-lg bg-base border border-border text-fg text-sm focus:outline-none focus:border-accent transition-colors cursor-pointer'
             >
-              <option value="">— Disabled —</option>
+              <option value=''>— Disabled —</option>
               {channels.map((c) => (
                 <option key={c.id} value={c.id}>
                   # {c.name}
@@ -323,19 +323,19 @@ export default function AdminSection() {
               ))}
             </select>
           ) : (
-            <p className="text-xs text-muted italic">No channels loaded.</p>
+            <p className='text-xs text-muted italic'>No channels loaded.</p>
           )}
 
-          <div className="mt-3 space-y-3">
+          <div className='mt-3 space-y-3'>
             <SettingsToggle
-              label="Notify on approved"
-              description="Post a message when a request is approved. Requesters can also opt into a personal DM."
+              label='Notify on approved'
+              description='Post a message when a request is approved. Requesters can also opt into a personal DM.'
               checked={notifyOnApproved}
               onChange={setNotifyOnApproved}
             />
             <SettingsToggle
-              label="Notify on denied"
-              description="Post a message when a request is denied."
+              label='Notify on denied'
+              description='Post a message when a request is denied.'
               checked={notifyOnDenied}
               onChange={setNotifyOnDenied}
             />
@@ -343,61 +343,61 @@ export default function AdminSection() {
         </div>
 
         {/* Idle Timeout */}
-        <div className="space-y-2 border-t border-muted/10 pt-5">
-          <div className="flex items-center gap-2">
-            <TimerIcon size={14} weight="duotone" className="text-muted" />
-            <h3 className="font-mono text-[11px] text-muted uppercase tracking-wider">
+        <div className='space-y-2 border-t border-muted/10 pt-5'>
+          <div className='flex items-center gap-2'>
+            <TimerIcon size={14} weight='duotone' className='text-muted' />
+            <h3 className='font-mono text-[11px] text-muted uppercase tracking-wider'>
               Idle Timeout
             </h3>
           </div>
-          <p className="text-xs text-muted">
+          <p className='text-xs text-muted'>
             Alfira leaves the voice channel after this many minutes of inactivity (no music
             playing).
           </p>
-          <div className="flex items-center gap-4 mt-4">
+          <div className='flex items-center gap-4 mt-4'>
             <input
-              type="range"
+              type='range'
               min={1}
               max={120}
               value={timeoutMinutes}
               onChange={(e) => setTimeoutMinutes(Number(e.target.value))}
-              className="flex-1 range-input range-input-h"
+              className='flex-1 range-input range-input-h'
               style={
                 {
                   ['--range-pct' as string]: `${((timeoutMinutes - 1) / (120 - 1)) * 100}%`,
                 } as React.CSSProperties
               }
             />
-            <span className="font-mono text-sm text-fg w-20 text-right whitespace-nowrap">
+            <span className='font-mono text-sm text-fg w-20 text-right whitespace-nowrap'>
               {timeoutMinutes} min
             </span>
           </div>
         </div>
 
         {/* Public URL */}
-        <div className="space-y-2 border-t border-muted/10 pt-5">
-          <div className="flex items-center gap-2">
-            <GlobeIcon size={14} weight="duotone" className="text-muted" />
-            <h3 className="font-mono text-[11px] text-muted uppercase tracking-wider">
+        <div className='space-y-2 border-t border-muted/10 pt-5'>
+          <div className='flex items-center gap-2'>
+            <GlobeIcon size={14} weight='duotone' className='text-muted' />
+            <h3 className='font-mono text-[11px] text-muted uppercase tracking-wider'>
               Public URL
             </h3>
           </div>
-          <p className="text-xs text-muted">
+          <p className='text-xs text-muted'>
             The external URL where this Alfira instance is reachable. Used for OAuth redirects and
             other features.
           </p>
           <input
-            type="text"
+            type='text'
             value={publicUrl ?? ''}
             onChange={(e) => setPublicUrl(e.target.value.trim() || null)}
-            placeholder="https://music.yourserver.com"
-            className="input"
+            placeholder='https://music.yourserver.com'
+            className='input'
           />
         </div>
 
         {/* Save */}
-        <div className="md:col-span-2 flex gap-3 pt-5 border-t border-muted/10 justify-end">
-          <Button variant="primary" onClick={handleSave} disabled={!hasChanges || saving}>
+        <div className='md:col-span-2 flex gap-3 pt-5 border-t border-muted/10 justify-end'>
+          <Button variant='primary' onClick={handleSave} disabled={!hasChanges || saving}>
             {saving ? 'Saving…' : 'Save Changes'}
           </Button>
         </div>

@@ -204,16 +204,16 @@ export default function SongEditPanel({ song, isOpen, onClose }: SongEditPanelPr
 
   return (
     <div
-      className="expand-panel-content"
+      className='expand-panel-content'
       data-closing={closing ? 'true' : undefined}
       style={closing ? { pointerEvents: 'none' } : undefined}
       onClick={(e) => e.stopPropagation()}
     >
-      <div className="px-3 md:px-4 pt-4 pb-4 border-t border-border">
-        <div className="flex flex-col gap-3">
+      <div className='px-3 md:px-4 pt-4 pb-4 border-t border-border'>
+        <div className='flex flex-col gap-3'>
           <Field
-            id="panel-name"
-            label="Name"
+            id='panel-name'
+            label='Name'
             value={nickname}
             onChange={setNickname}
             inputRef={inputRef}
@@ -223,28 +223,28 @@ export default function SongEditPanel({ song, isOpen, onClose }: SongEditPanelPr
             }}
           />
           <Field
-            id="panel-artist"
-            label="Artist"
+            id='panel-artist'
+            label='Artist'
             value={artist}
             onChange={setArtist}
-            placeholder="Artist name"
+            placeholder='Artist name'
             onKeyDown={(e) => {
               if (e.key === 'Enter') void doSave();
             }}
           />
           <Field
-            id="panel-album"
-            label="Album"
+            id='panel-album'
+            label='Album'
             value={album}
             onChange={setAlbum}
-            placeholder="Album name"
+            placeholder='Album name'
             onKeyDown={(e) => {
               if (e.key === 'Enter') void doSave();
             }}
           />
           <Field
-            id="panel-artwork"
-            label="Artwork URL"
+            id='panel-artwork'
+            label='Artwork URL'
             value={artwork}
             onChange={setArtwork}
             placeholder={song.thumbnailUrl}
@@ -256,13 +256,13 @@ export default function SongEditPanel({ song, isOpen, onClose }: SongEditPanelPr
           {/* Tags */}
           <div>
             <label
-              htmlFor="panel-tag-input"
-              className="block font-mono text-[10px] text-muted uppercase mb-1"
+              htmlFor='panel-tag-input'
+              className='block font-mono text-[10px] text-muted uppercase mb-1'
             >
               Tags
             </label>
             <div
-              className="input text-sm flex flex-wrap gap-1.5 items-center min-h-9.5 cursor-text relative"
+              className='input text-sm flex flex-wrap gap-1.5 items-center min-h-9.5 cursor-text relative'
               onClick={() => {
                 tagInputRef.current?.focus();
                 if (!fetchedTags) {
@@ -283,8 +283,8 @@ export default function SongEditPanel({ song, isOpen, onClose }: SongEditPanelPr
                   >
                     {tag}
                     <button
-                      type="button"
-                      className="ml-0.5 opacity-70 hover:opacity-100"
+                      type='button'
+                      className='ml-0.5 opacity-70 hover:opacity-100'
                       onClick={() => removeTag(tag)}
                     >
                       &times;
@@ -293,9 +293,9 @@ export default function SongEditPanel({ song, isOpen, onClose }: SongEditPanelPr
                 );
               })}
               <input
-                id="panel-tag-input"
+                id='panel-tag-input'
                 ref={tagInputRef}
-                className="flex-1 min-w-20 bg-transparent outline-none text-sm text-fg placeholder:text-faint"
+                className='flex-1 min-w-20 bg-transparent outline-none text-sm text-fg placeholder:text-faint'
                 placeholder={tags.length === 0 ? 'Custom grouping (enter to confirm)' : ''}
                 value={tagInput}
                 onChange={(e) => setTagInput(e.target.value)}
@@ -358,12 +358,12 @@ function VolumeSlider({
 
   return (
     <div>
-      <span className="block font-mono text-[10px] text-muted uppercase mb-1">Volume Boost</span>
-      <div className="flex items-center gap-3">
+      <span className='block font-mono text-[10px] text-muted uppercase mb-1'>Volume Boost</span>
+      <div className='flex items-center gap-3'>
         <input
-          id="panel-volume-boost"
-          className="input text-sm w-16 text-center"
-          type="text"
+          id='panel-volume-boost'
+          className='input text-sm w-16 text-center'
+          type='text'
           value={value}
           onChange={(e) => {
             const v = e.target.value;
@@ -381,14 +381,14 @@ function VolumeSlider({
             }
           }}
         />
-        <span className="text-xs text-muted font-mono w-8 text-left">%</span>
+        <span className='text-xs text-muted font-mono w-8 text-left'>%</span>
         <input
-          type="range"
+          type='range'
           min={min}
           max={max}
           value={numeric}
           onChange={(e) => onChange(e.target.value)}
-          className="volume-range-input"
+          className='volume-range-input'
           style={
             {
               ['--volume-pct' as string]: pct,
@@ -425,13 +425,13 @@ function Field({
 }) {
   return (
     <div>
-      <label htmlFor={id} className="block font-mono text-[10px] text-muted uppercase mb-1">
+      <label htmlFor={id} className='block font-mono text-[10px] text-muted uppercase mb-1'>
         {label}
       </label>
       <input
         id={id}
         ref={inputRef}
-        className="input text-sm"
+        className='input text-sm'
         type={type}
         min={type === 'number' ? min : undefined}
         max={type === 'number' ? max : undefined}
@@ -447,20 +447,20 @@ function Field({
 function CheckIcon() {
   return (
     <svg
-      width="14"
-      height="14"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="3"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      className="text-green-400 inline-block"
-      role="img"
-      aria-label="Added"
+      width='14'
+      height='14'
+      viewBox='0 0 24 24'
+      fill='none'
+      stroke='currentColor'
+      strokeWidth='3'
+      strokeLinecap='round'
+      strokeLinejoin='round'
+      className='text-green-400 inline-block'
+      role='img'
+      aria-label='Added'
     >
       <title>Added</title>
-      <polyline points="20 6 9 17 4 12" />
+      <polyline points='20 6 9 17 4 12' />
     </svg>
   );
 }
@@ -468,21 +468,21 @@ function CheckIcon() {
 function CrossIcon() {
   return (
     <svg
-      width="14"
-      height="14"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2.5"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      className="text-muted inline-block"
-      role="img"
-      aria-label="Not added"
+      width='14'
+      height='14'
+      viewBox='0 0 24 24'
+      fill='none'
+      stroke='currentColor'
+      strokeWidth='2.5'
+      strokeLinecap='round'
+      strokeLinejoin='round'
+      className='text-muted inline-block'
+      role='img'
+      aria-label='Not added'
     >
       <title>Not added</title>
-      <line x1="18" y1="6" x2="6" y2="18" />
-      <line x1="6" y1="6" x2="18" y2="18" />
+      <line x1='18' y1='6' x2='6' y2='18' />
+      <line x1='6' y1='6' x2='18' y2='18' />
     </svg>
   );
 }
@@ -548,11 +548,11 @@ function TagDropdown({
   const dropdown = (
     <div
       ref={dropdownRef}
-      className="fixed z-50 min-w-45 glass-popover max-h-48"
+      className='fixed z-50 min-w-45 glass-popover max-h-48'
       style={{ top: 0, left: 0 }}
     >
       {filtered.length === 0 ? (
-        <div className="px-3 py-2 text-xs text-muted cursor-default">
+        <div className='px-3 py-2 text-xs text-muted cursor-default'>
           {availableTags.length === 0 ? 'No tags yet' : 'No matches'}
         </div>
       ) : (
@@ -575,7 +575,7 @@ function TagDropdown({
               onMouseEnter={() => onHighlight(i)}
             >
               <span className={`font-mono text-xs ${c.text}`}>{tag.canonicalName}</span>
-              <span className="ml-auto text-muted text-xs">
+              <span className='ml-auto text-muted text-xs'>
                 {isAdded ? <CheckIcon /> : <CrossIcon />}
               </span>
             </div>

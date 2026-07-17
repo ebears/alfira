@@ -22,11 +22,11 @@ See [AGENTS.md](../AGENTS.md) for the full git workflow and commit conventions.
 
 The main dev command is `bun run dev`, which builds the server dist/ locally and then starts all services with Docker.
 
-| What Changed | Action |
-|--------------|--------|
-| Any of the above | `bun run dev` — rebuilds server dist/ and restarts Docker |
-| `packages/web/src/**` | Run `bun run web:build` locally to rebuild the UI, then `docker compose restart alfira` |
-| `packages/server/src/**` | `docker compose restart alfira` (source is live-mounted) |
+| What Changed             | Action                                                                                  |
+| ------------------------ | --------------------------------------------------------------------------------------- |
+| Any of the above         | `bun run dev` — rebuilds server dist/ and restarts Docker                               |
+| `packages/web/src/**`    | Run `bun run web:build` locally to rebuild the UI, then `docker compose restart alfira` |
+| `packages/server/src/**` | `docker compose restart alfira` (source is live-mounted)                                |
 
 ## Database Migrations
 

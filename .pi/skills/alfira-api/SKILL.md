@@ -15,21 +15,22 @@ Bun native HTTP server on port 3001. Serves three concerns:
 
 ## Route Map (defined in `index.ts` fetch handler)
 
-| Prefix | Handler file | Purpose |
-|--------|-------------|---------|
-| `/api/tags` | `routes/tags.ts` | CRUD for tags |
-| `/api/songs` | `routes/songs.ts` | Song library, search, edit, delete |
-| `/api/requests` | `routes/requests.ts` | Song request CRUD, preview, approve/deny |
-| `/api/playlists` | `routes/playlists.ts` | Playlist CRUD, reorder, import |
-| `/api/player` | `routes/player.ts` | Playback control (play, pause, skip, seek, volume, queue) |
-| `/api/settings/compressor` | `routes/compressor.ts` | Compressor settings |
-| `/api/settings/equalizer` | `routes/equalizer.ts` | Equalizer settings |
-| `/api/permissions` | `routes/permissions.ts` | Role-based permission management |
-| `/api/settings/general` | `routes/generalSettings.ts` | General guild settings |
-| `/api/setup` | `routes/setup.ts` | Initial setup wizard |
-| `/auth` | `routes/auth.ts` | OAuth2 Discord login flow |
+| Prefix                     | Handler file                | Purpose                                                   |
+| -------------------------- | --------------------------- | --------------------------------------------------------- |
+| `/api/tags`                | `routes/tags.ts`            | CRUD for tags                                             |
+| `/api/songs`               | `routes/songs.ts`           | Song library, search, edit, delete                        |
+| `/api/requests`            | `routes/requests.ts`        | Song request CRUD, preview, approve/deny                  |
+| `/api/playlists`           | `routes/playlists.ts`       | Playlist CRUD, reorder, import                            |
+| `/api/player`              | `routes/player.ts`          | Playback control (play, pause, skip, seek, volume, queue) |
+| `/api/settings/compressor` | `routes/compressor.ts`      | Compressor settings                                       |
+| `/api/settings/equalizer`  | `routes/equalizer.ts`       | Equalizer settings                                        |
+| `/api/permissions`         | `routes/permissions.ts`     | Role-based permission management                          |
+| `/api/settings/general`    | `routes/generalSettings.ts` | General guild settings                                    |
+| `/api/setup`               | `routes/setup.ts`           | Initial setup wizard                                      |
+| `/auth`                    | `routes/auth.ts`            | OAuth2 Discord login flow                                 |
 
 Special routes (no `/api` prefix):
+
 - `/health` — Returns service health with component status (database, nodelink, discord)
 - `/api/version` — Returns version, public (no auth)
 - `/ws` — WebSocket upgrade
@@ -94,12 +95,14 @@ Referrer-Policy: strict-origin-when-cross-origin
 ## Response Helpers
 
 ### `json(data, status)` — `lib/json.ts`
+
 ```typescript
 import { json } from './lib/json';
 return json({ error: 'Not found' }, 404);
 ```
 
 ### Player guards — `lib/player.ts`
+
 ```typescript
 import { requirePlayer, requirePlaying } from './lib/player';
 
@@ -113,6 +116,7 @@ if (!result.ok) return result.response; // 409 with error message
 1. Create handler in `packages/server/src/routes/yourRoute.ts`
 2. Export a `handleYourRoute(ctx: RouteContext, request: Request): Promise<Response>` function
 3. Add route matching in `index.ts` fetch handler:
+
 ```typescript
 if (url.pathname.startsWith('/api/yourRoute')) {
   return setSecurityHeaders(await handleYourRoute(ctx, request));

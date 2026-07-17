@@ -70,7 +70,7 @@ export default function EmptyState({
       <div
         className={`rounded-full bg-elevated border border-border flex items-center justify-center mx-auto ${compact ? 'w-10 h-10 mb-2' : 'w-12 h-12 mb-3'}`}
       >
-        <Icon size={compact ? 16 : 20} weight="duotone" className="text-faint" />
+        <Icon size={compact ? 16 : 20} weight='duotone' className='text-faint' />
       </div>
       <p
         className={`font-display text-faint tracking-wider ${compact ? 'text-xl mb-1' : 'text-4xl mb-2'}`}
@@ -78,10 +78,10 @@ export default function EmptyState({
         {title}
       </p>
       {message ? (
-        <p className="font-mono text-xs text-faint">{message}</p>
+        <p className='font-mono text-xs text-faint'>{message}</p>
       ) : isAdmin ? (
-        <p className="font-mono text-xs text-faint">
-          <button type="button" className="text-accent hover:underline" onClick={onAdd}>
+        <p className='font-mono text-xs text-faint'>
+          <button type='button' className='text-accent hover:underline' onClick={onAdd}>
             {addLabel}
           </button>{' '}
           to get started

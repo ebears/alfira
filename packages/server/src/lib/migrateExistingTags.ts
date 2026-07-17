@@ -41,7 +41,10 @@ export async function runTagMigration(): Promise<{ normalized: number; errors: n
       const canonicalTags = await canonicalizeTags(song.tags.map(normalizeTag));
 
       if (JSON.stringify(canonicalTags) !== JSON.stringify(song.tags)) {
-        await db.update(songTable).set({ tags: canonicalTags }).where(sql`id = ${song.id}`);
+        await db
+          .update(songTable)
+          .set({ tags: canonicalTags })
+          .where(sql`id = ${song.id}`);
         normalized++;
       }
     } catch (err) {

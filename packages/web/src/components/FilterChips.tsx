@@ -28,7 +28,7 @@ export default function FilterChips({
   onRemoveSource,
 }: FilterChipsProps) {
   return (
-    <div className="flex items-center gap-2 flex-wrap">
+    <div className='flex items-center gap-2 flex-wrap'>
       {/* Tag chips */}
       {tags.map((tag) => {
         const colors = getTagColorClasses(tag, null);
@@ -37,18 +37,18 @@ export default function FilterChips({
             key={`tag-${tag}`}
             className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-medium whitespace-nowrap select-none ${colors.bg} ${colors.text}`}
           >
-            <TagIcon size={11} weight="fill" />
+            <TagIcon size={11} weight='fill' />
             <span>{tag}</span>
             <button
-              type="button"
-              className="ml-0.5 cursor-pointer rounded-full p-px hover:bg-black/10 dark:hover:bg-white/10 transition-colors"
+              type='button'
+              className='ml-0.5 cursor-pointer rounded-full p-px hover:bg-black/10 dark:hover:bg-white/10 transition-colors'
               onClick={(e) => {
                 e.stopPropagation();
                 onRemoveTag(tag);
               }}
               aria-label={`Remove tag filter: ${tag}`}
             >
-              <XIcon size={10} weight="bold" />
+              <XIcon size={10} weight='bold' />
             </button>
           </span>
         );
@@ -58,20 +58,20 @@ export default function FilterChips({
       {sources.map((source) => (
         <span
           key={`source-${source}`}
-          className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-medium whitespace-nowrap select-none bg-elevated text-muted border border-border/50"
+          className='inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-medium whitespace-nowrap select-none bg-elevated text-muted border border-border/50'
         >
           <SourceIcon sourceKey={source} />
           <span>{SOURCE_LABELS[source] ?? source}</span>
           <button
-            type="button"
-            className="ml-0.5 cursor-pointer rounded-full p-px hover:bg-black/10 dark:hover:bg-white/10 transition-colors"
+            type='button'
+            className='ml-0.5 cursor-pointer rounded-full p-px hover:bg-black/10 dark:hover:bg-white/10 transition-colors'
             onClick={(e) => {
               e.stopPropagation();
               onRemoveSource(source);
             }}
             aria-label={`Remove source filter: ${SOURCE_LABELS[source] ?? source}`}
           >
-            <XIcon size={10} weight="bold" />
+            <XIcon size={10} weight='bold' />
           </button>
         </span>
       ))}

@@ -11,7 +11,10 @@ const { tag: tagTable, song: songTable } = tables;
  * Called automatically on startup after DB migrations.
  */
 export async function ensureTagsMigrated(): Promise<void> {
-  const [tagCount] = await db.select({ count: sql<number>`count(*)` }).from(tagTable).limit(1);
+  const [tagCount] = await db
+    .select({ count: sql<number>`count(*)` })
+    .from(tagTable)
+    .limit(1);
 
   if (!tagCount || tagCount.count > 0) {
     return; // Tags already exist, nothing to do

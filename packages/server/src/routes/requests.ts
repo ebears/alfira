@@ -542,7 +542,10 @@ async function handleGetRequests(ctx: RouteContext, request: Request): Promise<R
       .orderBy(sql`"createdAt" DESC`)
       .offset(skip)
       .limit(limit),
-    db.select({ count: sql<number>`count(*)` }).from(requestTable).where(where),
+    db
+      .select({ count: sql<number>`count(*)` })
+      .from(requestTable)
+      .where(where),
   ]);
 
   const total = parseInt(String(countResult[0]?.count ?? 0), 10);
