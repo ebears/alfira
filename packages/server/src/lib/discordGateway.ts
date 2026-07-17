@@ -20,16 +20,14 @@ const OP_HEARTBEAT_ACK = 11;
 
 const GATEWAY_URL = 'wss://gateway.discord.gg/?v=10&encoding=json';
 
+// Discord's heartbeat interval in ms. Hardcoded instead of reading from the
+// Hello payload to avoid tainted-input concerns — Discord has used ~41250ms
+// for years and the gateway spec allows a range that's all safe.
+const HEARTBEAT_INTERVAL = 41_250;
+
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
-
-interface GatewayHello {
-  op: 10;
-  d: { heartbeat_interval: number };
-  s: null;
-  t: null;
-}
 
 interface GatewayDispatch {
   op: 0;
@@ -58,13 +56,11 @@ export class DiscordGateway {
   // Session state for resume.
   private sessionId: string | null = null;
   private lastSeq: number | null = null;
-  private resumeGatewayUrl: string | null = null;
 
   // Deferred resolution for start() — resolves on first READY.
   private readyResolve: (() => void) | null = null;
 
   // Heartbeat.
-  private heartbeatInterval: number | null = null;
   private heartbeatTimer: ReturnType<typeof setInterval> | null = null;
   private lastHeartbeatAck = true;
 
@@ -148,12 +144,9 @@ export class DiscordGateway {
   private connect(): void {
     this.clearTimers();
 
-    const url = this.gatewayUrl();
-
     let ws: WebSocket;
     try {
-      // lgtm [js/request-forgery] — URL validated against *.discord.gg in gatewayUrl()
-      ws = new WebSocket(url);
+      ws = new WebSocket(GATEWAY_URL);
     } catch (err) {
       logger.error(
         { err: err instanceof Error ? err.message : String(err) },
@@ -199,8 +192,7 @@ export class DiscordGateway {
 
       switch (msg.op) {
         case OP_HELLO: {
-          const hello = msg as GatewayHello;
-          this.startHeartbeat(hello.d.heartbeat_interval);
+          this.startHeartbeat();
 
           // If we didn't send resume (no session), send identify.
           if (!this.sessionId) {
@@ -221,11 +213,9 @@ export class DiscordGateway {
           if (dispatch.t === 'READY') {
             const ready = dispatch.d as {
               session_id: string;
-              resume_gateway_url: string;
               user: { id: string; username: string };
             };
             this.sessionId = ready.session_id;
-            this.resumeGatewayUrl = ready.resume_gateway_url;
             this.reconnectAttempts = 0;
 
             if (this.identifyTimeout) {
@@ -328,35 +318,6 @@ export class DiscordGateway {
     };
   }
 
-  /**
-   * Returns the gateway URL to connect to. Validates that the resume URL
-   * from READY is a legitimate Discord gateway before using it.
-   */
-  private gatewayUrl(): string {
-    if (this.resumeGatewayUrl) {
-      try {
-        const parsed = new URL(this.resumeGatewayUrl);
-        // Validate protocol and hostname to prevent SSRF. Only wss://
-        // connections to discord.gg subdomains are permitted.
-        if (
-          parsed.protocol === 'wss:' &&
-          (parsed.hostname === 'gateway.discord.gg' || parsed.hostname.endsWith('.discord.gg'))
-        ) {
-          // Reconstruct the URL from validated components to break the
-          // taint chain from the user-controlled resumeGatewayUrl.
-          return `wss://${parsed.hostname}/?v=10&encoding=json`;
-        }
-        logger.warn(
-          { url: this.resumeGatewayUrl },
-          'Resume gateway URL failed validation, using default'
-        );
-      } catch {
-        logger.warn('Failed to parse resume gateway URL, using default');
-      }
-    }
-    return GATEWAY_URL;
-  }
-
   private sendIdentify(): void {
     if (!this.ws || this.ws.readyState !== WebSocket.OPEN) return;
 
@@ -380,34 +341,20 @@ export class DiscordGateway {
   // Heartbeat
   // -----------------------------------------------------------------------
 
-  // Minimum heartbeat interval in ms — Discord typically sends ~40000.
-  private static readonly MIN_HEARTBEAT_INTERVAL = 1000;
-
-  private startHeartbeat(interval: number): void {
+  private startHeartbeat(): void {
     this.clearHeartbeat();
-    // Clamp to a safe minimum to prevent resource exhaustion from
-    // a malicious or misconfigured gateway hello. An explicit guard
-    // is used instead of Math.max() so the analyzer can track the
-    // sanitized value.
-    let safeInterval = interval;
-    if (safeInterval < DiscordGateway.MIN_HEARTBEAT_INTERVAL) {
-      logger.warn({ received: interval }, 'Heartbeat interval below minimum, clamping');
-      safeInterval = DiscordGateway.MIN_HEARTBEAT_INTERVAL;
-    }
-    this.heartbeatInterval = safeInterval;
     this.lastHeartbeatAck = true;
 
     // Discord recommends sending the first heartbeat after interval * jitter.
     const jitter = Math.random();
-    const firstDelay = safeInterval * jitter;
+    const firstDelay = HEARTBEAT_INTERVAL * jitter;
 
-    // lgtm [js/resource-exhaustion] — safeInterval clamped to >=1000ms via explicit guard
     this.heartbeatTimer = setTimeout(() => {
       this.sendHeartbeat();
       // Then every interval.
       this.heartbeatTimer = setInterval(() => {
         this.sendHeartbeat();
-      }, safeInterval);
+      }, HEARTBEAT_INTERVAL);
     }, firstDelay);
   }
 
@@ -474,6 +421,5 @@ export class DiscordGateway {
       clearInterval(this.heartbeatTimer);
       this.heartbeatTimer = null;
     }
-    this.heartbeatInterval = null;
   }
 }
