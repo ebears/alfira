@@ -29,6 +29,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 - Songs now sort by display name instead of raw title, matching the displayed value (#654).
+- Sort options now correctly apply on the playlist detail page (#664).
 - Removed broken `softprops/action-gh-release` step from the release workflow (#617).
 
 ### Dependencies

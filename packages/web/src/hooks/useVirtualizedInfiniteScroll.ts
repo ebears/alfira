@@ -222,7 +222,7 @@ export function useVirtualizedInfiniteScroll<T, A extends unknown[], M = undefin
   const depsArray = [...deps, loadPage];
   useEffect(() => {
     isMountedRef.current = true;
-    void loadPage(1, true, deps[0] as string | undefined);
+    void loadPage(1, true);
 
     return () => {
       isMountedRef.current = false;
