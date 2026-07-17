@@ -16,10 +16,6 @@ Prefer stdlib/native runtime APIs over npm packages. Bun's built-in HTTP, WebSoc
 
 ### Dependencies we keep intentionally
 
-**`seyfert`** — Handles the Discord gateway protocol: heartbeats, identify, resume, sharding, opcode dispatch, and rate-limit backpressure. The codebase interacts with it at only ~6 call sites, but those are backed by hundreds of lines of non-trivial protocol logic. Reimplementing that correctly would be error-prone and violate the spirit of "better dependencies."
-
----
-
 ## 3. Single-process simplicity by design
 
 The bot, API, and WebSocket run in a single Bun process. Shared memory = real-time updates without Redis pub/sub or message queues.
