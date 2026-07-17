@@ -268,16 +268,16 @@ export default function SongsPage() {
   );
 
   return (
-    <div className="p-4 md:p-8">
+    <div className='p-4 md:p-8'>
       <PageHeader
         icon={MusicNotesIcon}
-        title="Songs"
+        title='Songs'
         subtitle={`Music library${hasLoaded ? ` • ${total} track${total !== 1 ? 's' : ''}` : ''}`}
       >
-        <span className="relative group">
-          <QuestionIcon size={20} weight="duotone" className="text-muted cursor-help" />
-          <span className="glass-tooltip absolute right-0 top-full mt-2 w-64 p-3 leading-relaxed">
-            Songs are added through the <span className="text-accent">Requests</span> page. Submit a
+        <span className='relative group'>
+          <QuestionIcon size={20} weight='duotone' className='text-muted cursor-help' />
+          <span className='glass-tooltip absolute right-0 top-full mt-2 w-64 p-3 leading-relaxed'>
+            Songs are added through the <span className='text-accent'>Requests</span> page. Submit a
             URL there — admins review and approve it, or it&rsquo;s added instantly if you have
             permission.
           </span>
@@ -287,7 +287,7 @@ export default function SongsPage() {
       <ListToolbar
         searchValue={search}
         onSearchChange={(v) => updateParam('search', v || null)}
-        searchPlaceholder="Search by title, nickname, artist, album, or tag..."
+        searchPlaceholder='Search by title, nickname, artist, album, or tag...'
         sortOptions={SORT_OPTIONS}
         sort={sort}
         order={order as 'asc' | 'desc'}
@@ -310,7 +310,7 @@ export default function SongsPage() {
             { replace: true }
           );
         }}
-        defaultSort="createdAt"
+        defaultSort='createdAt'
         textSortFields={['title', 'artist', 'album']}
         filterTags={filterTags}
         filterSources={filterSources}
@@ -386,17 +386,17 @@ export default function SongsPage() {
 
       {bulkDeleteConfirm && (
         <ConfirmModal
-          title="Delete Songs"
+          title='Delete Songs'
           message={
             <>
               Permanently delete{' '}
-              <span className="text-fg font-semibold">
+              <span className='text-fg font-semibold'>
                 {bulk.count} song{bulk.count !== 1 ? 's' : ''}
               </span>{' '}
               from the library? This cannot be undone.
             </>
           }
-          confirmLabel="Delete"
+          confirmLabel='Delete'
           onConfirm={executeBulkDelete}
           onCancel={() => setBulkDeleteConfirm(false)}
         />
@@ -448,17 +448,17 @@ function DeleteConfirmDialog({
   if (!song) return null;
   return (
     <ConfirmModal
-      title="Delete Song"
+      title='Delete Song'
       message={
         <>
-          Remove <span className="text-fg font-semibold">"{song.nickname || song.title}"</span> from
+          Remove <span className='text-fg font-semibold'>"{song.nickname || song.title}"</span> from
           the library?{' '}
-          <span className="font-mono text-xs text-danger/70">
+          <span className='font-mono text-xs text-danger/70'>
             this will remove it from all playlists too.
           </span>
         </>
       }
-      confirmLabel="Delete"
+      confirmLabel='Delete'
       onConfirm={onConfirm}
       onCancel={onCancel}
     />

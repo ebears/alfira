@@ -1,17 +1,60 @@
 {
+  "lsp": {
+    "oxlint": {
+      "initialization_options": {
+        "settings": {
+          "configPath": "./oxlint.config.ts",
+          "run": "onType"
+        }
+      }
+    },
+    "oxfmt": {
+      "initialization_options": {
+        "settings": {
+          "configPath": "./oxfmt.config.ts"
+        }
+      }
+    }
+  },
   "languages": {
     "CSS": {
-      "language_servers": ["tailwindcss-intellisense-css", "!vscode-css-language-server", "..."]
+      "language_servers": ["tailwindcss-intellisense-css", "!vscode-css-language-server", "..."],
+      "format_on_save": "on",
+      "formatter": [
+        {
+          "language_server": {
+            "name": "oxfmt"
+          }
+        }
+      ]
     },
     "JavaScript": {
-      "language_servers": ["biome", "..."],
-      "formatter": "language_server",
-      "format_on_save": "on"
+      "language_servers": ["oxlint", "..."],
+      "format_on_save": "on",
+      "formatter": [
+        {
+          "language_server": {
+            "name": "oxfmt"
+          }
+        },
+        {
+          "code_action": "source.fixAll.oxc"
+        }
+      ]
     },
     "TypeScript": {
-      "language_servers": ["biome", "..."],
-      "formatter": "language_server",
+      "language_servers": ["oxlint", "..."],
       "format_on_save": "on",
+      "formatter": [
+        {
+          "language_server": {
+            "name": "oxfmt"
+          }
+        },
+        {
+          "code_action": "source.fixAll.oxc"
+        }
+      ],
       "inlay_hints": {
         "enabled": true,
         "show_parameter_hints": true,
@@ -19,9 +62,18 @@
       }
     },
     "TSX": {
-      "language_servers": ["biome", "..."],
-      "formatter": "language_server",
+      "language_servers": ["oxlint", "..."],
       "format_on_save": "on",
+      "formatter": [
+        {
+          "language_server": {
+            "name": "oxfmt"
+          }
+        },
+        {
+          "code_action": "source.fixAll.oxc"
+        }
+      ],
       "inlay_hints": {
         "enabled": true,
         "show_parameter_hints": true,
@@ -29,21 +81,21 @@
       }
     },
     "JSON": {
-      "language_servers": ["biome", "..."],
-      "formatter": "language_server",
-      "format_on_save": "on"
+      "language_servers": ["oxlint", "..."],
+      "format_on_save": "on",
+      "formatter": [
+        {
+          "language_server": {
+            "name": "oxfmt"
+          }
+        }
+      ]
     },
     "Markdown": {
       "format_on_save": "on"
     }
   },
-  "formatter": {
-    "language_server": {
-      "name": "biome"
-    }
-  },
   "code_actions_on_format": {
-    "source.organizeImports.biome": true,
-    "source.fixAll.biome": true
+    "source.fixAll.oxc": true
   }
 }

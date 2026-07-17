@@ -427,7 +427,7 @@ export default function PlaylistDetailPage() {
     {
       id: 'add-to-queue',
       label: 'Add to Queue',
-      icon: <PlusCircleIcon size={14} weight="duotone" />,
+      icon: <PlusCircleIcon size={14} weight='duotone' />,
       disabled: songs.length === 0,
       onClick: handleAddPlaylistToQueue,
     },
@@ -436,7 +436,7 @@ export default function PlaylistDetailPage() {
           {
             id: 'rename',
             label: 'Rename',
-            icon: <PencilSimple size={14} weight="duotone" />,
+            icon: <PencilSimple size={14} weight='duotone' />,
             editSubmenu: {
               title: 'Rename',
               value: renameValue,
@@ -451,9 +451,9 @@ export default function PlaylistDetailPage() {
             id: 'toggle-visibility',
             label: playlistDetail?.isPrivate ? 'Make Public' : 'Make Private',
             icon: playlistDetail?.isPrivate ? (
-              <LockOpenIcon size={14} weight="duotone" />
+              <LockOpenIcon size={14} weight='duotone' />
             ) : (
-              <LockIcon size={14} weight="duotone" />
+              <LockIcon size={14} weight='duotone' />
             ),
             onClick: handleToggleVisibility,
           } as MenuItem,
@@ -462,7 +462,7 @@ export default function PlaylistDetailPage() {
                 {
                   id: 'change-tag',
                   label: 'Change Tracked Tag',
-                  icon: <TagIcon size={14} weight="duotone" />,
+                  icon: <TagIcon size={14} weight='duotone' />,
                   submenu: {
                     title: 'Track Tag',
                     items: tagSubmenuItems,
@@ -473,7 +473,7 @@ export default function PlaylistDetailPage() {
                 {
                   id: 'convert-regular',
                   label: 'Convert to Regular Playlist',
-                  icon: <PlayCircleIcon size={14} weight="duotone" />,
+                  icon: <PlayCircleIcon size={14} weight='duotone' />,
                   onClick: handleConvertToRegular,
                 } as MenuItem,
               ]
@@ -481,13 +481,13 @@ export default function PlaylistDetailPage() {
                 {
                   id: 'add-songs',
                   label: 'Add Songs',
-                  icon: <PlayCircleIcon size={14} weight="duotone" />,
+                  icon: <PlayCircleIcon size={14} weight='duotone' />,
                   onClick: () => setShowAddSongs(true),
                 } as MenuItem,
                 {
                   id: 'make-smart',
                   label: 'Track a Tag',
-                  icon: <TagIcon size={14} weight="duotone" />,
+                  icon: <TagIcon size={14} weight='duotone' />,
                   submenu: {
                     title: 'Track Tag',
                     items: tagSubmenuItems,
@@ -499,7 +499,7 @@ export default function PlaylistDetailPage() {
           {
             id: 'delete',
             label: 'Delete',
-            icon: <BombIcon size={14} weight="duotone" />,
+            icon: <BombIcon size={14} weight='duotone' />,
             danger: true,
             onClick: () => setDeleteConfirm(true),
           } as MenuItem,
@@ -514,28 +514,28 @@ export default function PlaylistDetailPage() {
   const songItems: Song[] = songs.map((ps) => ps.song);
 
   return (
-    <div className="p-4 md:p-8">
+    <div className='p-4 md:p-8'>
       {/* Back */}
       <Button
-        variant="inherit"
-        surface="surface"
+        variant='inherit'
+        surface='surface'
         onClick={() => navigate('/playlists')}
-        className="flex items-center gap-1.5 font-mono text-xs mb-4 md:mb-6 min-h-11 md:min-h-0"
+        className='flex items-center gap-1.5 font-mono text-xs mb-4 md:mb-6 min-h-11 md:min-h-0'
       >
-        <CaretLeftIcon size={16} weight="duotone" className="md:w-3.5 md:h-3.5" />
+        <CaretLeftIcon size={16} weight='duotone' className='md:w-3.5 md:h-3.5' />
         playlists
       </Button>
 
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-start justify-between mb-6 md:mb-8 gap-4">
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 flex-wrap">
-            <h1 className="font-display text-3xl md:text-4xl text-fg tracking-wider">
+      <div className='flex flex-col sm:flex-row sm:items-start justify-between mb-6 md:mb-8 gap-4'>
+        <div className='flex-1 min-w-0'>
+          <div className='flex items-center gap-2 flex-wrap'>
+            <h1 className='font-display text-3xl md:text-4xl text-fg tracking-wider'>
               {playlistDetail.name}
             </h1>
             {playlistDetail.isPrivate && (
-              <span className="text-muted text-sm" title="Private playlist">
-                <GhostIcon size={14} weight="duotone" className="inline mr-1" />
+              <span className='text-muted text-sm' title='Private playlist'>
+                <GhostIcon size={14} weight='duotone' className='inline mr-1' />
                 private
               </span>
             )}
@@ -549,16 +549,16 @@ export default function PlaylistDetailPage() {
                     className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-xs font-medium ${colors.bg} ${colors.text}`}
                     title={`Auto-tracking all songs tagged "${displayName}"`}
                   >
-                    <TagIcon size={12} weight="duotone" />
+                    <TagIcon size={12} weight='duotone' />
                     {displayName}
                   </span>
                 );
               })()}
           </div>
-          <p className="font-mono text-xs text-muted mt-2">
+          <p className='font-mono text-xs text-muted mt-2'>
             {songItems.length} {songItems.length === 1 ? 'track' : 'tracks'}
             {playlistDetail.tagNameLower ? (
-              <span className="text-accent"> • auto-tracked</span>
+              <span className='text-accent'> • auto-tracked</span>
             ) : (
               <>
                 {' • '}
@@ -570,35 +570,35 @@ export default function PlaylistDetailPage() {
           </p>
         </div>
 
-        <div className="flex gap-2 shrink-0 items-center">
+        <div className='flex gap-2 shrink-0 items-center'>
           <Button
-            variant="secondary"
-            className="rounded-full!"
+            variant='secondary'
+            className='rounded-full!'
             onClick={() => {
               void handlePlayFromSong(songs[0]?.songId, 'random');
             }}
             disabled={songItems.length === 0}
-            title="Shuffle"
+            title='Shuffle'
           >
-            <ShuffleIcon size={18} weight="duotone" />
+            <ShuffleIcon size={18} weight='duotone' />
           </Button>
           <Button
-            variant="primary"
-            className="text-xs flex items-center gap-1.5"
+            variant='primary'
+            className='text-xs flex items-center gap-1.5'
             onClick={() => {
               void handlePlayFromSong(songs[0]?.songId, 'sequential');
             }}
             disabled={songItems.length === 0}
           >
-            <PlayIcon size={14} weight="duotone" /> Play
+            <PlayIcon size={14} weight='duotone' /> Play
           </Button>
           <ContextMenuTrigger
             ref={menuTriggerRef}
             onToggle={() => setMenuOpen((v) => !v)}
             isOpen={menuOpen}
-            surface="surface"
-            size="default"
-            className="rounded-full!"
+            surface='surface'
+            size='default'
+            className='rounded-full!'
           />
           {menuOpen && (
             <ContextMenu
@@ -614,7 +614,7 @@ export default function PlaylistDetailPage() {
       <ListToolbar
         searchValue={search}
         onSearchChange={setSearch}
-        searchPlaceholder="Search by title, nickname, artist, album, or tag..."
+        searchPlaceholder='Search by title, nickname, artist, album, or tag...'
         sortOptions={[...SORT_OPTIONS]}
         sort={sort}
         order={order as 'asc' | 'desc'}
@@ -622,7 +622,7 @@ export default function PlaylistDetailPage() {
           setSort(field);
           setOrder(newOrder);
         }}
-        defaultSort="position"
+        defaultSort='position'
         textSortFields={['title', 'artist', 'album']}
         filterTags={filterTags}
         filterSources={filterSources}
@@ -651,15 +651,15 @@ export default function PlaylistDetailPage() {
       {songItems.length === 0 && !isLoading ? (
         isSmart ? (
           <EmptyState
-            title="No Songs Yet"
+            title='No Songs Yet'
             message={`This playlist tracks the "${tags.find((t) => t.nameLower === playlistDetail.tagNameLower)?.canonicalName ?? playlistDetail.tagNameLower}" tag. Tag some songs to populate it.`}
           />
         ) : (
           <EmptyState
-            title="Empty Playlist"
+            title='Empty Playlist'
             isAdmin={canEdit}
             onAdd={() => setShowAddSongs(true)}
-            addLabel="add some songs"
+            addLabel='add some songs'
           />
         )
       ) : (
@@ -689,8 +689,8 @@ export default function PlaylistDetailPage() {
           selectionMode={selectionMode}
           isSelected={bulk.isSelected}
           onToggleSelect={bulk.toggle}
-          emptyTitle="No Songs"
-          emptyMessage="Add songs to this playlist"
+          emptyTitle='No Songs'
+          emptyMessage='Add songs to this playlist'
         />
       )}
 
@@ -711,43 +711,43 @@ export default function PlaylistDetailPage() {
       )}
       {bulkRemoveConfirm && (
         <ConfirmModal
-          title="Remove Songs"
+          title='Remove Songs'
           message={
             <>
               Remove{' '}
-              <span className="text-fg font-semibold">
+              <span className='text-fg font-semibold'>
                 {bulk.count} song{bulk.count !== 1 ? 's' : ''}
               </span>{' '}
               from this playlist? The songs won&lsquo;t be deleted from the library.
             </>
           }
-          confirmLabel="Remove"
+          confirmLabel='Remove'
           onConfirm={executeBulkRemove}
           onCancel={() => setBulkRemoveConfirm(false)}
         />
       )}
       {removeId && (
         <ConfirmModal
-          title="Remove Song"
+          title='Remove Song'
           message={
             <>
               Remove{' '}
-              <span className="text-fg font-semibold">
+              <span className='text-fg font-semibold'>
                 "{songs.find((ps) => ps.songId === removeId)?.song?.title}"
               </span>{' '}
               from this playlist? The song won't be deleted from the library.
             </>
           }
-          confirmLabel="Remove"
+          confirmLabel='Remove'
           onConfirm={() => handleRemoveSong(removeId)}
           onCancel={() => setRemoveId(null)}
         />
       )}
       {deleteConfirm && (
         <ConfirmModal
-          title="Delete Playlist"
-          message="This playlist will be permanently deleted. This cannot be undone."
-          confirmLabel="Delete"
+          title='Delete Playlist'
+          message='This playlist will be permanently deleted. This cannot be undone.'
+          confirmLabel='Delete'
           onConfirm={() => {
             setDeleteConfirm(false);
             handleDeletePlaylist();
@@ -757,18 +757,18 @@ export default function PlaylistDetailPage() {
       )}
       {tagSmartConfirm && (
         <ConfirmModal
-          title="Track a Tag"
+          title='Track a Tag'
           message={
             <>
               This will convert the playlist to auto-track the "
-              <span className="text-fg font-semibold">
+              <span className='text-fg font-semibold'>
                 {tags.find((t) => t.nameLower === tagSmartConfirm)?.canonicalName ??
                   tagSmartConfirm}
               </span>
               " tag. All current songs not matching this tag will be removed.
             </>
           }
-          confirmLabel="Convert"
+          confirmLabel='Convert'
           onConfirm={() => handleMakeSmart(tagSmartConfirm)}
           onCancel={() => setTagSmartConfirm(null)}
         />
@@ -782,7 +782,7 @@ export default function PlaylistDetailPage() {
           totalCount={totalSongs}
           canDelete={canEdit}
           canTag={canEdit}
-          deleteLabel="Remove selected"
+          deleteLabel='Remove selected'
           onDelete={handleBulkRemove}
           onTag={() => setBulkEditingOpen(true)}
           onSelectAll={() => bulk.selectAll(songItems.map((s) => s.id))}
@@ -809,16 +809,16 @@ export default function PlaylistDetailPage() {
 // ---------------------------------------------------------------------------
 function DetailSkeleton() {
   return (
-    <div className="p-8">
-      <div className="skeleton h-3 w-20 mb-6 rounded" />
-      <div className="skeleton h-12 w-64 mb-2 rounded" />
-      <div className="skeleton h-3 w-24 mb-8 rounded" />
+    <div className='p-8'>
+      <div className='skeleton h-3 w-20 mb-6 rounded' />
+      <div className='skeleton h-12 w-64 mb-2 rounded' />
+      <div className='skeleton h-3 w-24 mb-8 rounded' />
       {Array.from({ length: 5 }).map((_, i) => (
-        <div key={`skeleton-${i}`} className="flex items-center gap-4 py-3">
-          <div className="skeleton w-6 h-3 rounded" />
-          <div className="skeleton w-10 h-7 rounded" />
-          <div className="skeleton h-3 flex-1 rounded" />
-          <div className="skeleton h-3 w-12 rounded" />
+        <div key={`skeleton-${i}`} className='flex items-center gap-4 py-3'>
+          <div className='skeleton w-6 h-3 rounded' />
+          <div className='skeleton w-10 h-7 rounded' />
+          <div className='skeleton h-3 flex-1 rounded' />
+          <div className='skeleton h-3 w-12 rounded' />
         </div>
       ))}
     </div>

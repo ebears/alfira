@@ -68,14 +68,14 @@ export default function PlaylistsPage() {
   );
 
   return (
-    <div className="p-4 md:p-8">
+    <div className='p-4 md:p-8'>
       <PageHeader
         icon={PlaylistIcon}
-        title="Playlists"
+        title='Playlists'
         subtitle={`Browse & manage playlists${hasLoaded ? ` • ${items.length} playlist${items.length !== 1 ? 's' : ''}` : ''}`}
       >
         <Button
-          variant="primary"
+          variant='primary'
           onClick={() => setShowCreate(true)}
           className={showCreate ? 'pressed' : ''}
         >
@@ -93,8 +93,8 @@ export default function PlaylistsPage() {
         onRetry={retry}
         sentinelRef={sentinelRef}
         onRowClick={handleRowClick}
-        emptyTitle="No Playlists Yet"
-        emptyMessage="Create one to get started"
+        emptyTitle='No Playlists Yet'
+        emptyMessage='Create one to get started'
       />
 
       {showCreate && <CreatePlaylistModal onClose={() => setShowCreate(false)} />}
@@ -131,16 +131,16 @@ function CreatePlaylistModal({ onClose }: { onClose: () => void }) {
     <Backdrop onClose={onClose}>
       <form
         action={formAction}
-        className="p-5 md:p-6 w-full max-w-sm mx-4 glass-modal animate-fade-up"
+        className='p-5 md:p-6 w-full max-w-sm mx-4 glass-modal animate-fade-up'
       >
-        <h2 className="font-display text-2xl md:text-3xl text-fg tracking-wider mb-1">
+        <h2 className='font-display text-2xl md:text-3xl text-fg tracking-wider mb-1'>
           New Playlist
         </h2>
-        <p className="font-mono text-xs text-muted mb-4 md:mb-6">choose a name</p>
+        <p className='font-mono text-xs text-muted mb-4 md:mb-6'>choose a name</p>
         <input
-          name="name"
-          className="input mb-3"
-          placeholder="My Playlist"
+          name='name'
+          className='input mb-3'
+          placeholder='My Playlist'
           value={name}
           onChange={(e) => {
             setName(e.target.value);
@@ -150,15 +150,15 @@ function CreatePlaylistModal({ onClose }: { onClose: () => void }) {
           }}
           required
         />
-        <div className="mb-3">
-          <p className="font-mono text-xs text-muted mb-1.5">track a tag (optional)</p>
+        <div className='mb-3'>
+          <p className='font-mono text-xs text-muted mb-1.5'>track a tag (optional)</p>
           <select
-            name="tagNameLower"
-            className="input w-full"
+            name='tagNameLower'
+            className='input w-full'
             value={selectedTag}
             onChange={(e) => setSelectedTag(e.target.value)}
           >
-            <option value="">None (manual playlist)</option>
+            <option value=''>None (manual playlist)</option>
             {tags.map((tag) => (
               <option key={tag.nameLower} value={tag.nameLower}>
                 {tag.canonicalName}
@@ -166,9 +166,9 @@ function CreatePlaylistModal({ onClose }: { onClose: () => void }) {
             ))}
           </select>
         </div>
-        {state?.error && <p className="font-mono text-xs text-danger mb-3">{state.error}</p>}
-        <div className="flex gap-2 justify-end">
-          <Button variant="inherit" type="button" onClick={onClose} surface="surface">
+        {state?.error && <p className='font-mono text-xs text-danger mb-3'>{state.error}</p>}
+        <div className='flex gap-2 justify-end'>
+          <Button variant='inherit' type='button' onClick={onClose} surface='surface'>
             Cancel
           </Button>
           <CreatePlaylistSubmitButton disabled={!name.trim()}>Create</CreatePlaylistSubmitButton>

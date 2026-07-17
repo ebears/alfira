@@ -1,7 +1,3 @@
-alfira-bot\packages\web\public\manifest.webmanifest
-```
-
-```json
 {
   "name": "Alfira",
   "short_name": "Alfira",

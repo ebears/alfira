@@ -113,8 +113,8 @@ const TagTicker = memo(({ tags, isHovered: externalHovered }: TagTickerProps) =>
 
   return (
     <div
-      role="marquee"
-      className="overflow-hidden py-0 max-w-[60%]"
+      role='marquee'
+      className='overflow-hidden py-0 max-w-[60%]'
       ref={outerRef}
       style={{
         ...(shouldScroll && {
@@ -130,7 +130,7 @@ const TagTicker = memo(({ tags, isHovered: externalHovered }: TagTickerProps) =>
         if (externalHovered === undefined) setIsHovered(false);
       }}
     >
-      <div className="flex gap-1" ref={innerRef} style={animationStyle}>
+      <div className='flex gap-1' ref={innerRef} style={animationStyle}>
         {renderTags('a')}
         {shouldScroll && renderTags('b')}
       </div>

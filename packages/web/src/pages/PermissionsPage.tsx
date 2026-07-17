@@ -196,12 +196,12 @@ export default function PermissionsPage() {
 
   if (!data) {
     return (
-      <div className="p-4 md:p-8">
-        <PageHeader icon={ShieldCheckIcon} title="Permissions" />
+      <div className='p-4 md:p-8'>
+        <PageHeader icon={ShieldCheckIcon} title='Permissions' />
         {error ? (
           <ErrorBanner message={error} />
         ) : (
-          showLoading && <p className="text-sm text-muted">Loading…</p>
+          showLoading && <p className='text-sm text-muted'>Loading…</p>
         )}
       </div>
     );
@@ -209,34 +209,34 @@ export default function PermissionsPage() {
 
   // Render ----------------------------------------------------------------
   return (
-    <div className="p-4 md:p-8">
+    <div className='p-4 md:p-8'>
       <PageHeader
         icon={ShieldCheckIcon}
-        title="Permissions"
-        subtitle="Grant specific abilities to non-admin roles. Super-admins always have full access."
+        title='Permissions'
+        subtitle='Grant specific abilities to non-admin roles. Super-admins always have full access.'
       />
 
-      {error && <ErrorBanner message={error} className="mb-4" />}
+      {error && <ErrorBanner message={error} className='mb-4' />}
 
       {successMsg && (
-        <div className="mb-4 p-3 rounded-lg bg-accent/10 border border-accent/20 text-accent text-sm">
+        <div className='mb-4 p-3 rounded-lg bg-accent/10 border border-accent/20 text-accent text-sm'>
           {successMsg}
         </div>
       )}
 
       {/* Add role combobox */}
-      <div className="mb-6">
-        <RoleComboBox roles={unmanagedRoles} onSelect={addRole} placeholder="Add a role…" />
+      <div className='mb-6'>
+        <RoleComboBox roles={unmanagedRoles} onSelect={addRole} placeholder='Add a role…' />
       </div>
 
       {/* Managed role cards */}
       {managedRoles.length === 0 ? (
         <EmptyState
-          title="No Managed Roles"
-          message="Add a role above to start configuring granular permissions"
+          title='No Managed Roles'
+          message='Add a role above to start configuring granular permissions'
         />
       ) : (
-        <div className="space-y-4">
+        <div className='space-y-4'>
           {managedRoles.map((role) => (
             <RoleCard
               key={role.id}
@@ -253,8 +253,8 @@ export default function PermissionsPage() {
       )}
 
       {/* Save */}
-      <div className="flex gap-3 pt-5 justify-end">
-        <Button variant="primary" onClick={handleSave} disabled={!hasChanges || saving}>
+      <div className='flex gap-3 pt-5 justify-end'>
+        <Button variant='primary' onClick={handleSave} disabled={!hasChanges || saving}>
           {saving ? 'Saving…' : 'Save Changes'}
         </Button>
       </div>
@@ -262,17 +262,17 @@ export default function PermissionsPage() {
       {/* Confirm remove */}
       {roleToRemove && (
         <ConfirmModal
-          title="Remove Role"
+          title='Remove Role'
           message={
             <>
               This will clear all permissions for{' '}
-              <span className="text-fg font-medium">
+              <span className='text-fg font-medium'>
                 {data.roles.find((r) => r.id === roleToRemove)?.name ?? roleToRemove}
               </span>
               .
             </>
           }
-          confirmLabel="Remove"
+          confirmLabel='Remove'
           onConfirm={removeRole}
           onCancel={() => setRoleToRemove(null)}
         />
@@ -309,32 +309,32 @@ function RoleCard({
   }));
 
   return (
-    <div className="bg-elevated clay-resting rounded-xl overflow-hidden hover:clay-raised hover:-translate-y-px active:clay-flat active:translate-y-0 transition-all duration-100">
+    <div className='bg-elevated clay-resting rounded-xl overflow-hidden hover:clay-raised hover:-translate-y-px active:clay-flat active:translate-y-0 transition-all duration-100'>
       {/* Header row — clickable to toggle expand */}
       <button
-        type="button"
-        className="flex items-center gap-3 px-5 py-3 cursor-pointer w-full"
+        type='button'
+        className='flex items-center gap-3 px-5 py-3 cursor-pointer w-full'
         onClick={onToggleExpand}
       >
         <span
-          className="w-3 h-3 rounded-full shrink-0"
+          className='w-3 h-3 rounded-full shrink-0'
           style={{
             backgroundColor: role.color
               ? `#${role.color.toString(16).padStart(6, '0')}`
               : 'var(--color-muted)',
           }}
         />
-        <span className="text-sm font-medium text-fg">{role.name}</span>
+        <span className='text-sm font-medium text-fg'>{role.name}</span>
 
         {/* Category badges */}
-        <div className="flex items-center gap-4 ml-auto">
+        <div className='flex items-center gap-4 ml-auto'>
           {summaries.map((cat) => (
             <span
               key={cat.key}
               className={`flex items-center gap-1.5 text-xs font-mono
                 ${cat.summary.granted > 0 ? 'text-accent' : 'text-muted'}`}
             >
-              <span className="text-sm">{cat.icon}</span>
+              <span className='text-sm'>{cat.icon}</span>
               <span>
                 {cat.summary.granted}/{cat.summary.total}
               </span>
@@ -344,40 +344,40 @@ function RoleCard({
 
         {/* Remove */}
         <Button
-          variant="danger"
-          size="icon"
+          variant='danger'
+          size='icon'
           onClick={(e) => {
             e.stopPropagation();
             onRemove();
           }}
           title={`Remove ${role.name}`}
           aria-label={`Remove ${role.name}`}
-          className="shrink-0"
+          className='shrink-0'
         >
-          <TrashIcon size={16} weight="duotone" />
+          <TrashIcon size={16} weight='duotone' />
         </Button>
       </button>
 
       {/* Expanded content */}
       {isExpanded && (
-        <div className="border-t border-border px-5 py-4">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+        <div className='border-t border-border px-5 py-4'>
+          <div className='grid grid-cols-1 md:grid-cols-3 gap-5'>
             {summaries.map((cat) => (
               <div key={cat.key}>
-                <h4 className="text-xs font-mono text-muted uppercase tracking-wider mb-2.5">
-                  <span className="text-sm mr-1.5">{cat.icon}</span>
+                <h4 className='text-xs font-mono text-muted uppercase tracking-wider mb-2.5'>
+                  <span className='text-sm mr-1.5'>{cat.icon}</span>
                   {cat.key}
                 </h4>
-                <div className="space-y-2">
+                <div className='space-y-2'>
                   {cat.actions.map((action) => {
                     const checked = (mapping[action] ?? []).includes(role.id);
                     return (
                       <label
                         key={action}
-                        className="flex items-center gap-2.5 text-sm text-fg cursor-pointer group"
+                        className='flex items-center gap-2.5 text-sm text-fg cursor-pointer group'
                       >
                         <Checkbox checked={checked} onChange={() => onTogglePermission(action)} />
-                        <span className="group-hover:text-fg transition-colors">
+                        <span className='group-hover:text-fg transition-colors'>
                           {labels[action] ?? action}
                         </span>
                       </label>

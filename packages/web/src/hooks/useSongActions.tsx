@@ -71,7 +71,7 @@ export function useSongActions({
       {
         id: 'add-to-queue',
         label: 'Add to Up Next',
-        icon: <VinylRecordIcon size={14} weight="duotone" />,
+        icon: <VinylRecordIcon size={14} weight='duotone' />,
         onClick: onAddToQueue,
       },
       // (when onRemove is provided, skip full admin submenu)
@@ -80,7 +80,7 @@ export function useSongActions({
             {
               id: 'remove',
               label: removeLabel || 'Remove',
-              icon: <BombIcon size={14} weight="duotone" />,
+              icon: <BombIcon size={14} weight='duotone' />,
               danger: true,
               onClick: onRemove,
             } as MenuItem,
@@ -92,7 +92,7 @@ export function useSongActions({
                   {
                     id: 'add-to-playlist',
                     label: 'Add to playlist',
-                    icon: <CassetteTapeIcon size={14} weight="duotone" />,
+                    icon: <CassetteTapeIcon size={14} weight='duotone' />,
                     submenu: {
                       title: 'Add to playlist',
                       items: playlists.map((pl) => ({
@@ -109,7 +109,7 @@ export function useSongActions({
             {
               id: 'open-link',
               label: 'Open Link',
-              icon: <ArrowSquareOutIcon size={14} weight="duotone" />,
+              icon: <ArrowSquareOutIcon size={14} weight='duotone' />,
               onClick: () => window.open(song.sourceUrl, '_blank'),
             },
             // Delete + Requested By (library context, can delete)
@@ -118,17 +118,17 @@ export function useSongActions({
                   {
                     id: 'delete',
                     label: 'Delete song',
-                    icon: <BombIcon size={14} weight="duotone" />,
+                    icon: <BombIcon size={14} weight='duotone' />,
                     danger: true,
                     onClick: onDelete,
                   } as MenuItem,
                   {
                     id: 'user-info',
                     label: '',
-                    icon: <UserIcon size={14} weight="duotone" />,
+                    icon: <UserIcon size={14} weight='duotone' />,
                     info: {
                       label: song.addedByDisplayName || song.addedBy || '',
-                      icon: <UserIcon size={14} weight="duotone" />,
+                      icon: <UserIcon size={14} weight='duotone' />,
                     },
                     separatorBefore: true,
                   },

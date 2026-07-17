@@ -1,6 +1,6 @@
 ---
 description: Create a release PR from dev to main, auto-determine version from conventional commits, and update the changelog
-argument-hint: "[version or semver bump: major|minor|patch]"
+argument-hint: '[version or semver bump: major|minor|patch]'
 ---
 
 Follow these steps exactly, reporting progress as you go.
@@ -45,10 +45,12 @@ Use it directly. Skip the auto-bump logic below.
 Count the pending commits by conventional commit type:
 
 **Pre-stable (0.x.x):**
+
 - Any `feat` commits → bump **minor** (e.g., 0.1.0 → 0.2.0)
 - Only `fix`/`chore`/`refactor`/`docs`/`ci`/`style`/`test`/`perf` → bump **patch** (e.g., 0.1.0 → 0.1.1)
 
 **Stable (1.x.x+):**
+
 - Any `BREAKING CHANGE` footer or `!` in commit type (e.g., `feat!`) → bump **major**
 - Any `feat` commits → bump **minor**
 - Only `fix`/`chore`/etc. → bump **patch**
@@ -69,15 +71,19 @@ Read `CHANGELOG.md`. Replace the `## [Unreleased]` section with:
 ## [VERSION] - YYYY-MM-DD
 
 ### Added
+
 - <items from feat commits>
 
 ### Changed
+
 - <items from refactor/perf commits>
 
 ### Fixed
+
 - <items from fix commits>
 
 ### Security
+
 - <items from security commits>
 ```
 

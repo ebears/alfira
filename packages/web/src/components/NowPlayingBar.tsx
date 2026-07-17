@@ -55,42 +55,42 @@ const PlaybackControls = memo(function PlaybackControls({
   onStop,
 }: PlaybackControlsProps) {
   return (
-    <div className="flex items-center gap-1 md:gap-1.5 shrink-0">
+    <div className='flex items-center gap-1 md:gap-1.5 shrink-0'>
       <BarButton
         onClick={onPauseResume}
         busy={pauseBusy}
         disabled={!currentSong || pauseBusy || skipBusy}
         title={isPaused || isStopped ? 'Play' : 'Pause'}
-        hoverColor="hover:text-fg"
+        hoverColor='hover:text-fg'
         pulse={isPlaying && !isPaused}
       >
         {isPaused || isStopped ? (
-          <PlayIcon size={24} weight="duotone" className="md:w-5 md:h-5" />
+          <PlayIcon size={24} weight='duotone' className='md:w-5 md:h-5' />
         ) : (
-          <PauseIcon size={24} weight="duotone" className="md:w-5 md:h-5" />
+          <PauseIcon size={24} weight='duotone' className='md:w-5 md:h-5' />
         )}
       </BarButton>
       <BarButton
         onClick={onSkip}
         busy={skipBusy}
         disabled={!currentSong || pauseBusy || skipBusy}
-        title="Skip"
-        hoverColor="hover:text-fg"
-        className="hidden md:flex"
+        title='Skip'
+        hoverColor='hover:text-fg'
+        className='hidden md:flex'
       >
-        <SkipForwardIcon size={24} weight="duotone" className="md:w-5 md:h-5" />
+        <SkipForwardIcon size={24} weight='duotone' className='md:w-5 md:h-5' />
       </BarButton>
 
       <Button
-        variant="inherit"
-        surface="base"
-        size="icon"
+        variant='inherit'
+        surface='base'
+        size='icon'
         onClick={onStop}
         disabled={!isConnectedToVoice}
-        title="Stop playback"
-        className="text-black dark:text-white hover:text-danger md:w-12 md:h-12"
+        title='Stop playback'
+        className='text-black dark:text-white hover:text-danger md:w-12 md:h-12'
       >
-        <DoorOpenIcon size={24} weight="duotone" className="md:w-5 md:h-5" />
+        <DoorOpenIcon size={24} weight='duotone' className='md:w-5 md:h-5' />
       </Button>
     </div>
   );
@@ -118,20 +118,20 @@ const LoopShuffleControls = memo(function LoopShuffleControls({
   const isLoopActive = loopMode !== 'off';
   const loopIcon = isLoopActive ? (
     loopMode === 'song' ? (
-      <RepeatOnceIcon size={22} weight="fill" className="md:w-5 md:h-5" />
+      <RepeatOnceIcon size={22} weight='fill' className='md:w-5 md:h-5' />
     ) : (
-      <RepeatIcon size={22} weight="fill" className="md:w-5 md:h-5" />
+      <RepeatIcon size={22} weight='fill' className='md:w-5 md:h-5' />
     )
   ) : (
-    <RepeatIcon size={22} weight="duotone" className="md:w-5 md:h-5" />
+    <RepeatIcon size={22} weight='duotone' className='md:w-5 md:h-5' />
   );
 
   return (
-    <div className="hidden md:flex items-center gap-1 md:gap-1.5 shrink-0">
+    <div className='hidden md:flex items-center gap-1 md:gap-1.5 shrink-0'>
       <Button
-        variant="inherit"
-        surface="base"
-        size="icon"
+        variant='inherit'
+        surface='base'
+        size='icon'
         onClick={onCycleLoop}
         disabled={!currentSong || loopBusy}
         title={`Loop: ${loopMode}`}
@@ -142,15 +142,15 @@ const LoopShuffleControls = memo(function LoopShuffleControls({
         }`}
       >
         {loopBusy ? (
-          <CircleNotchIcon size={22} weight="bold" className="animate-spin md:w-5 md:h-5" />
+          <CircleNotchIcon size={22} weight='bold' className='animate-spin md:w-5 md:h-5' />
         ) : (
           loopIcon
         )}
       </Button>
       <Button
-        variant="inherit"
-        surface="base"
-        size="icon"
+        variant='inherit'
+        surface='base'
+        size='icon'
         onClick={onShuffleToggle}
         disabled={!currentSong || shuffleBusy}
         title={isShuffled ? 'Unshuffle queue' : 'Shuffle queue'}
@@ -161,12 +161,12 @@ const LoopShuffleControls = memo(function LoopShuffleControls({
         }`}
       >
         {shuffleBusy ? (
-          <CircleNotchIcon size={22} weight="bold" className="animate-spin md:w-5 md:h-5" />
+          <CircleNotchIcon size={22} weight='bold' className='animate-spin md:w-5 md:h-5' />
         ) : (
           <ShuffleIcon
             size={24}
             weight={isShuffled ? 'fill' : 'duotone'}
-            className="md:w-5 md:h-5"
+            className='md:w-5 md:h-5'
           />
         )}
       </Button>
@@ -254,13 +254,13 @@ const Scrubber = memo(function Scrubber({
 
   if (!isSeekable) {
     return (
-      <div className="w-full h-2 clay-inset rounded-full relative overflow-hidden cursor-not-allowed opacity-50">
+      <div className='w-full h-2 clay-inset rounded-full relative overflow-hidden cursor-not-allowed opacity-50'>
         <div
           ref={(ref) => {
             fillRef.current = ref;
             registerProgress(ref);
           }}
-          className="absolute inset-y-0 left-0 bg-accent rounded-full"
+          className='absolute inset-y-0 left-0 bg-accent rounded-full'
         />
       </div>
     );
@@ -269,7 +269,7 @@ const Scrubber = memo(function Scrubber({
   return (
     <div
       ref={trackRef}
-      className="w-full h-2 clay-inset rounded-full relative cursor-pointer group"
+      className='w-full h-2 clay-inset rounded-full relative cursor-pointer group'
       onPointerDown={handlePointerDown}
     >
       <div
@@ -277,7 +277,7 @@ const Scrubber = memo(function Scrubber({
           fillRef.current = ref;
           registerProgress(ref);
         }}
-        className="absolute inset-y-0 left-0 bg-accent rounded-full"
+        className='absolute inset-y-0 left-0 bg-accent rounded-full'
       />
       {/* Fill & thumb — positioned entirely by useProgressBar (rAF + effect).
            No React style props. */}
@@ -286,10 +286,10 @@ const Scrubber = memo(function Scrubber({
           thumbRef.current = ref;
           if (ref) registerThumb(ref);
         }}
-        className="scrubber-thumb absolute top-1/2 -translate-y-1/2 w-3.5 h-3.5 rounded-full bg-surface border-2 border-accent opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity"
+        className='scrubber-thumb absolute top-1/2 -translate-y-1/2 w-3.5 h-3.5 rounded-full bg-surface border-2 border-accent opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity'
       />
       {/* Invisible hit area for hovering */}
-      <div className="absolute inset-0" />
+      <div className='absolute inset-0' />
     </div>
   );
 });
@@ -316,12 +316,12 @@ const ProgressBar = memo(function ProgressBar({
   if (variant === 'mobile') {
     return (
       <div
-        className="md:hidden h-1 w-full clay-inset relative overflow-hidden"
+        className='md:hidden h-1 w-full clay-inset relative overflow-hidden'
         style={{ boxShadow: 'var(--clay-shadow-flat)' }}
       >
         <div
           ref={currentSong != null ? registerProgress : null}
-          className="absolute inset-y-0 left-0 bg-accent"
+          className='absolute inset-y-0 left-0 bg-accent'
           style={{ width: '0%' }}
         />
       </div>
@@ -329,7 +329,7 @@ const ProgressBar = memo(function ProgressBar({
   }
 
   return (
-    <div className="hidden md:flex items-center flex-1 min-h-0">
+    <div className='hidden md:flex items-center flex-1 min-h-0'>
       <Scrubber
         isSeekable={currentSong?.isSeekable ?? false}
         duration={currentSong?.duration ?? 0}
@@ -348,17 +348,17 @@ interface AlbumArtProps {
 
 const AlbumArt = memo(function AlbumArt({ currentSong }: AlbumArtProps) {
   return (
-    <div className="w-12 h-12 md:w-14 md:h-14 rounded border border-border shrink-0 overflow-hidden relative bg-elevated">
+    <div className='w-12 h-12 md:w-14 md:h-14 rounded border border-border shrink-0 overflow-hidden relative bg-elevated'>
       {currentSong ? (
         <ArtworkImage
           src={currentSong.artwork ?? currentSong.thumbnailUrl}
           alt={currentSong.title}
-          className="w-full h-full"
-          imageClassName="scale-[1.33]"
+          className='w-full h-full'
+          imageClassName='scale-[1.33]'
         />
       ) : (
-        <div className="w-full h-full flex items-center justify-center">
-          <GuitarIcon size={18} weight="duotone" className="text-faint" />
+        <div className='w-full h-full flex items-center justify-center'>
+          <GuitarIcon size={18} weight='duotone' className='text-faint' />
         </div>
       )}
     </div>
@@ -376,8 +376,8 @@ const MetadataSection = memo(function MetadataSection({
 }: MetadataSectionProps) {
   if (!currentSong) {
     return (
-      <div className="flex items-center h-6">
-        <p className="font-body text-sm text-muted">Nothing playing</p>
+      <div className='flex items-center h-6'>
+        <p className='font-body text-sm text-muted'>Nothing playing</p>
       </div>
     );
   }
@@ -386,20 +386,20 @@ const MetadataSection = memo(function MetadataSection({
   const sourceKey = getSourceKey(currentSong.sourceUrl);
 
   return (
-    <div className="flex flex-col min-w-0 gap-0.5">
-      <div className="flex items-center gap-2 min-w-0">
-        <p className="font-body text-sm font-medium text-fg truncate">{displayName}</p>
+    <div className='flex flex-col min-w-0 gap-0.5'>
+      <div className='flex items-center gap-2 min-w-0'>
+        <p className='font-body text-sm font-medium text-fg truncate'>{displayName}</p>
         {currentSong.artist && (
-          <p className="font-body text-xs text-muted shrink-0">· {currentSong.artist}</p>
+          <p className='font-body text-xs text-muted shrink-0'>· {currentSong.artist}</p>
         )}
         <TagTicker tags={currentSong.tags ?? []} />
       </div>
-      <div className="flex items-center gap-2">
-        <p className="font-mono text-xs text-muted">
+      <div className='flex items-center gap-2'>
+        <p className='font-mono text-xs text-muted'>
           {formatDuration(elapsed)} / {formatDuration(currentSong.duration)}
         </p>
         {sourceKey && (
-          <span className="flex items-center shrink-0 [&_svg]:w-3 [&_svg]:h-3">
+          <span className='flex items-center shrink-0 [&_svg]:w-3 [&_svg]:h-3'>
             <SourceIcon sourceKey={sourceKey} />
           </span>
         )}
@@ -502,7 +502,7 @@ export function NowPlayingBar() {
   }, [setOverrideElapsed]);
 
   return (
-    <div className="shrink-0 w-full bg-base fixed bottom-0 left-0 right-0 z-10">
+    <div className='shrink-0 w-full bg-base fixed bottom-0 left-0 right-0 z-10'>
       {/* Mobile: progress bar on top */}
       <ProgressBar
         currentSong={currentSong}
@@ -510,10 +510,10 @@ export function NowPlayingBar() {
         registerThumb={registerThumb}
         elapsed={elapsed}
         setOverrideElapsed={setOverrideElapsed}
-        variant="mobile"
+        variant='mobile'
       />
 
-      <div className="h-22 md:h-20 flex flex-row items-center px-3 md:px-8 gap-1">
+      <div className='h-22 md:h-20 flex flex-row items-center px-3 md:px-8 gap-1'>
         {/* Playback controls: Play/Pause (desktop: also Skip, Leave) */}
         <PlaybackControls
           currentSong={currentSong}
@@ -529,11 +529,11 @@ export function NowPlayingBar() {
         />
 
         {/* Desktop: spacer → art → metadata+progress → spacer → loop/shuffle+queue */}
-        <div className="hidden md:flex flex-1" />
-        <div className="hidden md:block shrink-0">
+        <div className='hidden md:flex flex-1' />
+        <div className='hidden md:block shrink-0'>
           <AlbumArt currentSong={currentSong} />
         </div>
-        <div className="hidden md:flex flex-col flex-8 min-w-0 px-3 h-14 justify-between">
+        <div className='hidden md:flex flex-col flex-8 min-w-0 px-3 h-14 justify-between'>
           <MetadataSection currentSong={currentSong} elapsed={elapsed} />
           <ProgressBar
             currentSong={currentSong}
@@ -542,11 +542,11 @@ export function NowPlayingBar() {
             elapsed={elapsed}
             onSeek={handleSeek}
             setOverrideElapsed={setOverrideElapsed}
-            variant="desktop"
+            variant='desktop'
           />
         </div>
-        <div className="hidden md:flex flex-1" />
-        <div className="hidden md:flex items-center gap-1.5 shrink-0">
+        <div className='hidden md:flex flex-1' />
+        <div className='hidden md:flex items-center gap-1.5 shrink-0'>
           <LoopShuffleControls
             currentSong={currentSong}
             loopMode={loopMode}
@@ -557,67 +557,67 @@ export function NowPlayingBar() {
             onShuffleToggle={handleShuffleToggle}
           />
           <Button
-            variant="inherit"
-            surface="base"
-            size="icon"
+            variant='inherit'
+            surface='base'
+            size='icon'
             onClick={() => setQueueOpen(!queueOpen)}
-            title="Queue"
+            title='Queue'
             className={`shrink-0 md:w-12 md:h-12 ${
               queueOpen
                 ? 'pressed text-accent hover:text-accent-muted'
                 : 'text-black dark:text-white hover:text-fg'
             }`}
           >
-            <QueueIcon size={24} weight="duotone" className="md:w-5 md:h-5" />
+            <QueueIcon size={24} weight='duotone' className='md:w-5 md:h-5' />
           </Button>
         </div>
 
         {/* Mobile: metadata + art + queue */}
-        <div className="md:hidden flex items-center ms-auto shrink-0">
+        <div className='md:hidden flex items-center ms-auto shrink-0'>
           {currentSong ? (
-            <div className="max-w-32 min-w-0 mr-2">
-              <p className="font-body text-sm font-semibold text-fg truncate text-right">
+            <div className='max-w-32 min-w-0 mr-2'>
+              <p className='font-body text-sm font-semibold text-fg truncate text-right'>
                 {currentSong.nickname || currentSong.title}
               </p>
               {currentSong.artist && (
-                <p className="font-body text-xs text-muted truncate text-right">
+                <p className='font-body text-xs text-muted truncate text-right'>
                   {currentSong.artist}
                 </p>
               )}
             </div>
           ) : (
-            <div className="min-w-0 mr-2">
-              <p className="font-body text-sm text-muted text-right">Nothing playing</p>
+            <div className='min-w-0 mr-2'>
+              <p className='font-body text-sm text-muted text-right'>Nothing playing</p>
             </div>
           )}
           <AlbumArt currentSong={currentSong} />
-          <div className="w-px h-8 bg-border shrink-0 mx-1" />
+          <div className='w-px h-8 bg-border shrink-0 mx-1' />
           <Button
-            variant="inherit"
-            surface="base"
-            size="icon"
+            variant='inherit'
+            surface='base'
+            size='icon'
             onClick={() => setQueueOpen(!queueOpen)}
-            title="Queue"
+            title='Queue'
             className={`shrink-0 md:w-12 md:h-12 ${
               queueOpen
                 ? 'pressed text-accent hover:text-accent-muted'
                 : 'text-black dark:text-white hover:text-fg'
             }`}
           >
-            <QueueIcon size={24} weight="duotone" className="md:w-5 md:h-5" />
+            <QueueIcon size={24} weight='duotone' className='md:w-5 md:h-5' />
           </Button>
         </div>
       </div>
 
       {/* Mobile: bottom sheet */}
       {queueOpen && (
-        <div className="md:hidden fixed inset-0 z-50">
+        <div className='md:hidden fixed inset-0 z-50'>
           <div
-            className="absolute inset-0 bg-black/60 backdrop-blur-sm cursor-pointer"
+            className='absolute inset-0 bg-black/60 backdrop-blur-sm cursor-pointer'
             onClick={() => setQueueOpen(false)}
-            role="presentation"
+            role='presentation'
           />
-          <div className="absolute bottom-0 left-0 right-0 max-h-[85vh] bg-surface rounded-t-2xl flex flex-col clay-floating animate-slide-up">
+          <div className='absolute bottom-0 left-0 right-0 max-h-[85vh] bg-surface rounded-t-2xl flex flex-col clay-floating animate-slide-up'>
             <QueuePanel
               mobileQuickControls={{
                 currentSong,

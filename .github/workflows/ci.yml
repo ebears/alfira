@@ -7,22 +7,22 @@ on:
   push:
     branches: [main, dev]
     paths-ignore:
-      - "docs/**"
-      - "**.md"
-      - ".zed/**"
-      - ".pi/**"
-      - "LICENSE"
-      - ".git-commit-template"
-      - ".env.example"
+      - 'docs/**'
+      - '**.md'
+      - '.zed/**'
+      - '.pi/**'
+      - 'LICENSE'
+      - '.git-commit-template'
+      - '.env.example'
   pull_request:
     paths-ignore:
-      - "docs/**"
-      - "**.md"
-      - ".zed/**"
-      - ".pi/**"
-      - "LICENSE"
-      - ".git-commit-template"
-      - ".env.example"
+      - 'docs/**'
+      - '**.md'
+      - '.zed/**'
+      - '.pi/**'
+      - 'LICENSE'
+      - '.git-commit-template'
+      - '.env.example'
   workflow_dispatch:
 
 concurrency:
@@ -50,7 +50,7 @@ jobs:
           cache: true
       - name: Install dependencies
         run: bun install --frozen-lockfile
-      - name: Lint (Biome)
+      - name: Lint (oxlint)
         run: bun run lint
       - name: Build server
         run: bun run --filter @alfira-bot/server build

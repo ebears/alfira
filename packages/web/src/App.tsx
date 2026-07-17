@@ -32,9 +32,9 @@ export default function App() {
                 <SongEditProvider>
                   <SongMenuProvider>
                     <Routes>
-                      <Route path="/login" element={<LoginPage />} />
+                      <Route path='/login' element={<LoginPage />} />
                       <Route
-                        path="/setup"
+                        path='/setup'
                         element={
                           <ProtectedRoute>
                             <SetupWizard />
@@ -42,7 +42,7 @@ export default function App() {
                         }
                       />
                       <Route
-                        path="/"
+                        path='/'
                         element={
                           <ProtectedRoute>
                             {/* PlayerProvider lives inside ProtectedRoute so it only polls while a user is authenticated. */}
@@ -52,17 +52,17 @@ export default function App() {
                           </ProtectedRoute>
                         }
                       >
-                        <Route index element={<Navigate to="/songs" replace />} />
-                        <Route path="songs" element={<SongsPage />} />
-                        <Route path="playlists" element={<PlaylistsPage />} />
-                        <Route path="playlists/:id" element={<PlaylistDetailPage />} />
-                        <Route path="settings" element={<SettingsPage />} />
-                        <Route path="audio" element={<AudioPage />} />
-                        <Route path="tags" element={<TagsPage />} />
-                        <Route path="permissions" element={<PermissionsPage />} />
-                        <Route path="requests" element={<RequestsPage />} />
+                        <Route index element={<Navigate to='/songs' replace />} />
+                        <Route path='songs' element={<SongsPage />} />
+                        <Route path='playlists' element={<PlaylistsPage />} />
+                        <Route path='playlists/:id' element={<PlaylistDetailPage />} />
+                        <Route path='settings' element={<SettingsPage />} />
+                        <Route path='audio' element={<AudioPage />} />
+                        <Route path='tags' element={<TagsPage />} />
+                        <Route path='permissions' element={<PermissionsPage />} />
+                        <Route path='requests' element={<RequestsPage />} />
                       </Route>
-                      <Route path="*" element={<Navigate to="/" replace />} />
+                      <Route path='*' element={<Navigate to='/' replace />} />
                     </Routes>
                   </SongMenuProvider>
                 </SongEditProvider>

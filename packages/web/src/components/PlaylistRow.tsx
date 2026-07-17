@@ -32,7 +32,7 @@ export const PlaylistRow = memo(
       <Card
         hoverable
         animate
-        className="rounded-xl flex items-center gap-3 md:gap-4 px-4 md:px-5 py-3.5 md:py-4 cursor-pointer group"
+        className='rounded-xl flex items-center gap-3 md:gap-4 px-4 md:px-5 py-3.5 md:py-4 cursor-pointer group'
         style={{ animationDelay }}
         data-playlist-id={dataPlaylistId}
         onClick={onClick}
@@ -42,56 +42,56 @@ export const PlaylistRow = memo(
             onClick(e as unknown as React.MouseEvent);
           }
         }}
-        role="button"
+        role='button'
         tabIndex={0}
       >
         {/* Cover art grid or fallback icon */}
-        <div className="w-16 h-16 md:w-20 md:h-20 rounded-xl overflow-hidden clay-flat shrink-0">
+        <div className='w-16 h-16 md:w-20 md:h-20 rounded-xl overflow-hidden clay-flat shrink-0'>
           {hasArtwork ? (
-            <div className="grid grid-cols-2 grid-rows-2 w-full h-full">
+            <div className='grid grid-cols-2 grid-rows-2 w-full h-full'>
               {cells.map((url, i) => (
                 // biome-ignore lint/suspicious/noArrayIndexKey: cells are always exactly 4, never reorder
-                <div key={i} className="overflow-hidden bg-elevated">
-                  <ArtworkImage src={url ?? undefined} alt="" className="w-full h-full" />
+                <div key={i} className='overflow-hidden bg-elevated'>
+                  <ArtworkImage src={url ?? undefined} alt='' className='w-full h-full' />
                 </div>
               ))}
             </div>
           ) : (
-            <div className="w-full h-full bg-elevated flex items-center justify-center">
-              <PlaylistIcon size={32} weight="duotone" className="text-accent" />
+            <div className='w-full h-full bg-elevated flex items-center justify-center'>
+              <PlaylistIcon size={32} weight='duotone' className='text-accent' />
             </div>
           )}
         </div>
 
         {/* Info */}
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2">
-            <p className="font-body font-medium text-fg transition-colors duration-150">
+        <div className='flex-1 min-w-0'>
+          <div className='flex items-center gap-2'>
+            <p className='font-body font-medium text-fg transition-colors duration-150'>
               {playlist.name}
             </p>
             {playlist.isPrivate && (
-              <span className="text-muted" title="Private playlist">
-                <GhostIcon size={14} weight="duotone" />
+              <span className='text-muted' title='Private playlist'>
+                <GhostIcon size={14} weight='duotone' />
               </span>
             )}
             {playlist.tagNameLower && (
               <span
-                className="text-accent"
+                className='text-accent'
                 title={`Smart playlist — tracks "${playlist.tagNameLower}" tag`}
               >
-                <TagIcon size={14} weight="duotone" />
+                <TagIcon size={14} weight='duotone' />
               </span>
             )}
           </div>
-          <p className="font-mono text-xs text-muted mt-0.5">
+          <p className='font-mono text-xs text-muted mt-0.5'>
             {count} {count === 1 ? 'song' : 'songs'}
           </p>
         </div>
         {/* Arrow */}
         <CaretRightIcon
           size={18}
-          weight="duotone"
-          className="text-faint group-hover:text-muted transition-colors duration-150 md:w-4 md:h-4"
+          weight='duotone'
+          className='text-faint group-hover:text-muted transition-colors duration-150 md:w-4 md:h-4'
         />
       </Card>
     );

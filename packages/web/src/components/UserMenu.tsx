@@ -98,7 +98,7 @@ export default function UserMenu({ user, collapsed, onLogout }: UserMenuProps) {
       src={user.avatar}
       alt={user.username}
       className={`${avatarSize} rounded-full object-cover shrink-0`}
-      decoding="async"
+      decoding='async'
     />
   ) : (
     <div
@@ -117,7 +117,7 @@ export default function UserMenu({ user, collapsed, onLogout }: UserMenuProps) {
       {/* Trigger */}
       <button
         ref={triggerRef}
-        type="button"
+        type='button'
         onClick={() => setOpen((o) => !o)}
         title={user.username}
         className={`flex items-center rounded-xl font-body transition-all duration-150 cursor-pointer w-full btn-inherit ${
@@ -138,28 +138,28 @@ export default function UserMenu({ user, collapsed, onLogout }: UserMenuProps) {
         createPortal(
           <div
             ref={menuRef}
-            role="menu"
+            role='menu'
             style={{ position: 'fixed', top: position.top, left: position.left }}
-            className="z-9999 min-w-40"
+            className='z-9999 min-w-40'
             onKeyDown={(e) => e.stopPropagation()}
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="glass-popover outline-2 outline-accent/20">
+            <div className='glass-popover outline-2 outline-accent/20'>
               {/* Username header — mirrors ContextMenu InfoRow */}
-              <div className="px-3 py-1.5 text-xs font-mono text-muted flex items-center gap-2">
-                <UserIcon size={14} weight="duotone" className="shrink-0" />
-                <span className="truncate">{user.username}</span>
+              <div className='px-3 py-1.5 text-xs font-mono text-muted flex items-center gap-2'>
+                <UserIcon size={14} weight='duotone' className='shrink-0' />
+                <span className='truncate'>{user.username}</span>
               </div>
               {/* Separator — mirrors ContextMenu separators */}
-              <div className="border-b border-muted/50" />
+              <div className='border-b border-muted/50' />
               {/* Logout — mirrors ContextMenu MenuItemButton danger styling */}
               <button
-                type="button"
-                role="menuitem"
+                type='button'
+                role='menuitem'
                 onClick={handleLogout}
-                className="w-full text-left px-3 py-1.5 text-xs font-mono text-danger hover:bg-danger/10 flex items-center gap-2 transition-colors duration-100"
+                className='w-full text-left px-3 py-1.5 text-xs font-mono text-danger hover:bg-danger/10 flex items-center gap-2 transition-colors duration-100'
               >
-                <SignOutIcon size={14} weight="duotone" className="shrink-0" />
+                <SignOutIcon size={14} weight='duotone' className='shrink-0' />
                 <span>Log out</span>
               </button>
             </div>

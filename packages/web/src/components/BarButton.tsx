@@ -23,9 +23,9 @@ export function BarButton({
 }) {
   return (
     <Button
-      variant="inherit"
-      surface="base"
-      size="icon"
+      variant='inherit'
+      surface='base'
+      size='icon'
       onClick={onClick}
       disabled={disabled}
       title={title}
@@ -36,7 +36,7 @@ export function BarButton({
       } disabled:cursor-not-allowed disabled:opacity-50 md:w-12 md:h-12 ${className}`}
     >
       {busy ? (
-        <CircleNotchIcon size={22} weight="bold" className="animate-spin md:w-5 md:h-5" />
+        <CircleNotchIcon size={22} weight='bold' className='animate-spin md:w-5 md:h-5' />
       ) : (
         children
       )}

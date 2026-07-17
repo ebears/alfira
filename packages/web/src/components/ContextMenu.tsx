@@ -79,9 +79,9 @@ export function ContextMenuTrigger({
       ref={ref}
       variant={variant ?? 'inherit'}
       size={size ?? 'icon'}
-      aria-haspopup="true"
+      aria-haspopup='true'
       aria-expanded={isOpen}
-      title="More actions"
+      title='More actions'
       surface={surface ?? 'elevated'}
       style={style}
       onMouseDown={onMouseDown}
@@ -91,7 +91,7 @@ export function ContextMenuTrigger({
       }}
       className={`${className ?? ''} ${isOpen ? 'pressed text-accent' : ''}`}
     >
-      <DotsThreeOutlineVerticalIcon size={18} weight="duotone" />
+      <DotsThreeOutlineVerticalIcon size={18} weight='duotone' />
     </Button>
   );
 }
@@ -264,14 +264,14 @@ export function ContextMenu({
   return createPortal(
     <div
       ref={menuRef}
-      role="menu"
-      aria-label="Song actions"
+      role='menu'
+      aria-label='Song actions'
       style={{ position: 'fixed', top: position.top, left: position.left }}
-      className="z-9999 min-w-48"
+      className='z-9999 min-w-48'
       onKeyDown={activeEditItemId ? undefined : handleKeyDown}
       onClick={(e) => e.stopPropagation()}
     >
-      <div className="glass-popover outline-2 outline-accent/20">
+      <div className='glass-popover outline-2 outline-accent/20'>
         {activeSubmenu ? (
           <SubmenuPanel
             config={activeSubmenu}
@@ -303,7 +303,7 @@ export function ContextMenu({
               return (
                 <div key={item.id}>
                   {(index > 0 || item.separatorBefore) && (
-                    <div className="border-b border-muted/50" />
+                    <div className='border-b border-muted/50' />
                   )}
                   <InfoRow item={item} />
                 </div>
@@ -311,7 +311,7 @@ export function ContextMenu({
             }
             return (
               <div key={item.id}>
-                {index > 0 && <div className="border-b border-muted/50" />}
+                {index > 0 && <div className='border-b border-muted/50' />}
                 <MenuItemButton
                   item={item}
                   onClick={() => {
@@ -344,11 +344,11 @@ export function ContextMenu({
 function InfoRow({ item }: { item: MenuItem }) {
   return (
     <div
-      role="presentation"
-      className="px-3 py-1.5 text-xs font-mono text-muted flex items-center gap-2"
+      role='presentation'
+      className='px-3 py-1.5 text-xs font-mono text-muted flex items-center gap-2'
     >
-      {item.icon && <span className="shrink-0">{item.icon}</span>}
-      <span className="truncate">{item.info?.label}</span>
+      {item.icon && <span className='shrink-0'>{item.icon}</span>}
+      <span className='truncate'>{item.info?.label}</span>
     </div>
   );
 }

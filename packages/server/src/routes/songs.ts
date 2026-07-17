@@ -296,7 +296,10 @@ async function handleGetSongs(ctx: RouteContext, request: Request): Promise<Resp
 
   const [songs, countResult] = await Promise.all([
     db.select().from(songTable).where(where).orderBy(orderBy).offset(skip).limit(limit),
-    db.select({ count: sql<number>`count(*)` }).from(songTable).where(where),
+    db
+      .select({ count: sql<number>`count(*)` })
+      .from(songTable)
+      .where(where),
   ]);
   const total = parseInt(String(countResult[0]?.count ?? 0), 10);
 

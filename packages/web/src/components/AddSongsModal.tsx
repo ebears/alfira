@@ -127,29 +127,29 @@ export default function AddSongsModal({
 
   return (
     <Backdrop onClose={onClose}>
-      <div className="w-full max-w-lg glass-modal flex flex-col max-h-[80vh] animate-fade-up">
-        <div className="p-4 md:p-5 border-b border-border">
-          <h2 className="font-display text-2xl md:text-3xl text-fg tracking-wider">Add Songs</h2>
-          <p className="font-mono text-xs text-muted mt-0.5">to "{playlist.name}"</p>
+      <div className='w-full max-w-lg glass-modal flex flex-col max-h-[80vh] animate-fade-up'>
+        <div className='p-4 md:p-5 border-b border-border'>
+          <h2 className='font-display text-2xl md:text-3xl text-fg tracking-wider'>Add Songs</h2>
+          <p className='font-mono text-xs text-muted mt-0.5'>to "{playlist.name}"</p>
           <input
-            className="input mt-3 md:mt-4"
-            placeholder="Search..."
+            className='input mt-3 md:mt-4'
+            placeholder='Search...'
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
         </div>
-        <div ref={scrollRef} className="flex-1 overflow-y-auto">
+        <div ref={scrollRef} className='flex-1 overflow-y-auto'>
           {loading ? (
-            <div className="p-4 md:p-6 space-y-2">
+            <div className='p-4 md:p-6 space-y-2'>
               {[1, 2, 3, 4, 5].map((n) => (
-                <div key={`skeleton-${n}`} className="flex items-center gap-3">
-                  <div className="skeleton w-12 h-8 md:w-10 md:h-7 rounded" />
-                  <div className="skeleton h-3 flex-1" />
+                <div key={`skeleton-${n}`} className='flex items-center gap-3'>
+                  <div className='skeleton w-12 h-8 md:w-10 md:h-7 rounded' />
+                  <div className='skeleton h-3 flex-1' />
                 </div>
               ))}
             </div>
           ) : songs.length === 0 ? (
-            <p className="p-4 md:p-6 font-mono text-xs text-muted text-center">no songs found</p>
+            <p className='p-4 md:p-6 font-mono text-xs text-muted text-center'>no songs found</p>
           ) : (
             <div
               style={{
@@ -182,12 +182,12 @@ export default function AddSongsModal({
             </div>
           )}
           {loadingMore && (
-            <p className="p-3 font-mono text-xs text-muted text-center">loading...</p>
+            <p className='p-3 font-mono text-xs text-muted text-center'>loading...</p>
           )}
         </div>
 
-        <div className="p-4 border-t border-border flex justify-end">
-          <Button variant="primary" onClick={hasAddedNew ? onAdded : onClose}>
+        <div className='p-4 border-t border-border flex justify-end'>
+          <Button variant='primary' onClick={hasAddedNew ? onAdded : onClose}>
             {hasAddedNew ? 'Done' : 'Close'}
           </Button>
         </div>
@@ -208,24 +208,24 @@ const SongRow = memo(function SongRow({
   onAdd: (song: Song) => void;
 }) {
   return (
-    <div className="flex items-center gap-2 md:gap-3 px-4 md:px-5 py-3 hover:bg-elevated active:bg-elevated/80 transition-colors duration-100">
-      <div className="overflow-hidden w-10 h-10 md:w-8 md:h-8 rounded border border-border shrink-0 bg-elevated">
+    <div className='flex items-center gap-2 md:gap-3 px-4 md:px-5 py-3 hover:bg-elevated active:bg-elevated/80 transition-colors duration-100'>
+      <div className='overflow-hidden w-10 h-10 md:w-8 md:h-8 rounded border border-border shrink-0 bg-elevated'>
         <ArtworkImage
           src={song.artwork ?? song.thumbnailUrl}
           alt={song.nickname || song.title}
-          className="w-full h-full"
-          imageClassName="scale-[1.33]"
+          className='w-full h-full'
+          imageClassName='scale-[1.33]'
         />
       </div>
-      <span className="flex-1 font-body text-sm text-fg truncate">
+      <span className='flex-1 font-body text-sm text-fg truncate'>
         {song.nickname || song.title}
       </span>
-      <span className="font-mono text-xs text-muted hidden sm:block">
+      <span className='font-mono text-xs text-muted hidden sm:block'>
         {formatDuration(song.duration)}
       </span>
       <Button
-        variant="inherit"
-        surface="surface"
+        variant='inherit'
+        surface='surface'
         disabled={isAdded || isAdding}
         onClick={() => onAdd(song)}
         className={`font-mono text-xs px-3 py-2 md:py-1 min-h-11 md:min-h-0 ${

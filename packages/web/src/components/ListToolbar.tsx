@@ -168,15 +168,15 @@ export default function ListToolbar({
   return (
     <>
       {/* ── Toolbar ── */}
-      <div className="flex items-center gap-2 mb-3">
+      <div className='flex items-center gap-2 mb-3'>
         {/* Search */}
-        <div className="relative flex-1">
+        <div className='relative flex-1'>
           <MagnifyingGlassIcon
-            className="absolute left-3 top-1/2 -translate-y-1/2 text-faint w-4 h-4 md:w-3.5 md:h-3.5"
-            weight="duotone"
+            className='absolute left-3 top-1/2 -translate-y-1/2 text-faint w-4 h-4 md:w-3.5 md:h-3.5'
+            weight='duotone'
           />
           <input
-            className="input pl-10"
+            className='input pl-10'
             placeholder={searchPlaceholder}
             value={searchInput}
             onChange={(e) => handleSearchInputChange(e.target.value)}
@@ -186,54 +186,54 @@ export default function ListToolbar({
         {/* Bulk selection toggle */}
         {showBulkToggle && (
           <Button
-            variant="inherit"
-            surface="surface"
+            variant='inherit'
+            surface='surface'
             onClick={onToggleSelectionMode}
             className={`flex items-center gap-1.5 px-2.5 ${
               selectionMode ? 'pressed text-accent' : ''
             }`}
             title={selectionMode ? 'Exit selection mode' : 'Select items'}
           >
-            <CheckSquareIcon size={16} weight="duotone" />
+            <CheckSquareIcon size={16} weight='duotone' />
           </Button>
         )}
 
         {/* Filter button */}
         <Button
-          variant="inherit"
-          surface="surface"
+          variant='inherit'
+          surface='surface'
           onClick={() => setFilterOpen(true)}
           className={`flex items-center gap-1.5 px-2.5 ${
             hasActiveFilters ? 'pressed text-accent' : ''
           }`}
           title={`Filter${hasActiveFilters ? ` (${filterTags.length + filterSources.length} active)` : ''}`}
         >
-          <FunnelIcon size={16} weight="duotone" />
+          <FunnelIcon size={16} weight='duotone' />
         </Button>
 
         {/* Sort dropdown */}
-        <div className="relative" ref={sortRef}>
+        <div className='relative' ref={sortRef}>
           <Button
-            variant="inherit"
-            surface="surface"
+            variant='inherit'
+            surface='surface'
             onClick={() => setSortOpen((v) => !v)}
             className={`flex items-center gap-1.5 px-2.5 ${
               sortOpen || hasActiveSort ? 'pressed text-accent' : ''
             }`}
             title={`Sort by ${sortOptions.find((o) => o.value === sort)?.label ?? sort} (${order === 'asc' ? 'ascending' : 'descending'})`}
           >
-            <SortAscendingIcon size={16} weight="duotone" />
-            <CaretDownIcon size={10} weight="fill" className="text-faint" />
+            <SortAscendingIcon size={16} weight='duotone' />
+            <CaretDownIcon size={10} weight='fill' className='text-faint' />
           </Button>
 
           {sortOpen && (
-            <div className="absolute right-0 top-full mt-1.5 w-48 glass-popover z-20 py-1 origin-top-right">
+            <div className='absolute right-0 top-full mt-1.5 w-48 glass-popover z-20 py-1 origin-top-right'>
               {sortOptions.map((opt) => {
                 const isActive = sort === opt.value;
                 return (
                   <button
                     key={opt.value}
-                    type="button"
+                    type='button'
                     className={`w-full flex items-center justify-between px-3 py-2 text-sm font-body transition-colors ${
                       isActive
                         ? 'text-accent bg-accent/5'
@@ -244,8 +244,8 @@ export default function ListToolbar({
                     <span>{opt.label}</span>
                     {isActive && (
                       <button
-                        type="button"
-                        className="cursor-pointer p-0.5 rounded hover:bg-black/10 dark:hover:bg-white/10 transition-colors"
+                        type='button'
+                        className='cursor-pointer p-0.5 rounded hover:bg-black/10 dark:hover:bg-white/10 transition-colors'
                         onClick={(e) => {
                           e.stopPropagation();
                           handleSortOptionClick(opt.value);
@@ -253,9 +253,9 @@ export default function ListToolbar({
                         title={order === 'asc' ? 'Switch to descending' : 'Switch to ascending'}
                       >
                         {showDownArrow ? (
-                          <ArrowDownIcon size={14} weight="bold" />
+                          <ArrowDownIcon size={14} weight='bold' />
                         ) : (
-                          <ArrowUpIcon size={14} weight="bold" />
+                          <ArrowUpIcon size={14} weight='bold' />
                         )}
                       </button>
                     )}
@@ -268,26 +268,26 @@ export default function ListToolbar({
 
         {/* View toggle */}
         {showViewToggle && (
-          <div className="flex gap-1 bg-elevated rounded-lg p-1 shrink-0">
+          <div className='flex gap-1 bg-elevated rounded-lg p-1 shrink-0'>
             <button
-              type="button"
+              type='button'
               onClick={() => handleViewModeChange('list')}
               className={`px-2 py-1.5 rounded-md transition-colors cursor-pointer ${
                 !isGrid ? 'bg-accent text-elevated' : 'text-muted hover:text-fg'
               }`}
-              title="List view"
+              title='List view'
             >
-              <ListIcon size={18} weight="duotone" />
+              <ListIcon size={18} weight='duotone' />
             </button>
             <button
-              type="button"
+              type='button'
               onClick={() => handleViewModeChange('grid')}
               className={`px-2 py-1.5 rounded-md transition-colors cursor-pointer ${
                 isGrid ? 'bg-accent text-elevated' : 'text-muted hover:text-fg'
               }`}
-              title="Grid view"
+              title='Grid view'
             >
-              <SquaresFourIcon size={18} weight="duotone" />
+              <SquaresFourIcon size={18} weight='duotone' />
             </button>
           </div>
         )}
@@ -295,7 +295,7 @@ export default function ListToolbar({
 
       {/* ── Filter chips ── */}
       {hasActiveFilters && (
-        <div className="mb-2">
+        <div className='mb-2'>
           <FilterChips
             tags={filterTags}
             sources={filterSources}

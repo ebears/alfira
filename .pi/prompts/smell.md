@@ -1,6 +1,6 @@
 ---
 description: Find and evaluate code smells — structural design issues worth refactoring
-argument-hint: "[area to focus on]"
+argument-hint: '[area to focus on]'
 ---
 
 Search for code smells in the repo. $1
@@ -26,7 +26,7 @@ Smells relevant to this TypeScript + React codebase:
 - **Primitive obsession** — strings and numbers used where a small typed wrapper would prevent bugs (e.g., raw strings for IDs, magic numbers for durations, untyped config dictionaries).
 - **Feature envy** — a function that spends more time accessing another module's data than its own. Often a sign that the logic belongs somewhere else.
 - **Too many parameters** — functions with 4+ positional parameters, especially when several are always passed together (data clump).
-- **Commented-out explanations** — comments that narrate *what* the code does rather than *why*. The code should be self-documenting; comments should explain intent.
+- **Commented-out explanations** — comments that narrate _what_ the code does rather than _why_. The code should be self-documenting; comments should explain intent.
 - **Inconsistent patterns** — the same problem solved differently in different places (error handling, validation, async patterns, state management).
 - **Shotgun surgery** — a single conceptual change requiring edits across many files. Often a sign of poor cohesion.
 - **Speculative generality** — hooks, abstractions, or configuration built for a future that never arrived.

@@ -39,6 +39,7 @@ git diff
 ```
 
 Check for:
+
 - Debug logging left in
 - Commented-out code
 - Hardcoded values that should be config

@@ -52,6 +52,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button
   return (
     <button
       ref={ref}
+      type='button'
       className={className ? `${base} ${className}` : base}
       style={inheritStyle}
       {...props}

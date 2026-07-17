@@ -40,7 +40,7 @@ export default function Checkbox({
     >
       {/* Hidden native input fills the entire box, capturing clicks even inside parent labels */}
       <input
-        type="checkbox"
+        type='checkbox'
         checked={checked}
         disabled={disabled}
         onChange={(e) => onChange(e.target.checked)}
@@ -58,7 +58,7 @@ export default function Checkbox({
       >
         <Check
           size={s.icon}
-          weight="bold"
+          weight='bold'
           className={`transition-all duration-150 ease-out ${
             checked ? `scale-100 opacity-100 ${variantIcon[variant]}` : 'scale-0 opacity-0'
           }`}

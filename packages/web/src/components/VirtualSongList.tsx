@@ -29,31 +29,31 @@ interface VirtualSongListProps {
 
 function SkeletonGrid() {
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-[repeat(auto-fill,minmax(270px,1fr))] gap-3 md:gap-4">
+    <div className='grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-[repeat(auto-fill,minmax(270px,1fr))] gap-3 md:gap-4'>
       {Array.from({ length: 12 }).map((_, i) => (
         // biome-ignore lint/suspicious/noArrayIndexKey: skeleton items are static placeholders
-        <div key={`skeleton-${i}`} className="flex flex-col bg-elevated clay-resting rounded-lg">
-          <div className="relative aspect-square overflow-hidden rounded-lg border border-border m-3 mb-0">
-            <div className="skeleton w-full h-full" />
+        <div key={`skeleton-${i}`} className='flex flex-col bg-elevated clay-resting rounded-lg'>
+          <div className='relative aspect-square overflow-hidden rounded-lg border border-border m-3 mb-0'>
+            <div className='skeleton w-full h-full' />
           </div>
-          <div className="p-4 flex-1 flex flex-col gap-2">
-            <div className="flex justify-between">
-              <div className="skeleton h-3.5 w-3/4" />
-              <div className="skeleton h-3.5 w-3.5 rounded-full" />
+          <div className='p-4 flex-1 flex flex-col gap-2'>
+            <div className='flex justify-between'>
+              <div className='skeleton h-3.5 w-3/4' />
+              <div className='skeleton h-3.5 w-3.5 rounded-full' />
             </div>
-            <div className="flex justify-between">
-              <div className="skeleton h-3 w-2/5" />
-              <div className="skeleton h-3 w-10" />
+            <div className='flex justify-between'>
+              <div className='skeleton h-3 w-2/5' />
+              <div className='skeleton h-3 w-10' />
             </div>
-            <div className="flex justify-between">
-              <div className="skeleton h-3 w-1/2" />
-              <div className="skeleton h-3 w-8" />
+            <div className='flex justify-between'>
+              <div className='skeleton h-3 w-1/2' />
+              <div className='skeleton h-3 w-8' />
             </div>
-            <div className="flex justify-between pt-1">
-              <div className="skeleton h-3 w-16" />
-              <span className="flex gap-1">
-                <div className="skeleton h-8 w-8 rounded-full" />
-                <div className="skeleton h-8 w-8 rounded-full" />
+            <div className='flex justify-between pt-1'>
+              <div className='skeleton h-3 w-16' />
+              <span className='flex gap-1'>
+                <div className='skeleton h-8 w-8 rounded-full' />
+                <div className='skeleton h-8 w-8 rounded-full' />
               </span>
             </div>
           </div>
@@ -65,20 +65,20 @@ function SkeletonGrid() {
 
 function SkeletonList() {
   return (
-    <div className="flex flex-col gap-1.5">
+    <div className='flex flex-col gap-1.5'>
       {Array.from({ length: 8 }).map((_, i) => (
         <div
           // biome-ignore lint/suspicious/noArrayIndexKey: skeleton items are static placeholders
           key={`skeleton-${i}`}
-          className="flex items-center gap-3 md:gap-4 px-4 py-4 rounded-lg bg-elevated clay-resting"
+          className='flex items-center gap-3 md:gap-4 px-4 py-4 rounded-lg bg-elevated clay-resting'
         >
-          <div className="skeleton w-16 h-16 rounded border border-border shrink-0" />
-          <div className="flex-1 min-w-0 flex flex-col gap-2">
-            <div className="skeleton h-3.5 w-2/5" />
-            <div className="skeleton h-3 w-3/5" />
+          <div className='skeleton w-16 h-16 rounded border border-border shrink-0' />
+          <div className='flex-1 min-w-0 flex flex-col gap-2'>
+            <div className='skeleton h-3.5 w-2/5' />
+            <div className='skeleton h-3 w-3/5' />
           </div>
-          <div className="skeleton h-6 w-6 shrink-0" />
-          <div className="skeleton h-4 w-4 shrink-0" />
+          <div className='skeleton h-6 w-6 shrink-0' />
+          <div className='skeleton h-4 w-4 shrink-0' />
         </div>
       ))}
     </div>

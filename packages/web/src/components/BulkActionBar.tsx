@@ -33,53 +33,53 @@ export default function BulkActionBar({
     loadedCount < totalCount ? `Select all ${loadedCount}` : `Select all ${totalCount}`;
 
   return (
-    <div className="fixed bottom-20 md:bottom-18 left-0 right-0 z-50 flex justify-center pb-4 md:pb-6 pointer-events-none">
-      <div className="pointer-events-auto flex items-center gap-3 px-4 py-3 bg-elevated border border-border rounded-xl shadow-2xl animate-fade-up">
-        <span className="text-sm font-mono text-fg tabular-nums">
+    <div className='fixed bottom-20 md:bottom-18 left-0 right-0 z-50 flex justify-center pb-4 md:pb-6 pointer-events-none'>
+      <div className='pointer-events-auto flex items-center gap-3 px-4 py-3 bg-elevated border border-border rounded-xl shadow-2xl animate-fade-up'>
+        <span className='text-sm font-mono text-fg tabular-nums'>
           {count} / {totalCount} selected
         </span>
 
         <button
-          type="button"
-          className="text-xs text-muted hover:text-accent transition-colors cursor-pointer"
+          type='button'
+          className='text-xs text-muted hover:text-accent transition-colors cursor-pointer'
           onClick={allLoadedSelected ? onDeselectAll : onSelectAll}
         >
           {allLoadedSelected ? 'Deselect all' : selectLabel}
         </button>
 
-        <div className="w-px h-5 bg-border" />
+        <div className='w-px h-5 bg-border' />
 
         {canDelete && (
           <Button
-            variant="danger"
-            className="text-xs flex items-center gap-1.5"
+            variant='danger'
+            className='text-xs flex items-center gap-1.5'
             onClick={onDelete}
             disabled={isDeleting}
           >
-            <TrashIcon size={14} weight="duotone" />
+            <TrashIcon size={14} weight='duotone' />
             {deleteLabel}
           </Button>
         )}
 
         {canTag && (
           <Button
-            variant="inherit"
-            surface="surface"
-            className="text-xs flex items-center gap-1.5"
+            variant='inherit'
+            surface='surface'
+            className='text-xs flex items-center gap-1.5'
             onClick={onTag}
           >
-            <TagIcon size={14} weight="duotone" />
+            <TagIcon size={14} weight='duotone' />
             Edit selected
           </Button>
         )}
 
         <button
-          type="button"
-          className="ml-1 p-1 text-muted hover:text-fg transition-colors cursor-pointer"
+          type='button'
+          className='ml-1 p-1 text-muted hover:text-fg transition-colors cursor-pointer'
           onClick={onDeselectAll}
-          title="Clear selection"
+          title='Clear selection'
         >
-          <XIcon size={16} weight="bold" />
+          <XIcon size={16} weight='bold' />
         </button>
       </div>
     </div>

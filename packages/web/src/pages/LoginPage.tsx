@@ -15,10 +15,10 @@ export default function LoginPage() {
   if (loading) return null;
 
   return (
-    <div className="min-h-screen bg-elevated flex items-center justify-center relative overflow-hidden">
+    <div className='min-h-screen bg-elevated flex items-center justify-center relative overflow-hidden'>
       {/* Background texture */}
       <div
-        className="absolute inset-0 opacity-[0.03]"
+        className='absolute inset-0 opacity-[0.03]'
         style={{
           backgroundImage: `repeating-linear-gradient(
           0deg,
@@ -38,32 +38,32 @@ export default function LoginPage() {
       />
 
       {/* Card */}
-      <div className="relative z-10 w-full max-w-sm mx-4 animate-fade-up">
-        <div className="p-6 md:p-8 glass-modal">
+      <div className='relative z-10 w-full max-w-sm mx-4 animate-fade-up'>
+        <div className='p-6 md:p-8 glass-modal'>
           {/* Logo */}
-          <div className="mb-6 md:mb-8 text-center">
-            <h1 className="font-display text-5xl md:text-6xl text-accent tracking-widest">
+          <div className='mb-6 md:mb-8 text-center'>
+            <h1 className='font-display text-5xl md:text-6xl text-accent tracking-widest'>
               alfira
             </h1>
-            <p className="font-mono text-xs text-muted mt-2 tracking-widest uppercase">music bot</p>
+            <p className='font-mono text-xs text-muted mt-2 tracking-widest uppercase'>music bot</p>
           </div>
 
           {/* Description */}
-          <p className="font-body text-sm text-muted text-center mb-6 md:mb-8 leading-relaxed">
+          <p className='font-body text-sm text-muted text-center mb-6 md:mb-8 leading-relaxed'>
             Log in with your Discord account to access the music library and controls.
           </p>
 
           {/* Login button */}
           <a
-            href="/auth/login"
-            className="btn-discord flex items-center justify-center gap-3 w-full"
+            href='/auth/login'
+            className='btn-discord flex items-center justify-center gap-3 w-full'
           >
-            <DiscordLogoIcon size={18} weight="duotone" />
+            <DiscordLogoIcon size={18} weight='duotone' />
             Login with Discord
           </a>
         </div>
 
-        <p className="text-center font-mono text-[10px] text-faint mt-6 tracking-widest uppercase">
+        <p className='text-center font-mono text-[10px] text-faint mt-6 tracking-widest uppercase'>
           access is restricted to server members
         </p>
       </div>
