@@ -10,10 +10,6 @@ updates:
       semver-major-days: 30
       semver-minor-days: 14
       semver-patch-days: 3
-    groups:
-      discord:
-        patterns:
-          - 'seyfert'
   - package-ecosystem: 'docker'
     directory: '/'
     target-branch: 'dev'

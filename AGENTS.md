@@ -4,7 +4,7 @@
 
 Alfira is a self-hosted Discord music bot with a web UI as the primary interface. It's a Bun workspaces monorepo with two packages:
 
-- `packages/server` — Bun API server + Discord bot (`GuildPlayer`, NodeLink audio, Seyfert v4), plus shared types, utilities, DB schema, and logger
+- `packages/server` — Bun API server + Discord bot (`GuildPlayer`, NodeLink audio, custom Discord gateway), plus shared types, utilities, DB schema, and logger
 - `packages/web` — React 19 + Tailwind CSS 4 web UI
 
 The bot and API run in a **single Bun process**. For detailed architecture (startup sequence, WebSocket pipeline, build cycle, shared exports), load the `alfira-architecture` skill.
@@ -15,7 +15,7 @@ The bot and API run in a **single Bun process**. For detailed architecture (star
 | --------- | --------------------------- |
 | Runtime   | Bun                         |
 | Language  | TypeScript                  |
-| Discord   | Seyfert v4                  |
+| Discord   | Custom gateway (WebSocket)  |
 | Audio     | NodeLink (Lavalink v4)      |
 | API       | Bun native HTTP + WebSocket |
 | Database  | SQLite + Drizzle ORM        |

@@ -1,5 +1,11 @@
 import { logger } from '../shared/logger';
-import { connectToVoice, createPlayer, getClient, getPlayer } from '../startDiscord';
+import {
+  connectToVoice,
+  createPlayer,
+  getClient,
+  getPlayer,
+  getUserVoiceChannel,
+} from '../startDiscord';
 import { getGuildId } from './config';
 import { json } from './json';
 import { lavalink } from './lavalink';
@@ -7,37 +13,24 @@ import { lavalink } from './lavalink';
 /**
  * Verifies the requesting user is in a voice channel.
  * Returns true if in voice, error Response otherwise.
+ *
+ * Uses gateway-tracked voice state (no REST call) for fast lookups.
  */
-export async function requireUserInVoice(discordId: string): Promise<true | Response> {
-  const client = getClient();
-  if (!client) {
+export function requireUserInVoice(discordId: string): true | Response {
+  const gateway = getClient();
+  if (!gateway || !gateway.isReady()) {
     return json({ error: 'Discord bot is not ready yet.', code: 'BOT_NOT_READY' }, 503);
   }
 
-  try {
-    const guild = await client.guilds.fetch(getGuildId());
-    const member = await guild.members.resolve(discordId);
-
-    if (!member) {
-      return json({ error: 'Could not find member in guild.', code: 'MEMBER_NOT_FOUND' }, 404);
-    }
-
-    const voiceState = await member.voice('rest');
-    if (!voiceState?.channelId) {
-      return json(
-        { error: 'You must be in a voice channel to control playback.', code: 'NOT_IN_VOICE' },
-        409
-      );
-    }
-
-    return true;
-  } catch (error) {
-    logger.error({ err: error as Error }, 'Failed to verify voice channel membership');
+  const voiceChannelId = getUserVoiceChannel(discordId);
+  if (!voiceChannelId) {
     return json(
-      { error: 'Could not verify voice channel membership.', code: 'VOICE_CHECK_FAILED' },
-      503
+      { error: 'You must be in a voice channel to control playback.', code: 'NOT_IN_VOICE' },
+      409
     );
   }
+
+  return true;
 }
 
 /**
@@ -58,41 +51,29 @@ export async function resolveOrAutoJoinPlayer(
     }
   }
 
-  const discordClient = getClient();
-  if (!discordClient) {
+  const gateway = getClient();
+  if (!gateway || !gateway.isReady()) {
     return {
       ok: false,
       response: json({ error: 'Discord bot is not ready yet.', code: 'BOT_NOT_READY' }, 503),
     };
   }
 
+  const voiceChannelId = getUserVoiceChannel(discordId);
+  if (!voiceChannelId) {
+    return {
+      ok: false,
+      response: json(
+        {
+          error: 'You are not in a voice channel. Join a voice channel in Discord first.',
+          code: 'NOT_IN_VOICE',
+        },
+        409
+      ),
+    };
+  }
+
   try {
-    const guild = await discordClient.guilds.fetch(guildId);
-    const member = await guild.members.resolve(discordId);
-
-    if (!member) {
-      return {
-        ok: false,
-        response: json({ error: 'Could not find member in guild.', code: 'MEMBER_NOT_FOUND' }, 404),
-      };
-    }
-
-    const voiceState = await member.voice('rest');
-    const voiceChannelId = voiceState?.channelId;
-
-    if (!voiceChannelId) {
-      return {
-        ok: false,
-        response: json(
-          {
-            error: 'You are not in a voice channel. Join a voice channel in Discord first.',
-            code: 'NOT_IN_VOICE',
-          },
-          409
-        ),
-      };
-    }
-
     // Connect to voice via the Discord gateway, then create the GuildPlayer.
     await connectToVoice(guildId, voiceChannelId);
     // Give NodeLink time to fully establish the voice connection

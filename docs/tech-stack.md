@@ -6,7 +6,7 @@
 | ------------ | ------------------------------------------------ |
 | **Runtime**  | Bun                                              |
 | **Language** | TypeScript                                       |
-| **Discord**  | `Seyfert` v4                                     |
+| **Discord**  | Custom gateway (WebSocket) + REST                |
 | **Audio**    | NodeLink (Lavalink v4) — direct WebSocket + REST |
 | **API**      | Bun native HTTP + WebSocket                      |
 | **Database** | SQLite + Drizzle ORM                             |
@@ -57,7 +57,7 @@ The project is a Bun workspaces monorepo:
 
 ```
 packages/
-├── server    # Bun API + Discord bot (GuildPlayer, NodeLink audio, Seyfert v4)
+├── server    # Bun API + Discord bot (GuildPlayer, NodeLink audio, custom Discord gateway)
 │             # Also contains shared types, utilities, DB schema, and logger
 └── web       # React 19 + Tailwind CSS 4 web UI
 ```
