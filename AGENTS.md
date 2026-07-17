@@ -20,7 +20,7 @@ The bot and API run in a **single Bun process**. For detailed architecture (star
 | API       | Bun native HTTP + WebSocket |
 | Database  | SQLite + Drizzle ORM        |
 | Frontend  | React 19 + Tailwind CSS 4   |
-| Linting   | Biome                       |
+| Linting   | oxlint + oxfmt              |
 
 ## Development Commands
 
@@ -49,7 +49,7 @@ bun run format
 
 ## Code Style
 
-- Biome for linting and formatting
+- oxlint + oxfmt for linting and formatting
 - Run `bun run check` before committing
 - CI runs `bun run lint` — code must pass before merging
 
