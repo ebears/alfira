@@ -9,7 +9,7 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/ebears/alfira"><img src="https://img.shields.io/badge/status-v0.1.0%20%7C%20pre--release-orange" alt="Status: Experimental | Pre-release"></a>
+  <a href="https://github.com/ebears/alfira"><img src="https://img.shields.io/github/v/release/ebears/alfira?include_prereleases&label=status&color=orange" alt="Latest release"></a>
   <a href="https://github.com/ebears/alfira/actions/workflows/docker-build.yml"><img src="https://github.com/ebears/alfira/actions/workflows/docker-build.yml/badge.svg" alt="GitHub Actions"></a>
 </p>
 
