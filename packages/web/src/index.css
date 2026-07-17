@@ -3,6 +3,44 @@
 
 @import "tailwindcss";
 
+/* ============================================
+   SELF-HOSTED FONTS
+   Latin-subset woff2 files served locally to
+   eliminate FOUT from Google Fonts CDN.
+   ============================================ */
+
+@font-face {
+    font-family: "Cherry Bomb One";
+    font-style: normal;
+    font-weight: 400;
+    font-display: swap;
+    src: url(/fonts/cherry-bomb-one-400-latin.woff2) format("woff2");
+}
+
+@font-face {
+    font-family: "Chiron GoRound TC";
+    font-style: normal;
+    font-weight: 400;
+    font-display: swap;
+    src: url(/fonts/chiron-go-round-tc-400-latin.woff2) format("woff2");
+}
+
+@font-face {
+    font-family: "JetBrains Mono";
+    font-style: normal;
+    font-weight: 400;
+    font-display: swap;
+    src: url(/fonts/jetbrains-mono-400-latin.woff2) format("woff2");
+}
+
+@font-face {
+    font-family: "JetBrains Mono";
+    font-style: normal;
+    font-weight: 500;
+    font-display: swap;
+    src: url(/fonts/jetbrains-mono-500-latin.woff2) format("woff2");
+}
+
 @keyframes fadeUp {
     0% {
         opacity: 0;
