@@ -43,7 +43,13 @@
       ]
     },
     "TypeScript": {
-      "language_servers": ["oxlint", "..."],
+      "language_servers": [
+        "typescript-ls",
+        "oxlint",
+        "!typescript-language-server",
+        "!vtsls",
+        "..."
+      ],
       "format_on_save": "on",
       "formatter": [
         {
@@ -62,7 +68,13 @@
       }
     },
     "TSX": {
-      "language_servers": ["oxlint", "..."],
+      "language_servers": [
+        "typescript-ls",
+        "oxlint",
+        "!typescript-language-server",
+        "!vtsls",
+        "..."
+      ],
       "format_on_save": "on",
       "formatter": [
         {
