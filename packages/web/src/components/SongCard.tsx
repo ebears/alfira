@@ -214,8 +214,9 @@ const SongCardInner = ({
       data-song-id={song.id}
       data-song-edit-container
     >
-      <button
-        type='button'
+      <div
+        role='button'
+        tabIndex={canEdit || selectionMode ? 0 : -1}
         className='flex items-center gap-3 md:gap-4 px-4 py-4 w-full text-left bg-transparent border-0'
         onClick={handleListClick}
         onKeyDown={(e) => {
@@ -296,7 +297,7 @@ const SongCardInner = ({
             triggerRef={triggerRef}
           />
         )}
-      </button>
+      </div>
 
       {/* Inline edit panel */}
       <div className={`expand-panel ${isOpen ? 'expanded' : ''}`}>
