@@ -6,7 +6,7 @@
     "ignoreDeprecations": "7.0",
     "rootDir": "./src",
     "paths": { "*": ["./*"] },
-    "lib": ["ESNext"],
+    "lib": ["ESNext", "DOM"],
     "types": ["bun-types", "node"],
     "outDir": "./dist",
     "strict": true,
