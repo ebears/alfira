@@ -20,7 +20,7 @@
     "drizzle-orm": "0.45.2",
     "jsonwebtoken": "9.0.3",
     "seyfert": "5.0.0",
-    "ws": "8.21.0"
+    "ws": "8.21.1"
   },
   "devDependencies": {
     "@types/jsonwebtoken": "9.0.10",
