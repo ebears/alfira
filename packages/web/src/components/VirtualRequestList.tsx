@@ -25,8 +25,8 @@ function SkeletonList() {
     <div className='space-y-3'>
       {Array.from({ length: 4 }).map((_, i) => (
         <div
-          // biome-ignore lint/suspicious/noArrayIndexKey: skeleton items are static placeholders
-          key={`skeleton-${i}`}
+          // eslint-disable-next-line react/no-array-index-key -- static skeleton placeholders
+          key={`skel-${i}`}
           className='flex items-center gap-4 p-4 rounded-xl bg-elevated clay-resting'
         >
           <div className='skeleton w-14 h-14 rounded-lg shrink-0' />

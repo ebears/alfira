@@ -111,6 +111,7 @@ export default function MobileNav() {
       {isOpen && (
         <button
           type='button'
+          aria-label='Close navigation menu'
           className='md:hidden fixed inset-0 z-50 bg-black/60 backdrop-blur-sm animate-fade-up'
           onClick={() => setIsOpen(false)}
           onKeyDown={(e) => {

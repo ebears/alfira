@@ -22,8 +22,7 @@ export function useProgressBar(
   const progressBars = useRef<Set<HTMLDivElement>>(new Set());
   const thumbs = useRef<Set<HTMLDivElement>>(new Set());
   const rafIdRef = useRef(0);
-  // biome-ignore lint/suspicious/noExplicitAny: setInterval return type differs across environments
-  const intervalIdRef = useRef<any>(0);
+  const intervalIdRef = useRef<ReturnType<typeof setInterval> | 0>(0);
 
   // Accumulated elapsed ms at pause time; 0 on new song
   const accumulatedMsRef = useRef(0);

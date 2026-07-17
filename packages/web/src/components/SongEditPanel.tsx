@@ -456,7 +456,6 @@ function CheckIcon() {
       strokeLinecap='round'
       strokeLinejoin='round'
       className='text-green-400 inline-block'
-      role='img'
       aria-label='Added'
     >
       <title>Added</title>
@@ -477,7 +476,6 @@ function CrossIcon() {
       strokeLinecap='round'
       strokeLinejoin='round'
       className='text-muted inline-block'
-      role='img'
       aria-label='Not added'
     >
       <title>Not added</title>

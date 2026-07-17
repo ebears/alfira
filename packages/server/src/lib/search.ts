@@ -21,7 +21,7 @@ export function parseSongSortField(raw: string): SongSortField | null {
  * Column params accept Drizzle column refs (SQLiteColumn / PgColumn) or
  * raw SQL chunks — anything the `sql` tagged template can interpolate.
  */
-// biome-ignore lint/suspicious/noExplicitAny: Drizzle column refs are not assignable to SQL<unknown> but are valid sql`` interpolations
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- Drizzle column refs are not assignable to SQL<unknown> but are valid sql`` interpolations
 type SqlInterpolatable = any;
 
 export function buildSongOrderBy(

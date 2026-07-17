@@ -179,7 +179,12 @@ export default function PlaylistDetailPage() {
       };
     },
     limit: ITEMS_PER_PAGE,
-    deps: [id!, isAdminView, songsOpts],
+    deps: [
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- route param is always defined
+      id!,
+      isAdminView,
+      songsOpts,
+    ],
   });
 
   // Derive PlaylistDetail for JSX — metadata from the hook, songs from items
@@ -189,6 +194,10 @@ export default function PlaylistDetailPage() {
         songs,
       } as PlaylistDetail)
     : null;
+
+  // Stable ref for callbacks — avoids playlistDetail changing every render
+  const playlistDetailRef = useRef(playlistDetail);
+  playlistDetailRef.current = playlistDetail;
 
   const isOwner = user?.discordId === playlistDetail?.createdBy;
   const canEdit = isAdminView || isOwner || hasPermission('songs.edit');
@@ -267,7 +276,8 @@ export default function PlaylistDetailPage() {
   }, []);
 
   const executeBulkRemove = useCallback(async () => {
-    if (!playlistDetail || bulk.count === 0) return;
+    const pd = playlistDetailRef.current;
+    if (!pd || bulk.count === 0) return;
     setBulkRemoveConfirm(false);
     setBulkRemoving(true);
     try {
@@ -278,7 +288,7 @@ export default function PlaylistDetailPage() {
         .filter((id): id is string => id !== undefined);
       const chunkSize = 500;
       for (let i = 0; i < allIds.length; i += chunkSize) {
-        await bulkRemoveSongsFromPlaylist(playlistDetail.id, allIds.slice(i, i + chunkSize));
+        await bulkRemoveSongsFromPlaylist(pd.id, allIds.slice(i, i + chunkSize));
       }
       for (const junctionId of junctionIds) {
         removeItem(junctionId);
@@ -291,7 +301,7 @@ export default function PlaylistDetailPage() {
       bulk.clearAll();
       setSelectionMode(false);
     }
-  }, [playlistDetail, bulk, notify, removeItem]);
+  }, [bulk, notify, removeItem]);
 
   const handleBulkEdit = useCallback(
     async (data: import('@alfira-bot/server/shared/api').BulkEditData) => {
@@ -343,11 +353,12 @@ export default function PlaylistDetailPage() {
       mode: 'sequential' | 'random' = 'sequential',
       { throwErrors = false }: { throwErrors?: boolean } = {}
     ) => {
-      if (!playlistDetail) return;
+      const pd = playlistDetailRef.current;
+      if (!pd) return;
       setPlayingSongId(songId);
       try {
         await startPlayback({
-          playlistId: playlistDetail.id,
+          playlistId: pd.id,
           mode,
           loop: queueState.loopMode,
           startFromSongId: songId,
@@ -361,62 +372,66 @@ export default function PlaylistDetailPage() {
         setPlayingSongId(null);
       }
     },
-    [playlistDetail, queueState.loopMode, notify]
+    [queueState.loopMode, notify]
   );
 
   const handleConvertToRegular = useCallback(async () => {
-    if (!playlistDetail) return;
+    const pd = playlistDetailRef.current;
+    if (!pd) return;
     try {
-      await updatePlaylistTag(playlistDetail.id, null);
+      await updatePlaylistTag(pd.id, null);
       refetch();
       notify('Playlist converted to regular playlist', 'success');
     } catch (err: unknown) {
       notify(apiErrorMessage(err, 'Could not convert playlist.'), 'error', 5000);
     }
-  }, [playlistDetail, refetch, notify]);
+  }, [refetch, notify]);
 
   const handleChangeTag = useCallback(
     async (tagNameLower: string) => {
-      if (!playlistDetail) return;
+      const pd = playlistDetailRef.current;
+      if (!pd) return;
       try {
-        await updatePlaylistTag(playlistDetail.id, tagNameLower);
+        await updatePlaylistTag(pd.id, tagNameLower);
         refetch();
         notify('Playlist tag updated', 'success');
       } catch (err: unknown) {
         notify(apiErrorMessage(err, 'Could not update playlist tag.'), 'error', 5000);
       }
     },
-    [playlistDetail, refetch, notify]
+    [refetch, notify]
   );
 
   const handleMakeSmart = useCallback(
     async (tagNameLower: string) => {
-      if (!playlistDetail) return;
+      const pd = playlistDetailRef.current;
+      if (!pd) return;
       setTagSmartConfirm(null);
       try {
-        await updatePlaylistTag(playlistDetail.id, tagNameLower);
+        await updatePlaylistTag(pd.id, tagNameLower);
         refetch();
         notify('Playlist now tracking tag', 'success');
       } catch (err: unknown) {
         notify(apiErrorMessage(err, 'Could not update playlist tag.'), 'error', 5000);
       }
     },
-    [playlistDetail, refetch, notify]
+    [refetch, notify]
   );
 
   const handleAddPlaylistToQueue = useCallback(async () => {
-    if (!playlistDetail) return;
+    const pd = playlistDetailRef.current;
+    if (!pd) return;
     try {
       await startPlayback({
-        playlistId: playlistDetail.id,
+        playlistId: pd.id,
         mode: 'sequential',
         loop: queueState.loopMode,
       });
-      notify(`Added "${playlistDetail.name}" to queue`, 'success');
+      notify(`Added "${pd.name}" to queue`, 'success');
     } catch (err: unknown) {
       notify(apiErrorMessage(err, 'Could not add to queue.'), 'error', 5000);
     }
-  }, [playlistDetail, queueState.loopMode, notify]);
+  }, [queueState.loopMode, notify]);
 
   const tagSubmenuItems = tags.map((tag) => ({
     id: tag.nameLower,

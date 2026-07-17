@@ -117,16 +117,21 @@ export function ContextMenu({
   const activeEditItem = activeEditItemId ? items.find((i) => i.id === activeEditItemId) : null;
   const activeEditSubmenu = activeEditItem?.editSubmenu ?? null;
 
-  const currentItems = activeSubmenu
-    ? activeSubmenu.items.map((item) => ({
-        id: item.id,
-        label: item.label,
-        icon: item.icon,
-        disabled: item.disabled,
-      }))
-    : activeEditItemId
-      ? []
-      : items;
+  const currentItems = (
+    activeSubmenu
+      ? activeSubmenu.items.map((item) => ({
+          id: item.id,
+          label: item.label,
+          icon: item.icon,
+          disabled: item.disabled,
+        }))
+      : activeEditItemId
+        ? []
+        : items
+  ) as { id: string; label: string; icon?: ReactNode; disabled?: boolean }[];
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- currentItems is derived from stable state, use via ref in callbacks
+  const currentItemsRef = useRef(currentItems);
+  currentItemsRef.current = currentItems;
 
   // Position calculation
   useEffect(() => {
@@ -233,7 +238,8 @@ export function ContextMenu({
   // Keyboard navigation
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent) => {
-      const enabledIndices = currentItems
+      const items = currentItemsRef.current;
+      const enabledIndices = items
         .map((item, i) => (!item.disabled ? i : -1))
         .filter((i) => i >= 0);
       if (enabledIndices.length === 0) return;
@@ -256,7 +262,7 @@ export function ContextMenu({
         triggerRef.current?.focus();
       }
     },
-    [currentItems, onClose, triggerRef]
+    [onClose, triggerRef]
   );
 
   if (!isOpen) return null;
@@ -265,6 +271,7 @@ export function ContextMenu({
     <div
       ref={menuRef}
       role='menu'
+      tabIndex={-1}
       aria-label='Song actions'
       style={{ position: 'fixed', top: position.top, left: position.left }}
       className='z-9999 min-w-48'

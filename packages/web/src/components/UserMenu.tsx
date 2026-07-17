@@ -139,6 +139,7 @@ export default function UserMenu({ user, collapsed, onLogout }: UserMenuProps) {
           <div
             ref={menuRef}
             role='menu'
+            tabIndex={-1}
             style={{ position: 'fixed', top: position.top, left: position.left }}
             className='z-9999 min-w-40'
             onKeyDown={(e) => e.stopPropagation()}

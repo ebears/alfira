@@ -139,6 +139,7 @@ export default function RoleComboBox({
             <li className='px-3 py-2 text-muted italic'>No roles found</li>
           ) : (
             filtered.map((role, i) => (
+              // eslint-disable-next-line jsx-a11y/no-noninteractive-element-interactions -- combobox option, keyboard handled at list level
               <li
                 key={role.id}
                 onMouseDown={(e) => {
