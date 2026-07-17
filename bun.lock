@@ -16,7 +16,7 @@
       "dependencies": {
         "drizzle-orm": "0.45.2",
         "jsonwebtoken": "9.0.3",
-        "seyfert": "4.3.0",
+        "seyfert": "4.4.0",
         "ws": "8.21.0",
       },
       "devDependencies": {
@@ -271,7 +271,7 @@
 
     "set-cookie-parser": ["set-cookie-parser@2.7.2", "", {}, "sha512-oeM1lpU/UvhTxw+g3cIfxXHyJRc/uidd3yK1P242gzHds0udQBYzs3y8j4gCCW+ZJ7ad0yctld8RYO+bdurlvw=="],
 
-    "seyfert": ["seyfert@4.3.0", "", {}, "sha512-IzLH1SBY45xFOjcI3WjNX7I23oQho8lOq+W3Plc3GvUHjGgAHb9o6EkWthh1hyGnd32I6IhqilDDhezVSrZ8Mg=="],
+    "seyfert": ["seyfert@4.4.0", "", {}, "sha512-DhrOpXPc74K5lGkhEWm0wpfQAaCoUpNh6sfPywLU9siKkuzFBq+lmMOGz+SIMke5kfwBuuDGM7R3Aw1ADeKo5g=="],
 
     "source-map-js": ["source-map-js@1.2.1", "", {}, "sha512-UXWMKhLOwVKb728IUtQPXxfYU+usdybtUrK/8uGE8CQMvrhOpwvzDBwj0QhSL7MQc7vIsISBG8VQ8+IDQxpfQA=="],
 
