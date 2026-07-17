@@ -20,7 +20,7 @@ function SkeletonList() {
   return (
     <div className='grid gap-3'>
       {Array.from({ length: 4 }).map((_, i) => (
-        // biome-ignore lint/suspicious/noArrayIndexKey: skeleton items are static placeholders
+        // eslint-disable-next-line react/no-array-index-key -- skeleton items are static placeholders
         <div key={`skeleton-${i}`} className='card flex items-center gap-4 px-5 py-4'>
           <div className='skeleton w-10 h-10 rounded' />
           <div className='flex-1 space-y-2'>

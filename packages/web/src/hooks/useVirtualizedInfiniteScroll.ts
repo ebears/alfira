@@ -198,8 +198,8 @@ export function useVirtualizedInfiniteScroll<T, A extends unknown[], M = undefin
       });
   }, [limit]);
 
-  // Initial load
-  // biome-ignore lint/correctness/useExhaustiveDependencies: intentionally depends on deps to refetch on search change; loadPage is stable via ref
+  // Initial load — extract deps array to a variable so the linter can statically check it
+  const depsArray = [...deps, loadPage];
   useEffect(() => {
     isMountedRef.current = true;
     void loadPage(1, true, deps[0] as string | undefined);
@@ -212,7 +212,8 @@ export function useVirtualizedInfiniteScroll<T, A extends unknown[], M = undefin
         loadingTimerRef.current = undefined;
       }
     };
-  }, [...deps, loadPage]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- intentionally depends on deps to refetch on search change; loadPage is stable via ref
+  }, depsArray);
 
   // IntersectionObserver — created once, reads fetchMore via ref so it never goes stale
   const setSentinelRef = useCallback((el: HTMLDivElement | null) => {

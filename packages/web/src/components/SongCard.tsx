@@ -113,15 +113,7 @@ const SongCardInner = ({
           />
           {/* Selection checkbox overlay */}
           {selectionMode && (
-            <div
-              className='absolute top-2 left-2 z-10'
-              onClick={(e) => e.stopPropagation()}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' || e.key === ' ') onToggleSelect?.();
-              }}
-              role='button'
-              tabIndex={0}
-            >
+            <div className='absolute top-2 left-2 z-10' onClick={(e) => e.stopPropagation()}>
               <Checkbox checked={isSelected} onChange={() => onToggleSelect?.()} size='md' />
             </div>
           )}
@@ -222,8 +214,9 @@ const SongCardInner = ({
       data-song-id={song.id}
       data-song-edit-container
     >
-      <div
-        className='flex items-center gap-3 md:gap-4 px-4 py-4'
+      <button
+        type='button'
+        className='flex items-center gap-3 md:gap-4 px-4 py-4 w-full text-left bg-transparent border-0'
         onClick={handleListClick}
         onKeyDown={(e) => {
           if ((e.key === 'Enter' || e.key === ' ') && !selectionMode) {
@@ -231,8 +224,6 @@ const SongCardInner = ({
             if (canEdit) setOpenSongId(isOpen ? null : song.id);
           }
         }}
-        role='button'
-        tabIndex={0}
         style={canEdit || selectionMode ? { cursor: 'pointer' } : undefined}
         onMouseEnter={() => setIsRowHovered(true)}
         onMouseLeave={() => setIsRowHovered(false)}
@@ -305,7 +296,7 @@ const SongCardInner = ({
             triggerRef={triggerRef}
           />
         )}
-      </div>
+      </button>
 
       {/* Inline edit panel */}
       <div className={`expand-panel ${isOpen ? 'expanded' : ''}`}>

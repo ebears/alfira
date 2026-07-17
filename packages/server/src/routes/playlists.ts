@@ -525,10 +525,7 @@ async function handleAddSong(
   if (playlist.tagNameLower) {
     return json(
       {
-        error:
-          'This playlist automatically tracks the "' +
-          playlist.tagNameLower +
-          '" tag. Songs are added when tagged and cannot be added manually.',
+        error: `This playlist automatically tracks the "${playlist.tagNameLower}" tag. Songs are added when tagged and cannot be added manually.`,
       },
       409
     );

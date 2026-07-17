@@ -31,8 +31,8 @@ function SkeletonGrid() {
   return (
     <div className='grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-[repeat(auto-fill,minmax(270px,1fr))] gap-3 md:gap-4'>
       {Array.from({ length: 12 }).map((_, i) => (
-        // biome-ignore lint/suspicious/noArrayIndexKey: skeleton items are static placeholders
-        <div key={`skeleton-${i}`} className='flex flex-col bg-elevated clay-resting rounded-lg'>
+        // eslint-disable-next-line react/no-array-index-key -- static skeleton placeholders
+        <div key={`skel-${i}`} className='flex flex-col bg-elevated clay-resting rounded-lg'>
           <div className='relative aspect-square overflow-hidden rounded-lg border border-border m-3 mb-0'>
             <div className='skeleton w-full h-full' />
           </div>
@@ -68,7 +68,7 @@ function SkeletonList() {
     <div className='flex flex-col gap-1.5'>
       {Array.from({ length: 8 }).map((_, i) => (
         <div
-          // biome-ignore lint/suspicious/noArrayIndexKey: skeleton items are static placeholders
+          // eslint-disable-next-line react/no-array-index-key -- skeleton items are static placeholders
           key={`skeleton-${i}`}
           className='flex items-center gap-3 md:gap-4 px-4 py-4 rounded-lg bg-elevated clay-resting'
         >

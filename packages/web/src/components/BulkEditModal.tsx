@@ -194,8 +194,7 @@ export default function BulkEditModal({ count, onApply, onClose, isApplying }: B
 
   return (
     <Backdrop onClose={onClose}>
-      {/* biome-ignore lint/a11y/useKeyWithClickEvents: modal container, keyboard not applicable */}
-      {/* biome-ignore lint/a11y/noStaticElementInteractions: modal container, keyboard not applicable */}
+      {/* eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-static-element-interactions -- modal container, keyboard not applicable */}
       <div
         className='w-full max-w-md mx-4 p-6 glass-modal animate-fade-up max-h-[85vh] overflow-y-auto'
         onClick={(e) => e.stopPropagation()}
@@ -282,8 +281,7 @@ export default function BulkEditModal({ count, onApply, onClose, isApplying }: B
                 >
                   Tags
                 </label>
-                {/* biome-ignore lint/a11y/useKeyWithClickEvents: container click focuses inner input */}
-                {/* biome-ignore lint/a11y/noStaticElementInteractions: container click focuses inner input */}
+                {/* eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-static-element-interactions -- container click focuses inner input */}
                 <div
                   ref={tagAreaRef}
                   className={`input text-sm flex flex-wrap gap-1.5 items-center min-h-9.5 cursor-text relative${clearFields.has('tags') ? ' opacity-30 pointer-events-none' : ''}`}

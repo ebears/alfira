@@ -94,6 +94,7 @@ export default function CompressorSection() {
           type='button'
           role='switch'
           aria-checked={values.enabled}
+          aria-label='Enable compressor'
           onClick={() => setValues((v) => ({ ...v, enabled: !v.enabled }))}
           className={`relative shrink-0 w-9 h-5 rounded-full transition-colors cursor-pointer focus:outline-none focus:ring-2 focus:ring-accent/50 focus:ring-offset-2 focus:ring-offset-surface ${
             values.enabled ? 'bg-accent' : 'bg-border'

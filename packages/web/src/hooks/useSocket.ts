@@ -16,8 +16,8 @@ type ConnectionStatus = 'connected' | 'disconnected' | 'reconnecting';
 let ws: WebSocket | null = null;
 let connectionStatus: ConnectionStatus = 'disconnected';
 let reconnectAttempt = 0;
-// biome-ignore lint: internal storage must hold callbacks of varying types
-const eventListeners = new Map<string, Set<any>>();
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- internal storage holds callbacks of varying types
+const eventListeners = new Map<string, Set<(...args: any[]) => void>>();
 const statusListeners = new Set<() => void>();
 
 const RECONNECT_DELAYS = [1000, 2000, 4000, 8000, 16000, 30000];
@@ -106,8 +106,8 @@ export function disposeSocket(): void {
 // Event registration (mirrors the native WebSocket event API)
 // ---------------------------------------------------------------------------
 
-// biome-ignore lint/suspicious/noExplicitAny: must return Set<any> to hold varying callback types
-function ensureListeners(event: string): Set<any> {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- must return Set to hold varying callback types
+function ensureListeners(event: string): Set<(...args: any[]) => void> {
   let listeners = eventListeners.get(event);
   if (!listeners) {
     listeners = new Set();

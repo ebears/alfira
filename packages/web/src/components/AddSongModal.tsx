@@ -330,8 +330,7 @@ export default function AddSongModal({
               >
                 Tags
               </label>
-              {/* biome-ignore lint/a11y/useKeyWithClickEvents: container click focuses inner input */}
-              {/* biome-ignore lint/a11y/noStaticElementInteractions: container click focuses inner input */}
+              {/* eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-static-element-interactions -- container click focuses inner input; keyboard handled by input */}
               <div
                 className='input text-sm flex flex-wrap gap-1.5 items-center min-h-9.5 cursor-text'
                 onClick={() => document.getElementById('add-tag-input')?.focus()}

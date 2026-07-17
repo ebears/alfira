@@ -127,6 +127,7 @@ export default function EqualizerSection() {
           type='button'
           role='switch'
           aria-checked={eqEnabled}
+          aria-label='Enable equalizer'
           onClick={() => setEqEnabled(!eqEnabled)}
           className={`relative shrink-0 w-9 h-5 rounded-full transition-colors cursor-pointer focus:outline-none focus:ring-2 focus:ring-accent/50 focus:ring-offset-2 focus:ring-offset-surface ${
             eqEnabled ? 'bg-accent' : 'bg-border'
@@ -168,7 +169,7 @@ export default function EqualizerSection() {
         className={`flex flex-wrap justify-center gap-2 md:flex-nowrap ${slidersDimmed ? 'opacity-40' : ''}`}
       >
         {bands.map((value, i) => (
-          // biome-ignore lint/suspicious/noArrayIndexKey: static UI elements with stable order
+          // eslint-disable-next-line react/no-array-index-key -- static UI elements with stable order
           <div key={i} className='flex flex-col items-center gap-1 shrink-0'>
             <span className='font-mono text-[10px] text-muted'>{FREQ_LABELS[i]}</span>
             <div className='relative h-[120px] w-2'>
