@@ -6,25 +6,16 @@ import { useVirtualizedInfiniteScroll } from '../hooks/useVirtualizedInfiniteScr
 type PlaylistDetailMeta = Omit<PlaylistDetail, 'songs'>;
 
 import {
-  ArrowDownIcon,
-  ArrowUpIcon,
   BombIcon,
-  CaretDownIcon,
   CaretLeftIcon,
-  CheckSquareIcon,
-  FunnelIcon,
   GhostIcon,
-  ListIcon,
   LockIcon,
   LockOpenIcon,
-  MagnifyingGlassIcon,
   PencilSimple,
   PlayCircleIcon,
   PlayIcon,
   PlusCircleIcon,
   ShuffleIcon,
-  SortAscendingIcon,
-  SquaresFourIcon,
   TagIcon,
 } from '@phosphor-icons/react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -39,7 +30,6 @@ import {
   startPlayback,
   togglePlaylistVisibility,
 } from '../api/api';
-import AddFilterPopover from '../components/AddFilterPopover';
 import AddSongsModal from '../components/AddSongsModal';
 import BulkActionBar from '../components/BulkActionBar';
 import BulkEditModal from '../components/BulkEditModal';
@@ -47,7 +37,8 @@ import ConfirmModal from '../components/ConfirmModal';
 import type { MenuItem } from '../components/ContextMenu';
 import { ContextMenu, ContextMenuTrigger } from '../components/ContextMenu';
 import EmptyState from '../components/EmptyState';
-import FilterChips from '../components/FilterChips';
+import ListToolbar from '../components/ListToolbar';
+
 import NotificationToast from '../components/NotificationToast';
 
 import { Button } from '../components/ui/Button';
@@ -135,9 +126,6 @@ export default function PlaylistDetailPage() {
   const [order, setOrder] = useState('desc');
   const [filterTags, setFilterTags] = useState<string[]>([]);
   const [filterSources, setFilterSources] = useState<string[]>([]);
-  const [sortOpen, setSortOpen] = useState(false);
-  const [filterPopoverOpen, setFilterPopoverOpen] = useState(false);
-  const sortRefEl = useRef<HTMLDivElement>(null);
 
   // Build stable fetch options for the hook
   const songsOpts = useMemo<FetchSongsOptions>(() => {
@@ -151,18 +139,6 @@ export default function PlaylistDetailPage() {
     if (s) opts.source = s;
     return opts;
   }, [search, sort, order, filterTags, filterSources]);
-
-  // Close sort dropdown on outside click
-  useEffect(() => {
-    if (!sortOpen) return;
-    const handler = (e: MouseEvent) => {
-      if (sortRefEl.current && !sortRefEl.current.contains(e.target as Node)) {
-        setSortOpen(false);
-      }
-    };
-    document.addEventListener('mousedown', handler);
-    return () => document.removeEventListener('mousedown', handler);
-  }, [sortOpen]);
 
   // ── Infinite scroll with metadata ────────────────────────────────────
 
@@ -218,46 +194,6 @@ export default function PlaylistDetailPage() {
   const canEdit = isAdminView || isOwner || hasPermission('songs.edit');
   const canBulk = canEdit;
   const isSmart = !!playlistDetail?.tagNameLower;
-
-  // ── Sort / filter handlers ──────────────────────────────────────────
-
-  const handleOrderToggle = useCallback(() => {
-    setOrder((prev) => (prev === 'asc' ? 'desc' : 'asc'));
-  }, []);
-
-  const handleSortChange = useCallback(
-    (newSort: string) => {
-      if (newSort === sort) {
-        handleOrderToggle();
-      } else {
-        const newOrder =
-          newSort === 'createdAt' || newSort === 'position' || newSort === 'duration'
-            ? 'desc'
-            : 'asc';
-        setSort(newSort);
-        setOrder(newOrder);
-        setSortOpen(false);
-      }
-    },
-    [sort, handleOrderToggle]
-  );
-
-  const handleRemoveTag = useCallback((tag: string) => {
-    setFilterTags((prev) => prev.filter((t) => t !== tag));
-  }, []);
-
-  const handleRemoveSource = useCallback((source: string) => {
-    setFilterSources((prev) => prev.filter((s) => s !== source));
-  }, []);
-
-  const handleAddTag = useCallback((tag: string) => {
-    const normalized = tag.toLowerCase();
-    setFilterTags((prev) => (prev.includes(normalized) ? prev : [...prev, normalized]));
-  }, []);
-
-  const handleAddSource = useCallback((source: string) => {
-    setFilterSources((prev) => (prev.includes(source) ? prev : [...prev, source]));
-  }, []);
 
   // ── Socket: playlist updated (rename, visibility, song count changes) ──
   useEffect(() => {
@@ -675,156 +611,41 @@ export default function PlaylistDetailPage() {
         </div>
       </div>
 
-      {/* Search, sort, filter, and view toggle */}
-      <div className="flex items-center gap-2 mb-3">
-        <div className="relative flex-1">
-          <MagnifyingGlassIcon
-            className="absolute left-3 top-1/2 -translate-y-1/2 text-faint w-4 h-4 md:w-3.5 md:h-3.5"
-            weight="duotone"
-          />
-          <input
-            className="input pl-10"
-            placeholder="Search by title, nickname, artist, album, or tag..."
-            value={search}
-            onChange={(e) => {
-              setSearch(e.target.value);
-            }}
-          />
-        </div>
-
-        {/* Select toggle (only visible to users with bulk permissions) */}
-        {canBulk && (
-          <Button
-            variant="inherit"
-            surface="surface"
-            onClick={() => {
-              if (selectionMode) bulk.clearAll();
-              setSelectionMode((v) => !v);
-            }}
-            className={`flex items-center gap-1.5 px-2.5 ${
-              selectionMode ? 'pressed text-accent' : ''
-            }`}
-            title={selectionMode ? 'Exit selection mode' : 'Select songs'}
-          >
-            <CheckSquareIcon size={16} weight="duotone" />
-          </Button>
-        )}
-
-        {/* Add filter button */}
-        <Button
-          variant="inherit"
-          surface="surface"
-          onClick={() => setFilterPopoverOpen(true)}
-          className={`flex items-center gap-1.5 px-2.5 ${
-            filterTags.length > 0 || filterSources.length > 0 ? 'pressed text-accent' : ''
-          }`}
-          title={`Filter${filterTags.length > 0 || filterSources.length > 0 ? ` (${filterTags.length + filterSources.length} active)` : ''}`}
-        >
-          <FunnelIcon size={16} weight="duotone" />
-        </Button>
-
-        {/* Sort dropdown */}
-        <div className="relative" ref={sortRefEl}>
-          <Button
-            variant="inherit"
-            surface="surface"
-            onClick={() => setSortOpen((v) => !v)}
-            className={`flex items-center gap-1.5 px-2.5 ${
-              sortOpen || sort !== 'position' || order !== 'desc' ? 'pressed text-accent' : ''
-            }`}
-            title={`Sort by ${SORT_OPTIONS.find((o) => o.value === sort)?.label ?? 'Playlist Order'} (${order === 'asc' ? 'ascending' : 'descending'})`}
-          >
-            <SortAscendingIcon size={16} weight="duotone" />
-            <CaretDownIcon size={10} weight="fill" className="text-faint" />
-          </Button>
-
-          {sortOpen && (
-            <div className="absolute right-0 top-full mt-1.5 w-48 glass-popover z-20 py-1 origin-top-right">
-              {SORT_OPTIONS.map((opt) => {
-                const isActive = sort === opt.value;
-                return (
-                  <button
-                    key={opt.value}
-                    type="button"
-                    className={`w-full flex items-center justify-between px-3 py-2 text-sm font-body transition-colors ${
-                      isActive
-                        ? 'text-accent bg-accent/5'
-                        : 'text-fg hover:bg-surface active:bg-surface/80'
-                    }`}
-                    onClick={() => handleSortChange(opt.value)}
-                  >
-                    <span>{opt.label}</span>
-                    {isActive && (
-                      <button
-                        type="button"
-                        className="cursor-pointer p-0.5 rounded hover:bg-black/10 dark:hover:bg-white/10 transition-colors"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleOrderToggle();
-                        }}
-                        title={order === 'asc' ? 'Switch to descending' : 'Switch to ascending'}
-                      >
-                        {(() => {
-                          const isTextField =
-                            sort === 'title' || sort === 'artist' || sort === 'album';
-                          const showDown = isTextField ? order === 'asc' : order !== 'asc';
-                          return showDown ? (
-                            <ArrowDownIcon size={14} weight="bold" />
-                          ) : (
-                            <ArrowUpIcon size={14} weight="bold" />
-                          );
-                        })()}
-                      </button>
-                    )}
-                  </button>
-                );
-              })}
-            </div>
-          )}
-        </div>
-
-        {/* View toggle */}
-        <div className="flex gap-1 bg-elevated rounded-lg p-1 shrink-0">
-          <button
-            type="button"
-            onClick={() => {
-              setViewMode('list');
-              localStorage.setItem('alfira-playlist-detail-view', 'list');
-            }}
-            className={`px-2 py-1.5 rounded-md transition-colors cursor-pointer ${
-              viewMode === 'list' ? 'bg-accent text-elevated' : 'text-muted hover:text-fg'
-            }`}
-            title="List view"
-          >
-            <ListIcon size={18} weight="duotone" />
-          </button>
-          <button
-            type="button"
-            onClick={() => {
-              setViewMode('grid');
-              localStorage.setItem('alfira-playlist-detail-view', 'grid');
-            }}
-            className={`px-2 py-1.5 rounded-md transition-colors cursor-pointer ${
-              viewMode === 'grid' ? 'bg-accent text-elevated' : 'text-muted hover:text-fg'
-            }`}
-            title="Grid view"
-          >
-            <SquaresFourIcon size={18} weight="duotone" />
-          </button>
-        </div>
-      </div>
-
-      {/* Active filter chips */}
-      {(filterTags.length > 0 || filterSources.length > 0) && (
-        <div className="mb-2">
-          <FilterChips
-            tags={filterTags}
-            sources={filterSources}
-            onRemoveTag={handleRemoveTag}
-            onRemoveSource={handleRemoveSource}
-          />
-        </div>
-      )}
+      <ListToolbar
+        searchValue={search}
+        onSearchChange={setSearch}
+        searchPlaceholder="Search by title, nickname, artist, album, or tag..."
+        sortOptions={[...SORT_OPTIONS]}
+        sort={sort}
+        order={order as 'asc' | 'desc'}
+        onSortChange={(field, newOrder) => {
+          setSort(field);
+          setOrder(newOrder);
+        }}
+        defaultSort="position"
+        textSortFields={['title', 'artist', 'album']}
+        filterTags={filterTags}
+        filterSources={filterSources}
+        onAddTag={(tag) => {
+          const normalized = tag.toLowerCase();
+          setFilterTags((prev) => (prev.includes(normalized) ? prev : [...prev, normalized]));
+        }}
+        onRemoveTag={(tag) => setFilterTags((prev) => prev.filter((t) => t !== tag))}
+        onAddSource={(s) => setFilterSources((prev) => (prev.includes(s) ? prev : [...prev, s]))}
+        onRemoveSource={(s) => setFilterSources((prev) => prev.filter((x) => x !== s))}
+        showBulkToggle={canBulk}
+        selectionMode={selectionMode}
+        onToggleSelectionMode={() => {
+          if (selectionMode) bulk.clearAll();
+          setSelectionMode((v) => !v);
+        }}
+        showViewToggle
+        viewMode={viewMode}
+        onViewModeChange={(m) => {
+          setViewMode(m);
+          localStorage.setItem('alfira-playlist-detail-view', m);
+        }}
+      />
 
       {/* Song list */}
       {songItems.length === 0 && !isLoading ? (
@@ -950,19 +771,6 @@ export default function PlaylistDetailPage() {
           confirmLabel="Convert"
           onConfirm={() => handleMakeSmart(tagSmartConfirm)}
           onCancel={() => setTagSmartConfirm(null)}
-        />
-      )}
-
-      {/* Add Filter popover */}
-      {filterPopoverOpen && (
-        <AddFilterPopover
-          activeTags={filterTags}
-          activeSources={filterSources}
-          onAddTag={handleAddTag}
-          onRemoveTag={handleRemoveTag}
-          onAddSource={handleAddSource}
-          onRemoveSource={handleRemoveSource}
-          onClose={() => setFilterPopoverOpen(false)}
         />
       )}
 
