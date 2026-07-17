@@ -212,10 +212,9 @@ export class GuildPlayer {
     lavalink.markConnected(this.guildId, false);
 
     // Tell Discord to leave the voice channel.
-    const client = getClient();
-    if (client) {
-      const shardId = client.gateway.calculateShardId(this.guildId);
-      client.gateway.send(shardId, {
+    const gateway = getClient();
+    if (gateway) {
+      gateway.send({
         op: 4,
         d: {
           guild_id: this.guildId,

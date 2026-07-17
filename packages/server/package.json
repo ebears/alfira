@@ -17,8 +17,7 @@
     "db:studio": "cd ../.. && drizzle-kit studio"
   },
   "dependencies": {
-    "drizzle-orm": "0.45.2",
-    "seyfert": "5.0.0"
+    "drizzle-orm": "0.45.2"
   },
   "devDependencies": {
     "@types/node": "25.9.4",
