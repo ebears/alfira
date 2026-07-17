@@ -18,8 +18,6 @@ Prefer stdlib/native runtime APIs over npm packages. Bun's built-in HTTP, WebSoc
 
 **`seyfert`** — Handles the Discord gateway protocol: heartbeats, identify, resume, sharding, opcode dispatch, and rate-limit backpressure. The codebase interacts with it at only ~6 call sites, but those are backed by hundreds of lines of non-trivial protocol logic. Reimplementing that correctly would be error-prone and violate the spirit of "better dependencies."
 
-**`jsonwebtoken`** — Bun has Web Crypto API primitives (HMAC-SHA256, base64url) but no built-in JWT encode/decode. Implementing JWT from scratch — with correct expiration, audience, and algorithm handling — would be a net negative in maintenance surface area. This is a focused, zero-dependency library.
-
 ---
 
 ## 3. Single-process simplicity by design

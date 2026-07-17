@@ -1,6 +1,6 @@
 import crypto from 'node:crypto';
 import { and, eq, lt } from 'drizzle-orm';
-import jwt from 'jsonwebtoken';
+import { sign, verify } from '../lib/jwt';
 import type { RouteContext } from '../index';
 import { getGuildId } from '../lib/config';
 import { json } from '../lib/json';
@@ -112,15 +112,11 @@ function generateAccessToken(payload: {
   isSetupAdmin?: boolean;
   roles?: string[];
 }): string {
-  return jwt.sign(payload, JWT_SECRET_, {
-    expiresIn: ACCESS_TOKEN_EXPIRES_IN,
-  } as jwt.SignOptions);
+  return sign(payload, JWT_SECRET_, { expiresIn: ACCESS_TOKEN_EXPIRES_IN });
 }
 
 function generateRefreshToken(discordId: string): string {
-  return jwt.sign({ discordId, type: 'refresh' }, JWT_SECRET_, {
-    expiresIn: REFRESH_TOKEN_EXPIRES_IN,
-  } as jwt.SignOptions);
+  return sign({ discordId, type: 'refresh' }, JWT_SECRET_, { expiresIn: REFRESH_TOKEN_EXPIRES_IN });
 }
 
 function buildCookieHeader(
@@ -512,16 +508,14 @@ async function handleRefresh(
   }
 
   // 1. Verify the refresh token signature and expiration.
-  let decoded: { discordId: string; type: string };
-  try {
-    decoded = jwt.verify(refreshToken, JWT_SECRET_) as { discordId: string; type: string };
-    if (decoded.type !== 'refresh') {
-      logger.warn({ decodedType: decoded.type }, 'Auth refresh failed: invalid token type');
-      return json({ error: 'Invalid token type.' }, 401);
-    }
-  } catch (err) {
-    logger.warn({ err: (err as Error).message }, 'Auth refresh failed: JWT verification');
+  const decoded = verify<{ discordId: string; type: string }>(refreshToken, JWT_SECRET_);
+  if (!decoded) {
+    logger.warn('Auth refresh failed: JWT verification');
     return json({ error: 'Invalid or expired refresh token.' }, 401);
+  }
+  if (decoded.type !== 'refresh') {
+    logger.warn({ decodedType: decoded.type }, 'Auth refresh failed: invalid token type');
+    return json({ error: 'Invalid token type.' }, 401);
   }
 
   // 2. Check if the refresh token exists in the database (not revoked).
