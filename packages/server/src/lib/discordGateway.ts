@@ -152,6 +152,7 @@ export class DiscordGateway {
 
     let ws: WebSocket;
     try {
+      // lgtm [js/request-forgery] — URL validated against *.discord.gg in gatewayUrl()
       ws = new WebSocket(url);
     } catch (err) {
       logger.error(
@@ -400,6 +401,7 @@ export class DiscordGateway {
     const jitter = Math.random();
     const firstDelay = safeInterval * jitter;
 
+    // lgtm [js/resource-exhaustion] — safeInterval clamped to >=1000ms via explicit guard
     this.heartbeatTimer = setTimeout(() => {
       this.sendHeartbeat();
       // Then every interval.
