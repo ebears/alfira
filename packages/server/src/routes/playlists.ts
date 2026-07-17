@@ -238,6 +238,7 @@ async function handleGetPlaylist(
     const orderBy = songSortField
       ? buildSongOrderBy(songSortField, sortOrder, {
           title: tables.song.title,
+          nickname: tables.song.nickname,
           artist: tables.song.artist,
           album: tables.song.album,
           duration: tables.song.duration,

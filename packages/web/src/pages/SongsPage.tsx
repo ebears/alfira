@@ -134,6 +134,43 @@ export default function SongsPage() {
       });
   }, [isAdminView]);
 
+  // ── Comparator for re-sorting after real-time mutations ──────────────
+  const songCompareFn = useMemo(() => {
+    const dir = order === 'asc' ? 1 : -1;
+    return (a: Song, b: Song): number => {
+      switch (sort) {
+        case 'title': {
+          // Sort by display name: nickname if set, otherwise title
+          const aName = (a.nickname || a.title) ?? '';
+          const bName = (b.nickname || b.title) ?? '';
+          return dir * aName.localeCompare(bName, undefined, { sensitivity: 'base' });
+        }
+        case 'artist': {
+          const aArt = a.artist ?? '';
+          const bArt = b.artist ?? '';
+          // nulls last, regardless of direction
+          if (!aArt && !bArt) return 0;
+          if (!aArt) return dir;
+          if (!bArt) return -dir;
+          return dir * aArt.localeCompare(bArt, undefined, { sensitivity: 'base' });
+        }
+        case 'album': {
+          const aAlb = a.album ?? '';
+          const bAlb = b.album ?? '';
+          if (!aAlb && !bAlb) return 0;
+          if (!aAlb) return dir;
+          if (!bAlb) return -dir;
+          return dir * aAlb.localeCompare(bAlb, undefined, { sensitivity: 'base' });
+        }
+        case 'duration':
+          return dir * ((a.duration ?? 0) - (b.duration ?? 0));
+        default:
+          // createdAt — newest first for desc, oldest first for asc
+          return dir * (new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+      }
+    };
+  }, [sort, order]);
+
   // ── Infinite scroll ─────────────────────────────────────────────────
   const {
     items,
@@ -159,6 +196,7 @@ export default function SongsPage() {
     },
     limit: ITEMS_PER_PAGE,
     deps: [songsOpts],
+    compareFn: songCompareFn,
   });
 
   // ── Real-time socket wiring ─────────────────────────────────────────

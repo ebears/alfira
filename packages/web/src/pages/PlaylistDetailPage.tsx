@@ -140,6 +140,47 @@ export default function PlaylistDetailPage() {
     return opts;
   }, [search, sort, order, filterTags, filterSources]);
 
+  // ── Comparator for re-sorting after real-time mutations ──────────────
+  type PS = PlaylistDetail['songs'][number];
+  const playlistSongCompareFn = useMemo(() => {
+    const dir = order === 'asc' ? 1 : -1;
+    return (a: PS, b: PS): number => {
+      switch (sort) {
+        case 'title': {
+          // Sort by display name: nickname if set, otherwise title
+          const aName = (a.song.nickname || a.song.title) ?? '';
+          const bName = (b.song.nickname || b.song.title) ?? '';
+          return dir * aName.localeCompare(bName, undefined, { sensitivity: 'base' });
+        }
+        case 'artist': {
+          const aArt = a.song.artist ?? '';
+          const bArt = b.song.artist ?? '';
+          if (!aArt && !bArt) return 0;
+          if (!aArt) return dir;
+          if (!bArt) return -dir;
+          return dir * aArt.localeCompare(bArt, undefined, { sensitivity: 'base' });
+        }
+        case 'album': {
+          const aAlb = a.song.album ?? '';
+          const bAlb = b.song.album ?? '';
+          if (!aAlb && !bAlb) return 0;
+          if (!aAlb) return dir;
+          if (!bAlb) return -dir;
+          return dir * aAlb.localeCompare(bAlb, undefined, { sensitivity: 'base' });
+        }
+        case 'duration':
+          return dir * ((a.song.duration ?? 0) - (b.song.duration ?? 0));
+        case 'createdAt':
+          return (
+            dir * (new Date(a.song.createdAt).getTime() - new Date(b.song.createdAt).getTime())
+          );
+        default:
+          // position — lower position first for asc, higher first for desc
+          return dir * (a.position - b.position);
+      }
+    };
+  }, [sort, order]);
+
   // ── Infinite scroll with metadata ────────────────────────────────────
 
   const {
@@ -185,6 +226,7 @@ export default function PlaylistDetailPage() {
       isAdminView,
       songsOpts,
     ],
+    compareFn: playlistSongCompareFn,
   });
 
   // Derive PlaylistDetail for JSX — metadata from the hook, songs from items

@@ -29,6 +29,7 @@ export function buildSongOrderBy(
   sortOrder: 'ASC' | 'DESC',
   cols?: {
     title: SqlInterpolatable;
+    nickname: SqlInterpolatable;
     artist: SqlInterpolatable;
     album: SqlInterpolatable;
     duration: SqlInterpolatable;
@@ -37,6 +38,7 @@ export function buildSongOrderBy(
 ): ReturnType<typeof sql> {
   const c = cols ?? {
     title: sql`title`,
+    nickname: sql`nickname`,
     artist: sql`artist`,
     album: sql`album`,
     duration: sql`duration`,
@@ -44,7 +46,7 @@ export function buildSongOrderBy(
   };
   switch (sortField) {
     case 'title':
-      return sql`lower(${c.title}) ${sql.raw(sortOrder)}`;
+      return sql`lower(COALESCE(NULLIF(TRIM(${c.nickname}), ''), ${c.title})) ${sql.raw(sortOrder)}`;
     case 'artist':
       return sql`${c.artist} IS NULL, lower(${c.artist}) ${sql.raw(sortOrder)}`;
     case 'album':
