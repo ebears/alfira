@@ -8,6 +8,12 @@ export interface UseInfiniteScrollOptions<T, A extends unknown[], M = undefined>
   ) => Promise<{ items: T[]; hasMore: boolean; total?: number; metadata?: M }>;
   limit?: number;
   deps?: A;
+  /**
+   * Optional comparator for sorting items after real-time mutations (prepend / updateItem).
+   * Without this, updated items stay at their old array position even when the current
+   * sort order would place them elsewhere.
+   */
+  compareFn?: (a: T, b: T) => number;
 }
 
 export interface UseInfiniteScrollReturn<T, M = undefined> {
@@ -32,6 +38,7 @@ export function useVirtualizedInfiniteScroll<T, A extends unknown[], M = undefin
   fetchPage,
   limit = 24,
   deps = [] as unknown as A,
+  compareFn,
 }: UseInfiniteScrollOptions<T, A, M>): UseInfiniteScrollReturn<T, M> {
   const [items, setItems] = useState<T[]>([]);
   const [metadata, setMetadata] = useState<M | undefined>(undefined);
@@ -58,6 +65,9 @@ export function useVirtualizedInfiniteScroll<T, A extends unknown[], M = undefin
 
   const depsRef = useRef(deps);
   depsRef.current = deps;
+
+  const compareFnRef = useRef(compareFn);
+  compareFnRef.current = compareFn;
 
   const sentinelRefInternal = useRef<HTMLDivElement | null>(null);
   const observerRef = useRef<IntersectionObserver | null>(null);
@@ -144,15 +154,25 @@ export function useVirtualizedInfiniteScroll<T, A extends unknown[], M = undefin
     if (resetInProgressRef.current) return;
     setItems((prev) => {
       if (prev.some((i) => (i as { id: string }).id === (item as { id: string }).id)) return prev;
-      return [item, ...prev];
+      const next = [item, ...prev];
+      if (compareFnRef.current) {
+        next.sort(compareFnRef.current);
+      }
+      return next;
     });
   }, []);
 
   const updateItem = useCallback((item: T) => {
     if (resetInProgressRef.current) return;
-    setItems((prev) =>
-      prev.map((i) => ((i as { id: string }).id === (item as { id: string }).id ? item : i))
-    );
+    setItems((prev) => {
+      const next = prev.map((i) =>
+        (i as { id: string }).id === (item as { id: string }).id ? item : i
+      );
+      if (compareFnRef.current) {
+        next.sort(compareFnRef.current);
+      }
+      return next;
+    });
   }, []);
 
   const removeItem = useCallback((id: string) => {
