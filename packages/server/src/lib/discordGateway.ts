@@ -335,11 +335,15 @@ export class DiscordGateway {
     if (this.resumeGatewayUrl) {
       try {
         const parsed = new URL(this.resumeGatewayUrl);
+        // Validate protocol and hostname to prevent SSRF. Only wss://
+        // connections to discord.gg subdomains are permitted.
         if (
           parsed.protocol === 'wss:' &&
           (parsed.hostname === 'gateway.discord.gg' || parsed.hostname.endsWith('.discord.gg'))
         ) {
-          return this.resumeGatewayUrl;
+          // Reconstruct the URL from validated components to break the
+          // taint chain from the user-controlled resumeGatewayUrl.
+          return `wss://${parsed.hostname}/?v=10&encoding=json`;
         }
         logger.warn(
           { url: this.resumeGatewayUrl },
@@ -380,26 +384,28 @@ export class DiscordGateway {
 
   private startHeartbeat(interval: number): void {
     this.clearHeartbeat();
-    // Clamp to a sane minimum to prevent resource exhaustion from
-    // a malicious or misconfigured gateway hello.
-    const clamped = Math.max(interval, DiscordGateway.MIN_HEARTBEAT_INTERVAL);
-    this.heartbeatInterval = clamped;
-    this.lastHeartbeatAck = true;
-
-    if (clamped !== interval) {
-      logger.warn({ received: interval, clamped }, 'Heartbeat interval clamped to minimum');
+    // Clamp to a safe minimum to prevent resource exhaustion from
+    // a malicious or misconfigured gateway hello. An explicit guard
+    // is used instead of Math.max() so the analyzer can track the
+    // sanitized value.
+    let safeInterval = interval;
+    if (safeInterval < DiscordGateway.MIN_HEARTBEAT_INTERVAL) {
+      logger.warn({ received: interval }, 'Heartbeat interval below minimum, clamping');
+      safeInterval = DiscordGateway.MIN_HEARTBEAT_INTERVAL;
     }
+    this.heartbeatInterval = safeInterval;
+    this.lastHeartbeatAck = true;
 
     // Discord recommends sending the first heartbeat after interval * jitter.
     const jitter = Math.random();
-    const firstDelay = clamped * jitter;
+    const firstDelay = safeInterval * jitter;
 
     this.heartbeatTimer = setTimeout(() => {
       this.sendHeartbeat();
       // Then every interval.
       this.heartbeatTimer = setInterval(() => {
         this.sendHeartbeat();
-      }, clamped);
+      }, safeInterval);
     }, firstDelay);
   }
 
