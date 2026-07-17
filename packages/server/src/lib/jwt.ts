@@ -5,18 +5,20 @@
  * Only supports HS256 — the only algorithm this project uses.
  */
 
+import { timingSafeEqual } from 'node:crypto';
+
+const encoder = new TextEncoder();
+
 // Standard JWT header for HS256
 const JWT_HEADER = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9'; // base64url({"alg":"HS256","typ":"JWT"})
 
 /** Encode a string as base64url (RFC 7515). */
 function base64url(input: string): string {
-  // Bun's btoa uses standard base64. Convert to base64url.
   return btoa(input).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
 }
 
 /** Decode a base64url string. */
 function base64urlDecode(input: string): string {
-  // Restore padding and convert to standard base64, then decode.
   const base64 = input.replace(/-/g, '+').replace(/_/g, '/');
   const padded = base64 + '='.repeat((4 - (base64.length % 4)) % 4);
   return atob(padded);
@@ -32,11 +34,12 @@ function parseExpiresIn(expiresIn: string): number {
   return num * (multipliers[unit] ?? 1);
 }
 
-/** Compute HMAC-SHA256 of data using the given key. */
-function hmacSha256(key: string, data: string): Uint8Array {
+/** Compute HMAC-SHA256 and return the result as a base64url string. */
+function hmacSha256Base64url(key: string, data: string): string {
   const hasher = new Bun.CryptoHasher('sha256', key);
   hasher.update(data);
-  return hasher.digest();
+  // digest('base64') returns standard base64; convert to base64url
+  return hasher.digest('base64').replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
 }
 
 /**
@@ -60,7 +63,7 @@ export function sign(
   };
 
   const data = `${JWT_HEADER}.${base64url(JSON.stringify(payloadWithClaims))}`;
-  const signature = base64url(String.fromCharCode(...hmacSha256(secret, data)));
+  const signature = hmacSha256Base64url(secret, data);
 
   return `${data}.${signature}`;
 }
@@ -77,10 +80,14 @@ export function verify<T = Record<string, unknown>>(token: string, secret: strin
   const payloadB64 = parts[1] as string;
   const signatureB64 = parts[2] as string;
 
-  // Verify the signature
+  // Verify the signature using constant-time comparison
   const data = `${headerB64}.${payloadB64}`;
-  const expectedSig = base64url(String.fromCharCode(...hmacSha256(secret, data)));
-  if (signatureB64 !== expectedSig) return null;
+  const expectedSig = hmacSha256Base64url(secret, data);
+  const sigBytes = encoder.encode(signatureB64);
+  const expectedBytes = encoder.encode(expectedSig);
+  if (sigBytes.length !== expectedBytes.length || !timingSafeEqual(sigBytes, expectedBytes)) {
+    return null;
+  }
 
   // Decode and parse the payload
   let payload: Record<string, unknown>;
