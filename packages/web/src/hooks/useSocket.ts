@@ -16,6 +16,7 @@ type ConnectionStatus = 'connected' | 'disconnected' | 'reconnecting';
 let ws: WebSocket | null = null;
 let connectionStatus: ConnectionStatus = 'disconnected';
 let reconnectAttempt = 0;
+let intentionalClose = false;
 // eslint-disable-next-line @typescript-eslint/no-explicit-any -- internal storage holds callbacks of varying types
 const eventListeners = new Map<string, Set<(...args: any[]) => void>>();
 const statusListeners = new Set<() => void>();
@@ -39,6 +40,7 @@ function scheduleReconnect() {
 }
 
 function connect() {
+  intentionalClose = false;
   const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
   ws = new WebSocket(`${protocol}//${window.location.host}/ws`);
 
@@ -49,7 +51,9 @@ function connect() {
 
   ws.addEventListener('close', () => {
     setStatus('disconnected');
-    scheduleReconnect();
+    if (!intentionalClose) {
+      scheduleReconnect();
+    }
   });
 
   ws.addEventListener('error', () => {
@@ -96,6 +100,7 @@ export function useConnectionStatus(): ConnectionStatus {
 }
 
 export function disposeSocket(): void {
+  intentionalClose = true;
   if (ws) {
     ws.close();
     ws = null;

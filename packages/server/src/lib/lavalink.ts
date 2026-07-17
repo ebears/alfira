@@ -1,5 +1,4 @@
 import { EventEmitter } from 'node:events';
-import WebSocket from 'ws';
 
 import { logger } from '../shared/logger';
 
@@ -137,27 +136,28 @@ class LavalinkSocket extends EventEmitter<LavalinkEvents> {
     if (this._userId) headers['User-Id'] = this._userId;
     headers['Client-Name'] = 'Alfira';
 
-    const ws = new WebSocket(this.url, { headers });
+    // Bun extends WebSocket constructor with { headers } option
+    const ws = new WebSocket(this.url, { headers } as never);
     this.ws = ws;
 
-    ws.on('open', () => {
+    ws.addEventListener('open', () => {
       logger.info({ url: this.url }, 'Lavalink WebSocket open');
       this.reconnectAttempt = 0;
     });
 
-    ws.on('message', (data: Buffer) => {
+    ws.addEventListener('message', (event: MessageEvent) => {
       let msg: LavalinkMessage;
       try {
-        msg = JSON.parse(data.toString()) as LavalinkMessage;
+        msg = JSON.parse(event.data as string) as LavalinkMessage;
       } catch {
-        logger.warn({ raw: data.toString().slice(0, 200) }, 'Lavalink: unparseable message');
+        logger.warn({ raw: String(event.data).slice(0, 200) }, 'Lavalink: unparseable message');
         return;
       }
       this.dispatch(msg);
     });
 
-    ws.on('close', (code: number) => {
-      logger.warn({ code }, 'Lavalink WebSocket closed');
+    ws.addEventListener('close', (event: CloseEvent) => {
+      logger.warn({ code: event.code }, 'Lavalink WebSocket closed');
       this.ws = null;
       this._sessionId = null;
 
@@ -171,8 +171,8 @@ class LavalinkSocket extends EventEmitter<LavalinkEvents> {
       }
     });
 
-    ws.on('error', (err: Error) => {
-      logger.error({ err }, 'Lavalink WebSocket error');
+    ws.addEventListener('error', (event: Event) => {
+      logger.error({ event }, 'Lavalink WebSocket error');
     });
   }
 
