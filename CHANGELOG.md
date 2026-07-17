@@ -33,7 +33,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Dependencies
 
-- Bumped `seyfert` from 4.3.0 to 4.4.0 (#637)
+- Bumped `seyfert` from 4.3.0 to 5.0.0 (#637)
 - Bumped `@tanstack/react-virtual` from 3.14.2 to 3.14.5 (#638)
 - Bumped `@types/node` from 25.5.2 to 25.9.4 (#640)
 - Bumped `tailwindcss` from 4.3.1 to 4.3.2 (#639)
