@@ -8,6 +8,7 @@ import { Backdrop } from '../components/Backdrop';
 import NotificationToast from '../components/NotificationToast';
 import { Button } from '../components/ui/Button';
 import { PageHeader } from '../components/ui/PageHeader';
+import { SpringUp } from '../components/ui/SpringUp';
 import { VirtualPlaylistList } from '../components/VirtualPlaylistList';
 import { useAdminView } from '../context/AdminViewContext';
 import { CreatePlaylistSubmitButton, useCreatePlaylist } from '../hooks/useCreatePlaylist';
@@ -129,51 +130,50 @@ function CreatePlaylistModal({ onClose }: { onClose: () => void }) {
 
   return (
     <Backdrop onClose={onClose}>
-      <form
-        action={formAction}
-        className='p-5 md:p-6 w-full max-w-sm mx-4 glass-modal animate-fade-up'
-      >
-        <h2 className='font-display text-2xl md:text-3xl text-fg tracking-wider mb-1'>
-          New Playlist
-        </h2>
-        <p className='font-mono text-xs text-muted mb-4 md:mb-6'>choose a name</p>
-        <input
-          name='name'
-          className='input mb-3'
-          placeholder='My Playlist'
-          value={name}
-          onChange={(e) => {
-            setName(e.target.value);
-          }}
-          onKeyDown={(e) => {
-            if (e.key === 'Escape') onClose();
-          }}
-          required
-        />
-        <div className='mb-3'>
-          <p className='font-mono text-xs text-muted mb-1.5'>track a tag (optional)</p>
-          <select
-            name='tagNameLower'
-            className='input w-full'
-            value={selectedTag}
-            onChange={(e) => setSelectedTag(e.target.value)}
-          >
-            <option value=''>None (manual playlist)</option>
-            {tags.map((tag) => (
-              <option key={tag.nameLower} value={tag.nameLower}>
-                {tag.canonicalName}
-              </option>
-            ))}
-          </select>
-        </div>
-        {state?.error && <p className='font-mono text-xs text-danger mb-3'>{state.error}</p>}
-        <div className='flex gap-2 justify-end'>
-          <Button variant='inherit' type='button' onClick={onClose} surface='surface'>
-            Cancel
-          </Button>
-          <CreatePlaylistSubmitButton disabled={!name.trim()}>Create</CreatePlaylistSubmitButton>
-        </div>
-      </form>
+      <SpringUp className='p-5 md:p-6 w-full max-w-sm mx-4 glass-modal'>
+        <form action={formAction}>
+          <h2 className='font-display text-2xl md:text-3xl text-fg tracking-wider mb-1'>
+            New Playlist
+          </h2>
+          <p className='font-mono text-xs text-muted mb-4 md:mb-6'>choose a name</p>
+          <input
+            name='name'
+            className='input mb-3'
+            placeholder='My Playlist'
+            value={name}
+            onChange={(e) => {
+              setName(e.target.value);
+            }}
+            onKeyDown={(e) => {
+              if (e.key === 'Escape') onClose();
+            }}
+            required
+          />
+          <div className='mb-3'>
+            <p className='font-mono text-xs text-muted mb-1.5'>track a tag (optional)</p>
+            <select
+              name='tagNameLower'
+              className='input w-full'
+              value={selectedTag}
+              onChange={(e) => setSelectedTag(e.target.value)}
+            >
+              <option value=''>None (manual playlist)</option>
+              {tags.map((tag) => (
+                <option key={tag.nameLower} value={tag.nameLower}>
+                  {tag.canonicalName}
+                </option>
+              ))}
+            </select>
+          </div>
+          {state?.error && <p className='font-mono text-xs text-danger mb-3'>{state.error}</p>}
+          <div className='flex gap-2 justify-end'>
+            <Button variant='inherit' type='button' onClick={onClose} surface='surface'>
+              Cancel
+            </Button>
+            <CreatePlaylistSubmitButton disabled={!name.trim()}>Create</CreatePlaylistSubmitButton>
+          </div>
+        </form>
+      </SpringUp>
     </Backdrop>
   );
 }

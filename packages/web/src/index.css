@@ -41,26 +41,6 @@
   src: url(/fonts/jetbrains-mono-500-latin.woff2) format('woff2');
 }
 
-@keyframes fadeUp {
-  0% {
-    opacity: 0;
-    transform: translateY(12px);
-  }
-  100% {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-@keyframes slideInRight {
-  0% {
-    transform: translateX(100%);
-  }
-  100% {
-    transform: translateX(0);
-  }
-}
-
 @keyframes slideUp {
   0% {
     transform: translateY(100%);
@@ -523,8 +503,6 @@
   --font-body: 'Chiron GoRound TC', regular;
   --font-mono: 'JetBrains Mono', monospace;
   /* Animations */
-  --animate-fade-up: fadeUp 0.3s ease forwards;
-  --animate-slide-in-right: slideInRight 0.3s ease forwards;
   --animate-slide-up: slideUp 0.3s ease forwards;
   --animate-pulse-gentle: pulseGentle 2.4s ease-in-out infinite;
   /* Clay radius tokens — consistent "pebble" proportions */
@@ -1335,7 +1313,7 @@
 
 /* Glass popover — unified styling for dropdowns, context menus, etc. */
 @utility glass-popover {
-  @apply glass-panel rounded-2xl border border-accent/30 clay-floating overflow-hidden animate-fade-up;
+  @apply glass-panel rounded-2xl border border-accent/30 clay-floating overflow-hidden;
 }
 
 /* Glass hover tooltip — for .group hover-revealed help text */

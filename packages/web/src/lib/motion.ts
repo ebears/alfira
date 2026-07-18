@@ -21,3 +21,13 @@ export const queueItemVariants: Variants = {
 };
 
 export { LazyMotion, domAnimation };
+
+/** Spring-up variant — gentle bounce for cards, modals, and overlays. */
+export const springUp: Variants = {
+  hidden: { opacity: 0, y: 24 },
+  show: {
+    opacity: 1,
+    y: 0,
+    transition: { type: 'spring', stiffness: 300, damping: 24 },
+  },
+};

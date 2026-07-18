@@ -5,6 +5,7 @@ import { apiErrorMessage, isRateLimitError } from '../../utils/api';
 import { Backdrop } from '../Backdrop';
 import { Button } from '../ui/Button';
 import { Spinner } from '../ui/Spinner';
+import { SpringUp } from '../ui/SpringUp';
 
 export default function OverrideModal({
   onClose,
@@ -36,7 +37,7 @@ export default function OverrideModal({
 
   return (
     <Backdrop onClose={onClose}>
-      <div className='p-5 md:p-6 w-full max-w-sm mx-4 glass-modal animate-fade-up'>
+      <SpringUp className='p-5 md:p-6 w-full max-w-sm mx-4 glass-modal'>
         <h2 className='font-display text-2xl md:text-3xl text-fg tracking-wider mb-1'>Override</h2>
         <p className='font-mono text-xs text-danger mb-4 md:mb-6'>
           <WarningIcon size={14} weight='duotone' className='inline mr-1' /> This will stop current
@@ -95,7 +96,7 @@ export default function OverrideModal({
             {submitting ? 'Overriding...' : 'Override & Play'}
           </Button>
         </div>
-      </div>
+      </SpringUp>
     </Backdrop>
   );
 }
