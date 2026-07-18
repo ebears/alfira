@@ -1,6 +1,32 @@
 import type { Playlist, Song } from '@alfira/server/shared';
 import { memo } from 'react';
+import type { Transition, Variants } from 'motion/react';
+import * as motionM from 'motion/react-m';
 import SongCard from './SongCard';
+
+/** Parent orchestrates staggered children. */
+const gridVariants: Variants = {
+  hidden: {},
+  show: {
+    transition: {
+      staggerChildren: 0.04,
+    },
+  },
+};
+
+/** Each card springs up with a gentle bounce. */
+const cardVariants: Variants = {
+  hidden: { opacity: 0, y: 24 },
+  show: {
+    opacity: 1,
+    y: 0,
+    transition: {
+      type: 'spring',
+      stiffness: 300,
+      damping: 24,
+    } as Transition,
+  },
+};
 import VirtualListShell from './VirtualListShell';
 
 interface VirtualSongListProps {
@@ -109,6 +135,10 @@ export const VirtualSongList = memo(function VirtualSongList({
 }: VirtualSongListProps) {
   const isGrid = viewMode === 'grid';
 
+  const gridClass = isGrid
+    ? 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-[repeat(auto-fill,minmax(270px,1fr))] gap-3 md:gap-4 items-start'
+    : 'flex flex-col gap-1.5';
+
   return (
     <VirtualListShell
       isLoading={isLoading}
@@ -124,30 +154,26 @@ export const VirtualSongList = memo(function VirtualSongList({
       emptyMessage={emptyMessage}
       endSpacer
     >
-      <div
-        className={
-          isGrid
-            ? 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-[repeat(auto-fill,minmax(270px,1fr))] gap-3 md:gap-4 items-start'
-            : 'flex flex-col gap-1.5'
-        }
-      >
+      <motionM.div className={gridClass} initial='hidden' animate='show' variants={gridVariants}>
         {items.map((song) => (
-          <SongCard
-            key={song.id}
-            song={song}
-            variant={viewMode === 'grid' ? 'grid' : 'list'}
-            isAdminView={isAdminView}
-            playlists={playlists}
-            onDelete={onDelete}
-            onPlay={() => onPlay(song.id)}
-            isPlaying={playingId === song.id}
-            onAddToQueue={() => onAddToQueue(song.id)}
-            selectionMode={selectionMode}
-            isSelected={isSelected?.(song.id) ?? false}
-            onToggleSelect={onToggleSelect ? () => onToggleSelect(song.id) : undefined}
-          />
+          <motionM.div key={song.id} variants={cardVariants}>
+            <SongCard
+              key={song.id}
+              song={song}
+              variant={viewMode === 'grid' ? 'grid' : 'list'}
+              isAdminView={isAdminView}
+              playlists={playlists}
+              onDelete={onDelete}
+              onPlay={() => onPlay(song.id)}
+              isPlaying={playingId === song.id}
+              onAddToQueue={() => onAddToQueue(song.id)}
+              selectionMode={selectionMode}
+              isSelected={isSelected?.(song.id) ?? false}
+              onToggleSelect={onToggleSelect ? () => onToggleSelect(song.id) : undefined}
+            />
+          </motionM.div>
         ))}
-      </div>
+      </motionM.div>
     </VirtualListShell>
   );
 });
