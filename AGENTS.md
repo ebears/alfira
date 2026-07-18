@@ -31,12 +31,6 @@ bun run dev
 # Build the web UI (needed after web/src changes before docker compose restart)
 bun run web:build
 
-# Generate Drizzle migration files
-bun run db:generate
-
-# Run Drizzle migrations
-bun run db:migrate
-
 # Lint + format with auto-fix (run before committing)
 bun run check
 
@@ -46,6 +40,14 @@ bun run lint:fix
 # Format only, with auto-fix
 bun run format
 ```
+
+### Database Migrations
+
+Migrations are handwritten `.sql` files in `packages/server/src/shared/db/migrations/`. They run automatically at server startup — no separate command needed.
+
+To create one: pick the next sequential number (e.g., `0013_descriptive_name.sql`), write the DDL, and use `--> statement-breakpoint` on its own line to separate multiple statements. The runner is idempotent (SHA-256 content hashing) and catches "already exists" errors.
+
+See the `alfira-database` skill for full details.
 
 ## Code Style
 

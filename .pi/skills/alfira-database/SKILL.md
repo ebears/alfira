@@ -97,10 +97,12 @@ Custom, not Drizzle Kit:
 
 ### Creating new migrations
 
-```bash
-bun run db:generate    # Generate .sql migration files
-bun run db:migrate     # Run them (standalone, not via the server)
-```
+Migrations are handwritten `.sql` files placed in `packages/server/src/shared/db/migrations/`.
+
+1. Pick the next sequential number (e.g., `0013_descriptive_name.sql`)
+2. Write the DDL / DML statements. Use `--> statement-breakpoint` on its own line to split multi-statement migrations (the runner splits on this separator)
+3. Migrations run automatically at server startup via `runMigrations()` in `index.ts` — no separate step required
+4. The runner is idempotent: it computes a SHA-256 hash of each file and skips previously-applied files. It also catches "already exists" / "duplicate column name" errors for safety
 
 ## Tag Migration (`lib/ensureTagsMigrated.ts`)
 

@@ -10,11 +10,7 @@
   },
   "scripts": {
     "dev": "bun run src/index.ts",
-    "build": "tsc --skipLibCheck",
-    "db:generate": "cd ../.. && drizzle-kit generate",
-    "db:migrate": "cd ../.. && drizzle-kit migrate",
-    "db:migrate:deploy": "cd ../.. && drizzle-kit migrate",
-    "db:studio": "cd ../.. && drizzle-kit studio"
+    "build": "tsc --skipLibCheck"
   },
   "dependencies": {
     "drizzle-orm": "0.45.2"

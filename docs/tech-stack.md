@@ -69,15 +69,14 @@ package via the `@alfira-bot/server/shared` export.
 
 Top-level scripts:
 
-| Script                | Description                                             |
-| --------------------- | ------------------------------------------------------- |
-| `bun run dev`         | Build server dist/, then start all services with Docker |
-| `bun run web:build`   | Build the web UI (used by Docker)                       |
-| `bun run db:generate` | Generate Drizzle migration files                        |
-| `bun run db:migrate`  | Run Drizzle migrations                                  |
-| `bun run check`       | Lint (oxlint) and check format (oxfmt)                  |
-| `bun run lint:fix`    | Lint with auto-fix                                      |
-| `bun run format`      | Format with auto-fix                                    |
+| Script              | Description                                             |
+| ------------------- | ------------------------------------------------------- |
+| `bun run dev`       | Build server dist/, then start all services with Docker |
+| `bun run web:build` | Build the web UI (used by Docker)                       |
+
+| `bun run check` | Lint (oxlint) and check format (oxfmt) |
+| `bun run lint:fix` | Lint with auto-fix |
+| `bun run format` | Format with auto-fix |
 
 ## Shared Package Exports
 
