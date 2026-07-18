@@ -84,21 +84,21 @@ description: React 19 + Tailwind CSS 4 web UI, component and page structure, API
 
 ### Utility UI Components (in `components/ui/`)
 
-| Component               | Purpose                      |
-| ----------------------- | ---------------------------- |
-| `Button.tsx`            | Reusable button component    |
-| `Card.tsx`              | Reusable card wrapper        |
-| `Checkbox.tsx`          | Reusable checkbox            |
-| `DurationBadge.tsx`     | Formatted duration display   |
-| `ErrorBanner.tsx`       | Error message banner         |
-| `PlayButton.tsx`        | Play action button           |
-| `RoleComboBox.tsx`      | Role selection dropdown      |
-| `ArtworkImage.tsx`      | Lazy-loaded artwork with fallback |
-| `PageHeader.tsx`        | Consistent page header           |
-| `Spinner.tsx`           | Loading spinner                   |
+| Component               | Purpose                                    |
+| ----------------------- | ------------------------------------------ |
+| `Button.tsx`            | Reusable button component                  |
+| `Card.tsx`              | Reusable card wrapper                      |
+| `Checkbox.tsx`          | Reusable checkbox                          |
+| `DurationBadge.tsx`     | Formatted duration display                 |
+| `ErrorBanner.tsx`       | Error message banner                       |
+| `PlayButton.tsx`        | Play action button                         |
+| `RoleComboBox.tsx`      | Role selection dropdown                    |
+| `ArtworkImage.tsx`      | Lazy-loaded artwork with fallback          |
+| `PageHeader.tsx`        | Consistent page header                     |
+| `Spinner.tsx`           | Loading spinner                            |
 | `SpringUp.tsx`          | Spring-up mount animation wrapper (motion) |
-| `VirtualListFooter.tsx` | Footer for virtualized lists      |
-| `VolumeBoostBadge.tsx`  | Volume boost indicator            |
+| `VirtualListFooter.tsx` | Footer for virtualized lists               |
+| `VolumeBoostBadge.tsx`  | Volume boost indicator                     |
 
 ### Other Components
 
