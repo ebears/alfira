@@ -2,7 +2,7 @@ import crypto from 'node:crypto';
 import { and, eq, lt } from 'drizzle-orm';
 import { sign, verify } from '../lib/jwt';
 import type { RouteContext } from '../index';
-import { getGuildId } from '../lib/config';
+import { getGuildId, refreshGuildId } from '../lib/config';
 import { json } from '../lib/json';
 import { getClientIp } from '../lib/rateLimit';
 import { routeTable } from '../lib/routeTable';
@@ -427,7 +427,6 @@ async function handleCallback(
         .run();
 
       // Refresh the in-memory guild ID cache.
-      const { refreshGuildId } = await import('../lib/config');
       refreshGuildId(envGuildId);
 
       // Fall through to normal auth flow below.

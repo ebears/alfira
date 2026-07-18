@@ -1,8 +1,14 @@
 import { DiscordGateway } from './lib/discordGateway';
+import {
+  completePendingConnection,
+  getBotUserId,
+  setBotUserId,
+  setGateway,
+  setPendingConnectionDetails,
+} from './lib/gatewayState';
 import { lavalink } from './lib/lavalink';
 import { getPlayer } from './manager';
 import { logger } from './shared/logger';
-import { updateNodeLinkPlayer } from './utils/nodelink';
 
 export type { GuildPlayer } from './GuildPlayer';
 export { createPlayer, destroyAllPlayers, getPlayer } from './manager';
@@ -18,102 +24,11 @@ export {
   SOURCE_DEFINITIONS,
 } from './utils/nodelink';
 
+// Re-export gateway state for backward-compatible imports.
+export { connectToVoice, getClient, getUserVoiceChannel } from './lib/gatewayState';
+
 const NODELINK_URL = 'http://127.0.0.1:2333';
 const NODELINK_AUTH = 'nodelink-internal';
-
-// ---------------------------------------------------------------------------
-// Gateway singleton
-// ---------------------------------------------------------------------------
-
-let _gateway: DiscordGateway | null = null;
-let _botUserId: string | null = null;
-
-export function getClient(): DiscordGateway | null {
-  return _gateway;
-}
-
-export function getUserVoiceChannel(userId: string): string | null {
-  return _gateway?.getUserVoiceChannel(userId) ?? null;
-}
-
-// ---------------------------------------------------------------------------
-// Voice connection (direct Discord gateway)
-// ---------------------------------------------------------------------------
-
-interface PendingVoiceConnection {
-  voiceChannelId: string;
-  sessionId: string | null;
-  token: string | null;
-  endpoint: string | null;
-  resolve: () => void;
-  reject: (err: Error) => void;
-}
-
-const pendingVoiceConnections = new Map<string, PendingVoiceConnection>();
-
-function tryCompleteVoiceConnection(guildId: string): void {
-  const pending = pendingVoiceConnections.get(guildId);
-  if (!pending) return;
-  if (!pending.sessionId || !pending.token || !pending.endpoint) return;
-
-  const sessionId = lavalink.getSessionId();
-  if (!sessionId) {
-    // Lavalink WebSocket hasn't received its 'ready' event yet.
-    // Retry in 200ms — the connection was just initiated.
-    setTimeout(() => tryCompleteVoiceConnection(guildId), 200);
-    return;
-  }
-
-  pendingVoiceConnections.delete(guildId);
-
-  updateNodeLinkPlayer(guildId, sessionId, {
-    voice: {
-      token: pending.token,
-      endpoint: pending.endpoint,
-      sessionId: pending.sessionId,
-    },
-  })
-    .then(() => {
-      lavalink.markConnected(guildId, true);
-      pending.resolve();
-    })
-    .catch((err: Error) => pending.reject(err));
-}
-
-/**
- * Connect the bot to a voice channel.
- *
- * Sends VOICE_STATE_UPDATE (op 4) to the Discord gateway and resolves
- * once the voice server data has been forwarded to NodeLink.
- */
-export function connectToVoice(guildId: string, voiceChannelId: string): Promise<void> {
-  return new Promise((resolve, reject) => {
-    const gateway = _gateway;
-    if (!gateway) {
-      reject(new Error('Discord gateway not ready'));
-      return;
-    }
-
-    pendingVoiceConnections.set(guildId, {
-      voiceChannelId,
-      sessionId: null,
-      token: null,
-      endpoint: null,
-      resolve,
-      reject,
-    });
-
-    gateway.send({
-      op: 4,
-      d: {
-        guild_id: guildId,
-        channel_id: voiceChannelId,
-        self_mute: false,
-        self_deaf: false,
-      },
-    });
-  });
-}
 
 // ---------------------------------------------------------------------------
 // Voice membership tracking (for auto-pause)
@@ -144,12 +59,8 @@ function handleVoiceStateUpdate(data: unknown): void {
   const isBot = d.member?.user?.bot === true;
 
   // Track our own bot's voice session ID for pending voice connections.
-  if (userId === _botUserId) {
-    const pending = pendingVoiceConnections.get(guildId);
-    if (pending && d.session_id) {
-      pending.sessionId = d.session_id;
-      tryCompleteVoiceConnection(guildId);
-    }
+  if (userId === getBotUserId() && d.session_id) {
+    completePendingConnection(guildId, d.session_id);
   }
 
   // --- Update human voice membership ---
@@ -214,17 +125,12 @@ function handleVoiceStateUpdate(data: unknown): void {
 
 function handleVoiceServerUpdate(data: unknown): void {
   const d = data as { guild_id: string; token: string; endpoint: string };
-  const pending = pendingVoiceConnections.get(d.guild_id);
-  if (pending) {
-    pending.token = d.token;
-    pending.endpoint = d.endpoint;
-    tryCompleteVoiceConnection(d.guild_id);
-  }
+  setPendingConnectionDetails(d.guild_id, d.token, d.endpoint);
 }
 
 function handleReady(data: unknown): void {
   const ready = data as { user: { id: string; username: string } };
-  _botUserId = ready.user.id;
+  setBotUserId(ready.user.id);
   logger.info(`Bot logged in as ${ready.user.username}`);
 
   // Now that we have the bot's Discord user ID, connect to NodeLink.
@@ -271,6 +177,6 @@ export async function startDiscord(): Promise<void> {
     }
   });
 
-  _gateway = gateway;
+  setGateway(gateway);
   await gateway.start();
 }

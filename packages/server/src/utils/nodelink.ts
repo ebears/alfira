@@ -26,6 +26,7 @@ export interface PlaylistMetadata {
 const NODELINK_URL = 'http://127.0.0.1:2333';
 const NODELINK_AUTH = 'nodelink-internal';
 
+import { db, tables, eq } from '../shared/db';
 import { logger } from '../shared/logger';
 
 // ---------------------------------------------------------------------------
@@ -190,7 +191,6 @@ export function getEnabledSourceDisplayNames(): string[] {
 export async function initEnabledSources(): Promise<void> {
   if (_enabledSourcesLoaded) return;
   try {
-    const { db, tables, eq } = await import('../shared/db');
     const row = await db
       .select({ enabledSources: tables.guildSettings.enabledSources })
       .from(tables.guildSettings)

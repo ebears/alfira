@@ -7,7 +7,6 @@
     "rootDir": "./src",
     "paths": { "*": ["./*"] },
     "lib": ["ESNext", "DOM"],
-    "types": ["bun-types", "node"],
     "outDir": "./dist",
     "strict": true,
     "esModuleInterop": true,

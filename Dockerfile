@@ -27,8 +27,8 @@ COPY package.json bun.lock ./
 COPY packages ./packages
 
 RUN bun install --frozen-lockfile
-RUN bun run --filter @alfira-bot/server build && \
-    bun run --filter @alfira-bot/web build
+RUN bun run --filter @alfira/server build && \
+    bun run --filter @alfira/web build
 
 # Copy custom NodeLink config into the cloned repo
 COPY nodelink-config/config.js /usr/local/nodelink/config.js
@@ -50,8 +50,8 @@ RUN bun install --frozen-lockfile
 # NOTE: NODE_ENV is not set here because bun build produces broken bundles
 # with NODE_ENV=production due to how React 19's JSX runtime is bundled.
 # NODE_ENV=production is set in the runtime stage instead.
-RUN bun run --filter @alfira-bot/server build && \
-    bun run --filter @alfira-bot/web build
+RUN bun run --filter @alfira/server build && \
+    bun run --filter @alfira/web build
 
 COPY packages/server/src/shared/db/migrations packages/server/dist/shared/db/migrations
 
@@ -100,4 +100,4 @@ EXPOSE 3001
 HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
     CMD bun -e "fetch('http://localhost:3001/health').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"
 
-CMD ["bun", "run", "packages/server/dist/index.js"]
+CMD ["bun", "packages/server/dist/index.js"]

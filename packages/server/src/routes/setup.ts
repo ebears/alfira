@@ -1,6 +1,7 @@
 import { eq } from 'drizzle-orm';
 import type { RouteContext } from '../index';
 import { refreshGuildId } from '../lib/config';
+import { refreshEnabledSources } from '../startDiscord';
 import { botHeaders, fetchGuildRoles } from '../lib/discordRoles';
 import { json } from '../lib/json';
 import { checkGuards } from '../lib/routeGuards';
@@ -304,7 +305,6 @@ async function handlePostComplete(
     refreshGuildId(body.guildId);
 
     // Update the enabled sources cache.
-    const { refreshEnabledSources } = await import('../startDiscord');
     refreshEnabledSources(enabledSources);
 
     return json({ success: true });
