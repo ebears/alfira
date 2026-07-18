@@ -138,7 +138,6 @@ See the **[Installation Guide](docs/installation.md)** for full details.
 | Document                                       | Description                                   |
 | ---------------------------------------------- | --------------------------------------------- |
 | **[Installation Guide](docs/installation.md)** | Setup, environment variables, Docker commands |
-| **[Philosophy](docs/philosophy.md)**           | Design principles guiding the project         |
 | **[Tech Stack](docs/tech-stack.md)**           | Technology stack and project structure        |
 | **[Troubleshooting](docs/troubleshooting.md)** | Common issues and solutions                   |
 

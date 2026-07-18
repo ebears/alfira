@@ -22,6 +22,14 @@ The bot and API run in a **single Bun process**. For detailed architecture (star
 | Frontend  | React 19 + Tailwind CSS 4   |
 | Linting   | oxlint + oxfmt              |
 
+## Design Principles
+
+- **Self-hosting without operational burden** — Docker + Bun + SQLite means no external managed services. One `docker compose up` gets you running. Networking (domain/reverse proxy) is the only unavoidable external dependency.
+- **Fewer, better dependencies** — Prefer Bun's built-in HTTP, WebSocket, test runner, and SQLite driver over npm packages. Drizzle gives type-safe SQL without ORM bloat.
+- **Single-process by design** — Bot, API, and WebSocket run in one Bun process. Shared memory gives real-time updates without Redis or message queues. This is a deliberate tradeoff: the scope is a single self-hosted community, not multi-tenant SaaS.
+- **Web UI as primary interface** — The Discord bot is the playback engine; the web app is the control plane. This avoids Discord's rate limits and UX constraints.
+- **Audio is audio — no assumptions about content** — Works equally as a music bot or tabletop audio player. The data model (songs, playlists, tags) is content-type-agnostic: a pop song and an hour-long dungeon ambience are the same shape.
+
 ## Development Commands
 
 ```bash
@@ -159,6 +167,5 @@ Always run `bun run check` and resolve any lint/format issues before committing.
 ## Documentation
 
 - [Installation Guide](docs/installation.md) — Setup, environment variables, Docker commands
-- [Philosophy](docs/philosophy.md) — Design principles guiding the project
 - [Tech Stack](docs/tech-stack.md) — Detailed architecture
 - [Troubleshooting](docs/troubleshooting.md) — Common issues and solutions (also available as the `alfira-troubleshooting` skill)
