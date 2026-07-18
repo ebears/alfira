@@ -4,6 +4,7 @@ import { type TagItem, useTagColors } from '../context/TagsContext';
 import { getTagColorClasses } from '../utils/tagColors';
 import { Backdrop } from './Backdrop';
 import { SourceIcon } from './SourceIcons';
+import { SpringUp } from './ui/SpringUp';
 
 // ---------------------------------------------------------------------------
 // Available sources — must mirror the server's SOURCE_LIKE_PATTERNS and the
@@ -83,7 +84,7 @@ export default function AddFilterPopover({
 
   return (
     <Backdrop onClose={onClose}>
-      <div className='w-full max-w-sm glass-modal flex flex-col max-h-[70vh] animate-fade-up'>
+      <SpringUp className='w-full max-w-sm glass-modal flex flex-col max-h-[70vh]'>
         <div className='p-4 border-b border-border flex items-center justify-between'>
           <h3 className='font-body font-semibold text-sm text-fg'>Filters</h3>
           <button
@@ -180,7 +181,7 @@ export default function AddFilterPopover({
             </div>
           </div>
         </div>
-      </div>
+      </SpringUp>
     </Backdrop>
   );
 }

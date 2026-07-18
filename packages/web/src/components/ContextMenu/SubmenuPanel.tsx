@@ -1,5 +1,6 @@
 import { CaretLeftIcon } from '@phosphor-icons/react';
 import type { SubmenuConfig } from '../ContextMenu';
+import { SpringUp } from '../ui/SpringUp';
 
 interface SubmenuPanelProps {
   config: SubmenuConfig;
@@ -9,7 +10,7 @@ interface SubmenuPanelProps {
 
 export function SubmenuPanel({ config, onBack, onSelect }: SubmenuPanelProps) {
   return (
-    <div className='animate-fade-up'>
+    <SpringUp>
       <div className='flex items-center gap-2 px-3 py-2 border-b border-border'>
         <button
           type='button'
@@ -45,6 +46,6 @@ export function SubmenuPanel({ config, onBack, onSelect }: SubmenuPanelProps) {
           ))
         )}
       </div>
-    </div>
+    </SpringUp>
   );
 }

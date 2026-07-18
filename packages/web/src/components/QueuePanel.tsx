@@ -24,6 +24,9 @@ import {
 } from '@phosphor-icons/react';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { memo, useCallback, useMemo, useRef, useState } from 'react';
+import { AnimatePresence, type Transition } from 'motion/react';
+import * as m from 'motion/react-m';
+import { queueItemVariants } from '../lib/motion';
 import type { CooldownState } from '../hooks/useCooldownGuard';
 import { createPortal } from 'react-dom';
 import ConfirmModal from '../components/ConfirmModal';
@@ -296,15 +299,35 @@ export default function QueuePanel({
 
       {/* Fixed content: Now Playing */}
       <div className='p-4 space-y-4 shrink-0'>
-        {currentSong ? (
-          <NowPlayingCard
-            song={currentSong}
-            elapsed={elapsed}
-            registerProgress={registerProgress}
-          />
-        ) : (
-          <IdleCard />
-        )}
+        <AnimatePresence mode='wait'>
+          {currentSong ? (
+            <m.div
+              key={currentSong.id}
+              variants={queueItemVariants}
+              initial='initial'
+              animate='animate'
+              exit='exit'
+              transition={{ duration: 0.2, ease: 'easeOut' } as Transition}
+            >
+              <NowPlayingCard
+                song={currentSong}
+                elapsed={elapsed}
+                registerProgress={registerProgress}
+              />
+            </m.div>
+          ) : (
+            <m.div
+              key='idle'
+              variants={queueItemVariants}
+              initial='initial'
+              animate='animate'
+              exit='exit'
+              transition={{ duration: 0.2, ease: 'easeOut' } as Transition}
+            >
+              <IdleCard />
+            </m.div>
+          )}
+        </AnimatePresence>
 
         {/* Empty state */}
         {virtualItems.length === 0 && (
@@ -386,20 +409,27 @@ export default function QueuePanel({
                     transform: `translateY(${virtualRow.start}px)`,
                   }}
                 >
-                  <QueueSongItem
-                    song={item.song}
-                    index={item.listIndex}
-                    variant={item.variant}
-                    canManage={canManage}
-                    targetQueue={item.variant === 'priority' ? priorityQueue : queue}
-                    onRemove={handleRemove}
-                    onPromote={handlePromote}
-                    onDemote={handleDemote}
-                    onMoveUp={handleMoveUp}
-                    onMoveDown={handleMoveDown}
-                    onMoveToTop={handleMoveToTop}
-                    onMoveToBottom={handleMoveToBottom}
-                  />
+                  <m.div
+                    initial='initial'
+                    animate='animate'
+                    variants={queueItemVariants}
+                    transition={{ duration: 0.2, ease: 'easeOut' } as Transition}
+                  >
+                    <QueueSongItem
+                      song={item.song}
+                      index={item.listIndex}
+                      variant={item.variant}
+                      canManage={canManage}
+                      targetQueue={item.variant === 'priority' ? priorityQueue : queue}
+                      onRemove={handleRemove}
+                      onPromote={handlePromote}
+                      onDemote={handleDemote}
+                      onMoveUp={handleMoveUp}
+                      onMoveDown={handleMoveDown}
+                      onMoveToTop={handleMoveToTop}
+                      onMoveToBottom={handleMoveToBottom}
+                    />
+                  </m.div>
                 </div>
               );
             })}

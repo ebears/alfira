@@ -1,6 +1,7 @@
 import { CaretLeftIcon } from '@phosphor-icons/react';
 import { useEffect, useRef } from 'react';
 import type { MenuItem } from '../ContextMenu';
+import { SpringUp } from '../ui/SpringUp';
 
 interface EditSubmenuPanelProps {
   config: NonNullable<MenuItem['editSubmenu']>;
@@ -12,13 +13,13 @@ export function EditSubmenuPanel({ config, onBack, onSave }: EditSubmenuPanelPro
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    // Delay focus to let the fade-up animation start (element is opacity:0 initially)
+    // Delay focus to let the spring-up animation start.
     const timer = setTimeout(() => inputRef.current?.focus(), 50);
     return () => clearTimeout(timer);
   }, []);
 
   return (
-    <div className='animate-fade-up'>
+    <SpringUp>
       <div className='flex items-center gap-2 px-3 py-2 border-b border-border'>
         <button
           type='button'
@@ -62,6 +63,6 @@ export function EditSubmenuPanel({ config, onBack, onSave }: EditSubmenuPanelPro
           </button>
         </div>
       </div>
-    </div>
+    </SpringUp>
   );
 }

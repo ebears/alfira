@@ -12,6 +12,7 @@ import { useAdminView } from '../context/AdminViewContext';
 import { useAuth } from '../context/AuthContext';
 import SettingsMenu from './SettingsMenu';
 import { Button } from './ui/Button';
+import { SpringUp } from './ui/SpringUp';
 
 export default function MobileNav() {
   const { user, logout } = useAuth();
@@ -109,15 +110,17 @@ export default function MobileNav() {
 
       {/* Backdrop overlay */}
       {isOpen && (
-        <button
-          type='button'
-          aria-label='Close navigation menu'
-          className='md:hidden fixed inset-0 z-50 bg-black/60 backdrop-blur-sm animate-fade-up'
-          onClick={() => setIsOpen(false)}
-          onKeyDown={(e) => {
-            if (e.key === 'Escape' || e.key === 'Enter') setIsOpen(false);
-          }}
-        />
+        <SpringUp className='md:hidden fixed inset-0 z-50'>
+          <button
+            type='button'
+            aria-label='Close navigation menu'
+            className='bg-black/60 backdrop-blur-sm absolute inset-0'
+            onClick={() => setIsOpen(false)}
+            onKeyDown={(e) => {
+              if (e.key === 'Escape' || e.key === 'Enter') setIsOpen(false);
+            }}
+          />
+        </SpringUp>
       )}
 
       {/* Slide-out drawer */}

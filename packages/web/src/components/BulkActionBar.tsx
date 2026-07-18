@@ -1,5 +1,6 @@
 import { TagIcon, TrashIcon, XIcon } from '@phosphor-icons/react';
 import { Button } from './ui/Button';
+import { SpringUp } from './ui/SpringUp';
 
 interface BulkActionBarProps {
   count: number;
@@ -34,7 +35,7 @@ export default function BulkActionBar({
 
   return (
     <div className='fixed bottom-20 md:bottom-18 left-0 right-0 z-50 flex justify-center pb-4 md:pb-6 pointer-events-none'>
-      <div className='pointer-events-auto flex items-center gap-3 px-4 py-3 bg-elevated border border-border rounded-xl shadow-2xl animate-fade-up'>
+      <SpringUp className='pointer-events-auto flex items-center gap-3 px-4 py-3 bg-elevated border border-border rounded-xl shadow-2xl'>
         <span className='text-sm font-mono text-fg tabular-nums'>
           {count} / {totalCount} selected
         </span>
@@ -81,7 +82,7 @@ export default function BulkActionBar({
         >
           <XIcon size={16} weight='bold' />
         </button>
-      </div>
+      </SpringUp>
     </div>
   );
 }
