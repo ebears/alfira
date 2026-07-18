@@ -35,10 +35,6 @@
       },
     },
   },
-  "overrides": {
-    "react": "19.2.7",
-    "react-dom": "19.2.7",
-  },
   "packages": {
     "@alfira/server": ["@alfira/server@workspace:packages/server"],
 
