@@ -7,6 +7,55 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-07-22
+
+### Added
+
+- **Custom Discord gateway and REST client** — Replaces the Seyfert framework with a purpose-built, zero-dependency implementation: gateway WebSocket handling (`discordGateway.ts`), REST API client (`discordRest.ts`), and state management (`gatewayState.ts`). Lighter, faster, and free of framework churn (#672).
+- **Motion-powered animations** — Framer Motion brings smooth transitions to the now-playing bar metadata, sidebar, and queue panel (#682, #684, #685).
+- **Rate-limit cooldown feedback** — All player controls (play, pause, skip, shuffle, etc.) now show visual cooldown feedback when Discord rate limits apply, giving clear UX cues instead of silent failures (#680).
+- **Discord rate-limit caching** — Guild members, roles, and channels are now cached to avoid hitting Discord's rate limits during normal operation (#683, #673).
+
+### Changed
+
+- **Bun-native crypto** — Replaced `jsonwebtoken` with Bun's built-in crypto hasher for JWT operations. Fewer dependencies, faster startup (#670).
+- **Bun-native WebSocket** — Dropped the `ws` package in favor of Bun's built-in WebSocket implementation (#667).
+- **Bun build pipeline** — Eliminated circular dependencies across the server package, switched from `tsc` to `bun build`, adopted Bun's native spawn for child processes, and enabled strict SQLite mode (#677, #679).
+- **Database migrations renumbered** — Removed drizzle-kit artifacts and renumbered migrations sequentially (0001–0011) for clarity (#675).
+- **Dependabot** — Now targets the `dev` branch instead of `main` (#666).
+
+### Fixed
+
+- **WebSocket double-connect** — The bot no longer opens duplicate WebSocket connections to Discord (#667).
+- **Nested button hydration** — Fixed React hydration warnings from buttons nested inside buttons in the web UI (#668).
+- **Priority queue audio desync** — Fixed an edge case where priority queue tracks could cause audio desync and stale metadata (#611).
+- **Queue header and song card truncation** — Fixed layout issues with the queue header gap, empty actions menu, and long text truncation on song cards (#612).
+- **Tag color consistency** — Unified tag color hashing and improved the color selector's visibility (#609).
+- **Optional env vars** — Fixed optional environment variable passthrough in the production Docker Compose file (#615).
+- **Token refresh logging** — Added diagnostic logging to token refresh paths to aid debugging auth issues (#601).
+
+### Security
+
+- **Constant-time JWT verification** — JWT signature comparison now uses constant-time comparison to prevent timing attacks (#671).
+- **Bun-native crypto** — Replaced the `jsonwebtoken` npm package (which bundles its own crypto) with Bun's audited, built-in Web Crypto API (#670).
+
+### Removed
+
+- **Seyfert** — Discord bot framework replaced with a custom gateway and REST client (#672).
+- **`jsonwebtoken`** — Replaced with Bun's native crypto (#670).
+- **`ws`** — Replaced with Bun's native WebSocket (#667).
+- **`undici` override** — Removed the unused dependency override from package.json (#669).
+- **drizzle-kit artifacts** — Removed `drizzle.config.ts` and the generated migrations meta directory (#675).
+
+### Dependencies
+
+- Bumped `react-router-dom` from 7.18.0 to 7.18.1
+- Bumped `@tanstack/react-virtual` from 3.14.2 to 3.14.6
+- Bumped `tailwindcss` from 4.3.1 to 4.3.2
+- Bumped `ws` from 8.21.0 to 8.21.1 (before removal)
+- Bumped `@types/node` to 25.9.4
+- Bumped GitHub Actions: `codeql-action`, `docker/build-push-action` to latest
+
 ## [0.1.1] - 2026-07-19
 
 ### Added
@@ -109,6 +158,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - UI actions now properly gated by granular permissions rather than a simple admin check.
 - Inherited pointer cursor on modal cards.
 
-[Unreleased]: https://github.com/ebears/alfira/compare/v0.1.1...dev
+[Unreleased]: https://github.com/ebears/alfira/compare/v0.2.0...dev
+[0.2.0]: https://github.com/ebears/alfira/compare/v0.1.1...v0.2.0
 [0.1.1]: https://github.com/ebears/alfira/releases/tag/v0.1.1
 [0.1.0]: https://github.com/ebears/alfira/releases/tag/v0.1.0
