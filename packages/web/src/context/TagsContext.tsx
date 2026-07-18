@@ -1,4 +1,4 @@
-import { fetchTags } from '@alfira-bot/server/shared/api';
+import { fetchTags } from '@alfira/server/shared/api';
 import { createContext, type ReactNode, useCallback, useContext, useEffect, useState } from 'react';
 
 export interface TagItem {

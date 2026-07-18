@@ -63,7 +63,7 @@ packages/
 ```
 
 Shared code lives in `packages/server/src/shared/` and is imported by the web
-package via the `@alfira-bot/server/shared` export.
+package via the `@alfira/server/shared` export.
 
 ## Development Scripts
 
@@ -80,7 +80,7 @@ Top-level scripts:
 
 ## Shared Package Exports
 
-`@alfira-bot/server/shared` provides types and utilities consumed by the web package:
+`@alfira/server/shared` provides types and utilities consumed by the web package:
 
 ### Types
 

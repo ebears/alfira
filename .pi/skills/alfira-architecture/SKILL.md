@@ -74,13 +74,13 @@ Guild ID, admin roles, idle timeout, and notification channel are configured via
 
 ## Shared Package Exports
 
-`@alfira-bot/server/shared` (imported by `packages/web`):
+`@alfira/server/shared` (imported by `packages/web`):
 
 **Types:** `Song`, `QueuedSong`, `LoopMode`, `QueueState`, `Playlist`, `PlaylistDetail`, `User`
 **Utilities:** `formatDuration(seconds)`, `fisherYatesShuffle(array)`
 **DB:** Schema in `packages/server/src/shared/db/schema.ts`
-**Logger:** `logger` from `@alfira-bot/server/shared/logger`
-**API Service:** `@alfira-bot/server/shared/api` — centralized API functions (`fetchSongs`, `createRequest`, `fetchRequests`, etc.)
+**Logger:** `logger` from `@alfira/server/shared/logger`
+**API Service:** `@alfira/server/shared/api` — centralized API functions (`fetchSongs`, `createRequest`, `fetchRequests`, etc.)
 
 Always use the shared API service for API calls rather than raw `fetch`.
 

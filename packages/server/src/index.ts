@@ -40,7 +40,7 @@ import { handleSongs } from './routes/songs';
 import { handleTags } from './routes/tags';
 import { $client, db } from './shared/db';
 import { logger } from './shared/logger';
-import { destroyAllPlayers, startDiscord } from './startDiscord';
+import { destroyAllPlayers, initEnabledSources, startDiscord } from './startDiscord';
 
 // ---------------------------------------------------------------------------
 // Validate required environment variables.
@@ -299,7 +299,7 @@ function startServer(): void {
 // Startup sequence
 // ---------------------------------------------------------------------------
 function runMigrations(): void {
-  const MIGRATIONS_DIR = join(__dirname, './shared/db/migrations');
+  const MIGRATIONS_DIR = join(import.meta.dir, './shared/db/migrations');
 
   // Ensure the drizzle migrations tracking table exists (SQLite: INTEGER PRIMARY KEY AUTOINCREMENT)
   $client.run(`
@@ -435,7 +435,6 @@ async function main(): Promise<void> {
 
   // 2.6. Initialize enabled sources cache.
   try {
-    const { initEnabledSources } = await import('./startDiscord');
     await initEnabledSources();
     logger.info('Enabled sources cache initialized');
   } catch (error) {

@@ -1,4 +1,4 @@
-import type { SongRequest } from '@alfira-bot/server/shared';
+import type { SongRequest } from '@alfira/server/shared';
 import { TrayIcon } from '@phosphor-icons/react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { approveRequest, cancelRequest, denyRequest, fetchRequests } from '../api/api';

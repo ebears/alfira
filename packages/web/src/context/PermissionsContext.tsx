@@ -1,4 +1,4 @@
-import type { PermissionAction } from '@alfira-bot/server/shared';
+import type { PermissionAction } from '@alfira/server/shared';
 import type React from 'react';
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import { fetchMyPermissions } from '../api/api';

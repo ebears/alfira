@@ -1,22 +1,17 @@
-import { configureApiClient } from '@alfira-bot/server/shared/api';
+import { configureApiClient } from '@alfira/server/shared/api';
 import { client } from './client';
 
 // Configure the shared API service with the web client
 configureApiClient(client);
 
-export type {
-  GeneralSettings,
-  SetupChannel,
-  SetupGuild,
-  SetupRole,
-} from '@alfira-bot/server/shared';
+export type { GeneralSettings, SetupChannel, SetupGuild, SetupRole } from '@alfira/server/shared';
 
 export type {
   BulkEditData,
   FetchSongsOptions,
   MyPermissionsResponse,
   PermissionsResponse,
-} from '@alfira-bot/server/shared/api';
+} from '@alfira/server/shared/api';
 // ---------------------------------------------------------------------------
 // Re-export everything from shared API with web-compatible names
 // ---------------------------------------------------------------------------
@@ -68,4 +63,4 @@ export {
   togglePlaylistVisibility,
   updateGeneralSettings,
   updatePermission,
-} from '@alfira-bot/server/shared/api';
+} from '@alfira/server/shared/api';

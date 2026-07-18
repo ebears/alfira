@@ -5,7 +5,7 @@ import { checkGuards } from '../lib/routeGuards';
 import { routeTable } from '../lib/routeTable';
 import type { GeneralSettings } from '../shared';
 import { db, tables } from '../shared/db';
-import { SOURCE_DEFINITIONS } from '../startDiscord';
+import { refreshEnabledSources, SOURCE_DEFINITIONS } from '../startDiscord';
 
 const AVAILABLE_SOURCES = Object.entries(SOURCE_DEFINITIONS).map(([key, def]) => ({
   key,
@@ -180,7 +180,6 @@ async function handlePatchGeneral(
 
   // Refresh the enabled sources cache if sources were updated.
   if (updates.enabledSources) {
-    const { refreshEnabledSources } = await import('../startDiscord');
     refreshEnabledSources(updates.enabledSources as string);
   }
 

@@ -1,4 +1,4 @@
-import { formatDuration } from '@alfira-bot/server/shared';
+import { formatDuration } from '@alfira/server/shared';
 import { ClockIcon } from '@phosphor-icons/react';
 import { memo } from 'react';
 

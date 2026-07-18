@@ -1,5 +1,5 @@
-import { deleteTag, fetchTagSongs, fetchTags, updateTag } from '@alfira-bot/server/shared/api';
-import type { Song } from '@alfira-bot/server/shared/types';
+import { deleteTag, fetchTagSongs, fetchTags, updateTag } from '@alfira/server/shared/api';
+import type { Song } from '@alfira/server/shared/types';
 import { MagnifyingGlassIcon, TagIcon, TrashIcon } from '@phosphor-icons/react';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import ConfirmModal from '../components/ConfirmModal';
@@ -99,7 +99,7 @@ export default function TagsPage() {
       const newTags = (song.tags ?? []).filter(
         (t) => t.toLowerCase() !== selected.nameLower.toLowerCase()
       );
-      const updated = await import('@alfira-bot/server/shared/api').then((m) =>
+      const updated = await import('@alfira/server/shared/api').then((m) =>
         m.updateSong(song.id, { tags: newTags })
       );
       setTagSongs((prev) => prev.filter((s) => s.id !== updated.id));

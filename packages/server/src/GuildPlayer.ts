@@ -7,8 +7,13 @@ import { PlaybackCursor } from './PlaybackCursor';
 import type { LoopMode, QueuedSong, QueueState } from './shared';
 import { db, tables } from './shared/db';
 import { logger } from './shared/logger';
-import { connectToVoice, getClient } from './startDiscord';
-import { destroyNodeLinkPlayer, preloadTrack, updateNodeLinkPlayer } from './utils/nodelink';
+import { connectToVoice, getClient } from './lib/gatewayState';
+import {
+  destroyNodeLinkPlayer,
+  getStreamFormat,
+  preloadTrack,
+  updateNodeLinkPlayer,
+} from './utils/nodelink';
 
 export class GuildPlayer {
   private static readonly MAX_CONSECUTIVE_FAILURES = 3;
@@ -899,7 +904,6 @@ export class GuildPlayer {
     let lastError: unknown;
     for (let attempt = 0; attempt < RETRY_ATTEMPTS; attempt++) {
       try {
-        const { getStreamFormat } = await import('./utils/nodelink');
         return await getStreamFormat(sourceUrl);
       } catch (error) {
         lastError = error;

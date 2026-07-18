@@ -1,5 +1,5 @@
-import type { PlaylistDetail, Song } from '@alfira-bot/server/shared';
-import { formatDuration } from '@alfira-bot/server/shared';
+import type { PlaylistDetail, Song } from '@alfira/server/shared';
+import { formatDuration } from '@alfira/server/shared';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { memo, useCallback, useEffect, useRef, useState } from 'react';
 import { addSongToPlaylist, getSongsPage } from '../api/api';

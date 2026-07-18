@@ -1,14 +1,14 @@
 {
-  "name": "alfira-bot",
-  "version": "0.1.0",
+  "name": "alfira",
+  "version": "0.1.1",
   "private": true,
   "workspaces": [
     "packages/*"
   ],
   "type": "module",
   "scripts": {
-    "dev": "bun run --filter @alfira-bot/server build && docker compose -f docker-compose.dev.yml up --build",
-    "web:build": "bun run --filter @alfira-bot/web build",
+    "dev": "bun run --filter @alfira/server build && docker compose -f docker-compose.dev.yml up --build",
+    "web:build": "bun run --filter @alfira/web build",
     "discord:unregister-commands": "bun run packages/server/src/utils/unregisterCommands.ts",
     "lint": "oxlint .",
     "lint:fix": "oxlint --fix .",
@@ -17,16 +17,8 @@
     "check": "oxlint . && oxfmt --check ."
   },
   "devDependencies": {
-    "@types/node": "25.9.4",
     "oxfmt": "^0.59.0",
-    "oxlint": "^1.74.0",
-    "typescript": "7.0.2"
+    "oxlint": "^1.74.0"
   },
-  "overrides": {
-    "lodash": "4.17.23",
-    "react": "19.2.7",
-    "react-dom": "19.2.7",
-    "serialize-javascript": "7.0.4"
-  },
-  "packageManager": "bun@1.3.11"
+  "packageManager": "bun@1.3.14"
 }

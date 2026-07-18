@@ -1,5 +1,5 @@
-import type { Playlist, Song } from '@alfira-bot/server/shared';
-import type { FetchSongsOptions } from '@alfira-bot/server/shared/api';
+import type { Playlist, Song } from '@alfira/server/shared';
+import type { FetchSongsOptions } from '@alfira/server/shared/api';
 import { MusicNotesIcon, QuestionIcon } from '@phosphor-icons/react';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
@@ -259,7 +259,7 @@ export default function SongsPage() {
   }, [bulk, removeItem, notify]);
 
   const handleBulkEdit = useCallback(
-    async (data: import('@alfira-bot/server/shared/api').BulkEditData) => {
+    async (data: import('@alfira/server/shared/api').BulkEditData) => {
       if (bulk.count === 0) return;
       setBulkEditingApplying(true);
       try {

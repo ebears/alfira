@@ -1,6 +1,6 @@
-import type { Song } from '@alfira-bot/server/shared';
-import type { SongUpdateData, TagItem } from '@alfira-bot/server/shared/api';
-import { fetchTags, updateSong } from '@alfira-bot/server/shared/api';
+import type { Song } from '@alfira/server/shared';
+import type { SongUpdateData, TagItem } from '@alfira/server/shared/api';
+import { fetchTags, updateSong } from '@alfira/server/shared/api';
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal, flushSync } from 'react-dom';
 import { useTagColors } from '../context/TagsContext';
