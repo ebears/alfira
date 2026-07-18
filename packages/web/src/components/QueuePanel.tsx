@@ -24,6 +24,7 @@ import {
 } from '@phosphor-icons/react';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { memo, useCallback, useMemo, useRef, useState } from 'react';
+import type { CooldownState } from '../hooks/useCooldownGuard';
 import { createPortal } from 'react-dom';
 import ConfirmModal from '../components/ConfirmModal';
 import { ContextMenu, type MenuItem } from '../components/ContextMenu';
@@ -37,6 +38,7 @@ import { getSourceKey } from '../utils/source';
 import { getRandomIdleIcon } from './EmptyState';
 import { ArtworkImage } from './ui/ArtworkImage';
 import { Button } from './ui/Button';
+import { cooldownButtonProps } from './ui/cooldownButtonProps';
 import { DurationBadge } from './ui/DurationBadge';
 import { VolumeBoostBadge } from './ui/VolumeBoostBadge';
 
@@ -47,6 +49,7 @@ export interface MobileQuickControls {
   loopBusy: boolean;
   shuffleBusy: boolean;
   skipBusy: boolean;
+  cooldown: CooldownState;
   onSkip: () => void;
   onCycleLoop: () => void;
   onShuffleToggle: () => void;
@@ -696,10 +699,12 @@ const PanelHeader = memo(function PanelHeader({
               variant='inherit'
               surface='base'
               size='icon'
-              onClick={mqc.onSkip}
-              disabled={!mqc.currentSong || mqc.skipBusy}
-              title='Skip'
-              className='text-muted hover:text-fg disabled:opacity-50'
+              {...cooldownButtonProps(mqc.cooldown, {
+                onClick: mqc.onSkip,
+                disabled: !mqc.currentSong || mqc.skipBusy,
+                title: 'Skip',
+              })}
+              className='text-muted hover:text-fg'
             >
               {mqc.skipBusy ? (
                 <CircleNotchIcon size={18} weight='bold' className='animate-spin' />
@@ -711,10 +716,12 @@ const PanelHeader = memo(function PanelHeader({
               variant='inherit'
               surface='base'
               size='icon'
-              onClick={mqc.onCycleLoop}
-              disabled={!mqc.currentSong || mqc.loopBusy}
-              title={`Loop: ${mqc.loopMode}`}
-              className={`disabled:opacity-50 ${
+              {...cooldownButtonProps(mqc.cooldown, {
+                onClick: mqc.onCycleLoop,
+                disabled: !mqc.currentSong || mqc.loopBusy,
+                title: `Loop: ${mqc.loopMode}`,
+              })}
+              className={`${
                 isLoopActive
                   ? 'pressed text-accent hover:text-accent-muted'
                   : 'text-muted hover:text-fg'
@@ -730,10 +737,12 @@ const PanelHeader = memo(function PanelHeader({
               variant='inherit'
               surface='base'
               size='icon'
-              onClick={mqc.onShuffleToggle}
-              disabled={!mqc.currentSong || mqc.shuffleBusy}
-              title={mqc.isShuffled ? 'Unshuffle queue' : 'Shuffle queue'}
-              className={`disabled:opacity-50 ${
+              {...cooldownButtonProps(mqc.cooldown, {
+                onClick: mqc.onShuffleToggle,
+                disabled: !mqc.currentSong || mqc.shuffleBusy,
+                title: mqc.isShuffled ? 'Unshuffle queue' : 'Shuffle queue',
+              })}
+              className={`${
                 mqc.isShuffled
                   ? 'pressed text-accent hover:text-accent-muted'
                   : 'text-muted hover:text-fg'

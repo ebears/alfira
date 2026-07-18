@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { quickAddPlaylistToQueue, quickAddToQueue } from '../../api/api';
-import { apiErrorMessage } from '../../utils/api';
+import { apiErrorMessage, isRateLimitError } from '../../utils/api';
 import { Backdrop } from '../Backdrop';
 import { Button } from '../ui/Button';
 import Checkbox from '../ui/Checkbox';
@@ -37,7 +37,11 @@ export default function QuickAddModal({
         onAdded();
       }
     } catch (err: unknown) {
-      setError(apiErrorMessage(err, 'Could not add song to queue. Is the bot in a voice channel?'));
+      if (!isRateLimitError(err)) {
+        setError(
+          apiErrorMessage(err, 'Could not add song to queue. Is the bot in a voice channel?')
+        );
+      }
       setSubmitting(false);
     }
   };

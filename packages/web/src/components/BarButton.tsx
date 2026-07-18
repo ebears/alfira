@@ -7,6 +7,7 @@ export function BarButton({
   onClick,
   busy,
   disabled,
+  dimmed,
   title,
   hoverColor,
   pulse = false,
@@ -16,6 +17,7 @@ export function BarButton({
   onClick: () => void;
   busy: boolean;
   disabled: boolean;
+  dimmed?: boolean;
   title: string;
   hoverColor: string;
   pulse?: boolean;
@@ -28,6 +30,7 @@ export function BarButton({
       size='icon'
       onClick={onClick}
       disabled={disabled}
+      dimmed={dimmed}
       title={title}
       className={`${
         busy

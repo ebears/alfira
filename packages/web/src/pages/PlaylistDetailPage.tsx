@@ -49,9 +49,11 @@ import { usePermissions } from '../context/PermissionsContext';
 import { usePlayerState } from '../context/PlayerContext';
 import { useAddToQueue } from '../hooks/useAddToQueue';
 import { useBulkSelection } from '../hooks/useBulkSelection';
+import { useCooldownGuard } from '../hooks/useCooldownGuard';
+import { cooldownButtonProps } from '../components/ui/cooldownButtonProps';
 import { useNotification } from '../hooks/useNotification';
 import { onSocketEvent } from '../hooks/useSocket';
-import { apiErrorMessage } from '../utils/api';
+import { apiErrorMessage, notifyUnlessRateLimit } from '../utils/api';
 import { getTagColorClasses } from '../utils/tagColors';
 
 const ITEMS_PER_PAGE = 24;
@@ -74,6 +76,12 @@ export default function PlaylistDetailPage() {
   const [tags, setTags] = useState<TagItem[]>([]);
   const { handleAddToQueue, notification } = useAddToQueue();
   const { notify } = useNotification();
+  const { coolingDown, statusTitle, handleCooldownClick } = useCooldownGuard();
+
+  const cooldown = useMemo(
+    () => ({ coolingDown, statusTitle, onCooldownClick: handleCooldownClick }),
+    [coolingDown, statusTitle, handleCooldownClick]
+  );
 
   const SORT_OPTIONS = [
     { value: 'position', label: 'Playlist Order' },
@@ -409,7 +417,7 @@ export default function PlaylistDetailPage() {
         if (throwErrors) {
           throw err;
         }
-        notify(apiErrorMessage(err, 'Could not start playback.'), 'error', 5000);
+        notifyUnlessRateLimit(err, 'Could not start playback.', notify);
       } finally {
         setPlayingSongId(null);
       }
@@ -631,21 +639,26 @@ export default function PlaylistDetailPage() {
           <Button
             variant='secondary'
             className='rounded-full!'
-            onClick={() => {
-              void handlePlayFromSong(songs[0]?.songId, 'random');
-            }}
-            disabled={songItems.length === 0}
-            title='Shuffle'
+            {...cooldownButtonProps(cooldown, {
+              onClick: () => {
+                void handlePlayFromSong(songs[0]?.songId, 'random');
+              },
+              disabled: songItems.length === 0,
+              title: 'Shuffle',
+            })}
           >
             <ShuffleIcon size={18} weight='duotone' />
           </Button>
           <Button
             variant='primary'
             className='text-xs flex items-center gap-1.5'
-            onClick={() => {
-              void handlePlayFromSong(songs[0]?.songId, 'sequential');
-            }}
-            disabled={songItems.length === 0}
+            {...cooldownButtonProps(cooldown, {
+              onClick: () => {
+                void handlePlayFromSong(songs[0]?.songId, 'sequential');
+              },
+              disabled: songItems.length === 0,
+              title: 'Play',
+            })}
           >
             <PlayIcon size={14} weight='duotone' /> Play
           </Button>
