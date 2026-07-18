@@ -29,6 +29,7 @@ The bot and API run in a **single Bun process**. For detailed architecture (star
 - **Single-process by design** — Bot, API, and WebSocket run in one Bun process. Shared memory gives real-time updates without Redis or message queues. This is a deliberate tradeoff: the scope is a single self-hosted community, not multi-tenant SaaS.
 - **Web UI as primary interface** — The Discord bot is the playback engine; the web app is the control plane. This avoids Discord's rate limits and UX constraints.
 - **Audio is audio — no assumptions about content** — Works equally as a music bot or tabletop audio player. The data model (songs, playlists, tags) is content-type-agnostic: a pop song and an hour-long dungeon ambience are the same shape.
+- **Single source of truth** — Every concept, pattern, and piece of knowledge has one canonical home. Before creating something new, check if it already exists or can be extended. If nothing fits and your change would duplicate what already exists across files, extract the commonality into a shared location first. This applies as much to UI patterns (one toast, one button variant, one data-fetching hook) as it does to types and utilities. Copy-pasting is a last resort, not a first move.
 
 ## Development Commands
 
