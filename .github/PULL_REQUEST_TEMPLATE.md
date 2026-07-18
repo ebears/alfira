@@ -22,7 +22,7 @@ Closes #
 ## Checklist
 
 - [ ] `bun run check` passes
-- [ ] TypeScript compiles (`bunx tsc --noEmit -p packages/server/tsconfig.json`)
+- [ ] Server and web build (`bun run --filter @alfira/server build && bun run --filter @alfira/web build`)
 - [ ] Manual testing done (describe below)
 - [ ] Documentation updated if needed
 

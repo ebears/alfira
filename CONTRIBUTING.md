@@ -63,7 +63,7 @@ bun run lint:fix
 bun run format
 ```
 
-CI runs `bun run lint` in the typecheck workflow — your code must pass before merging.
+CI runs `bun run lint` and `bun run build` for both packages — your code must pass before merging.
 
 ## Editor Tooling
 
