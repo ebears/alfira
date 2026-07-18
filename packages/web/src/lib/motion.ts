@@ -1,4 +1,4 @@
-import { LazyMotion, domAnimation, type Variants } from 'motion/react';
+import { LazyMotion, domAnimation, type Transition, type Variants } from 'motion/react';
 
 /**
  * Shared page transition variants.
@@ -30,4 +30,19 @@ export const springUp: Variants = {
     y: 0,
     transition: { type: 'spring', stiffness: 300, damping: 24 },
   },
+};
+
+/**
+ * Metadata crossfade variants — used in the now-playing bar when the song
+ * changes. Old text slides up and fades out; new text slides up from below.
+ */
+export const metadataVariants: Variants = {
+  initial: { opacity: 0, y: 6 },
+  animate: { opacity: 1, y: 0 },
+  exit: { opacity: 0, y: -6 },
+};
+
+export const metadataTransition: Transition = {
+  duration: 0.18,
+  ease: 'easeOut',
 };

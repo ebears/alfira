@@ -13,6 +13,9 @@ import {
   SkipForwardIcon,
 } from '@phosphor-icons/react';
 import { memo, useCallback, useEffect, useMemo, useRef } from 'react';
+import { AnimatePresence } from 'motion/react';
+import * as m from 'motion/react-m';
+import { metadataTransition, metadataVariants } from '../lib/motion';
 import { usePlayer } from '../context/PlayerContext';
 import { useQueuePanel } from '../context/QueuePanelContext';
 import { useCooldownGuard, type CooldownState } from '../hooks/useCooldownGuard';
@@ -366,21 +369,32 @@ interface AlbumArtProps {
 }
 
 const AlbumArt = memo(function AlbumArt({ currentSong }: AlbumArtProps) {
+  const songKey = currentSong?.id ?? 'empty';
+
   return (
-    <div className='w-12 h-12 md:w-14 md:h-14 rounded border border-border shrink-0 overflow-hidden relative bg-elevated'>
-      {currentSong ? (
-        <ArtworkImage
-          src={currentSong.artwork ?? currentSong.thumbnailUrl}
-          alt={currentSong.title}
-          className='w-full h-full'
-          imageClassName='scale-[1.33]'
-        />
-      ) : (
-        <div className='w-full h-full flex items-center justify-center'>
-          <GuitarIcon size={18} weight='duotone' className='text-faint' />
-        </div>
-      )}
-    </div>
+    <AnimatePresence mode='wait'>
+      <m.div
+        key={songKey}
+        className='w-12 h-12 md:w-14 md:h-14 rounded border border-border shrink-0 overflow-hidden relative bg-elevated'
+        initial={{ opacity: 0, scale: 0.92 }}
+        animate={{ opacity: 1, scale: 1 }}
+        exit={{ opacity: 0, scale: 0.92 }}
+        transition={{ duration: 0.2, ease: 'easeOut' }}
+      >
+        {currentSong ? (
+          <ArtworkImage
+            src={currentSong.artwork ?? currentSong.thumbnailUrl}
+            alt={currentSong.title}
+            className='w-full h-full'
+            imageClassName='scale-[1.33]'
+          />
+        ) : (
+          <div className='w-full h-full flex items-center justify-center'>
+            <GuitarIcon size={18} weight='duotone' className='text-faint' />
+          </div>
+        )}
+      </m.div>
+    </AnimatePresence>
   );
 });
 
@@ -403,28 +417,39 @@ const MetadataSection = memo(function MetadataSection({
 
   const displayName = currentSong.nickname || currentSong.title;
   const sourceKey = getSourceKey(currentSong.sourceUrl);
+  const songKey = currentSong.id;
 
   return (
-    <div className='flex flex-col min-w-0 gap-0.5'>
-      <div className='flex items-center gap-2 min-w-0'>
-        <p className='font-body text-sm font-medium text-fg truncate'>{displayName}</p>
-        {currentSong.artist && (
-          <p className='font-body text-xs text-muted shrink-0'>· {currentSong.artist}</p>
-        )}
-        <TagTicker tags={currentSong.tags ?? []} />
-      </div>
-      <div className='flex items-center gap-2'>
-        <p className='font-mono text-xs text-muted'>
-          {formatDuration(elapsed)} / {formatDuration(currentSong.duration)}
-        </p>
-        {sourceKey && (
-          <span className='flex items-center shrink-0 [&_svg]:w-3 [&_svg]:h-3'>
-            <SourceIcon sourceKey={sourceKey} />
-          </span>
-        )}
-        <VolumeBoostBadge volumeBoost={currentSong.volumeBoost} />
-      </div>
-    </div>
+    <AnimatePresence mode='wait'>
+      <m.div
+        key={songKey}
+        className='flex flex-col min-w-0 gap-0.5'
+        variants={metadataVariants}
+        initial='initial'
+        animate='animate'
+        exit='exit'
+        transition={metadataTransition}
+      >
+        <div className='flex items-center gap-2 min-w-0'>
+          <p className='font-body text-sm font-medium text-fg truncate'>{displayName}</p>
+          {currentSong.artist && (
+            <p className='font-body text-xs text-muted shrink-0'>· {currentSong.artist}</p>
+          )}
+          <TagTicker tags={currentSong.tags ?? []} />
+        </div>
+        <div className='flex items-center gap-2'>
+          <p className='font-mono text-xs text-muted'>
+            {formatDuration(elapsed)} / {formatDuration(currentSong.duration)}
+          </p>
+          {sourceKey && (
+            <span className='flex items-center shrink-0 [&_svg]:w-3 [&_svg]:h-3'>
+              <SourceIcon sourceKey={sourceKey} />
+            </span>
+          )}
+          <VolumeBoostBadge volumeBoost={currentSong.volumeBoost} />
+        </div>
+      </m.div>
+    </AnimatePresence>
   );
 });
 
@@ -572,22 +597,40 @@ export function NowPlayingBar() {
 
         {/* Mobile: metadata + art + queue */}
         <div className='md:hidden flex items-center ms-auto shrink-0'>
-          {currentSong ? (
-            <div className='max-w-32 min-w-0 mr-2'>
-              <p className='font-body text-sm font-semibold text-fg truncate text-right'>
-                {currentSong.nickname || currentSong.title}
-              </p>
-              {currentSong.artist && (
-                <p className='font-body text-xs text-muted truncate text-right'>
-                  {currentSong.artist}
+          <AnimatePresence mode='wait'>
+            {currentSong ? (
+              <m.div
+                key={currentSong.id}
+                className='max-w-32 min-w-0 mr-2'
+                variants={metadataVariants}
+                initial='initial'
+                animate='animate'
+                exit='exit'
+                transition={metadataTransition}
+              >
+                <p className='font-body text-sm font-semibold text-fg truncate text-right'>
+                  {currentSong.nickname || currentSong.title}
                 </p>
-              )}
-            </div>
-          ) : (
-            <div className='min-w-0 mr-2'>
-              <p className='font-body text-sm text-muted text-right'>Nothing playing</p>
-            </div>
-          )}
+                {currentSong.artist && (
+                  <p className='font-body text-xs text-muted truncate text-right'>
+                    {currentSong.artist}
+                  </p>
+                )}
+              </m.div>
+            ) : (
+              <m.div
+                key='empty'
+                className='min-w-0 mr-2'
+                variants={metadataVariants}
+                initial='initial'
+                animate='animate'
+                exit='exit'
+                transition={metadataTransition}
+              >
+                <p className='font-body text-sm text-muted text-right'>Nothing playing</p>
+              </m.div>
+            )}
+          </AnimatePresence>
           <AlbumArt currentSong={currentSong} />
           <div className='w-px h-8 bg-border shrink-0 mx-1' />
           <Button
