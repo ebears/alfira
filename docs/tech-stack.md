@@ -10,7 +10,7 @@
 | **Audio**    | NodeLink (Lavalink v4) — direct WebSocket + REST |
 | **API**      | Bun native HTTP + WebSocket                      |
 | **Database** | SQLite + Drizzle ORM                             |
-| **Frontend** | React 19 + Tailwind CSS 4                        |
+| **Frontend** | React 19 + Tailwind CSS 4 + motion (framer-motion v12) |
 | **Logging**  | Custom (shared/logger)                           |
 
 ## Architecture

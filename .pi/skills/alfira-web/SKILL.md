@@ -93,9 +93,12 @@ description: React 19 + Tailwind CSS 4 web UI, component and page structure, API
 | `ErrorBanner.tsx`       | Error message banner         |
 | `PlayButton.tsx`        | Play action button           |
 | `RoleComboBox.tsx`      | Role selection dropdown      |
-| `Spinner.tsx`           | Loading spinner              |
-| `VirtualListFooter.tsx` | Footer for virtualized lists |
-| `VolumeBoostBadge.tsx`  | Volume boost indicator       |
+| `ArtworkImage.tsx`      | Lazy-loaded artwork with fallback |
+| `PageHeader.tsx`        | Consistent page header           |
+| `Spinner.tsx`           | Loading spinner                   |
+| `SpringUp.tsx`          | Spring-up mount animation wrapper (motion) |
+| `VirtualListFooter.tsx` | Footer for virtualized lists      |
+| `VolumeBoostBadge.tsx`  | Volume boost indicator            |
 
 ### Other Components
 
@@ -156,7 +159,8 @@ Shared constants used across the web UI. Common values like API base URLs, defau
 - **Page transitions:** `AnimatedOutlet` replaces `<Outlet />` in Layout — handles enter/exit crossfade on route change
 - **Pattern:** `import * as m from 'motion/react-m'` for the minimal `m` component factory; `import { AnimatePresence } from 'motion/react'` for enter/exit orchestration; `import { pageVariants } from '../lib/motion'` for shared variants
 - **Bundle:** Uses `LazyMotion` + `m` (4.6kb base) with `domAnimation` features loaded synchronously at mount
-- CSS keyframes (`fadeUp`, `slideUp`, etc.) remain in `index.css` for non-React animations (modals, loaders)
+- **SpringUp:** `<SpringUp>` wraps content in a shared spring-up variant (`springUp` from `lib/motion.ts`) — replaces the old `animate-fade-up` CSS class
+- CSS keyframes (`slideUp`, `pulseGentle`, etc.) remain in `index.css` for non-React animations (now-playing bar, loaders)
 
 ## Tailwind CSS 4 Conventions
 
