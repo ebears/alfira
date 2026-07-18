@@ -98,7 +98,7 @@ const SongCardInner = ({
     return (
       <Card
         hoverable={!!isAdminView && !selectionMode}
-        className={`rounded-lg flex flex-col${(isAdminView && !selectionMode) || selectionMode ? ' cursor-pointer' : ''}${selectionMode ? ' select-none hover:ring-2 hover:ring-accent/50' : ''}${isAdminView && !selectionMode ? ' group' : ''}`}
+        className={`rounded-lg flex flex-col${(isAdminView && !selectionMode) || selectionMode ? ' cursor-pointer' : ''}${selectionMode ? ' select-none hover:ring-2 hover:ring-accent/50' : ''}${!selectionMode ? ' group' : ''}`}
         style={gridStyle}
         data-song-edit-container
         onClick={handleGridClick}
@@ -164,16 +164,24 @@ const SongCardInner = ({
           <div className='flex items-center justify-between gap-2 pt-1'>
             <div className='min-w-0'>{tags.length > 0 && <TagTicker tags={tags} />}</div>
             <div className='flex items-center gap-1 shrink-0'>
+              <div
+                className={
+                  menuOpen
+                    ? ''
+                    : 'opacity-0 group-hover:opacity-100 [@media(hover:none)]:opacity-100 transition-opacity duration-150'
+                }
+              >
+                <ContextMenuTrigger
+                  ref={triggerRef}
+                  onToggle={() => setMenuOpen((v) => !v)}
+                  isOpen={menuOpen}
+                  onMouseDown={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                  }}
+                />
+              </div>
               <PlayButton onClick={onPlay} isPlaying={!!isPlaying} />
-              <ContextMenuTrigger
-                ref={triggerRef}
-                onToggle={() => setMenuOpen((v) => !v)}
-                isOpen={menuOpen}
-                onMouseDown={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                }}
-              />
             </div>
           </div>
 
@@ -274,20 +282,28 @@ const SongCardInner = ({
             <VolumeBoostBadge volumeBoost={song.volumeBoost} />
           </div>
         </div>
+        <div
+          className={
+            menuOpen
+              ? ''
+              : `opacity-0 [@media(hover:none)]:opacity-100 transition-opacity duration-150 ${isRowHovered ? 'opacity-100' : ''}`
+          }
+        >
+          <ContextMenuTrigger
+            ref={triggerRef}
+            onToggle={() => setMenuOpen((v) => !v)}
+            isOpen={menuOpen}
+            onMouseDown={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+            }}
+            className='w-12 h-12'
+          />
+        </div>
         <PlayButton
           onClick={onPlay}
           isPlaying={!!isPlaying}
           className='w-12 h-12 disabled:opacity-50'
-        />
-        <ContextMenuTrigger
-          ref={triggerRef}
-          onToggle={() => setMenuOpen((v) => !v)}
-          isOpen={menuOpen}
-          onMouseDown={(e) => {
-            e.preventDefault();
-            e.stopPropagation();
-          }}
-          className='w-12 h-12'
         />
         {menuOpen && (
           <ContextMenu
