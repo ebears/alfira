@@ -7,3 +7,8 @@ export function apiErrorMessage(err: unknown, fallback: string): string {
   }
   return err instanceof Error ? err.message : fallback;
 }
+
+/** True when the error is a 429 rate limit response — the cooldown UI handles these. */
+export function isRateLimitError(err: unknown): boolean {
+  return err instanceof ApiError && err.status === 429;
+}

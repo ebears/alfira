@@ -1,6 +1,12 @@
 import type { RouteContext } from '../index';
 import { json } from './json';
-import { checkRateLimit, getClientIp, rateLimitResponse } from './rateLimit';
+import {
+  checkRateLimit,
+  getClientIp,
+  rateLimitHeaders,
+  rateLimitResponse,
+  type RateLimitInfo,
+} from './rateLimit';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -81,15 +87,16 @@ export function routeTable(
     const path = url.pathname.slice(prefix.length) || '/';
 
     // Rate-limit non-GET requests.
+    let rateLimitInfo: RateLimitInfo | null = null;
     if (rateLimit && request.method !== 'GET') {
       const ip = getClientIp(request);
-      if (
-        !checkRateLimit(rateLimit.bucket, ip, {
-          windowMs: rateLimit.windowMs,
-          maxRequests: rateLimit.maxRequests,
-        })
-      ) {
-        return rateLimitResponse(60);
+      const result = checkRateLimit(rateLimit.bucket, ip, {
+        windowMs: rateLimit.windowMs,
+        maxRequests: rateLimit.maxRequests,
+      });
+      rateLimitInfo = result;
+      if (!result.allowed) {
+        return rateLimitResponse(result);
       }
     }
 
@@ -99,7 +106,23 @@ export function routeTable(
       const params = matchPath(path, pattern);
       if (params === null) continue;
 
-      return await handler(ctx, request, params);
+      let response = await handler(ctx, request, params);
+
+      // Attach rate limit headers to the response so the client can track
+      // remaining budget and show approaching / cooldown UI.
+      if (rateLimitInfo) {
+        const headers = new Headers(response.headers);
+        for (const [key, value] of Object.entries(rateLimitHeaders(rateLimitInfo))) {
+          headers.set(key, value);
+        }
+        response = new Response(response.body, {
+          status: response.status,
+          statusText: response.statusText,
+          headers,
+        });
+      }
+
+      return response;
     }
 
     return json({ error: 'Not Found' }, 404);

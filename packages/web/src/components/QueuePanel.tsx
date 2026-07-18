@@ -47,9 +47,12 @@ export interface MobileQuickControls {
   loopBusy: boolean;
   shuffleBusy: boolean;
   skipBusy: boolean;
+  coolingDown: boolean;
+  statusTitle: string | undefined;
   onSkip: () => void;
   onCycleLoop: () => void;
   onShuffleToggle: () => void;
+  onCooldownClick: () => void;
 }
 
 type VirtualQueueItem =
@@ -696,10 +699,11 @@ const PanelHeader = memo(function PanelHeader({
               variant='inherit'
               surface='base'
               size='icon'
-              onClick={mqc.onSkip}
+              onClick={mqc.coolingDown ? mqc.onCooldownClick : mqc.onSkip}
               disabled={!mqc.currentSong || mqc.skipBusy}
-              title='Skip'
-              className='text-muted hover:text-fg disabled:opacity-50'
+              dimmed={mqc.coolingDown}
+              title={mqc.statusTitle ?? 'Skip'}
+              className='text-muted hover:text-fg'
             >
               {mqc.skipBusy ? (
                 <CircleNotchIcon size={18} weight='bold' className='animate-spin' />
@@ -711,10 +715,11 @@ const PanelHeader = memo(function PanelHeader({
               variant='inherit'
               surface='base'
               size='icon'
-              onClick={mqc.onCycleLoop}
+              onClick={mqc.coolingDown ? mqc.onCooldownClick : mqc.onCycleLoop}
               disabled={!mqc.currentSong || mqc.loopBusy}
-              title={`Loop: ${mqc.loopMode}`}
-              className={`disabled:opacity-50 ${
+              dimmed={mqc.coolingDown}
+              title={mqc.statusTitle ?? `Loop: ${mqc.loopMode}`}
+              className={`${
                 isLoopActive
                   ? 'pressed text-accent hover:text-accent-muted'
                   : 'text-muted hover:text-fg'
@@ -730,10 +735,11 @@ const PanelHeader = memo(function PanelHeader({
               variant='inherit'
               surface='base'
               size='icon'
-              onClick={mqc.onShuffleToggle}
+              onClick={mqc.coolingDown ? mqc.onCooldownClick : mqc.onShuffleToggle}
               disabled={!mqc.currentSong || mqc.shuffleBusy}
-              title={mqc.isShuffled ? 'Unshuffle queue' : 'Shuffle queue'}
-              className={`disabled:opacity-50 ${
+              dimmed={mqc.coolingDown}
+              title={mqc.statusTitle ?? (mqc.isShuffled ? 'Unshuffle queue' : 'Shuffle queue')}
+              className={`${
                 mqc.isShuffled
                   ? 'pressed text-accent hover:text-accent-muted'
                   : 'text-muted hover:text-fg'

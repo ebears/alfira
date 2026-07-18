@@ -9,7 +9,28 @@
 // sent on every request automatically.
 // ---------------------------------------------------------------------------
 
+import { updateRateLimit } from '../hooks/useRateLimit';
+
 const TIMEOUT_MS = 10_000;
+
+// Map URL path prefixes to server-side rate limit bucket names.
+const RATE_LIMIT_BUCKETS: Array<[prefix: string, bucket: string]> = [
+  ['/api/player', 'player-mutations'],
+  ['/api/songs', 'songs-mutations'],
+  ['/api/playlists', 'playlists-mutations'],
+];
+
+function extractRateLimit(url: string, headers: Headers): void {
+  const limit = headers.get('X-RateLimit-Limit');
+  const remaining = headers.get('X-RateLimit-Remaining');
+  const reset = headers.get('X-RateLimit-Reset');
+  if (limit === null || remaining === null || reset === null) return;
+
+  const bucket = RATE_LIMIT_BUCKETS.find(([prefix]) => url.startsWith(prefix))?.[1];
+  if (!bucket) return;
+
+  updateRateLimit(bucket, Number(limit), Number(remaining), Number(reset));
+}
 
 async function fetchWithTimeout(url: string, init?: RequestInit): Promise<Response> {
   const controller = new AbortController();
@@ -186,6 +207,9 @@ async function wrappedFetch(
       throw new ApiError('Unauthorized', 401);
     }
   }
+
+  // Extract rate limit info from headers before consuming the body.
+  extractRateLimit(url, response.headers);
 
   if (!response.ok) {
     // Try to parse error body for code

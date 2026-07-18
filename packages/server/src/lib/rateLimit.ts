@@ -17,6 +17,12 @@ interface RateLimitConfig {
   maxRequests: number;
 }
 
+export interface RateLimitInfo {
+  limit: number;
+  remaining: number;
+  resetAt: number; // Unix ms timestamp when the window resets
+}
+
 const DEFAULT_CONFIG: RateLimitConfig = {
   windowMs: 60_000,
   maxRequests: 60,
@@ -36,11 +42,20 @@ export function getClientIp(request: Request): string {
 }
 
 /**
+ * Result of a rate limit check.
+ */
+export interface RateLimitResult extends RateLimitInfo {
+  allowed: boolean;
+}
+
+/**
  * Check whether a request is within the rate limit for a given route group.
- * Returns true if the request is allowed, false if rate-limited.
  *
- * Each call that succeeds increments the counter. Stale entries are pruned
+ * Each call that passes increments the counter. Stale entries are pruned
  * automatically when they're found to be outside the current window.
+ *
+ * Always returns detailed info (remaining, limit, resetAt) so the caller
+ * can attach standard X-RateLimit-* headers to the response.
  *
  * @param group  Identifier for the route group (e.g., 'player-mutations')
  * @param ip     Client IP address
@@ -50,7 +65,7 @@ export function checkRateLimit(
   group: string,
   ip: string,
   config: Partial<RateLimitConfig> = {}
-): boolean {
+): RateLimitResult {
   const { windowMs, maxRequests } = { ...DEFAULT_CONFIG, ...config };
   const now = Date.now();
 
@@ -65,30 +80,57 @@ export function checkRateLimit(
   // First request from this IP, or outside the current window.
   if (!entry || now - entry.windowStart >= windowMs) {
     store.set(ip, { count: 1, windowStart: now });
-    return true;
+    return {
+      allowed: true,
+      limit: maxRequests,
+      remaining: maxRequests - 1,
+      resetAt: now + windowMs,
+    };
   }
+
+  const resetAt = entry.windowStart + windowMs;
 
   // Within the current window but over the limit.
   if (entry.count >= maxRequests) {
-    return false;
+    return { allowed: false, limit: maxRequests, remaining: 0, resetAt };
   }
 
   entry.count++;
-  return true;
+  return { allowed: true, limit: maxRequests, remaining: maxRequests - entry.count, resetAt };
+}
+
+/**
+ * Build standard X-RateLimit-* headers from a RateLimitResult.
+ */
+export function rateLimitHeaders(info: RateLimitInfo): Record<string, string> {
+  return {
+    'X-RateLimit-Limit': String(info.limit),
+    'X-RateLimit-Remaining': String(info.remaining),
+    'X-RateLimit-Reset': String(Math.ceil(info.resetAt / 1000)),
+  };
 }
 
 /**
  * Build a 429 Response for rate-limited requests.
- * Includes Retry-After header.
+ * Includes Retry-After header, rate limit headers, and a JSON body
+ * with retryAfterSeconds so the client can show a countdown.
  */
-export function rateLimitResponse(retryAfterSeconds = 60): Response {
-  return new Response(JSON.stringify({ error: 'Too many requests. Please slow down.' }), {
-    status: 429,
-    headers: {
-      'Content-Type': 'application/json',
-      'Retry-After': String(retryAfterSeconds),
-    },
-  });
+export function rateLimitResponse(info: RateLimitInfo): Response {
+  const retryAfterSeconds = Math.max(1, Math.ceil((info.resetAt - Date.now()) / 1000));
+  return new Response(
+    JSON.stringify({
+      error: 'Too many requests. Please slow down.',
+      retryAfterSeconds,
+    }),
+    {
+      status: 429,
+      headers: {
+        'Content-Type': 'application/json',
+        'Retry-After': String(retryAfterSeconds),
+        ...rateLimitHeaders(info),
+      },
+    }
+  );
 }
 
 /**

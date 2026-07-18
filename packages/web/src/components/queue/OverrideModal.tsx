@@ -1,7 +1,7 @@
 import { WarningIcon } from '@phosphor-icons/react';
 import { useState } from 'react';
 import { overridePlay } from '../../api/api';
-import { apiErrorMessage } from '../../utils/api';
+import { apiErrorMessage, isRateLimitError } from '../../utils/api';
 import { Backdrop } from '../Backdrop';
 import { Button } from '../ui/Button';
 import { Spinner } from '../ui/Spinner';
@@ -25,7 +25,11 @@ export default function OverrideModal({
       await overridePlay(sourceUrl.trim());
       onOverride();
     } catch (err: unknown) {
-      setError(apiErrorMessage(err, 'Could not override playback. Is the bot in a voice channel?'));
+      if (!isRateLimitError(err)) {
+        setError(
+          apiErrorMessage(err, 'Could not override playback. Is the bot in a voice channel?')
+        );
+      }
       setSubmitting(false);
     }
   };
