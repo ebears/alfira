@@ -31,3 +31,18 @@ export const springUp: Variants = {
     transition: { type: 'spring', stiffness: 300, damping: 24 },
   },
 };
+
+/**
+ * Spring-up variant with per-item stagger via the custom prop.
+ * Pass the 0-based index as custom — each item delays by index * 40ms.
+ *
+ * Usage: custom={index % pageSize}
+ */
+export const springUpStaggered: Variants = {
+  hidden: { opacity: 0, y: 24 },
+  show: (i: number) => ({
+    opacity: 1,
+    y: 0,
+    transition: { type: 'spring', stiffness: 300, damping: 24, delay: i * 0.04 },
+  }),
+};

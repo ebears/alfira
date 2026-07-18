@@ -1,19 +1,8 @@
 import type { Playlist, Song } from '@alfira/server/shared';
 import { memo } from 'react';
-import type { Variants } from 'motion/react';
 import * as motionM from 'motion/react-m';
 import SongCard from './SongCard';
-import { springUp } from '../lib/motion';
-
-/** Parent orchestrates staggered children. */
-const gridVariants: Variants = {
-  hidden: {},
-  show: {
-    transition: {
-      staggerChildren: 0.04,
-    },
-  },
-};
+import { springUpStaggered } from '../lib/motion';
 import VirtualListShell from './VirtualListShell';
 
 interface VirtualSongListProps {
@@ -141,9 +130,15 @@ export const VirtualSongList = memo(function VirtualSongList({
       emptyMessage={emptyMessage}
       endSpacer
     >
-      <motionM.div className={gridClass} initial='hidden' animate='show' variants={gridVariants}>
-        {items.map((song) => (
-          <motionM.div key={song.id} variants={springUp}>
+      <div className={gridClass}>
+        {items.map((song, index) => (
+          <motionM.div
+            key={song.id}
+            initial='hidden'
+            animate='show'
+            variants={springUpStaggered}
+            custom={index % 24}
+          >
             <SongCard
               key={song.id}
               song={song}
@@ -160,7 +155,7 @@ export const VirtualSongList = memo(function VirtualSongList({
             />
           </motionM.div>
         ))}
-      </motionM.div>
+      </div>
     </VirtualListShell>
   );
 });
