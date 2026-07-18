@@ -28,7 +28,7 @@ import { useBulkSelection } from '../hooks/useBulkSelection';
 import { useNotification } from '../hooks/useNotification';
 import { onSocketEvent } from '../hooks/useSocket';
 import { useVirtualizedInfiniteScroll } from '../hooks/useVirtualizedInfiniteScroll';
-import { apiErrorMessage, isRateLimitError } from '../utils/api';
+import { apiErrorMessage, notifyUnlessRateLimit } from '../utils/api';
 
 const ITEMS_PER_PAGE = 24;
 
@@ -293,13 +293,11 @@ export default function SongsPage() {
         });
         notify('Started playback', 'success');
       } catch (err: unknown) {
-        if (!isRateLimitError(err)) {
-          notify(
-            apiErrorMessage(err, 'Could not start playback. Is the bot in a voice channel?'),
-            'error',
-            5000
-          );
-        }
+        notifyUnlessRateLimit(
+          err,
+          'Could not start playback. Is the bot in a voice channel?',
+          notify
+        );
       } finally {
         setPlayingId(null);
       }

@@ -1,9 +1,9 @@
 import type { RouteContext } from '../index';
 import { json } from './json';
 import {
+  attachRateLimitHeaders,
   checkRateLimit,
   getClientIp,
-  rateLimitHeaders,
   rateLimitResponse,
   type RateLimitInfo,
 } from './rateLimit';
@@ -111,15 +111,7 @@ export function routeTable(
       // Attach rate limit headers to the response so the client can track
       // remaining budget and show approaching / cooldown UI.
       if (rateLimitInfo) {
-        const headers = new Headers(response.headers);
-        for (const [key, value] of Object.entries(rateLimitHeaders(rateLimitInfo))) {
-          headers.set(key, value);
-        }
-        response = new Response(response.body, {
-          status: response.status,
-          statusText: response.statusText,
-          headers,
-        });
+        response = attachRateLimitHeaders(response, rateLimitInfo);
       }
 
       return response;

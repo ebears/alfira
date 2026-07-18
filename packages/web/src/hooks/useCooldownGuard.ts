@@ -14,7 +14,17 @@ import { useRateLimit } from './useRateLimit';
 // The toast debounce is module-level so all components share one timer —
 // clicking a dimmed play button and a dimmed shuffle button won't fire
 // two toasts within the same 6s window.
+//
+// CooldownState is the canonical prop shape for passing cooldown awareness
+// into memo children — use it alongside cooldownButtonProps() to avoid
+// repeating the onClick / disabled / dimmed / title ternaries.
 // ---------------------------------------------------------------------------
+
+export interface CooldownState {
+  coolingDown: boolean;
+  statusTitle: string | undefined;
+  onCooldownClick: () => void;
+}
 
 let lastToast = 0;
 let proactiveFired = false; // prevent duplicate proactive toasts across instances

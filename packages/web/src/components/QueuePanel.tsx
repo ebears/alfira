@@ -24,6 +24,7 @@ import {
 } from '@phosphor-icons/react';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { memo, useCallback, useMemo, useRef, useState } from 'react';
+import type { CooldownState } from '../hooks/useCooldownGuard';
 import { createPortal } from 'react-dom';
 import ConfirmModal from '../components/ConfirmModal';
 import { ContextMenu, type MenuItem } from '../components/ContextMenu';
@@ -37,6 +38,7 @@ import { getSourceKey } from '../utils/source';
 import { getRandomIdleIcon } from './EmptyState';
 import { ArtworkImage } from './ui/ArtworkImage';
 import { Button } from './ui/Button';
+import { cooldownButtonProps } from './ui/cooldownButtonProps';
 import { DurationBadge } from './ui/DurationBadge';
 import { VolumeBoostBadge } from './ui/VolumeBoostBadge';
 
@@ -47,12 +49,10 @@ export interface MobileQuickControls {
   loopBusy: boolean;
   shuffleBusy: boolean;
   skipBusy: boolean;
-  coolingDown: boolean;
-  statusTitle: string | undefined;
+  cooldown: CooldownState;
   onSkip: () => void;
   onCycleLoop: () => void;
   onShuffleToggle: () => void;
-  onCooldownClick: () => void;
 }
 
 type VirtualQueueItem =
@@ -699,10 +699,11 @@ const PanelHeader = memo(function PanelHeader({
               variant='inherit'
               surface='base'
               size='icon'
-              onClick={mqc.coolingDown ? mqc.onCooldownClick : mqc.onSkip}
-              disabled={!mqc.currentSong || mqc.skipBusy}
-              dimmed={mqc.coolingDown}
-              title={mqc.statusTitle ?? 'Skip'}
+              {...cooldownButtonProps(mqc.cooldown, {
+                onClick: mqc.onSkip,
+                disabled: !mqc.currentSong || mqc.skipBusy,
+                title: 'Skip',
+              })}
               className='text-muted hover:text-fg'
             >
               {mqc.skipBusy ? (
@@ -715,10 +716,11 @@ const PanelHeader = memo(function PanelHeader({
               variant='inherit'
               surface='base'
               size='icon'
-              onClick={mqc.coolingDown ? mqc.onCooldownClick : mqc.onCycleLoop}
-              disabled={!mqc.currentSong || mqc.loopBusy}
-              dimmed={mqc.coolingDown}
-              title={mqc.statusTitle ?? `Loop: ${mqc.loopMode}`}
+              {...cooldownButtonProps(mqc.cooldown, {
+                onClick: mqc.onCycleLoop,
+                disabled: !mqc.currentSong || mqc.loopBusy,
+                title: `Loop: ${mqc.loopMode}`,
+              })}
               className={`${
                 isLoopActive
                   ? 'pressed text-accent hover:text-accent-muted'
@@ -735,10 +737,11 @@ const PanelHeader = memo(function PanelHeader({
               variant='inherit'
               surface='base'
               size='icon'
-              onClick={mqc.coolingDown ? mqc.onCooldownClick : mqc.onShuffleToggle}
-              disabled={!mqc.currentSong || mqc.shuffleBusy}
-              dimmed={mqc.coolingDown}
-              title={mqc.statusTitle ?? (mqc.isShuffled ? 'Unshuffle queue' : 'Shuffle queue')}
+              {...cooldownButtonProps(mqc.cooldown, {
+                onClick: mqc.onShuffleToggle,
+                disabled: !mqc.currentSong || mqc.shuffleBusy,
+                title: mqc.isShuffled ? 'Unshuffle queue' : 'Shuffle queue',
+              })}
               className={`${
                 mqc.isShuffled
                   ? 'pressed text-accent hover:text-accent-muted'

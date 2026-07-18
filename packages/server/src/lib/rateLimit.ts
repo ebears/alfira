@@ -111,6 +111,22 @@ export function rateLimitHeaders(info: RateLimitInfo): Record<string, string> {
 }
 
 /**
+ * Attach X-RateLimit-* headers to an existing Response.
+ * Used to annotate successful responses so the client can track budget.
+ */
+export function attachRateLimitHeaders(response: Response, info: RateLimitInfo): Response {
+  const headers = new Headers(response.headers);
+  for (const [key, value] of Object.entries(rateLimitHeaders(info))) {
+    headers.set(key, value);
+  }
+  return new Response(response.body, {
+    status: response.status,
+    statusText: response.statusText,
+    headers,
+  });
+}
+
+/**
  * Build a 429 Response for rate-limited requests.
  * Includes Retry-After header, rate limit headers, and a JSON body
  * with retryAfterSeconds so the client can show a countdown.

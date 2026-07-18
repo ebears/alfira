@@ -12,12 +12,11 @@ import {
   ShuffleIcon,
   SkipForwardIcon,
 } from '@phosphor-icons/react';
-import { memo, useCallback, useEffect, useRef, useState } from 'react';
+import { memo, useCallback, useEffect, useMemo, useRef } from 'react';
 import { usePlayer } from '../context/PlayerContext';
 import { useQueuePanel } from '../context/QueuePanelContext';
-import { useCooldownGuard } from '../hooks/useCooldownGuard';
-import { useNotification } from '../hooks/useNotification';
-import { apiErrorMessage, isRateLimitError } from '../utils/api';
+import { useCooldownGuard, type CooldownState } from '../hooks/useCooldownGuard';
+import { useMutationHandler } from '../hooks/useMutationHandler';
 import { getSourceKey } from '../utils/source';
 import { BarButton } from './BarButton';
 import QueuePanel from './QueuePanel';
@@ -25,6 +24,7 @@ import { SourceIcon } from './SourceIcons';
 import TagTicker from './TagTicker';
 import { ArtworkImage } from './ui/ArtworkImage';
 import { Button } from './ui/Button';
+import { cooldownButtonProps } from './ui/cooldownButtonProps';
 import { VolumeBoostBadge } from './ui/VolumeBoostBadge';
 
 /* ---------------------------------------------------------------------------
@@ -40,12 +40,10 @@ interface PlaybackControlsProps {
   isConnectedToVoice: boolean;
   pauseBusy: boolean;
   skipBusy: boolean;
-  coolingDown: boolean;
-  statusTitle: string | undefined;
+  cooldown: CooldownState;
   onPauseResume: () => void;
   onSkip: () => void;
   onStop: () => void;
-  onCooldownClick: () => void;
 }
 
 const PlaybackControls = memo(function PlaybackControls({
@@ -56,23 +54,22 @@ const PlaybackControls = memo(function PlaybackControls({
   isConnectedToVoice,
   pauseBusy,
   skipBusy,
-  coolingDown,
-  statusTitle,
+  cooldown,
   onPauseResume,
   onSkip,
   onStop,
-  onCooldownClick,
 }: PlaybackControlsProps) {
   const realDisabled = !currentSong || pauseBusy || skipBusy;
 
   return (
     <div className='flex items-center gap-1 md:gap-1.5 shrink-0'>
       <BarButton
-        onClick={coolingDown ? onCooldownClick : onPauseResume}
+        {...cooldownButtonProps(cooldown, {
+          onClick: onPauseResume,
+          disabled: realDisabled,
+          title: isPaused || isStopped ? 'Play' : 'Pause',
+        })}
         busy={pauseBusy}
-        disabled={realDisabled}
-        dimmed={coolingDown}
-        title={statusTitle ?? (isPaused || isStopped ? 'Play' : 'Pause')}
         hoverColor='hover:text-fg'
         pulse={isPlaying && !isPaused}
       >
@@ -83,11 +80,12 @@ const PlaybackControls = memo(function PlaybackControls({
         )}
       </BarButton>
       <BarButton
-        onClick={coolingDown ? onCooldownClick : onSkip}
+        {...cooldownButtonProps(cooldown, {
+          onClick: onSkip,
+          disabled: realDisabled,
+          title: 'Skip',
+        })}
         busy={skipBusy}
-        disabled={realDisabled}
-        dimmed={coolingDown}
-        title={statusTitle ?? 'Skip'}
         hoverColor='hover:text-fg'
         className='hidden md:flex'
       >
@@ -98,10 +96,11 @@ const PlaybackControls = memo(function PlaybackControls({
         variant='inherit'
         surface='base'
         size='icon'
-        onClick={coolingDown ? onCooldownClick : onStop}
-        disabled={!isConnectedToVoice}
-        dimmed={coolingDown}
-        title={statusTitle ?? 'Stop playback'}
+        {...cooldownButtonProps(cooldown, {
+          onClick: onStop,
+          disabled: !isConnectedToVoice,
+          title: 'Stop playback',
+        })}
         className='text-black dark:text-white hover:text-danger md:w-12 md:h-12'
       >
         <DoorOpenIcon size={24} weight='duotone' className='md:w-5 md:h-5' />
@@ -116,11 +115,9 @@ interface LoopShuffleControlsProps {
   isShuffled: boolean;
   loopBusy: boolean;
   shuffleBusy: boolean;
-  coolingDown: boolean;
-  statusTitle: string | undefined;
+  cooldown: CooldownState;
   onCycleLoop: () => void;
   onShuffleToggle: () => void;
-  onCooldownClick: () => void;
 }
 
 const LoopShuffleControls = memo(function LoopShuffleControls({
@@ -129,11 +126,9 @@ const LoopShuffleControls = memo(function LoopShuffleControls({
   isShuffled,
   loopBusy,
   shuffleBusy,
-  coolingDown,
-  statusTitle,
+  cooldown,
   onCycleLoop,
   onShuffleToggle,
-  onCooldownClick,
 }: LoopShuffleControlsProps) {
   const isLoopActive = loopMode !== 'off';
   const loopIcon = isLoopActive ? (
@@ -152,10 +147,11 @@ const LoopShuffleControls = memo(function LoopShuffleControls({
         variant='inherit'
         surface='base'
         size='icon'
-        onClick={coolingDown ? onCooldownClick : onCycleLoop}
-        disabled={!currentSong || loopBusy}
-        dimmed={coolingDown}
-        title={statusTitle ?? `Loop: ${loopMode}`}
+        {...cooldownButtonProps(cooldown, {
+          onClick: onCycleLoop,
+          disabled: !currentSong || loopBusy,
+          title: `Loop: ${loopMode}`,
+        })}
         className={`shrink-0 md:w-12 md:h-12 ${
           isLoopActive
             ? 'pressed text-accent hover:text-accent-muted'
@@ -172,10 +168,11 @@ const LoopShuffleControls = memo(function LoopShuffleControls({
         variant='inherit'
         surface='base'
         size='icon'
-        onClick={coolingDown ? onCooldownClick : onShuffleToggle}
-        disabled={!currentSong || shuffleBusy}
-        dimmed={coolingDown}
-        title={statusTitle ?? (isShuffled ? 'Unshuffle queue' : 'Shuffle queue')}
+        {...cooldownButtonProps(cooldown, {
+          onClick: onShuffleToggle,
+          disabled: !currentSong || shuffleBusy,
+          title: isShuffled ? 'Unshuffle queue' : 'Shuffle queue',
+        })}
         className={`shrink-0 md:w-12 md:h-12 ${
           isShuffled
             ? 'pressed text-accent hover:text-accent-muted'
@@ -456,94 +453,36 @@ export function NowPlayingBar() {
 
   const { queueOpen, setQueueOpen } = useQueuePanel();
 
-  const [pauseBusy, setPauseBusy] = useState(false);
-  const [skipBusy, setSkipBusy] = useState(false);
-  const [loopBusy, setLoopBusy] = useState(false);
-  const [shuffleBusy, setShuffleBusy] = useState(false);
-
-  const { notify } = useNotification();
   const { coolingDown, statusTitle, handleCooldownClick } = useCooldownGuard();
 
-  // Refs provide synchronous guards against rapid clicks bypassing state-based
-  // disabled. React state updates are async, so fast clicks can fire multiple
-  // handlers before the DOM re-renders with disabled={true}.
-  const pauseBusyRef = useRef(false);
-  const skipBusyRef = useRef(false);
-  const loopBusyRef = useRef(false);
-  const shuffleBusyRef = useRef(false);
+  const cooldown: CooldownState = useMemo(
+    () => ({ coolingDown, statusTitle, onCooldownClick: handleCooldownClick }),
+    [coolingDown, statusTitle, handleCooldownClick]
+  );
 
-  const handlePauseResume = useCallback(async () => {
-    if (pauseBusyRef.current) return;
-    pauseBusyRef.current = true;
-    setPauseBusy(true);
-    try {
-      await pause();
-    } catch (err) {
-      if (!isRateLimitError(err)) {
-        notify(apiErrorMessage(err, 'Could not toggle playback.'), 'error', 5000);
-      }
-    } finally {
-      pauseBusyRef.current = false;
-      setPauseBusy(false);
-    }
-  }, [pause, notify]);
-
-  const handleSkip = useCallback(async () => {
-    if (skipBusyRef.current) return;
-    skipBusyRef.current = true;
-    setSkipBusy(true);
-    try {
-      await skip();
-    } catch (err) {
-      if (!isRateLimitError(err)) {
-        notify(apiErrorMessage(err, 'Could not skip track.'), 'error', 5000);
-      }
-    } finally {
-      skipBusyRef.current = false;
-      setSkipBusy(false);
-    }
-  }, [skip, notify]);
+  const { busy: pauseBusy, handler: handlePauseResume } = useMutationHandler(
+    pause,
+    'Could not toggle playback.'
+  );
+  const { busy: skipBusy, handler: handleSkip } = useMutationHandler(skip, 'Could not skip track.');
+  const { busy: loopBusy, handler: handleCycleLoop } = useMutationHandler(
+    useCallback(async () => {
+      const next = loopMode === 'off' ? 'queue' : loopMode === 'queue' ? 'song' : 'off';
+      await setLoop(next);
+    }, [loopMode, setLoop]),
+    'Could not change loop mode.'
+  );
+  const { busy: shuffleBusy, handler: handleShuffleToggle } = useMutationHandler(
+    useCallback(async () => {
+      if (isShuffled) await unshuffle();
+      else await shuffle();
+    }, [isShuffled, shuffle, unshuffle]),
+    'Could not toggle shuffle.'
+  );
 
   const handleStop = useCallback(() => {
     leave().catch((e) => console.error(e));
   }, [leave]);
-
-  const handleCycleLoop = useCallback(async () => {
-    if (loopBusyRef.current) return;
-    loopBusyRef.current = true;
-    setLoopBusy(true);
-    const next = loopMode === 'off' ? 'queue' : loopMode === 'queue' ? 'song' : 'off';
-    try {
-      await setLoop(next);
-    } catch (err) {
-      if (!isRateLimitError(err)) {
-        notify(apiErrorMessage(err, 'Could not change loop mode.'), 'error', 5000);
-      }
-    } finally {
-      loopBusyRef.current = false;
-      setLoopBusy(false);
-    }
-  }, [loopMode, setLoop, notify]);
-
-  const handleShuffleToggle = useCallback(async () => {
-    if (shuffleBusyRef.current) return;
-    shuffleBusyRef.current = true;
-    setShuffleBusy(true);
-    try {
-      if (isShuffled) {
-        await unshuffle();
-      } else {
-        await shuffle();
-      }
-    } catch (err) {
-      if (!isRateLimitError(err)) {
-        notify(apiErrorMessage(err, 'Could not toggle shuffle.'), 'error', 5000);
-      }
-    } finally {
-      shuffleBusyRef.current = false;
-      setShuffleBusy(false);
-    }
-  }, [isShuffled, shuffle, unshuffle, notify]);
 
   const handleSeek = useCallback(
     async (seconds: number) => {
@@ -580,12 +519,10 @@ export function NowPlayingBar() {
           isConnectedToVoice={isConnectedToVoice}
           pauseBusy={pauseBusy}
           skipBusy={skipBusy}
-          coolingDown={coolingDown}
-          statusTitle={statusTitle}
+          cooldown={cooldown}
           onPauseResume={handlePauseResume}
           onSkip={handleSkip}
           onStop={handleStop}
-          onCooldownClick={handleCooldownClick}
         />
 
         {/* Desktop: spacer → art → metadata+progress → spacer → loop/shuffle+queue */}
@@ -613,11 +550,9 @@ export function NowPlayingBar() {
             isShuffled={isShuffled}
             loopBusy={loopBusy}
             shuffleBusy={shuffleBusy}
-            coolingDown={coolingDown}
-            statusTitle={statusTitle}
+            cooldown={cooldown}
             onCycleLoop={handleCycleLoop}
             onShuffleToggle={handleShuffleToggle}
-            onCooldownClick={handleCooldownClick}
           />
           <Button
             variant='inherit'
@@ -689,12 +624,10 @@ export function NowPlayingBar() {
                 loopBusy,
                 shuffleBusy,
                 skipBusy,
-                coolingDown,
-                statusTitle,
+                cooldown,
                 onSkip: handleSkip,
                 onCycleLoop: handleCycleLoop,
                 onShuffleToggle: handleShuffleToggle,
-                onCooldownClick: handleCooldownClick,
               }}
             />
           </div>

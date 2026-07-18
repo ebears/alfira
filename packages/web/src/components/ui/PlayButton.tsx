@@ -1,7 +1,8 @@
 import { CircleNotchIcon, PlayIcon } from '@phosphor-icons/react';
-import { memo } from 'react';
+import { memo, useMemo } from 'react';
 import { useCooldownGuard } from '../../hooks/useCooldownGuard';
 import { Button } from './Button';
+import { cooldownButtonProps } from './cooldownButtonProps';
 
 interface PlayButtonProps {
   onClick: () => void;
@@ -18,12 +19,16 @@ export const PlayButton = memo(function PlayButton({
 }: PlayButtonProps) {
   const { coolingDown, statusTitle, handleCooldownClick } = useCooldownGuard();
 
-  const effectiveTitle = statusTitle ?? title;
+  const cooldown = useMemo(
+    () => ({ coolingDown, statusTitle, onCooldownClick: handleCooldownClick }),
+    [coolingDown, statusTitle, handleCooldownClick]
+  );
 
   return (
     <Button
       variant='primary'
       size='icon'
+      {...cooldownButtonProps(cooldown, { onClick, disabled: isPlaying, title })}
       onMouseDown={(e) => {
         e.preventDefault();
         e.stopPropagation();
@@ -36,10 +41,7 @@ export const PlayButton = memo(function PlayButton({
           onClick();
         }
       }}
-      disabled={isPlaying && !coolingDown}
-      dimmed={coolingDown}
       className={`shrink-0 disabled:cursor-default ${className}`}
-      title={effectiveTitle}
     >
       {isPlaying ? (
         <CircleNotchIcon size={22} weight='bold' className='animate-spin' />
