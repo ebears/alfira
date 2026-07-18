@@ -2,7 +2,7 @@ import { useVirtualizer } from '@tanstack/react-virtual';
 import { type Transition } from 'motion/react';
 import * as m from 'motion/react-m';
 import { memo, useEffect, useLayoutEffect, useRef } from 'react';
-import { queueItemVariants } from '../lib/motion';
+import { listItemVariants } from '../lib/motion';
 import EmptyState from './EmptyState';
 
 // ---------------------------------------------------------------------------
@@ -211,7 +211,7 @@ function VirtualListInner<T>({
                   <m.div
                     initial='initial'
                     animate='animate'
-                    variants={queueItemVariants}
+                    variants={listItemVariants}
                     transition={{ duration: 0.2, ease: 'easeOut' } as Transition}
                   >
                     {renderItem(item, virtualRow.index)}
