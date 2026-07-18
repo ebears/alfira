@@ -1,6 +1,6 @@
 import type { Playlist, Song } from '@alfira/server/shared';
 import { memo } from 'react';
-import * as motionM from 'motion/react-m';
+import * as m from 'motion/react-m';
 import SongCard from './SongCard';
 import { springUpStaggered } from '../lib/motion';
 import VirtualListShell from './VirtualListShell';
@@ -132,7 +132,7 @@ export const VirtualSongList = memo(function VirtualSongList({
     >
       <div className={gridClass}>
         {items.map((song, index) => (
-          <motionM.div
+          <m.div
             key={song.id}
             initial='hidden'
             animate='show'
@@ -153,7 +153,7 @@ export const VirtualSongList = memo(function VirtualSongList({
               isSelected={isSelected?.(song.id) ?? false}
               onToggleSelect={onToggleSelect ? () => onToggleSelect(song.id) : undefined}
             />
-          </motionM.div>
+          </m.div>
         ))}
       </div>
     </VirtualListShell>

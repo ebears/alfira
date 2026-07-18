@@ -25,7 +25,7 @@ import {
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { memo, useCallback, useMemo, useRef, useState } from 'react';
 import { AnimatePresence, type Transition } from 'motion/react';
-import * as motionM from 'motion/react-m';
+import * as m from 'motion/react-m';
 import { queueItemVariants } from '../lib/motion';
 import type { CooldownState } from '../hooks/useCooldownGuard';
 import { createPortal } from 'react-dom';
@@ -301,7 +301,7 @@ export default function QueuePanel({
       <div className='p-4 space-y-4 shrink-0'>
         <AnimatePresence mode='wait'>
           {currentSong ? (
-            <motionM.div
+            <m.div
               key={currentSong.id}
               variants={queueItemVariants}
               initial='initial'
@@ -314,9 +314,9 @@ export default function QueuePanel({
                 elapsed={elapsed}
                 registerProgress={registerProgress}
               />
-            </motionM.div>
+            </m.div>
           ) : (
-            <motionM.div
+            <m.div
               key='idle'
               variants={queueItemVariants}
               initial='initial'
@@ -325,7 +325,7 @@ export default function QueuePanel({
               transition={{ duration: 0.2, ease: 'easeOut' } as Transition}
             >
               <IdleCard />
-            </motionM.div>
+            </m.div>
           )}
         </AnimatePresence>
 
@@ -409,7 +409,7 @@ export default function QueuePanel({
                     transform: `translateY(${virtualRow.start}px)`,
                   }}
                 >
-                  <motionM.div
+                  <m.div
                     initial='initial'
                     animate='animate'
                     variants={queueItemVariants}
@@ -429,7 +429,7 @@ export default function QueuePanel({
                       onMoveToTop={handleMoveToTop}
                       onMoveToBottom={handleMoveToBottom}
                     />
-                  </motionM.div>
+                  </m.div>
                 </div>
               );
             })}

@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import * as motionM from 'motion/react-m';
+import * as m from 'motion/react-m';
 import { springUp } from '../../lib/motion';
 
 interface SpringUpProps {
@@ -13,8 +13,8 @@ interface SpringUpProps {
  */
 export function SpringUp({ children, className }: SpringUpProps) {
   return (
-    <motionM.div initial='hidden' animate='show' variants={springUp} className={className}>
+    <m.div initial='hidden' animate='show' variants={springUp} className={className}>
       {children}
-    </motionM.div>
+    </m.div>
   );
 }
