@@ -1,7 +1,7 @@
 import type { Playlist, PlaylistDetail, Song, TagItem } from '@alfira/server/shared';
 import type { FetchSongsOptions } from '@alfira/server/shared/api';
 import { fetchTags, updatePlaylistTag } from '@alfira/server/shared/api';
-import { useVirtualizedInfiniteScroll } from '../hooks/useVirtualizedInfiniteScroll';
+import { usePaginatedData } from '../hooks/usePaginatedData';
 
 type PlaylistDetailMeta = Omit<PlaylistDetail, 'songs'>;
 
@@ -56,7 +56,7 @@ import { onSocketEvent } from '../hooks/useSocket';
 import { apiErrorMessage, notifyUnlessRateLimit } from '../utils/api';
 import { getTagColorClasses } from '../utils/tagColors';
 
-const ITEMS_PER_PAGE = 24;
+const ITEMS_PER_PAGE = 48;
 
 export default function PlaylistDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -124,11 +124,6 @@ export default function PlaylistDetailPage() {
 
   // Search & filter state
   const [search, setSearch] = useState('');
-  const [viewMode, setViewMode] = useState<'grid' | 'list'>(() => {
-    const saved = localStorage.getItem('alfira-playlist-detail-view');
-    return saved === 'grid' ? 'grid' : 'list';
-  });
-
   // Sort & filter state
   const [sort, setSort] = useState('position');
   const [order, setOrder] = useState('desc');
@@ -202,10 +197,10 @@ export default function PlaylistDetailPage() {
     hasLoaded,
     updateItem,
     removeItem,
+    fetchNextPage,
     retry,
-    sentinelRef,
     refetch,
-  } = useVirtualizedInfiniteScroll<
+  } = usePaginatedData<
     PlaylistDetail['songs'][number],
     [string, boolean, FetchSongsOptions],
     PlaylistDetailMeta
@@ -709,12 +704,6 @@ export default function PlaylistDetailPage() {
           if (selectionMode) bulk.clearAll();
           setSelectionMode((v) => !v);
         }}
-        showViewToggle
-        viewMode={viewMode}
-        onViewModeChange={(m) => {
-          setViewMode(m);
-          localStorage.setItem('alfira-playlist-detail-view', m);
-        }}
       />
 
       {/* Song list */}
@@ -735,7 +724,6 @@ export default function PlaylistDetailPage() {
       ) : (
         <VirtualSongList
           items={songItems}
-          viewMode={viewMode}
           isAdminView={isAdminView}
           playlists={[]}
           isLoading={isLoading}
@@ -745,7 +733,7 @@ export default function PlaylistDetailPage() {
           hasLoaded={!isLoading}
           playingId={playingSongId}
           onRetry={retry}
-          sentinelRef={sentinelRef}
+          onFetchMore={fetchNextPage}
           onDelete={
             selectionMode
               ? undefined

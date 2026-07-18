@@ -1,12 +1,14 @@
 import type { Playlist, Song } from '@alfira/server/shared';
 import { memo } from 'react';
-import * as m from 'motion/react-m';
 import SongCard from './SongCard';
-import VirtualListShell from './VirtualListShell';
+import { VirtualList } from './VirtualList';
+
+// ---------------------------------------------------------------------------
+// Types
+// ---------------------------------------------------------------------------
 
 interface VirtualSongListProps {
   items: Song[];
-  viewMode: 'grid' | 'list';
   isAdminView: boolean;
   playlists: Playlist[];
   isLoading: boolean;
@@ -16,7 +18,7 @@ interface VirtualSongListProps {
   hasLoaded: boolean;
   playingId: string | null;
   onRetry: () => void;
-  sentinelRef: (el: HTMLDivElement | null) => void;
+  onFetchMore: () => void;
   onDelete?: (id: string) => void;
   onPlay: (id: string) => void;
   onAddToQueue: (id: string) => void;
@@ -28,48 +30,16 @@ interface VirtualSongListProps {
   onToggleSelect?: (id: string) => void;
 }
 
-function SkeletonGrid() {
-  return (
-    <div className='grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-[repeat(auto-fill,minmax(270px,1fr))] gap-3 md:gap-4'>
-      {Array.from({ length: 12 }).map((_, i) => (
-        // eslint-disable-next-line react/no-array-index-key -- static skeleton placeholders
-        <div key={`skel-${i}`} className='flex flex-col bg-elevated clay-resting rounded-lg'>
-          <div className='relative aspect-square overflow-hidden rounded-lg border border-border m-3 mb-0'>
-            <div className='skeleton w-full h-full' />
-          </div>
-          <div className='p-4 flex-1 flex flex-col gap-2'>
-            <div className='flex justify-between'>
-              <div className='skeleton h-3.5 w-3/4' />
-              <div className='skeleton h-3.5 w-3.5 rounded-full' />
-            </div>
-            <div className='flex justify-between'>
-              <div className='skeleton h-3 w-2/5' />
-              <div className='skeleton h-3 w-10' />
-            </div>
-            <div className='flex justify-between'>
-              <div className='skeleton h-3 w-1/2' />
-              <div className='skeleton h-3 w-8' />
-            </div>
-            <div className='flex justify-between pt-1'>
-              <div className='skeleton h-3 w-16' />
-              <span className='flex gap-1'>
-                <div className='skeleton h-8 w-8 rounded-full' />
-                <div className='skeleton h-8 w-8 rounded-full' />
-              </span>
-            </div>
-          </div>
-        </div>
-      ))}
-    </div>
-  );
-}
+// ---------------------------------------------------------------------------
+// Skeleton
+// ---------------------------------------------------------------------------
 
 function SkeletonList() {
   return (
     <div className='flex flex-col gap-1.5'>
       {Array.from({ length: 8 }).map((_, i) => (
+        // eslint-disable-next-line react/no-array-index-key -- static skeleton placeholders
         <div
-          // eslint-disable-next-line react/no-array-index-key -- skeleton items are static placeholders
           key={`skeleton-${i}`}
           className='flex items-center gap-3 md:gap-4 px-4 py-4 rounded-lg bg-elevated clay-resting'
         >
@@ -86,9 +56,12 @@ function SkeletonList() {
   );
 }
 
+// ---------------------------------------------------------------------------
+// Component
+// ---------------------------------------------------------------------------
+
 export const VirtualSongList = memo(function VirtualSongList({
   items,
-  viewMode,
   isAdminView,
   playlists,
   isLoading,
@@ -98,7 +71,7 @@ export const VirtualSongList = memo(function VirtualSongList({
   hasLoaded,
   playingId,
   onRetry,
-  sentinelRef,
+  onFetchMore,
   onDelete,
   onPlay,
   onAddToQueue,
@@ -108,58 +81,38 @@ export const VirtualSongList = memo(function VirtualSongList({
   isSelected,
   onToggleSelect,
 }: VirtualSongListProps) {
-  const isGrid = viewMode === 'grid';
-
-  const gridClass = isGrid
-    ? 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-[repeat(auto-fill,minmax(270px,1fr))] gap-3 md:gap-4 items-start'
-    : 'flex flex-col gap-1.5';
-
   return (
-    <VirtualListShell
+    <VirtualList
+      items={items}
+      getItemKey={(song) => song.id}
+      renderItem={(song) => (
+        <SongCard
+          song={song}
+          variant='list'
+          isAdminView={isAdminView}
+          playlists={playlists}
+          onDelete={onDelete}
+          onPlay={() => onPlay(song.id)}
+          isPlaying={playingId === song.id}
+          onAddToQueue={() => onAddToQueue(song.id)}
+          selectionMode={selectionMode}
+          isSelected={isSelected?.(song.id) ?? false}
+          onToggleSelect={onToggleSelect ? () => onToggleSelect(song.id) : undefined}
+        />
+      )}
+      estimateSize={105}
+      itemClassName='pb-3'
       isLoading={isLoading}
       hasLoaded={hasLoaded}
-      isEmpty={items.length === 0}
       isFetching={isFetching}
       isError={isError}
       hasMore={hasMore}
       onRetry={onRetry}
-      sentinelRef={sentinelRef}
-      skeleton={isGrid ? <SkeletonGrid /> : <SkeletonList />}
+      onFetchMore={onFetchMore}
+      skeleton={<SkeletonList />}
       emptyTitle={emptyTitle}
       emptyMessage={emptyMessage}
-      endSpacer
-    >
-      <div className={gridClass}>
-        {items.map((song, index) => (
-          <m.div
-            key={song.id}
-            initial={{ opacity: 0, y: 24 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{
-              type: 'spring',
-              stiffness: 300,
-              damping: 24,
-              delay: (index % 24) * 0.04,
-            }}
-          >
-            <SongCard
-              key={song.id}
-              song={song}
-              variant={viewMode === 'grid' ? 'grid' : 'list'}
-              isAdminView={isAdminView}
-              playlists={playlists}
-              onDelete={onDelete}
-              onPlay={() => onPlay(song.id)}
-              isPlaying={playingId === song.id}
-              onAddToQueue={() => onAddToQueue(song.id)}
-              selectionMode={selectionMode}
-              isSelected={isSelected?.(song.id) ?? false}
-              onToggleSelect={onToggleSelect ? () => onToggleSelect(song.id) : undefined}
-            />
-          </m.div>
-        ))}
-      </div>
-    </VirtualListShell>
+    />
   );
 });
 

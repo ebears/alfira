@@ -27,10 +27,10 @@ import { useAddToQueue } from '../hooks/useAddToQueue';
 import { useBulkSelection } from '../hooks/useBulkSelection';
 import { useNotification } from '../hooks/useNotification';
 import { onSocketEvent } from '../hooks/useSocket';
-import { useVirtualizedInfiniteScroll } from '../hooks/useVirtualizedInfiniteScroll';
+import { usePaginatedData } from '../hooks/usePaginatedData';
 import { apiErrorMessage, notifyUnlessRateLimit } from '../utils/api';
 
-const ITEMS_PER_PAGE = 24;
+const ITEMS_PER_PAGE = 48;
 
 type SortField = 'createdAt' | 'title' | 'artist' | 'album' | 'duration';
 
@@ -46,10 +46,7 @@ export default function SongsPage() {
   const { isAdminView } = useAdminView();
   const { hasPermission } = usePermissions();
   const { state: queueState } = usePlayerState();
-  const [viewMode, setViewMode] = useState<'grid' | 'list'>(() => {
-    const saved = localStorage.getItem('alfira-library-view');
-    return saved === 'grid' ? 'grid' : 'list';
-  });
+
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [playingId, setPlayingId] = useState<string | null>(null);
   const { handleAddToQueue, notification } = useAddToQueue();
@@ -183,9 +180,9 @@ export default function SongsPage() {
     prepend,
     updateItem,
     removeItem,
+    fetchNextPage,
     retry,
-    sentinelRef,
-  } = useVirtualizedInfiniteScroll<Song, [FetchSongsOptions]>({
+  } = usePaginatedData<Song, [FetchSongsOptions]>({
     fetchPage: async (page, limit, opts) => {
       const result = await getSongsPage(page, limit, opts);
       return {
@@ -373,18 +370,11 @@ export default function SongsPage() {
           if (selectionMode) bulk.clearAll();
           setSelectionMode((v) => !v);
         }}
-        showViewToggle
-        viewMode={viewMode}
-        onViewModeChange={(m) => {
-          setViewMode(m);
-          localStorage.setItem('alfira-library-view', m);
-        }}
       />
 
       {/* Content */}
       <VirtualSongList
         items={items}
-        viewMode={viewMode}
         isAdminView={isAdminView}
         playlists={playlists}
         isLoading={isLoading}
@@ -394,7 +384,7 @@ export default function SongsPage() {
         hasLoaded={hasLoaded}
         playingId={playingId}
         onRetry={retry}
-        sentinelRef={sentinelRef}
+        onFetchMore={fetchNextPage}
         onDelete={selectionMode ? undefined : handleSetDeleteId}
         onPlay={handlePlayFromSong}
         onAddToQueue={handleAddToQueue}
