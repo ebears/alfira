@@ -22,6 +22,20 @@ export const queueItemVariants: Variants = {
 
 export { LazyMotion, domAnimation };
 
+/**
+ * List item enter variants.
+ * Slides in from the right with a spring settle — subtle per-item animation on scroll.
+ */
+export const listItemVariants: Variants = {
+  initial: { opacity: 0, x: 24 },
+  animate: {
+    opacity: 1,
+    x: 0,
+    transition: { type: 'spring', stiffness: 650, damping: 22 },
+  },
+  exit: { opacity: 0 },
+};
+
 /** Spring-up variant — gentle bounce for cards, modals, and overlays. */
 export const springUp: Variants = {
   hidden: { opacity: 0, y: 24 },

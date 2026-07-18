@@ -14,9 +14,9 @@ import { useAdminView } from '../context/AdminViewContext';
 import { CreatePlaylistSubmitButton, useCreatePlaylist } from '../hooks/useCreatePlaylist';
 import { useNotification } from '../hooks/useNotification';
 import { onSocketEvent } from '../hooks/useSocket';
-import { useVirtualizedInfiniteScroll } from '../hooks/useVirtualizedInfiniteScroll';
+import { usePaginatedData } from '../hooks/usePaginatedData';
 
-const ITEMS_PER_PAGE = 20;
+const ITEMS_PER_PAGE = 48;
 
 export default function PlaylistsPage() {
   const { isAdminView } = useAdminView();
@@ -24,18 +24,28 @@ export default function PlaylistsPage() {
   const [showCreate, setShowCreate] = useState(false);
   const { notification } = useNotification();
 
-  const { items, isLoading, isFetching, isError, hasLoaded, prepend, retry, sentinelRef } =
-    useVirtualizedInfiniteScroll<Playlist, [boolean]>({
-      fetchPage: async (page, limit, admin) => {
-        const result = await getPlaylistsPage(admin, page, limit);
-        return {
-          items: result.items,
-          hasMore: result.pagination.page < result.pagination.totalPages,
-        };
-      },
-      limit: ITEMS_PER_PAGE,
-      deps: [isAdminView],
-    });
+  const {
+    items,
+    isLoading,
+    isFetching,
+    isError,
+    hasMore,
+    hasLoaded,
+    fetchNextPage,
+    prepend,
+    retry,
+  } = usePaginatedData<Playlist, [boolean]>({
+    fetchPage: async (page, limit, admin) => {
+      const result = await getPlaylistsPage(admin, page, limit);
+      return {
+        items: result.items,
+        hasMore: result.pagination.page < result.pagination.totalPages,
+        total: result.pagination.total,
+      };
+    },
+    limit: ITEMS_PER_PAGE,
+    deps: [isAdminView],
+  });
 
   // ---------------------------------------------------------------------------
   // Real-time socket wiring
@@ -90,9 +100,10 @@ export default function PlaylistsPage() {
         isLoading={isLoading}
         isFetching={isFetching}
         isError={isError}
+        hasMore={hasMore}
         hasLoaded={hasLoaded}
         onRetry={retry}
-        sentinelRef={sentinelRef}
+        onFetchMore={fetchNextPage}
         onRowClick={handleRowClick}
         emptyTitle='No Playlists Yet'
         emptyMessage='Create one to get started'
