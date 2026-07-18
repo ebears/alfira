@@ -1,4 +1,4 @@
-import type { Playlist, Song } from '@alfira-bot/server/shared';
+import type { Playlist, Song } from '@alfira/server/shared';
 import { DiscIcon, MusicNoteIcon, UserIcon } from '@phosphor-icons/react';
 import React, { useMemo, useState } from 'react';
 import { usePermissions } from '../context/PermissionsContext';

@@ -1,6 +1,6 @@
-import type { Playlist, PlaylistDetail, Song, TagItem } from '@alfira-bot/server/shared';
-import type { FetchSongsOptions } from '@alfira-bot/server/shared/api';
-import { fetchTags, updatePlaylistTag } from '@alfira-bot/server/shared/api';
+import type { Playlist, PlaylistDetail, Song, TagItem } from '@alfira/server/shared';
+import type { FetchSongsOptions } from '@alfira/server/shared/api';
+import { fetchTags, updatePlaylistTag } from '@alfira/server/shared/api';
 import { useVirtualizedInfiniteScroll } from '../hooks/useVirtualizedInfiniteScroll';
 
 type PlaylistDetailMeta = Omit<PlaylistDetail, 'songs'>;
@@ -346,7 +346,7 @@ export default function PlaylistDetailPage() {
   }, [bulk, notify, removeItem]);
 
   const handleBulkEdit = useCallback(
-    async (data: import('@alfira-bot/server/shared/api').BulkEditData) => {
+    async (data: import('@alfira/server/shared/api').BulkEditData) => {
       if (bulk.count === 0) return;
       setBulkEditingApplying(true);
       try {

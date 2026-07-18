@@ -1,5 +1,5 @@
-import type { SongRequest } from '@alfira-bot/server/shared';
-import { formatDuration } from '@alfira-bot/server/shared';
+import type { SongRequest } from '@alfira/server/shared';
+import { formatDuration } from '@alfira/server/shared';
 import { CheckCircleIcon, TrashIcon, XCircleIcon } from '@phosphor-icons/react';
 import { memo } from 'react';
 import { SourceIcon } from './SourceIcons';

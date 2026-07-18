@@ -1,4 +1,4 @@
-import type { RequestPreview, Song } from '@alfira-bot/server/shared';
+import type { RequestPreview, Song } from '@alfira/server/shared';
 import { useEffect, useRef, useState } from 'react';
 import { createRequest, previewRequest } from '../api/api';
 import { useTagColors } from '../context/TagsContext';

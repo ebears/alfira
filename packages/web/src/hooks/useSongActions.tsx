@@ -1,4 +1,4 @@
-import type { Playlist, Song } from '@alfira-bot/server/shared';
+import type { Playlist, Song } from '@alfira/server/shared';
 import {
   ArrowSquareOutIcon,
   BombIcon,

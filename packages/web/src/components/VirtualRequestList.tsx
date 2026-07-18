@@ -1,4 +1,4 @@
-import type { SongRequest } from '@alfira-bot/server/shared';
+import type { SongRequest } from '@alfira/server/shared';
 import { memo } from 'react';
 import RequestCard from './RequestCard';
 import VirtualListShell from './VirtualListShell';

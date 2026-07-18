@@ -1,5 +1,5 @@
-import type { QueuedSong } from '@alfira-bot/server/shared';
-import { formatDuration } from '@alfira-bot/server/shared';
+import type { QueuedSong } from '@alfira/server/shared';
+import { formatDuration } from '@alfira/server/shared';
 import {
   CircleNotchIcon,
   DoorOpenIcon,

@@ -138,7 +138,7 @@ Centralized API client. All frontend API calls go through this file. Provides ty
 - Settings: compressor, equalizer, general, permissions
 - Authentication: login, logout, session check
 
-Uses the shared API service from `@alfira-bot/server/shared/api` for type consistency. Always use this client — never raw `fetch` in components.
+Uses the shared API service from `@alfira/server/shared/api` for type consistency. Always use this client — never raw `fetch` in components.
 
 ## WebSocket Client
 
