@@ -69,17 +69,23 @@ export default function PermissionsPage() {
 
   // Load ------------------------------------------------------------------
   useEffect(() => {
+    let cancelled = false;
     async function load() {
       try {
         const result = await fetchPermissions();
+        if (cancelled) return;
         setData(result);
         setMapping(result.mapping);
         setSavedMapping(result.mapping);
       } catch {
+        if (cancelled) return;
         setError('Could not load permissions.');
       }
     }
     load();
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   // Has changes? (strip empty arrays before comparing — toggling on then off

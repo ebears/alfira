@@ -53,9 +53,11 @@ export default function AdminSection() {
   const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
+    let cancelled = false;
     async function load() {
       try {
         const settings = await fetchGeneralSettings();
+        if (cancelled) return;
         setSaved(settings);
         setAdminRoleIds(settings.adminRoleIds);
         setTimeoutMinutes(settings.voiceIdleTimeoutMinutes);
@@ -73,16 +75,21 @@ export default function AdminSection() {
             fetchSetupRoles(settings.guildId),
             fetchSetupChannels(settings.guildId),
           ]);
+          if (cancelled) return;
           setRoles(rolesRes.roles);
           setChannels(channelsRes.channels);
         }
       } catch {
+        if (cancelled) return;
         setError('Could not load settings.');
       } finally {
-        setLoaded(true);
+        if (!cancelled) setLoaded(true);
       }
     }
     load();
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const hasChanges = saved
