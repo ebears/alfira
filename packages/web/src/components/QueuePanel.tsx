@@ -1,5 +1,5 @@
-import type { QueuedSong } from '@alfira-bot/server/shared';
-import { formatDuration } from '@alfira-bot/server/shared';
+import type { QueuedSong } from '@alfira/server/shared';
+import { formatDuration } from '@alfira/server/shared';
 import {
   ArrowDownIcon,
   ArrowLineDownIcon,
@@ -24,6 +24,10 @@ import {
 } from '@phosphor-icons/react';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { memo, useCallback, useMemo, useRef, useState } from 'react';
+import { AnimatePresence, type Transition } from 'motion/react';
+import * as m from 'motion/react-m';
+import { queueItemVariants } from '../lib/motion';
+import type { CooldownState } from '../hooks/useCooldownGuard';
 import { createPortal } from 'react-dom';
 import ConfirmModal from '../components/ConfirmModal';
 import { ContextMenu, type MenuItem } from '../components/ContextMenu';
@@ -37,6 +41,7 @@ import { getSourceKey } from '../utils/source';
 import { getRandomIdleIcon } from './EmptyState';
 import { ArtworkImage } from './ui/ArtworkImage';
 import { Button } from './ui/Button';
+import { cooldownButtonProps } from './ui/cooldownButtonProps';
 import { DurationBadge } from './ui/DurationBadge';
 import { VolumeBoostBadge } from './ui/VolumeBoostBadge';
 
@@ -47,6 +52,7 @@ export interface MobileQuickControls {
   loopBusy: boolean;
   shuffleBusy: boolean;
   skipBusy: boolean;
+  cooldown: CooldownState;
   onSkip: () => void;
   onCycleLoop: () => void;
   onShuffleToggle: () => void;
@@ -293,15 +299,35 @@ export default function QueuePanel({
 
       {/* Fixed content: Now Playing */}
       <div className='p-4 space-y-4 shrink-0'>
-        {currentSong ? (
-          <NowPlayingCard
-            song={currentSong}
-            elapsed={elapsed}
-            registerProgress={registerProgress}
-          />
-        ) : (
-          <IdleCard />
-        )}
+        <AnimatePresence mode='wait'>
+          {currentSong ? (
+            <m.div
+              key={currentSong.id}
+              variants={queueItemVariants}
+              initial='initial'
+              animate='animate'
+              exit='exit'
+              transition={{ duration: 0.2, ease: 'easeOut' } as Transition}
+            >
+              <NowPlayingCard
+                song={currentSong}
+                elapsed={elapsed}
+                registerProgress={registerProgress}
+              />
+            </m.div>
+          ) : (
+            <m.div
+              key='idle'
+              variants={queueItemVariants}
+              initial='initial'
+              animate='animate'
+              exit='exit'
+              transition={{ duration: 0.2, ease: 'easeOut' } as Transition}
+            >
+              <IdleCard />
+            </m.div>
+          )}
+        </AnimatePresence>
 
         {/* Empty state */}
         {virtualItems.length === 0 && (
@@ -383,20 +409,27 @@ export default function QueuePanel({
                     transform: `translateY(${virtualRow.start}px)`,
                   }}
                 >
-                  <QueueSongItem
-                    song={item.song}
-                    index={item.listIndex}
-                    variant={item.variant}
-                    canManage={canManage}
-                    targetQueue={item.variant === 'priority' ? priorityQueue : queue}
-                    onRemove={handleRemove}
-                    onPromote={handlePromote}
-                    onDemote={handleDemote}
-                    onMoveUp={handleMoveUp}
-                    onMoveDown={handleMoveDown}
-                    onMoveToTop={handleMoveToTop}
-                    onMoveToBottom={handleMoveToBottom}
-                  />
+                  <m.div
+                    initial='initial'
+                    animate='animate'
+                    variants={queueItemVariants}
+                    transition={{ duration: 0.2, ease: 'easeOut' } as Transition}
+                  >
+                    <QueueSongItem
+                      song={item.song}
+                      index={item.listIndex}
+                      variant={item.variant}
+                      canManage={canManage}
+                      targetQueue={item.variant === 'priority' ? priorityQueue : queue}
+                      onRemove={handleRemove}
+                      onPromote={handlePromote}
+                      onDemote={handleDemote}
+                      onMoveUp={handleMoveUp}
+                      onMoveDown={handleMoveDown}
+                      onMoveToTop={handleMoveToTop}
+                      onMoveToBottom={handleMoveToBottom}
+                    />
+                  </m.div>
                 </div>
               );
             })}
@@ -696,10 +729,12 @@ const PanelHeader = memo(function PanelHeader({
               variant='inherit'
               surface='base'
               size='icon'
-              onClick={mqc.onSkip}
-              disabled={!mqc.currentSong || mqc.skipBusy}
-              title='Skip'
-              className='text-muted hover:text-fg disabled:opacity-50'
+              {...cooldownButtonProps(mqc.cooldown, {
+                onClick: mqc.onSkip,
+                disabled: !mqc.currentSong || mqc.skipBusy,
+                title: 'Skip',
+              })}
+              className='text-muted hover:text-fg'
             >
               {mqc.skipBusy ? (
                 <CircleNotchIcon size={18} weight='bold' className='animate-spin' />
@@ -711,10 +746,12 @@ const PanelHeader = memo(function PanelHeader({
               variant='inherit'
               surface='base'
               size='icon'
-              onClick={mqc.onCycleLoop}
-              disabled={!mqc.currentSong || mqc.loopBusy}
-              title={`Loop: ${mqc.loopMode}`}
-              className={`disabled:opacity-50 ${
+              {...cooldownButtonProps(mqc.cooldown, {
+                onClick: mqc.onCycleLoop,
+                disabled: !mqc.currentSong || mqc.loopBusy,
+                title: `Loop: ${mqc.loopMode}`,
+              })}
+              className={`${
                 isLoopActive
                   ? 'pressed text-accent hover:text-accent-muted'
                   : 'text-muted hover:text-fg'
@@ -730,10 +767,12 @@ const PanelHeader = memo(function PanelHeader({
               variant='inherit'
               surface='base'
               size='icon'
-              onClick={mqc.onShuffleToggle}
-              disabled={!mqc.currentSong || mqc.shuffleBusy}
-              title={mqc.isShuffled ? 'Unshuffle queue' : 'Shuffle queue'}
-              className={`disabled:opacity-50 ${
+              {...cooldownButtonProps(mqc.cooldown, {
+                onClick: mqc.onShuffleToggle,
+                disabled: !mqc.currentSong || mqc.shuffleBusy,
+                title: mqc.isShuffled ? 'Unshuffle queue' : 'Shuffle queue',
+              })}
+              className={`${
                 mqc.isShuffled
                   ? 'pressed text-accent hover:text-accent-muted'
                   : 'text-muted hover:text-fg'

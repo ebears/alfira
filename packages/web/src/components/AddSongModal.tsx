@@ -1,4 +1,4 @@
-import type { RequestPreview, Song } from '@alfira-bot/server/shared';
+import type { RequestPreview, Song } from '@alfira/server/shared';
 import { useEffect, useRef, useState } from 'react';
 import { createRequest, previewRequest } from '../api/api';
 import { useTagColors } from '../context/TagsContext';
@@ -9,6 +9,7 @@ import { ArtworkImage } from './ui/ArtworkImage';
 import { Button } from './ui/Button';
 import Checkbox from './ui/Checkbox';
 import { Spinner } from './ui/Spinner';
+import { SpringUp } from './ui/SpringUp';
 
 type Step = 'url' | 'metadata';
 
@@ -194,7 +195,7 @@ export default function AddSongModal({
 
   return (
     <Backdrop onClose={onClose}>
-      <div className='p-5 md:p-6 w-full max-w-md mx-4 glass-modal animate-fade-up'>
+      <SpringUp className='p-5 md:p-6 w-full max-w-md mx-4 glass-modal'>
         <h2 className='font-display text-2xl md:text-3xl text-fg tracking-wider mb-1'>
           Request Song
         </h2>
@@ -450,7 +451,7 @@ export default function AddSongModal({
         )}
 
         {successMsg && <p className='font-mono text-xs text-success mt-3'>{successMsg}</p>}
-      </div>
+      </SpringUp>
     </Backdrop>
   );
 }

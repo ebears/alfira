@@ -1,4 +1,3 @@
-import { spawn } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
@@ -40,7 +39,7 @@ import { handleSongs } from './routes/songs';
 import { handleTags } from './routes/tags';
 import { $client, db } from './shared/db';
 import { logger } from './shared/logger';
-import { destroyAllPlayers, startDiscord } from './startDiscord';
+import { destroyAllPlayers, initEnabledSources, startDiscord } from './startDiscord';
 
 // ---------------------------------------------------------------------------
 // Validate required environment variables.
@@ -176,11 +175,27 @@ async function handleHealth(): Promise<Response> {
 }
 
 // ---------------------------------------------------------------------------
+// Route wrapper — creates auth context for Bun's native routes.
+// ---------------------------------------------------------------------------
+
+/** Wrap a routeTable handler for use with Bun.serve({ routes }). */
+function apiRoute(handler: (ctx: RouteContext, request: Request) => Response | Promise<Response>) {
+  return async (request: Request) => {
+    const ctx = createContext(request);
+    return setSecurityHeaders(await handler(ctx, request));
+  };
+}
+
+// ---------------------------------------------------------------------------
 // Main server
 //
 // Created during startup in main() after migrations, DB verification,
-// and NodeLink are ready. A module-level mutable variable is used because
-// the fetch handler closes over `server` for server.upgrade() calls.
+// and NodeLink are ready. Uses Bun's native routes (v1.2.3+) for all
+// API endpoints; the fetch fallback handles WebSocket upgrades and
+// static file / SPA serving.
+//
+// The server instance is stored in a module-level variable so the
+// shutdown handler can call server.stop().
 // ---------------------------------------------------------------------------
 
 let server: ReturnType<typeof Bun.serve>;
@@ -188,33 +203,50 @@ let server: ReturnType<typeof Bun.serve>;
 function startServer(): void {
   server = Bun.serve({
     port: PORT,
-    async fetch(request) {
+    routes: {
+      '/health': async () => setSecurityHeaders(await handleHealth()),
+      '/api/version': () => setSecurityHeaders(json({ version: VERSION })),
+      '/api/tags': apiRoute(handleTags),
+      '/api/tags/*': apiRoute(handleTags),
+      '/api/requests': apiRoute(handleRequests),
+      '/api/requests/*': apiRoute(handleRequests),
+      '/api/songs': apiRoute(handleSongs),
+      '/api/songs/*': apiRoute(handleSongs),
+      '/api/playlists': apiRoute(handlePlaylists),
+      '/api/playlists/*': apiRoute(handlePlaylists),
+      '/api/player': apiRoute(handlePlayer),
+      '/api/player/*': apiRoute(handlePlayer),
+      '/api/settings/compressor': apiRoute(handleCompressor),
+      '/api/settings/compressor/*': apiRoute(handleCompressor),
+      '/api/settings/equalizer': apiRoute(handleEqualizer),
+      '/api/settings/equalizer/*': apiRoute(handleEqualizer),
+      '/api/permissions': apiRoute(handlePermissions),
+      '/api/permissions/*': apiRoute(handlePermissions),
+      '/api/settings/general': apiRoute(handleGeneralSettings),
+      '/api/settings/general/*': apiRoute(handleGeneralSettings),
+      '/api/setup': apiRoute(handleSetup),
+      '/api/setup/*': apiRoute(handleSetup),
+      '/auth': apiRoute(handleAuth),
+      '/auth/*': apiRoute(handleAuth),
+    },
+    fetch(request, server) {
       const url = new URL(request.url);
 
-      // Health check
-      if (url.pathname === '/health') {
-        return setSecurityHeaders(await handleHealth());
-      }
-
-      // Version — public, no auth required
-      if (url.pathname === '/api/version') {
-        return setSecurityHeaders(json({ version: VERSION }));
-      }
-
-      // WebSocket upgrade — auth is handled here before upgrade
+      // WebSocket upgrade — auth is handled here before upgrade.
+      // `server` is passed as the second argument to fetch (Bun 1.2+).
       if (url.pathname === '/ws') {
         const user = getSessionUser(request.headers.get('cookie') || '');
         if (!user) {
           return new Response('Unauthorized', { status: 401 });
         }
-        // server is assigned before requests arrive (in main()).
-        // The closure captures the mutable variable — it's set by then.
-        const success = server?.upgrade(request, { data: { user } });
+        const success = server.upgrade(request, { data: { user } });
         if (success) return undefined;
         return new Response('WebSocket upgrade failed', { status: 500 });
       }
 
-      // Serve built web assets statically (SPA fallback for client-side routing)
+      // Serve built web assets statically (SPA fallback for client-side routing).
+      // API routes are handled by `routes` above; `fetch` only runs for
+      // unmatched paths (static files, SPA, 404s).
       const pathname = url.pathname;
       const ext = pathname.includes('.') ? `.${pathname.split('.').pop()}` : '.html';
       const isAsset =
@@ -227,44 +259,6 @@ function startServer(): void {
         const filePath = `/app/packages/web/dist${url.pathname === '/' ? '/index.html' : url.pathname}`;
         const response = serveStatic(filePath, url.pathname);
         if (response) return response;
-      }
-
-      // Create auth context for all other routes
-      const ctx = createContext(request);
-
-      // Route matching
-      if (url.pathname.startsWith('/api/tags')) {
-        return setSecurityHeaders(await handleTags(ctx, request));
-      }
-      if (url.pathname.startsWith('/api/requests')) {
-        return setSecurityHeaders(await handleRequests(ctx, request));
-      }
-      if (url.pathname.startsWith('/api/songs')) {
-        return setSecurityHeaders(await handleSongs(ctx, request));
-      }
-      if (url.pathname.startsWith('/api/playlists')) {
-        return setSecurityHeaders(await handlePlaylists(ctx, request));
-      }
-      if (url.pathname.startsWith('/api/player')) {
-        return setSecurityHeaders(await handlePlayer(ctx, request));
-      }
-      if (url.pathname.startsWith('/api/settings/compressor')) {
-        return setSecurityHeaders(await handleCompressor(ctx, request));
-      }
-      if (url.pathname.startsWith('/api/settings/equalizer')) {
-        return setSecurityHeaders(await handleEqualizer(ctx, request));
-      }
-      if (url.pathname.startsWith('/api/permissions')) {
-        return setSecurityHeaders(await handlePermissions(ctx, request));
-      }
-      if (url.pathname.startsWith('/api/settings/general')) {
-        return setSecurityHeaders(await handleGeneralSettings(ctx, request));
-      }
-      if (url.pathname.startsWith('/api/setup')) {
-        return setSecurityHeaders(await handleSetup(ctx, request));
-      }
-      if (url.pathname.startsWith('/auth')) {
-        return setSecurityHeaders(await handleAuth(ctx, request));
       }
 
       return (
@@ -299,7 +293,7 @@ function startServer(): void {
 // Startup sequence
 // ---------------------------------------------------------------------------
 function runMigrations(): void {
-  const MIGRATIONS_DIR = join(__dirname, './shared/db/migrations');
+  const MIGRATIONS_DIR = join(import.meta.dir, './shared/db/migrations');
 
   // Ensure the drizzle migrations tracking table exists (SQLite: INTEGER PRIMARY KEY AUTOINCREMENT)
   $client.run(`
@@ -363,23 +357,37 @@ function runMigrations(): void {
 // ---------------------------------------------------------------------------
 function startNodeLink(): Promise<void> {
   return new Promise((resolve) => {
-    nodelinkProcess = spawn('/usr/local/bin/bun', ['src/index.ts'], {
+    nodelinkProcess = Bun.spawn(['/usr/local/bin/bun', 'src/index.ts'], {
       cwd: '/usr/local/nodelink',
-      stdio: 'pipe',
+      stdout: 'pipe',
+      stderr: 'pipe',
       env: { ...process.env, NODELINK_AUTHORIZATION: 'nodelink-internal' },
     });
 
-    nodelinkProcess.stdout?.on('data', (data: Buffer) => {
-      logger.debug({ component: 'NodeLink' }, data.toString().trimEnd());
-    });
+    // Fire-and-forget: consume stdout. ReadableStream chunks may contain
+    // partial lines — a long line split across chunks becomes two log
+    // entries, which matches the Node.js EventEmitter behavior this replaces.
+    void (async () => {
+      const decoder = new TextDecoder();
+      for await (const chunk of nodelinkProcess.stdout as ReadableStream<Uint8Array>) {
+        for (const line of decoder.decode(chunk).split('\n')) {
+          const trimmed = line.trimEnd();
+          if (trimmed) logger.debug({ component: 'NodeLink' }, trimmed);
+        }
+      }
+    })();
 
-    nodelinkProcess.stderr?.on('data', (data: Buffer) => {
-      const line = data.toString().trimEnd();
-      // NodeLink runs git commands internally — these fail harmlessly when
-      // there's no .git directory (production container). Suppress the noise.
-      if (line.includes('fatal:')) return;
-      logger.warn({ component: 'NodeLink' }, line);
-    });
+    // Fire-and-forget: consume stderr, suppressing git "fatal:" noise.
+    void (async () => {
+      const decoder = new TextDecoder();
+      for await (const chunk of nodelinkProcess.stderr as ReadableStream<Uint8Array>) {
+        for (const line of decoder.decode(chunk).split('\n')) {
+          const trimmed = line.trimEnd();
+          if (!trimmed || trimmed.includes('fatal:')) continue;
+          logger.warn({ component: 'NodeLink' }, trimmed);
+        }
+      }
+    })();
 
     const checkReady = async () => {
       try {
@@ -435,7 +443,6 @@ async function main(): Promise<void> {
 
   // 2.6. Initialize enabled sources cache.
   try {
-    const { initEnabledSources } = await import('./startDiscord');
     await initEnabledSources();
     logger.info('Enabled sources cache initialized');
   } catch (error) {
@@ -472,7 +479,7 @@ main().catch((err) => {
 // Graceful shutdown
 // ---------------------------------------------------------------------------
 let shuttingDown = false;
-let nodelinkProcess: ReturnType<typeof spawn> | undefined;
+let nodelinkProcess: ReturnType<typeof Bun.spawn> | undefined;
 
 function shutdown(signal: string): void {
   if (shuttingDown) return;

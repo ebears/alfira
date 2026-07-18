@@ -9,7 +9,7 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/ebears/alfira"><img src="https://img.shields.io/badge/status-v0.1.0%20%7C%20pre--release-orange" alt="Status: Experimental | Pre-release"></a>
+  <a href="https://github.com/ebears/alfira"><img src="https://img.shields.io/github/v/tag/ebears/alfira?label=status&color=orange" alt="Latest tag"></a>
   <a href="https://github.com/ebears/alfira/actions/workflows/docker-build.yml"><img src="https://github.com/ebears/alfira/actions/workflows/docker-build.yml/badge.svg" alt="GitHub Actions"></a>
 </p>
 
@@ -20,7 +20,6 @@
   <a href="https://tailwindcss.com/"><img src="https://img.shields.io/badge/Tailwind%20-06B6D4?logo=tailwindcss&logoColor=white" alt="Tailwind CSS"></a>
   <a href="https://www.sqlite.org/"><img src="https://img.shields.io/badge/SQLite-003B57?logo=sqlite&logoColor=white" alt="SQLite"></a>
   <a href="https://github.com/drizzle-team/drizzle-orm"><img src="https://img.shields.io/badge/Drizzle-C5F74F?logo=drizzle&logoColor=black" alt="Drizzle"></a>
-  <a href="https://github.com/tiramisulabs/seyfert"><img src="https://img.shields.io/badge/Seyfert%20-2D7553?logo=discord&logoColor=white" alt="Seyfert"></a>
   <a href="https://github.com/PerformanC/NodeLink"><img src="https://img.shields.io/badge/NodeLink%20-63B64C?logo=apple%20music&logoColor=white" alt="NodeLink"></a>
 </p>
 
@@ -139,7 +138,6 @@ See the **[Installation Guide](docs/installation.md)** for full details.
 | Document                                       | Description                                   |
 | ---------------------------------------------- | --------------------------------------------- |
 | **[Installation Guide](docs/installation.md)** | Setup, environment variables, Docker commands |
-| **[Philosophy](docs/philosophy.md)**           | Design principles guiding the project         |
 | **[Tech Stack](docs/tech-stack.md)**           | Technology stack and project structure        |
 | **[Troubleshooting](docs/troubleshooting.md)** | Common issues and solutions                   |
 

@@ -12,13 +12,12 @@
     "noEmit": true,
     "jsx": "react-jsx",
     "strict": true,
-    "types": ["bun-types"],
     "noUnusedLocals": true,
     "noUnusedParameters": true,
     "noFallthroughCasesInSwitch": true,
     "paths": {
-      "@alfira-bot/server": ["../server/dist"],
-      "@alfira-bot/server/*": ["../server/dist/*"]
+      "@alfira/server": ["../server/src"],
+      "@alfira/server/*": ["../server/src/*"]
     }
   },
   "include": ["src"]

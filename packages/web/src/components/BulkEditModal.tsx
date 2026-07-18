@@ -1,10 +1,11 @@
-import { type BulkEditData, fetchTags, type TagItem } from '@alfira-bot/server/shared/api';
+import { type BulkEditData, fetchTags, type TagItem } from '@alfira/server/shared/api';
 import { EraserIcon, XIcon } from '@phosphor-icons/react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTagColors } from '../context/TagsContext';
 import { getTagColorClasses } from '../utils/tagColors';
 import { Backdrop } from './Backdrop';
 import { Button } from './ui/Button';
+import { SpringUp } from './ui/SpringUp';
 
 interface BulkEditModalProps {
   count: number;
@@ -195,8 +196,8 @@ export default function BulkEditModal({ count, onApply, onClose, isApplying }: B
   return (
     <Backdrop onClose={onClose}>
       {/* eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-static-element-interactions -- modal container, keyboard not applicable */}
-      <div
-        className='w-full max-w-md mx-4 p-6 glass-modal animate-fade-up max-h-[85vh] overflow-y-auto'
+      <SpringUp
+        className='w-full max-w-md mx-4 p-6 glass-modal max-h-[85vh] overflow-y-auto'
         onClick={(e) => e.stopPropagation()}
       >
         <h2 className='font-display text-lg text-fg mb-1'>Edit {count} songs</h2>
@@ -463,7 +464,7 @@ export default function BulkEditModal({ count, onApply, onClose, isApplying }: B
             {isApplying ? 'Applying...' : `Apply to ${count} songs`}
           </Button>
         </div>
-      </div>
+      </SpringUp>
     </Backdrop>
   );
 }

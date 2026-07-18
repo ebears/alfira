@@ -1,5 +1,5 @@
-import type { QueuedSong } from '@alfira-bot/server/shared';
-import { formatDuration } from '@alfira-bot/server/shared';
+import type { QueuedSong } from '@alfira/server/shared';
+import { formatDuration } from '@alfira/server/shared';
 import {
   CircleNotchIcon,
   DoorOpenIcon,
@@ -12,9 +12,14 @@ import {
   ShuffleIcon,
   SkipForwardIcon,
 } from '@phosphor-icons/react';
-import { memo, useCallback, useEffect, useRef, useState } from 'react';
+import { memo, useCallback, useEffect, useMemo, useRef } from 'react';
+import { AnimatePresence } from 'motion/react';
+import * as m from 'motion/react-m';
+import { metadataTransition, metadataVariants } from '../lib/motion';
 import { usePlayer } from '../context/PlayerContext';
 import { useQueuePanel } from '../context/QueuePanelContext';
+import { useCooldownGuard, type CooldownState } from '../hooks/useCooldownGuard';
+import { useMutationHandler } from '../hooks/useMutationHandler';
 import { getSourceKey } from '../utils/source';
 import { BarButton } from './BarButton';
 import QueuePanel from './QueuePanel';
@@ -22,6 +27,7 @@ import { SourceIcon } from './SourceIcons';
 import TagTicker from './TagTicker';
 import { ArtworkImage } from './ui/ArtworkImage';
 import { Button } from './ui/Button';
+import { cooldownButtonProps } from './ui/cooldownButtonProps';
 import { VolumeBoostBadge } from './ui/VolumeBoostBadge';
 
 /* ---------------------------------------------------------------------------
@@ -37,6 +43,7 @@ interface PlaybackControlsProps {
   isConnectedToVoice: boolean;
   pauseBusy: boolean;
   skipBusy: boolean;
+  cooldown: CooldownState;
   onPauseResume: () => void;
   onSkip: () => void;
   onStop: () => void;
@@ -50,17 +57,22 @@ const PlaybackControls = memo(function PlaybackControls({
   isConnectedToVoice,
   pauseBusy,
   skipBusy,
+  cooldown,
   onPauseResume,
   onSkip,
   onStop,
 }: PlaybackControlsProps) {
+  const realDisabled = !currentSong || pauseBusy || skipBusy;
+
   return (
     <div className='flex items-center gap-1 md:gap-1.5 shrink-0'>
       <BarButton
-        onClick={onPauseResume}
+        {...cooldownButtonProps(cooldown, {
+          onClick: onPauseResume,
+          disabled: realDisabled,
+          title: isPaused || isStopped ? 'Play' : 'Pause',
+        })}
         busy={pauseBusy}
-        disabled={!currentSong || pauseBusy || skipBusy}
-        title={isPaused || isStopped ? 'Play' : 'Pause'}
         hoverColor='hover:text-fg'
         pulse={isPlaying && !isPaused}
       >
@@ -71,10 +83,12 @@ const PlaybackControls = memo(function PlaybackControls({
         )}
       </BarButton>
       <BarButton
-        onClick={onSkip}
+        {...cooldownButtonProps(cooldown, {
+          onClick: onSkip,
+          disabled: realDisabled,
+          title: 'Skip',
+        })}
         busy={skipBusy}
-        disabled={!currentSong || pauseBusy || skipBusy}
-        title='Skip'
         hoverColor='hover:text-fg'
         className='hidden md:flex'
       >
@@ -85,9 +99,11 @@ const PlaybackControls = memo(function PlaybackControls({
         variant='inherit'
         surface='base'
         size='icon'
-        onClick={onStop}
-        disabled={!isConnectedToVoice}
-        title='Stop playback'
+        {...cooldownButtonProps(cooldown, {
+          onClick: onStop,
+          disabled: !isConnectedToVoice,
+          title: 'Stop playback',
+        })}
         className='text-black dark:text-white hover:text-danger md:w-12 md:h-12'
       >
         <DoorOpenIcon size={24} weight='duotone' className='md:w-5 md:h-5' />
@@ -102,6 +118,7 @@ interface LoopShuffleControlsProps {
   isShuffled: boolean;
   loopBusy: boolean;
   shuffleBusy: boolean;
+  cooldown: CooldownState;
   onCycleLoop: () => void;
   onShuffleToggle: () => void;
 }
@@ -112,6 +129,7 @@ const LoopShuffleControls = memo(function LoopShuffleControls({
   isShuffled,
   loopBusy,
   shuffleBusy,
+  cooldown,
   onCycleLoop,
   onShuffleToggle,
 }: LoopShuffleControlsProps) {
@@ -132,10 +150,12 @@ const LoopShuffleControls = memo(function LoopShuffleControls({
         variant='inherit'
         surface='base'
         size='icon'
-        onClick={onCycleLoop}
-        disabled={!currentSong || loopBusy}
-        title={`Loop: ${loopMode}`}
-        className={`shrink-0 disabled:opacity-50 md:w-12 md:h-12 ${
+        {...cooldownButtonProps(cooldown, {
+          onClick: onCycleLoop,
+          disabled: !currentSong || loopBusy,
+          title: `Loop: ${loopMode}`,
+        })}
+        className={`shrink-0 md:w-12 md:h-12 ${
           isLoopActive
             ? 'pressed text-accent hover:text-accent-muted'
             : 'text-black dark:text-white hover:text-fg'
@@ -151,10 +171,12 @@ const LoopShuffleControls = memo(function LoopShuffleControls({
         variant='inherit'
         surface='base'
         size='icon'
-        onClick={onShuffleToggle}
-        disabled={!currentSong || shuffleBusy}
-        title={isShuffled ? 'Unshuffle queue' : 'Shuffle queue'}
-        className={`shrink-0 disabled:opacity-50 md:w-12 md:h-12 ${
+        {...cooldownButtonProps(cooldown, {
+          onClick: onShuffleToggle,
+          disabled: !currentSong || shuffleBusy,
+          title: isShuffled ? 'Unshuffle queue' : 'Shuffle queue',
+        })}
+        className={`shrink-0 md:w-12 md:h-12 ${
           isShuffled
             ? 'pressed text-accent hover:text-accent-muted'
             : 'text-black dark:text-white hover:text-fg'
@@ -347,21 +369,32 @@ interface AlbumArtProps {
 }
 
 const AlbumArt = memo(function AlbumArt({ currentSong }: AlbumArtProps) {
+  const songKey = currentSong?.id ?? 'empty';
+
   return (
-    <div className='w-12 h-12 md:w-14 md:h-14 rounded border border-border shrink-0 overflow-hidden relative bg-elevated'>
-      {currentSong ? (
-        <ArtworkImage
-          src={currentSong.artwork ?? currentSong.thumbnailUrl}
-          alt={currentSong.title}
-          className='w-full h-full'
-          imageClassName='scale-[1.33]'
-        />
-      ) : (
-        <div className='w-full h-full flex items-center justify-center'>
-          <GuitarIcon size={18} weight='duotone' className='text-faint' />
-        </div>
-      )}
-    </div>
+    <AnimatePresence mode='wait'>
+      <m.div
+        key={songKey}
+        className='w-12 h-12 md:w-14 md:h-14 rounded border border-border shrink-0 overflow-hidden relative bg-elevated'
+        initial={{ opacity: 0, scale: 0.92 }}
+        animate={{ opacity: 1, scale: 1 }}
+        exit={{ opacity: 0, scale: 0.92 }}
+        transition={{ duration: 0.2, ease: 'easeOut' }}
+      >
+        {currentSong ? (
+          <ArtworkImage
+            src={currentSong.artwork ?? currentSong.thumbnailUrl}
+            alt={currentSong.title}
+            className='w-full h-full'
+            imageClassName='scale-[1.33]'
+          />
+        ) : (
+          <div className='w-full h-full flex items-center justify-center'>
+            <GuitarIcon size={18} weight='duotone' className='text-faint' />
+          </div>
+        )}
+      </m.div>
+    </AnimatePresence>
   );
 });
 
@@ -384,28 +417,39 @@ const MetadataSection = memo(function MetadataSection({
 
   const displayName = currentSong.nickname || currentSong.title;
   const sourceKey = getSourceKey(currentSong.sourceUrl);
+  const songKey = currentSong.id;
 
   return (
-    <div className='flex flex-col min-w-0 gap-0.5'>
-      <div className='flex items-center gap-2 min-w-0'>
-        <p className='font-body text-sm font-medium text-fg truncate'>{displayName}</p>
-        {currentSong.artist && (
-          <p className='font-body text-xs text-muted shrink-0'>· {currentSong.artist}</p>
-        )}
-        <TagTicker tags={currentSong.tags ?? []} />
-      </div>
-      <div className='flex items-center gap-2'>
-        <p className='font-mono text-xs text-muted'>
-          {formatDuration(elapsed)} / {formatDuration(currentSong.duration)}
-        </p>
-        {sourceKey && (
-          <span className='flex items-center shrink-0 [&_svg]:w-3 [&_svg]:h-3'>
-            <SourceIcon sourceKey={sourceKey} />
-          </span>
-        )}
-        <VolumeBoostBadge volumeBoost={currentSong.volumeBoost} />
-      </div>
-    </div>
+    <AnimatePresence mode='wait'>
+      <m.div
+        key={songKey}
+        className='flex flex-col min-w-0 gap-0.5'
+        variants={metadataVariants}
+        initial='initial'
+        animate='animate'
+        exit='exit'
+        transition={metadataTransition}
+      >
+        <div className='flex items-center gap-2 min-w-0'>
+          <p className='font-body text-sm font-medium text-fg truncate'>{displayName}</p>
+          {currentSong.artist && (
+            <p className='font-body text-xs text-muted shrink-0'>· {currentSong.artist}</p>
+          )}
+          <TagTicker tags={currentSong.tags ?? []} />
+        </div>
+        <div className='flex items-center gap-2'>
+          <p className='font-mono text-xs text-muted'>
+            {formatDuration(elapsed)} / {formatDuration(currentSong.duration)}
+          </p>
+          {sourceKey && (
+            <span className='flex items-center shrink-0 [&_svg]:w-3 [&_svg]:h-3'>
+              <SourceIcon sourceKey={sourceKey} />
+            </span>
+          )}
+          <VolumeBoostBadge volumeBoost={currentSong.volumeBoost} />
+        </div>
+      </m.div>
+    </AnimatePresence>
   );
 });
 
@@ -434,59 +478,36 @@ export function NowPlayingBar() {
 
   const { queueOpen, setQueueOpen } = useQueuePanel();
 
-  const [pauseBusy, setPauseBusy] = useState(false);
-  const [skipBusy, setSkipBusy] = useState(false);
-  const [loopBusy, setLoopBusy] = useState(false);
-  const [shuffleBusy, setShuffleBusy] = useState(false);
+  const { coolingDown, statusTitle, handleCooldownClick } = useCooldownGuard();
 
-  const handlePauseResume = useCallback(async () => {
-    setPauseBusy(true);
-    try {
-      await pause();
-    } catch (e) {
-      console.error(e);
-    } finally {
-      setPauseBusy(false);
-    }
-  }, [pause]);
+  const cooldown: CooldownState = useMemo(
+    () => ({ coolingDown, statusTitle, onCooldownClick: handleCooldownClick }),
+    [coolingDown, statusTitle, handleCooldownClick]
+  );
 
-  const handleSkip = useCallback(async () => {
-    setSkipBusy(true);
-    try {
-      await skip();
-    } catch (e) {
-      console.error(e);
-    } finally {
-      setSkipBusy(false);
-    }
-  }, [skip]);
+  const { busy: pauseBusy, handler: handlePauseResume } = useMutationHandler(
+    pause,
+    'Could not toggle playback.'
+  );
+  const { busy: skipBusy, handler: handleSkip } = useMutationHandler(skip, 'Could not skip track.');
+  const { busy: loopBusy, handler: handleCycleLoop } = useMutationHandler(
+    useCallback(async () => {
+      const next = loopMode === 'off' ? 'queue' : loopMode === 'queue' ? 'song' : 'off';
+      await setLoop(next);
+    }, [loopMode, setLoop]),
+    'Could not change loop mode.'
+  );
+  const { busy: shuffleBusy, handler: handleShuffleToggle } = useMutationHandler(
+    useCallback(async () => {
+      if (isShuffled) await unshuffle();
+      else await shuffle();
+    }, [isShuffled, shuffle, unshuffle]),
+    'Could not toggle shuffle.'
+  );
 
   const handleStop = useCallback(() => {
     leave().catch((e) => console.error(e));
   }, [leave]);
-
-  const handleCycleLoop = useCallback(async () => {
-    setLoopBusy(true);
-    const next = loopMode === 'off' ? 'queue' : loopMode === 'queue' ? 'song' : 'off';
-    try {
-      await setLoop(next);
-    } finally {
-      setLoopBusy(false);
-    }
-  }, [loopMode, setLoop]);
-
-  const handleShuffleToggle = useCallback(async () => {
-    setShuffleBusy(true);
-    try {
-      if (isShuffled) {
-        await unshuffle();
-      } else {
-        await shuffle();
-      }
-    } finally {
-      setShuffleBusy(false);
-    }
-  }, [isShuffled, shuffle, unshuffle]);
 
   const handleSeek = useCallback(
     async (seconds: number) => {
@@ -523,6 +544,7 @@ export function NowPlayingBar() {
           isConnectedToVoice={isConnectedToVoice}
           pauseBusy={pauseBusy}
           skipBusy={skipBusy}
+          cooldown={cooldown}
           onPauseResume={handlePauseResume}
           onSkip={handleSkip}
           onStop={handleStop}
@@ -553,6 +575,7 @@ export function NowPlayingBar() {
             isShuffled={isShuffled}
             loopBusy={loopBusy}
             shuffleBusy={shuffleBusy}
+            cooldown={cooldown}
             onCycleLoop={handleCycleLoop}
             onShuffleToggle={handleShuffleToggle}
           />
@@ -574,22 +597,40 @@ export function NowPlayingBar() {
 
         {/* Mobile: metadata + art + queue */}
         <div className='md:hidden flex items-center ms-auto shrink-0'>
-          {currentSong ? (
-            <div className='max-w-32 min-w-0 mr-2'>
-              <p className='font-body text-sm font-semibold text-fg truncate text-right'>
-                {currentSong.nickname || currentSong.title}
-              </p>
-              {currentSong.artist && (
-                <p className='font-body text-xs text-muted truncate text-right'>
-                  {currentSong.artist}
+          <AnimatePresence mode='wait'>
+            {currentSong ? (
+              <m.div
+                key={currentSong.id}
+                className='max-w-32 min-w-0 mr-2'
+                variants={metadataVariants}
+                initial='initial'
+                animate='animate'
+                exit='exit'
+                transition={metadataTransition}
+              >
+                <p className='font-body text-sm font-semibold text-fg truncate text-right'>
+                  {currentSong.nickname || currentSong.title}
                 </p>
-              )}
-            </div>
-          ) : (
-            <div className='min-w-0 mr-2'>
-              <p className='font-body text-sm text-muted text-right'>Nothing playing</p>
-            </div>
-          )}
+                {currentSong.artist && (
+                  <p className='font-body text-xs text-muted truncate text-right'>
+                    {currentSong.artist}
+                  </p>
+                )}
+              </m.div>
+            ) : (
+              <m.div
+                key='empty'
+                className='min-w-0 mr-2'
+                variants={metadataVariants}
+                initial='initial'
+                animate='animate'
+                exit='exit'
+                transition={metadataTransition}
+              >
+                <p className='font-body text-sm text-muted text-right'>Nothing playing</p>
+              </m.div>
+            )}
+          </AnimatePresence>
           <AlbumArt currentSong={currentSong} />
           <div className='w-px h-8 bg-border shrink-0 mx-1' />
           <Button
@@ -626,6 +667,7 @@ export function NowPlayingBar() {
                 loopBusy,
                 shuffleBusy,
                 skipBusy,
+                cooldown,
                 onSkip: handleSkip,
                 onCycleLoop: handleCycleLoop,
                 onShuffleToggle: handleShuffleToggle,

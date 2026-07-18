@@ -1,4 +1,6 @@
+import { eq } from 'drizzle-orm';
 import { readFileSync } from 'node:fs';
+import { db, tables } from '../shared/db';
 
 function resolveVersion(): string {
   const envVersion = process.env.ALFIRA_VERSION;
@@ -44,8 +46,6 @@ export async function initGuildId(): Promise<void> {
   if (_guildIdLoaded) return;
 
   try {
-    // Lazy import to avoid circular dependency at module load time.
-    const { db, tables, eq } = await import('../shared/db');
     const row = await db
       .select({ guildId: tables.guildSettings.guildId })
       .from(tables.guildSettings)

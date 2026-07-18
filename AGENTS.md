@@ -4,7 +4,7 @@
 
 Alfira is a self-hosted Discord music bot with a web UI as the primary interface. It's a Bun workspaces monorepo with two packages:
 
-- `packages/server` — Bun API server + Discord bot (`GuildPlayer`, NodeLink audio, Seyfert v4), plus shared types, utilities, DB schema, and logger
+- `packages/server` — Bun API server + Discord bot (`GuildPlayer`, NodeLink audio, custom Discord gateway), plus shared types, utilities, DB schema, and logger
 - `packages/web` — React 19 + Tailwind CSS 4 web UI
 
 The bot and API run in a **single Bun process**. For detailed architecture (startup sequence, WebSocket pipeline, build cycle, shared exports), load the `alfira-architecture` skill.
@@ -15,12 +15,21 @@ The bot and API run in a **single Bun process**. For detailed architecture (star
 | --------- | --------------------------- |
 | Runtime   | Bun                         |
 | Language  | TypeScript                  |
-| Discord   | Seyfert v4                  |
+| Discord   | Custom gateway (WebSocket)  |
 | Audio     | NodeLink (Lavalink v4)      |
 | API       | Bun native HTTP + WebSocket |
 | Database  | SQLite + Drizzle ORM        |
 | Frontend  | React 19 + Tailwind CSS 4   |
 | Linting   | oxlint + oxfmt              |
+
+## Design Principles
+
+- **Self-hosting without operational burden** — Docker + Bun + SQLite means no external managed services. One `docker compose up` gets you running. Networking (domain/reverse proxy) is the only unavoidable external dependency.
+- **Fewer, better dependencies** — Prefer Bun's built-in HTTP, WebSocket, test runner, and SQLite driver over npm packages. Drizzle gives type-safe SQL without ORM bloat.
+- **Single-process by design** — Bot, API, and WebSocket run in one Bun process. Shared memory gives real-time updates without Redis or message queues. This is a deliberate tradeoff: the scope is a single self-hosted community, not multi-tenant SaaS.
+- **Web UI as primary interface** — The Discord bot is the playback engine; the web app is the control plane. This avoids Discord's rate limits and UX constraints.
+- **Audio is audio — no assumptions about content** — Works equally as a music bot or tabletop audio player. The data model (songs, playlists, tags) is content-type-agnostic: a pop song and an hour-long dungeon ambience are the same shape.
+- **Single source of truth** — Every concept, pattern, and piece of knowledge has one canonical home. Before creating something new, check if it already exists or can be extended. If nothing fits and your change would duplicate what already exists across files, extract the commonality into a shared location first. This applies as much to UI patterns (one toast, one button variant, one data-fetching hook) as it does to types and utilities. Copy-pasting is a last resort, not a first move.
 
 ## Development Commands
 
@@ -31,12 +40,6 @@ bun run dev
 # Build the web UI (needed after web/src changes before docker compose restart)
 bun run web:build
 
-# Generate Drizzle migration files
-bun run db:generate
-
-# Run Drizzle migrations
-bun run db:migrate
-
 # Lint + format with auto-fix (run before committing)
 bun run check
 
@@ -46,6 +49,14 @@ bun run lint:fix
 # Format only, with auto-fix
 bun run format
 ```
+
+### Database Migrations
+
+Migrations are handwritten `.sql` files in `packages/server/src/shared/db/migrations/`. They run automatically at server startup — no separate command needed.
+
+To create one: pick the next sequential number (e.g., `0013_descriptive_name.sql`), write the DDL, and use `--> statement-breakpoint` on its own line to separate multiple statements. The runner is idempotent (SHA-256 content hashing) and catches "already exists" errors.
+
+See the `alfira-database` skill for full details.
 
 ## Code Style
 
@@ -82,7 +93,7 @@ Every change follows this pipeline. The agent should guide the user through each
 1. **Discuss** — Talk through the problem and explore approaches. Ask clarifying questions before proposing solutions.
 2. **`/plan`** — Before writing any code, produce a written plan: goal, scope (files touched), ordered implementation steps, risks, and verification checklist. Get user agreement on the plan before proceeding.
 3. **Implement** — Follow the plan one step at a time. After each step, confirm it works before moving on. If the plan needs adjustment mid-implementation, say so and update it.
-4. **`/verify`** — The gate before `/submit`. Run `bun run check`, TypeScript compilation (`bunx tsc --noEmit`), review the full diff, and check for untracked files. Report pass/fail for each check. Do not proceed if anything fails.
+4. **`/verify`** — The gate before `/submit`. Run `bun run check`, then `bun run --filter @alfira/server build && bun run --filter @alfira/web build` to verify both packages compile. Review the full diff and check for untracked files. Report pass/fail for each check. Do not proceed if anything fails.
 5. **`/submit`** — Create a feature branch from `dev`, commit with a semantic message, push, and open a PR targeting `dev`.
 6. **Review & Merge** — Address review feedback. CI must pass. Merge to `dev`.
 7. **`/release`** — Batch accumulated `dev` changes into a release PR targeting `main`. Show pending commits, determine version if applicable, open the PR with a changelog.
@@ -157,6 +168,5 @@ Always run `bun run check` and resolve any lint/format issues before committing.
 ## Documentation
 
 - [Installation Guide](docs/installation.md) — Setup, environment variables, Docker commands
-- [Philosophy](docs/philosophy.md) — Design principles guiding the project
 - [Tech Stack](docs/tech-stack.md) — Detailed architecture
 - [Troubleshooting](docs/troubleshooting.md) — Common issues and solutions (also available as the `alfira-troubleshooting` skill)

@@ -1,5 +1,5 @@
-import type { Playlist, Song } from '@alfira-bot/server/shared';
-import type { FetchSongsOptions } from '@alfira-bot/server/shared/api';
+import type { Playlist, Song } from '@alfira/server/shared';
+import type { FetchSongsOptions } from '@alfira/server/shared/api';
 import { MusicNotesIcon, QuestionIcon } from '@phosphor-icons/react';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
@@ -28,7 +28,7 @@ import { useBulkSelection } from '../hooks/useBulkSelection';
 import { useNotification } from '../hooks/useNotification';
 import { onSocketEvent } from '../hooks/useSocket';
 import { useVirtualizedInfiniteScroll } from '../hooks/useVirtualizedInfiniteScroll';
-import { apiErrorMessage } from '../utils/api';
+import { apiErrorMessage, notifyUnlessRateLimit } from '../utils/api';
 
 const ITEMS_PER_PAGE = 24;
 
@@ -259,7 +259,7 @@ export default function SongsPage() {
   }, [bulk, removeItem, notify]);
 
   const handleBulkEdit = useCallback(
-    async (data: import('@alfira-bot/server/shared/api').BulkEditData) => {
+    async (data: import('@alfira/server/shared/api').BulkEditData) => {
       if (bulk.count === 0) return;
       setBulkEditingApplying(true);
       try {
@@ -293,10 +293,10 @@ export default function SongsPage() {
         });
         notify('Started playback', 'success');
       } catch (err: unknown) {
-        notify(
-          apiErrorMessage(err, 'Could not start playback. Is the bot in a voice channel?'),
-          'error',
-          5000
+        notifyUnlessRateLimit(
+          err,
+          'Could not start playback. Is the bot in a voice channel?',
+          notify
         );
       } finally {
         setPlayingId(null);

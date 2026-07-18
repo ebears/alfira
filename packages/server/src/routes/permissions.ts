@@ -1,55 +1,12 @@
 import { eq, inArray } from 'drizzle-orm';
 import type { RouteContext } from '../index';
 import { getGuildId } from '../lib/config';
+import { fetchGuildRoles } from '../lib/discordRoles';
 import { json } from '../lib/json';
 import { checkGuards } from '../lib/routeGuards';
 import { routeTable } from '../lib/routeTable';
 import { PERMISSION_CATEGORIES, PERMISSION_LABELS, type PermissionAction } from '../shared';
 import { db, tables } from '../shared/db';
-import { logger } from '../shared/logger';
-import type { SetupRole } from '../shared/types';
-
-const DISCORD_API = 'https://discord.com/api/v10';
-
-function botHeaders(): Record<string, string> {
-  const token = process.env.DISCORD_BOT_TOKEN;
-  if (!token) throw new Error('DISCORD_BOT_TOKEN not set');
-  return { Authorization: `Bot ${token}` };
-}
-
-async function fetchGuildRoles(): Promise<SetupRole[]> {
-  const guildId = getGuildId();
-  if (!guildId) return [];
-
-  try {
-    const res = await fetch(`${DISCORD_API}/guilds/${guildId}/roles`, {
-      headers: botHeaders(),
-    });
-
-    if (!res.ok) {
-      logger.error({ guildId, status: res.status }, 'Failed to fetch guild roles for permissions');
-      return [];
-    }
-
-    const roles = (await res.json()) as Array<{
-      id: string;
-      name: string;
-      color: number;
-      managed: boolean;
-    }>;
-
-    return roles
-      .filter((r) => r.id !== guildId && !r.managed)
-      .map((r) => ({
-        id: r.id,
-        name: r.name,
-        color: r.color,
-      }));
-  } catch (err) {
-    logger.error({ err }, 'Error fetching guild roles for permissions');
-    return [];
-  }
-}
 
 // ---------------------------------------------------------------------------
 // GET /api/permissions
@@ -62,9 +19,11 @@ async function handleGetPermissions(
   const guards = await checkGuards(ctx, { admin: true });
   if (guards instanceof Response) return guards;
 
+  const guildId = getGuildId();
+
   const [allRows, roles, settingsRow] = await Promise.all([
     db.select().from(tables.rolePermission),
-    fetchGuildRoles(),
+    guildId ? fetchGuildRoles(guildId) : [],
     db
       .select({ adminRoleIds: tables.guildSettings.adminRoleIds })
       .from(tables.guildSettings)

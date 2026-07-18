@@ -2,6 +2,7 @@ import { DiscordLogoIcon } from '@phosphor-icons/react';
 import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { SpringUp } from '../components/ui/SpringUp';
 
 export default function LoginPage() {
   const { user, loading } = useAuth();
@@ -38,7 +39,7 @@ export default function LoginPage() {
       />
 
       {/* Card */}
-      <div className='relative z-10 w-full max-w-sm mx-4 animate-fade-up'>
+      <SpringUp className='relative z-10 w-full max-w-sm mx-4'>
         <div className='p-6 md:p-8 glass-modal'>
           {/* Logo */}
           <div className='mb-6 md:mb-8 text-center'>
@@ -66,7 +67,7 @@ export default function LoginPage() {
         <p className='text-center font-mono text-[10px] text-faint mt-6 tracking-widest uppercase'>
           access is restricted to server members
         </p>
-      </div>
+      </SpringUp>
     </div>
   );
 }

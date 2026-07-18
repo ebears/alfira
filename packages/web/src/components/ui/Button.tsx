@@ -9,6 +9,8 @@ interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: ButtonVariant;
   size?: ButtonSize;
   surface?: ButtonSurface;
+  /** Visually disabled styling + cursor-not-allowed, but onClick still fires. */
+  dimmed?: boolean;
 }
 
 const defaultClasses: Record<ButtonVariant, string> = {
@@ -38,6 +40,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button
     variant = 'primary',
     size = 'default',
     surface = 'surface',
+    dimmed,
     className,
     style,
     ...props
@@ -49,13 +52,20 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button
     variant === 'inherit'
       ? ({ ...style, '--btn-surface': surfaceVars[surface] } as React.CSSProperties)
       : style || {};
+
+  // dimmed = visually disabled but still clickable (for cooldown toasts).
+  // Don't pass disabled to the native element when dimmed.
+  const { disabled: _disabled, ...restProps } = props;
+  const dimmedClass = dimmed ? 'opacity-50 cursor-not-allowed' : '';
+
   return (
     <button
       ref={ref}
       type='button'
-      className={className ? `${base} ${className}` : base}
+      disabled={dimmed ? undefined : (_disabled as boolean | undefined)}
+      className={[base, dimmedClass, className].filter(Boolean).join(' ')}
       style={inheritStyle}
-      {...props}
+      {...restProps}
     />
   );
 });

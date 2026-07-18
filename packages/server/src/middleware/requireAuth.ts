@@ -1,4 +1,4 @@
-import jwt from 'jsonwebtoken';
+import { verify } from '../lib/jwt';
 import type { User } from '../shared';
 
 /**
@@ -9,9 +9,5 @@ export function verifySessionToken(token: string): User | null {
   const { JWT_SECRET } = process.env;
   if (!JWT_SECRET) return null;
 
-  try {
-    return jwt.verify(token, JWT_SECRET) as User;
-  } catch {
-    return null;
-  }
+  return verify<User>(token, JWT_SECRET);
 }

@@ -1,4 +1,4 @@
-import type { LoopMode, QueueState } from '@alfira-bot/server/shared';
+import type { LoopMode, QueueState } from '@alfira/server/shared';
 import {
   clearQueue,
   demoteQueueSong,
@@ -13,7 +13,7 @@ import {
   skipTrack,
   togglePause,
   unshuffleQueue,
-} from '@alfira-bot/server/shared/api';
+} from '@alfira/server/shared/api';
 import type React from 'react';
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import { useProgressBar } from '../hooks/useProgressBar';

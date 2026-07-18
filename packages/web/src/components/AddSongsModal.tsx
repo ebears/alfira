@@ -1,11 +1,12 @@
-import type { PlaylistDetail, Song } from '@alfira-bot/server/shared';
-import { formatDuration } from '@alfira-bot/server/shared';
+import type { PlaylistDetail, Song } from '@alfira/server/shared';
+import { formatDuration } from '@alfira/server/shared';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { memo, useCallback, useEffect, useRef, useState } from 'react';
 import { addSongToPlaylist, getSongsPage } from '../api/api';
 import { Backdrop } from './Backdrop';
 import { ArtworkImage } from './ui/ArtworkImage';
 import { Button } from './ui/Button';
+import { SpringUp } from './ui/SpringUp';
 
 const PAGE_SIZE = 30;
 
@@ -127,7 +128,7 @@ export default function AddSongsModal({
 
   return (
     <Backdrop onClose={onClose}>
-      <div className='w-full max-w-lg glass-modal flex flex-col max-h-[80vh] animate-fade-up'>
+      <SpringUp className='w-full max-w-lg glass-modal flex flex-col max-h-[80vh]'>
         <div className='p-4 md:p-5 border-b border-border'>
           <h2 className='font-display text-2xl md:text-3xl text-fg tracking-wider'>Add Songs</h2>
           <p className='font-mono text-xs text-muted mt-0.5'>to "{playlist.name}"</p>
@@ -191,7 +192,7 @@ export default function AddSongsModal({
             {hasAddedNew ? 'Done' : 'Close'}
           </Button>
         </div>
-      </div>
+      </SpringUp>
     </Backdrop>
   );
 }

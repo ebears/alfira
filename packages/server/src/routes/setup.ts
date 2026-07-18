@@ -1,20 +1,30 @@
 import { eq } from 'drizzle-orm';
 import type { RouteContext } from '../index';
 import { refreshGuildId } from '../lib/config';
+import { refreshEnabledSources } from '../startDiscord';
+import { botHeaders, fetchGuildRoles } from '../lib/discordRoles';
 import { json } from '../lib/json';
 import { checkGuards } from '../lib/routeGuards';
 import { routeTable } from '../lib/routeTable';
-import type { SetupChannel, SetupGuild, SetupRole } from '../shared';
+import type { SetupChannel, SetupGuild } from '../shared';
 import { db, tables } from '../shared/db';
 import { logger } from '../shared/logger';
 
 const DISCORD_API = 'https://discord.com/api/v10';
 
-function botHeaders(): Record<string, string> {
-  const token = process.env.DISCORD_BOT_TOKEN;
-  if (!token) throw new Error('DISCORD_BOT_TOKEN not set');
-  return { Authorization: `Bot ${token}` };
+// ---------------------------------------------------------------------------
+// In-memory cache for Discord channels.
+// Prevents rate limiting when the frontend fetches these on every settings
+// page visit. Entries expire after 60 seconds.
+// ---------------------------------------------------------------------------
+const CACHE_TTL_MS = 60_000;
+
+interface CacheEntry<T> {
+  data: T;
+  expiresAt: number;
 }
+
+const channelsCache = new Map<string, CacheEntry<SetupChannel[]>>();
 
 // ---------------------------------------------------------------------------
 // GET /api/setup/status
@@ -131,37 +141,8 @@ async function handleGetRoles(
     return json({ error: 'guildId query parameter is required.' }, 400);
   }
 
-  try {
-    const res = await fetch(`${DISCORD_API}/guilds/${guildId}/roles`, {
-      headers: botHeaders(),
-    });
-
-    if (!res.ok) {
-      logger.error({ guildId, status: res.status }, 'Failed to fetch guild roles from Discord');
-      return json({ error: 'Could not fetch roles from Discord.' }, 502);
-    }
-
-    const roles = (await res.json()) as Array<{
-      id: string;
-      name: string;
-      color: number;
-      managed: boolean;
-    }>;
-
-    // Filter out @everyone (id matches guildId) and managed roles (bot integrations).
-    const result: SetupRole[] = roles
-      .filter((r) => r.id !== guildId && !r.managed)
-      .map((r) => ({
-        id: r.id,
-        name: r.name,
-        color: r.color,
-      }));
-
-    return json({ roles: result });
-  } catch (err) {
-    logger.error({ err }, 'Error fetching guild roles');
-    return json({ error: 'Could not fetch roles.' }, 502);
-  }
+  const roles = await fetchGuildRoles(guildId);
+  return json({ roles });
 }
 
 // ---------------------------------------------------------------------------
@@ -180,6 +161,12 @@ async function handleGetChannels(
   const guildId = url.searchParams.get('guildId');
   if (!guildId) {
     return json({ error: 'guildId query parameter is required.' }, 400);
+  }
+
+  // Serve from cache if available and not expired.
+  const cached = channelsCache.get(guildId);
+  if (cached && cached.expiresAt > Date.now()) {
+    return json({ channels: cached.data });
   }
 
   try {
@@ -206,6 +193,7 @@ async function handleGetChannels(
         name: c.name,
       }));
 
+    channelsCache.set(guildId, { data: result, expiresAt: Date.now() + CACHE_TTL_MS });
     return json({ channels: result });
   } catch (err) {
     logger.error({ err }, 'Error fetching guild channels');
@@ -317,7 +305,6 @@ async function handlePostComplete(
     refreshGuildId(body.guildId);
 
     // Update the enabled sources cache.
-    const { refreshEnabledSources } = await import('../startDiscord');
     refreshEnabledSources(enabledSources);
 
     return json({ success: true });

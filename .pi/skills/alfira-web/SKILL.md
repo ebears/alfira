@@ -9,6 +9,7 @@ description: React 19 + Tailwind CSS 4 web UI, component and page structure, API
 
 - **Framework:** React 19
 - **Styling:** Tailwind CSS 4
+- **Animation:** motion (framer-motion v12) via `LazyMotion` + `m` for minimal bundle
 - **Bundler:** Bun (builds to `packages/web/dist/`)
 - **Build command:** `bun run web:build`
 
@@ -39,6 +40,7 @@ description: React 19 + Tailwind CSS 4 web UI, component and page structure, API
 | Component            | Purpose                                              |
 | -------------------- | ---------------------------------------------------- |
 | `Layout.tsx`         | App shell with sidebar nav + NowPlayingBar           |
+| `AnimatedOutlet.tsx` | Page transition wrapper (motion AnimatePresence)     |
 | `MobileNav.tsx`      | Mobile navigation bar                                |
 | `NowPlayingBar.tsx`  | Persistent bottom bar with playback controls         |
 | `ProtectedRoute.tsx` | Auth guard wrapper                                   |
@@ -82,18 +84,21 @@ description: React 19 + Tailwind CSS 4 web UI, component and page structure, API
 
 ### Utility UI Components (in `components/ui/`)
 
-| Component               | Purpose                      |
-| ----------------------- | ---------------------------- |
-| `Button.tsx`            | Reusable button component    |
-| `Card.tsx`              | Reusable card wrapper        |
-| `Checkbox.tsx`          | Reusable checkbox            |
-| `DurationBadge.tsx`     | Formatted duration display   |
-| `ErrorBanner.tsx`       | Error message banner         |
-| `PlayButton.tsx`        | Play action button           |
-| `RoleComboBox.tsx`      | Role selection dropdown      |
-| `Spinner.tsx`           | Loading spinner              |
-| `VirtualListFooter.tsx` | Footer for virtualized lists |
-| `VolumeBoostBadge.tsx`  | Volume boost indicator       |
+| Component               | Purpose                                    |
+| ----------------------- | ------------------------------------------ |
+| `Button.tsx`            | Reusable button component                  |
+| `Card.tsx`              | Reusable card wrapper                      |
+| `Checkbox.tsx`          | Reusable checkbox                          |
+| `DurationBadge.tsx`     | Formatted duration display                 |
+| `ErrorBanner.tsx`       | Error message banner                       |
+| `PlayButton.tsx`        | Play action button                         |
+| `RoleComboBox.tsx`      | Role selection dropdown                    |
+| `ArtworkImage.tsx`      | Lazy-loaded artwork with fallback          |
+| `PageHeader.tsx`        | Consistent page header                     |
+| `Spinner.tsx`           | Loading spinner                            |
+| `SpringUp.tsx`          | Spring-up mount animation wrapper (motion) |
+| `VirtualListFooter.tsx` | Footer for virtualized lists               |
+| `VolumeBoostBadge.tsx`  | Volume boost indicator                     |
 
 ### Other Components
 
@@ -138,7 +143,7 @@ Centralized API client. All frontend API calls go through this file. Provides ty
 - Settings: compressor, equalizer, general, permissions
 - Authentication: login, logout, session check
 
-Uses the shared API service from `@alfira-bot/server/shared/api` for type consistency. Always use this client — never raw `fetch` in components.
+Uses the shared API service from `@alfira/server/shared/api` for type consistency. Always use this client — never raw `fetch` in components.
 
 ## WebSocket Client
 
@@ -147,6 +152,15 @@ Connects to `/ws` for real-time player state updates. Used primarily by the now-
 ## Constants (`packages/web/src/constants.ts`)
 
 Shared constants used across the web UI. Common values like API base URLs, default settings, etc.
+
+## Animations (motion)
+
+- **Setup:** `lib/motion.ts` exports `LazyMotion`, `domAnimation`, and shared variants. Import `m` separately as `import * as m from 'motion/react-m'` (namespace import required).
+- **Page transitions:** `AnimatedOutlet` replaces `<Outlet />` in Layout — handles enter/exit crossfade on route change
+- **Pattern:** `import * as m from 'motion/react-m'` for the minimal `m` component factory; `import { AnimatePresence } from 'motion/react'` for enter/exit orchestration; `import { pageVariants } from '../lib/motion'` for shared variants
+- **Bundle:** Uses `LazyMotion` + `m` (4.6kb base) with `domAnimation` features loaded synchronously at mount
+- **SpringUp:** `<SpringUp>` wraps content in a shared spring-up variant (`springUp` from `lib/motion.ts`) — replaces the old `animate-fade-up` CSS class
+- CSS keyframes (`slideUp`, `pulseGentle`, etc.) remain in `index.css` for non-React animations (now-playing bar, loaders)
 
 ## Tailwind CSS 4 Conventions
 

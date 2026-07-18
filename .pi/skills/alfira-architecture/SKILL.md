@@ -9,10 +9,10 @@ description: Server architecture, startup sequence, WebSocket pipeline, build/de
 
 ```
 packages/
-├── server/     # Bun API + Discord bot (GuildPlayer, NodeLink audio, Seyfert v4)
+├── server/     # Bun API + Discord bot (GuildPlayer, NodeLink audio, custom Discord gateway)
 │   └── src/
 │       ├── index.ts          # Entry point — startup sequence + HTTP server
-│       ├── startDiscord.ts   # Seyfert Discord client + NodeLink init
+│       ├── startDiscord.ts   # Discord gateway + NodeLink init
 │       ├── GuildPlayer.ts    # Per-guild audio player state machine
 │       ├── PlaybackCursor.ts # Queue cursor logic
 │       ├── lib/              # Utilities (socket, voice, lavalink, config, etc.)
@@ -33,7 +33,7 @@ The bot and API run in a **single Bun process**. They share memory for player st
 4. **Initialize guild ID cache** — `initGuildId()` reads the single `guildSettings` row (id=1)
 5. **Initialize enabled sources cache** — `initEnabledSources()` from `startDiscord.ts`
 6. **Start NodeLink subprocess** — Spawns NodeLink as a child process (`/usr/local/bin/bun src/index.ts` inside `/usr/local/nodelink`), polls `http://127.0.0.1:2333/v4/info` until ready
-7. **Start the Discord bot** — `startDiscord()` initializes Seyfert client + connects to NodeLink WebSocket
+7. **Start the Discord bot** — `startDiscord()` initializes the Discord gateway + connects to NodeLink WebSocket
 8. **Start HTTP server** — `Bun.serve()` on port 3001
 
 ### Graceful shutdown
@@ -74,13 +74,13 @@ Guild ID, admin roles, idle timeout, and notification channel are configured via
 
 ## Shared Package Exports
 
-`@alfira-bot/server/shared` (imported by `packages/web`):
+`@alfira/server/shared` (imported by `packages/web`):
 
 **Types:** `Song`, `QueuedSong`, `LoopMode`, `QueueState`, `Playlist`, `PlaylistDetail`, `User`
 **Utilities:** `formatDuration(seconds)`, `fisherYatesShuffle(array)`
 **DB:** Schema in `packages/server/src/shared/db/schema.ts`
-**Logger:** `logger` from `@alfira-bot/server/shared/logger`
-**API Service:** `@alfira-bot/server/shared/api` — centralized API functions (`fetchSongs`, `createRequest`, `fetchRequests`, etc.)
+**Logger:** `logger` from `@alfira/server/shared/logger`
+**API Service:** `@alfira/server/shared/api` — centralized API functions (`fetchSongs`, `createRequest`, `fetchRequests`, etc.)
 
 Always use the shared API service for API calls rather than raw `fetch`.
 
