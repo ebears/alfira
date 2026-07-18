@@ -1,6 +1,7 @@
 import { CaretLeftIcon, CraneTowerIcon, GuitarIcon, LinkBreakIcon } from '@phosphor-icons/react';
 import { useEffect, useState } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
+import * as m from 'motion/react-m';
 import { AnimatedOutlet } from './AnimatedOutlet';
 import { ADMIN_NAV_ITEMS, NAV_ITEMS } from '../constants';
 import { useAdminView } from '../context/AdminViewContext';
@@ -53,10 +54,11 @@ function LayoutContent() {
       {/* ------------------------------------------------------------------ */}
       {/* Sidebar - visible on medium screens and up */}
       {/* ------------------------------------------------------------------ */}
-      <aside
-        className={`hidden md:flex ${
-          collapsed ? 'w-16' : 'w-56'
-        } shrink-0 flex-col bg-elevated transition-[width] duration-200 overflow-hidden h-[calc(100vh-5rem)]`}
+      <m.aside
+        className='hidden md:flex shrink-0 flex-col bg-elevated overflow-hidden h-[calc(100vh-5rem)]'
+        animate={{ width: collapsed ? 64 : 224 }}
+        initial={false}
+        transition={{ type: 'spring', stiffness: 500, damping: 25 }}
       >
         {/* Wordmark */}
         <div
@@ -229,7 +231,7 @@ function LayoutContent() {
             <UserMenu user={user} collapsed={collapsed} onLogout={handleLogout} />
           </div>
         )}
-      </aside>
+      </m.aside>
 
       {/* ------------------------------------------------------------------ */}
       {/* Main content + now playing bar + queue panel */}
@@ -252,11 +254,14 @@ function QueueLayout() {
       </div>
 
       {/* Desktop: right-side panel that pushes content */}
-      <aside
-        className={`${queueOpen ? 'w-96' : 'w-0'} shrink-0 flex-col bg-elevated transition-[width] duration-200 overflow-hidden clay-floating md:flex hidden h-[calc(100vh-5rem)]`}
+      <m.aside
+        className='shrink-0 flex-col bg-elevated overflow-hidden clay-floating md:flex hidden h-[calc(100vh-5rem)]'
+        animate={{ width: queueOpen ? 384 : 0 }}
+        initial={false}
+        transition={{ type: 'spring', stiffness: 500, damping: 25 }}
       >
         {queueOpen && <QueuePanel />}
-      </aside>
+      </m.aside>
     </>
   );
 }
