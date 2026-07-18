@@ -15,7 +15,7 @@ if (!DATABASE_URL) {
   throw new Error('DATABASE_URL environment variable is not set');
 }
 
-const sqliteDb = new Database(DATABASE_URL, { create: true });
+const sqliteDb = new Database(DATABASE_URL, { create: true, strict: true });
 sqliteDb.exec('PRAGMA journal_mode=WAL;');
 sqliteDb.exec('PRAGMA foreign_keys=ON;');
 export const db = drizzle(sqliteDb, { schema });
