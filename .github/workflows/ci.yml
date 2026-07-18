@@ -52,7 +52,5 @@ jobs:
         run: bun run lint
       - name: Build server
         run: bun run --filter @alfira/server build
-      - name: Typecheck server
-        run: bunx tsc --noEmit -p packages/server/tsconfig.json
-      - name: Typecheck web
-        run: bunx tsc --noEmit -p packages/web/tsconfig.json
+      - name: Build web
+        run: bun run --filter @alfira/web build
