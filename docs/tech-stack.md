@@ -107,7 +107,7 @@ Four GitHub Actions workflows run on the repository:
 
 | Workflow             | Trigger                                               | Purpose                                                           |
 | -------------------- | ----------------------------------------------------- | ----------------------------------------------------------------- |
-| **ci.yml**           | All PRs, pushes to `main` and `dev`                   | Lint with oxlint + typecheck all packages + Trivy vuln scan       |
+| **ci.yml**           | All PRs, pushes to `main` and `dev`                   | Lint with oxlint + build all packages + Trivy vuln scan           |
 | **codeql.yml**       | All PRs, pushes to `main` and `dev`, weekly schedule  | CodeQL security analysis                                          |
 | **docker-build.yml** | All PRs, pushes to `main` and `dev` (ignores `docs/`) | Build Docker images; publish to GHCR on `main`                    |
 | **release.yml**      | Pushes of `v*` tags                                   | Build multi-arch Docker image, push to GHCR, draft GitHub release |

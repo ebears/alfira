@@ -92,7 +92,7 @@ Every change follows this pipeline. The agent should guide the user through each
 1. **Discuss** — Talk through the problem and explore approaches. Ask clarifying questions before proposing solutions.
 2. **`/plan`** — Before writing any code, produce a written plan: goal, scope (files touched), ordered implementation steps, risks, and verification checklist. Get user agreement on the plan before proceeding.
 3. **Implement** — Follow the plan one step at a time. After each step, confirm it works before moving on. If the plan needs adjustment mid-implementation, say so and update it.
-4. **`/verify`** — The gate before `/submit`. Run `bun run check`, TypeScript compilation (`bunx tsc --noEmit`), review the full diff, and check for untracked files. Report pass/fail for each check. Do not proceed if anything fails.
+4. **`/verify`** — The gate before `/submit`. Run `bun run check`, then `bun run --filter @alfira/server build && bun run --filter @alfira/web build` to verify both packages compile. Review the full diff and check for untracked files. Report pass/fail for each check. Do not proceed if anything fails.
 5. **`/submit`** — Create a feature branch from `dev`, commit with a semantic message, push, and open a PR targeting `dev`.
 6. **Review & Merge** — Address review feedback. CI must pass. Merge to `dev`.
 7. **`/release`** — Batch accumulated `dev` changes into a release PR targeting `main`. Show pending commits, determine version if applicable, open the PR with a changelog.
