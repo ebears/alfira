@@ -1,7 +1,13 @@
 import type { Playlist, Song } from '@alfira/server/shared';
-import { memo } from 'react';
+import { memo, useCallback, useEffect, useState } from 'react';
+import { useSongEdit } from '../context/SongEditContext';
 import SongCard from './SongCard';
 import { VirtualList } from './VirtualList';
+
+/** Height allocated to an expanded row (card + edit panel + spacer). */
+const EXPANDED_ROW_HEIGHT = 540;
+/** Height of a collapsed song row (card + spacer). */
+const COLLAPSED_ROW_HEIGHT = 105;
 
 // ---------------------------------------------------------------------------
 // Types
@@ -81,6 +87,33 @@ export const VirtualSongList = memo(function VirtualSongList({
   isSelected,
   onToggleSelect,
 }: VirtualSongListProps) {
+  const { openSongId } = useSongEdit();
+
+  // Track the "effective" open song for layout purposes.
+  // Expand: allocate space immediately so the row can grow into it.
+  // Collapse: delay shrinking until the CSS max-height transition finishes (300ms),
+  // otherwise the collapsing panel overflows behind the next row.
+  const [effectiveOpenId, setEffectiveOpenId] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (openSongId) {
+      // Expand immediately — allocate space before the transition starts.
+      setEffectiveOpenId(openSongId);
+    } else {
+      // Collapse: wait for the CSS transition to finish before releasing space.
+      const timeout = setTimeout(() => setEffectiveOpenId(null), 300);
+      return () => clearTimeout(timeout);
+    }
+  }, [openSongId]);
+
+  const estimateSize = useCallback(
+    (index: number) => {
+      const song = items[index];
+      return song && song.id === effectiveOpenId ? EXPANDED_ROW_HEIGHT : COLLAPSED_ROW_HEIGHT;
+    },
+    [items, effectiveOpenId]
+  );
+
   return (
     <VirtualList
       items={items}
@@ -100,7 +133,7 @@ export const VirtualSongList = memo(function VirtualSongList({
           onToggleSelect={onToggleSelect ? () => onToggleSelect(song.id) : undefined}
         />
       )}
-      estimateSize={105}
+      estimateSize={estimateSize}
       itemClassName='pb-3'
       isLoading={isLoading}
       hasLoaded={hasLoaded}

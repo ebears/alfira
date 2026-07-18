@@ -15,8 +15,12 @@ export interface VirtualListProps<T> {
   getItemKey: (item: T, index: number) => string;
   /** Render a single item. Receives the item and its index in the array. */
   renderItem: (item: T, index: number) => React.ReactNode;
-  /** Estimated height (px) of a row. Estimate the largest possible size. */
-  estimateSize: number;
+  /**
+   * Estimated height (px) of a row. Can be a flat number or a function
+   * receiving the item index. Use a function when rows have different
+   * heights (e.g. an expanded edit panel).
+   */
+  estimateSize: number | ((index: number) => number);
   /** Number of items to render outside the visible area. Default 5. */
   overscan?: number;
   /** CSS class applied to the measuring wrapper around each item. Use for gap/spacing. */
@@ -70,6 +74,11 @@ function VirtualListInner<T>({
   const itemsRef = useRef(items);
   itemsRef.current = items;
 
+  // Keep estimateSize in a ref so the virtualizer's estimateSize stays
+  // referentially stable while still reading the latest value.
+  const estimateSizeRef = useRef(estimateSize);
+  estimateSizeRef.current = estimateSize;
+
   // The virtualizer count includes a loader row when there are more pages.
   const totalCount = hasMore ? items.length + 1 : items.length;
 
@@ -81,7 +90,10 @@ function VirtualListInner<T>({
       return item != null ? getItemKeyRef.current(item, i) : `__missing__${i}`;
     },
     getScrollElement: () => scrollRef.current,
-    estimateSize: () => estimateSize,
+    estimateSize: (index: number) => {
+      const fn = estimateSizeRef.current;
+      return typeof fn === 'function' ? fn(index) : fn;
+    },
     overscan,
   });
 
