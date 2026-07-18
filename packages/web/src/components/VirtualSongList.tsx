@@ -2,7 +2,6 @@ import type { Playlist, Song } from '@alfira/server/shared';
 import { memo } from 'react';
 import * as m from 'motion/react-m';
 import SongCard from './SongCard';
-import { springUpStaggered } from '../lib/motion';
 import VirtualListShell from './VirtualListShell';
 
 interface VirtualSongListProps {
@@ -134,10 +133,14 @@ export const VirtualSongList = memo(function VirtualSongList({
         {items.map((song, index) => (
           <m.div
             key={song.id}
-            initial='hidden'
-            animate='show'
-            variants={springUpStaggered}
-            custom={index % 24}
+            initial={{ opacity: 0, y: 24 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{
+              type: 'spring',
+              stiffness: 300,
+              damping: 24,
+              delay: (index % 24) * 0.04,
+            }}
           >
             <SongCard
               key={song.id}
