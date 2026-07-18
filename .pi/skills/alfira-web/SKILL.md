@@ -9,6 +9,7 @@ description: React 19 + Tailwind CSS 4 web UI, component and page structure, API
 
 - **Framework:** React 19
 - **Styling:** Tailwind CSS 4
+- **Animation:** motion (framer-motion v12) via `LazyMotion` + `m` for minimal bundle
 - **Bundler:** Bun (builds to `packages/web/dist/`)
 - **Build command:** `bun run web:build`
 
@@ -39,6 +40,7 @@ description: React 19 + Tailwind CSS 4 web UI, component and page structure, API
 | Component            | Purpose                                              |
 | -------------------- | ---------------------------------------------------- |
 | `Layout.tsx`         | App shell with sidebar nav + NowPlayingBar           |
+| `AnimatedOutlet.tsx` | Page transition wrapper (motion AnimatePresence)     |
 | `MobileNav.tsx`      | Mobile navigation bar                                |
 | `NowPlayingBar.tsx`  | Persistent bottom bar with playback controls         |
 | `ProtectedRoute.tsx` | Auth guard wrapper                                   |
@@ -147,6 +149,14 @@ Connects to `/ws` for real-time player state updates. Used primarily by the now-
 ## Constants (`packages/web/src/constants.ts`)
 
 Shared constants used across the web UI. Common values like API base URLs, default settings, etc.
+
+## Animations (motion)
+
+- **Setup:** `lib/motion.ts` exports `LazyMotion`, `domAnimation`, and shared variants. Import `m` separately as `import * as m from 'motion/react-m'` (namespace import required).
+- **Page transitions:** `AnimatedOutlet` replaces `<Outlet />` in Layout — handles enter/exit crossfade on route change
+- **Pattern:** `import * as m from 'motion/react-m'` for the minimal `m` component factory; `import { AnimatePresence } from 'motion/react'` for enter/exit orchestration; `import { pageVariants } from '../lib/motion'` for shared variants
+- **Bundle:** Uses `LazyMotion` + `m` (4.6kb base) with `domAnimation` features loaded synchronously at mount
+- CSS keyframes (`fadeUp`, `slideUp`, etc.) remain in `index.css` for non-React animations (modals, loaders)
 
 ## Tailwind CSS 4 Conventions
 
