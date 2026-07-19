@@ -137,7 +137,7 @@ function VirtualListInner<T>({
       {showContent && (
         <div
           ref={scrollRef}
-          className='overflow-y-auto overflow-x-hidden px-2 pt-3 min-h-0 flex-1'
+          className='overflow-y-auto overflow-x-hidden px-2 pt-3 min-h-0 flex-1 bg-surface'
           style={{
             WebkitMaskImage:
               'linear-gradient(to bottom, transparent 0%, black 20px, black calc(100% - 20px), transparent 100%)',
@@ -227,9 +227,6 @@ function VirtualListInner<T>({
               );
             })}
           </div>
-
-          {/* End spacer when everything is loaded */}
-          {!isFetching && !isError && !hasMore && <div className='h-4' />}
         </div>
       )}
     </div>
