@@ -113,11 +113,7 @@ export const VirtualSongGrid = memo(function VirtualSongGrid({
   }, []);
 
   const positioner = usePositioner({
-    // Fall back to 960 while the ResizeObserver hasn't fired yet.
-    // useLayoutEffect updates this synchronously before paint, so the
-    // fallback is never visible — it just prevents usePositioner from
-    // seeing 0 during the initial internal render pass.
-    width: gridWidth || 960,
+    width: gridWidth,
     columnWidth: 260,
     columnGutter: 0, // We handle padding in the render wrapper
   });
@@ -212,6 +208,19 @@ export const VirtualSongGrid = memo(function VirtualSongGrid({
   const showSkeleton = isLoading;
   const showEmpty = hasLoaded && items.length === 0;
   const isContentReady = !isLoading && hasLoaded && items.length > 0;
+
+  // Pre-populate the positioner with estimated heights for items that
+  // haven't been measured yet. This prevents the visible flash of items
+  // jumping from estimated positions to measured positions — they start
+  // at near-correct positions and the ResizeObserver refines async.
+  // 420px ≈ typical grid card height at common column widths (thumbnail
+  // ~260-280px + info ~100px + wrapper padding 16px).
+  const posSize = positioner.size();
+  if (posSize < items.length) {
+    for (let i = posSize; i < items.length; i++) {
+      positioner.set(i, 420);
+    }
+  }
 
   const masonry = useMasonry({
     positioner,

@@ -33,8 +33,14 @@ export function useScrollObserver(
 ): ScrollObserverResult {
   const [scrollTop, setScrollTop] = useState(0);
   const [isScrolling, setIsScrolling] = useState(false);
+  // Seed with a reasonable DOM-based fallback so the first render pass
+  // has a close-to-correct width for usePositioner. The useLayoutEffect
+  // below reads the real element dimensions and refines before paint.
   const [height, setHeight] = useState(0);
-  const [width, setWidth] = useState(0);
+  const [width, setWidth] = useState(() => {
+    if (typeof window === 'undefined') return 960;
+    return document.querySelector('main')?.clientWidth ?? 960;
+  });
 
   const didMountRef = useRef(0);
   const tickingRef = useRef(false);
