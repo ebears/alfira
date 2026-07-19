@@ -249,10 +249,10 @@ export const VirtualSongGrid = memo(function VirtualSongGrid({
       style={{
         overflowY: isContentReady ? 'auto' : 'hidden',
         WebkitMaskImage: isContentReady
-          ? 'linear-gradient(to bottom, transparent 0%, black 20px, black calc(100% - 40px), transparent 100%)'
+          ? 'linear-gradient(to bottom, transparent 0%, black 20px, black calc(100% - 20px), transparent 100%)'
           : undefined,
         maskImage: isContentReady
-          ? 'linear-gradient(to bottom, transparent 0%, black 20px, black calc(100% - 40px), transparent 100%)'
+          ? 'linear-gradient(to bottom, transparent 0%, black 20px, black calc(100% - 20px), transparent 100%)'
           : undefined,
       }}
     >
