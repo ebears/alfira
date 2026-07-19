@@ -202,7 +202,7 @@ export default function PermissionsPage() {
 
   if (!data) {
     return (
-      <div className='p-4 md:p-8 h-full overflow-y-auto pb-24 md:pb-20'>
+      <div className='p-4 md:p-8 h-full overflow-y-auto'>
         <PageHeader icon={ShieldCheckIcon} title='Permissions' />
         {error ? (
           <ErrorBanner message={error} />
@@ -215,7 +215,7 @@ export default function PermissionsPage() {
 
   // Render ----------------------------------------------------------------
   return (
-    <div className='p-4 md:p-8 h-full overflow-y-auto pb-24 md:pb-20'>
+    <div className='p-4 md:p-8 h-full overflow-y-auto'>
       <PageHeader
         icon={ShieldCheckIcon}
         title='Permissions'

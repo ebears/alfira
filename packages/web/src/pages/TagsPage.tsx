@@ -121,7 +121,7 @@ export default function TagsPage() {
   }, [selected, refreshTags]);
 
   return (
-    <div className='p-4 md:p-8 h-full overflow-y-auto pb-24 md:pb-20'>
+    <div className='p-4 md:p-8 h-full overflow-y-auto'>
       <PageHeader
         icon={TagIcon}
         title='Tags'

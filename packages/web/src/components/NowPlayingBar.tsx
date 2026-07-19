@@ -523,7 +523,7 @@ export function NowPlayingBar() {
   }, [setOverrideElapsed]);
 
   return (
-    <div className='shrink-0 w-full bg-base fixed bottom-0 left-0 right-0 z-10'>
+    <div className='shrink-0 w-full bg-base'>
       {/* Mobile: progress bar on top */}
       <ProgressBar
         currentSong={currentSong}
