@@ -1,5 +1,4 @@
 import { useVirtualizer } from '@tanstack/react-virtual';
-import { type Transition } from 'motion/react';
 import * as m from 'motion/react-m';
 import { memo, useEffect, useLayoutEffect, useRef } from 'react';
 import { listItemVariants } from '../lib/motion';
@@ -128,7 +127,7 @@ function VirtualListInner<T>({
   return (
     <div
       ref={containerRef}
-      className='relative'
+      className='relative flex-1 min-h-0 flex flex-col overflow-x-hidden'
       style={{ opacity: 0, transition: 'opacity 120ms ease' }}
     >
       {showSkeleton && skeleton}
@@ -138,13 +137,12 @@ function VirtualListInner<T>({
       {showContent && (
         <div
           ref={scrollRef}
-          className='overflow-y-auto px-4 pt-4 pb-4 min-h-0'
+          className='overflow-y-auto overflow-x-hidden px-2 pt-3 min-h-0 flex-1 bg-surface'
           style={{
-            maxHeight: 'calc(100vh - 340px)',
             WebkitMaskImage:
-              'linear-gradient(to bottom, black 0%, black calc(100% - 40px), transparent 100%)',
+              'linear-gradient(to bottom, transparent 0%, black 20px, black calc(100% - 20px), transparent 100%)',
             maskImage:
-              'linear-gradient(to bottom, black 0%, black calc(100% - 40px), transparent 100%)',
+              'linear-gradient(to bottom, transparent 0%, black 20px, black calc(100% - 20px), transparent 100%)',
           }}
         >
           <div
@@ -218,14 +216,10 @@ function VirtualListInner<T>({
                     width: '100%',
                     height: `${virtualRow.size}px`,
                     transform: `translateY(${virtualRow.start}px)`,
+                    overflow: 'hidden',
                   }}
                 >
-                  <m.div
-                    initial='initial'
-                    animate='animate'
-                    variants={listItemVariants}
-                    transition={{ duration: 0.2, ease: 'easeOut' } as Transition}
-                  >
+                  <m.div layout initial='initial' animate='animate' variants={listItemVariants}>
                     {renderItem(item, virtualRow.index)}
                   </m.div>
                   {spacer}
@@ -233,9 +227,6 @@ function VirtualListInner<T>({
               );
             })}
           </div>
-
-          {/* End spacer when everything is loaded */}
-          {!isFetching && !isError && !hasMore && <div className='h-4' />}
         </div>
       )}
     </div>

@@ -7,6 +7,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.2] - 2026-07-22
+
+### Fixed
+
+- Eliminate queue panel close jank and grid view layout flash (#697)
+- Fix portal menu flash at top-left on Chromium
+- Fix virtualized list padding, spacing, and scroll overflow across all views
+- Fix NowPlayingBar positioning: full-width, normal flow instead of fixed
+
+### Changed
+
+- Move scroll ownership from `main` to individual pages
+- Tighten virtual list spacing and add scroll fade
+- Update release workflow documentation
+
+### Dependencies
+
+- Bumped `tailwindcss` from 4.3.2 to 4.3.3
+- Bumped `@tailwindcss/cli` from 4.3.2 to 4.3.3
+
 ## [0.2.0] - 2026-07-22
 
 ### Added
@@ -158,7 +178,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - UI actions now properly gated by granular permissions rather than a simple admin check.
 - Inherited pointer cursor on modal cards.
 
-[Unreleased]: https://github.com/ebears/alfira/compare/v0.2.0...dev
+[Unreleased]: https://github.com/ebears/alfira/compare/v0.2.2...dev
+[0.2.2]: https://github.com/ebears/alfira/compare/v0.2.0...v0.2.2
 [0.2.0]: https://github.com/ebears/alfira/compare/v0.1.1...v0.2.0
 [0.1.1]: https://github.com/ebears/alfira/releases/tag/v0.1.1
 [0.1.0]: https://github.com/ebears/alfira/releases/tag/v0.1.0

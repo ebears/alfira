@@ -1,5 +1,13 @@
 import { DotsThreeOutlineVerticalIcon } from '@phosphor-icons/react';
-import { type ReactNode, type RefObject, useCallback, useEffect, useRef, useState } from 'react';
+import {
+  type ReactNode,
+  type RefObject,
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from 'react';
 import { createPortal } from 'react-dom';
 import { EditSubmenuPanel } from './ContextMenu/EditSubmenuPanel';
 import { MenuItemButton } from './ContextMenu/MenuItemButton';
@@ -133,8 +141,8 @@ export function ContextMenu({
   const currentItemsRef = useRef(currentItems);
   currentItemsRef.current = currentItems;
 
-  // Position calculation
-  useEffect(() => {
+  // Position calculation — useLayoutEffect runs before paint, preventing a (0,0) flash.
+  useLayoutEffect(() => {
     if (!isOpen || !triggerRef.current) return;
 
     const lastUpdateRef = { current: 0 };
@@ -175,7 +183,7 @@ export function ContextMenu({
     };
   }, [isOpen, triggerRef, align]);
 
-  // Reset submenu and focus when opening
+  // Reset submenu and focus when opening (useEffect is fine — not position-critical)
   useEffect(() => {
     if (isOpen) {
       setActiveSubmenu(null);

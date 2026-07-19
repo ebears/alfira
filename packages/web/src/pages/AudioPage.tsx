@@ -12,7 +12,7 @@ export default function AudioPage() {
   const canManage = isAdminView || hasPermission('audio.manage');
 
   return (
-    <div className='p-4 md:p-8'>
+    <div className='p-4 md:p-8 h-full overflow-y-auto'>
       <PageHeader
         icon={SlidersHorizontal}
         title='Audio'

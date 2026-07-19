@@ -1,7 +1,6 @@
 import type { Playlist, Song } from '@alfira/server/shared';
 import { useMasonry, usePositioner, useResizeObserver } from 'masonic';
-import { memo, useCallback, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import { flushSync } from 'react-dom';
+import { memo, useCallback, useMemo, useRef } from 'react';
 import { useScrollObserver } from '../hooks/useScrollObserver';
 import SongCard from './SongCard';
 
@@ -96,38 +95,21 @@ export const VirtualSongGrid = memo(function VirtualSongGrid({
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const masonryContainerRef = useRef<HTMLDivElement>(null);
 
-  // rAF-batched scroll tracking + isScrolling flag (enables masonic's
-  // will-change / pointer-events optimizations during scroll) + height
-  // measurement via ResizeObserver.
-  const { scrollTop, isScrolling, height: containerHeight } = useScrollObserver(scrollContainerRef);
+  // rAF-batched scroll + isScrolling + size tracking via a single
+  // ResizeObserver. Width is throttled (see useScrollObserver) to avoid
+  // recalculating masonry columns on every frame during animated resizes.
+  const {
+    scrollTop,
+    isScrolling,
+    height: containerHeight,
+    width: gridWidth,
+  } = useScrollObserver(scrollContainerRef);
 
-  // Width: state initializer provides a reasonable fallback for SSR / first
-  // page load. On subsequent mounts (view switches), a callback ref with
-  // flushSync reads the real element width during commit and forces React
-  // to process the state update synchronously before the browser paints.
-  // A ResizeObserver handles subsequent layout changes.
-  const [gridWidth, setGridWidth] = useState(() => {
-    if (typeof window === 'undefined') return 960;
-    return document.querySelector('main')?.clientWidth ?? 960;
-  });
-
+  // Callback ref wires the DOM node into scrollContainerRef so
+  // useScrollObserver can observe it. React attaches refs before
+  // useLayoutEffect, so the hook sees the element on first pass.
   const scrollRefCallback = useCallback((el: HTMLDivElement | null) => {
     scrollContainerRef.current = el;
-    if (el) {
-      flushSync(() => {
-        setGridWidth(el.clientWidth);
-      });
-    }
-  }, []);
-
-  useLayoutEffect(() => {
-    const el = scrollContainerRef.current;
-    if (!el) return;
-    const ro = new ResizeObserver(([entry]) => {
-      if (entry) setGridWidth(entry.contentRect.width);
-    });
-    ro.observe(el);
-    return () => ro.disconnect();
   }, []);
 
   const positioner = usePositioner({
@@ -200,7 +182,7 @@ export const VirtualSongGrid = memo(function VirtualSongGrid({
     }) => {
       const p = cardPropsRef.current;
       return (
-        <div style={{ width, padding: '0 8px 16px' }}>
+        <div style={{ width, padding: '0 6px 16px' }}>
           <SongCard
             song={song}
             variant='grid'
@@ -227,6 +209,19 @@ export const VirtualSongGrid = memo(function VirtualSongGrid({
   const showEmpty = hasLoaded && items.length === 0;
   const isContentReady = !isLoading && hasLoaded && items.length > 0;
 
+  // Pre-populate the positioner with estimated heights for items that
+  // haven't been measured yet. This prevents the visible flash of items
+  // jumping from estimated positions to measured positions — they start
+  // at near-correct positions and the ResizeObserver refines async.
+  // 420px ≈ typical grid card height at common column widths (thumbnail
+  // ~260-280px + info ~100px + wrapper padding 16px).
+  const posSize = positioner.size();
+  if (posSize < items.length) {
+    for (let i = posSize; i < items.length; i++) {
+      positioner.set(i, 420);
+    }
+  }
+
   const masonry = useMasonry({
     positioner,
     resizeObserver,
@@ -245,15 +240,15 @@ export const VirtualSongGrid = memo(function VirtualSongGrid({
   return (
     <div
       ref={scrollRefCallback}
-      className='min-h-0'
+      className='pt-3 min-h-0 flex-1'
       style={{
-        maxHeight: 'calc(100vh - 340px)',
+        overflowX: 'hidden',
         overflowY: isContentReady ? 'auto' : 'hidden',
         WebkitMaskImage: isContentReady
-          ? 'linear-gradient(to bottom, black 0%, black calc(100% - 40px), transparent 100%)'
+          ? 'linear-gradient(to bottom, transparent 0%, black 20px, black calc(100% - 20px), transparent 100%)'
           : undefined,
         maskImage: isContentReady
-          ? 'linear-gradient(to bottom, black 0%, black calc(100% - 40px), transparent 100%)'
+          ? 'linear-gradient(to bottom, transparent 0%, black 20px, black calc(100% - 20px), transparent 100%)'
           : undefined,
       }}
     >
