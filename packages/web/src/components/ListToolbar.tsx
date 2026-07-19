@@ -4,8 +4,8 @@ import {
   CaretDownIcon,
   CheckSquareIcon,
   FunnelIcon,
-  ListIcon,
   MagnifyingGlassIcon,
+  RowsIcon,
   SortAscendingIcon,
   SquaresFourIcon,
 } from '@phosphor-icons/react';
@@ -55,11 +55,9 @@ export interface ListToolbarProps {
   selectionMode?: boolean;
   onToggleSelectionMode?: () => void;
 
-  // ── View mode toggle (grid / list) ──
-  showViewToggle?: boolean;
-  viewMode?: 'grid' | 'list';
-  onViewModeChange?: (mode: 'grid' | 'list') => void;
-  viewModeStorageKey?: string;
+  // ── View mode toggle ──
+  viewMode?: 'list' | 'grid';
+  onViewModeChange?: (mode: 'list' | 'grid') => void;
 }
 
 // ---------------------------------------------------------------------------
@@ -85,10 +83,8 @@ export default function ListToolbar({
   showBulkToggle = false,
   selectionMode = false,
   onToggleSelectionMode,
-  showViewToggle = false,
-  viewMode = 'grid',
+  viewMode,
   onViewModeChange,
-  viewModeStorageKey,
 }: ListToolbarProps) {
   // ── Search (local mirror + debounce) ─────────────────────────────
   const [searchInput, setSearchInput] = useState(searchValue);
@@ -151,19 +147,6 @@ export default function ListToolbar({
   // ── Filter popover ───────────────────────────────────────────────
   const [filterOpen, setFilterOpen] = useState(false);
   const hasActiveFilters = filterTags.length > 0 || filterSources.length > 0;
-
-  // ── View toggle ──────────────────────────────────────────────────
-  const isGrid = viewMode === 'grid';
-
-  const handleViewModeChange = useCallback(
-    (mode: 'grid' | 'list') => {
-      onViewModeChange?.(mode);
-      if (viewModeStorageKey) {
-        localStorage.setItem(viewModeStorageKey, mode);
-      }
-    },
-    [onViewModeChange, viewModeStorageKey]
-  );
 
   return (
     <>
@@ -266,30 +249,21 @@ export default function ListToolbar({
           )}
         </div>
 
-        {/* View toggle */}
-        {showViewToggle && (
-          <div className='flex gap-1 bg-elevated rounded-lg p-1 shrink-0'>
-            <button
-              type='button'
-              onClick={() => handleViewModeChange('list')}
-              className={`px-2 py-1.5 rounded-md transition-colors cursor-pointer ${
-                !isGrid ? 'bg-accent text-elevated' : 'text-muted hover:text-fg'
-              }`}
-              title='List view'
-            >
-              <ListIcon size={18} weight='duotone' />
-            </button>
-            <button
-              type='button'
-              onClick={() => handleViewModeChange('grid')}
-              className={`px-2 py-1.5 rounded-md transition-colors cursor-pointer ${
-                isGrid ? 'bg-accent text-elevated' : 'text-muted hover:text-fg'
-              }`}
-              title='Grid view'
-            >
-              <SquaresFourIcon size={18} weight='duotone' />
-            </button>
-          </div>
+        {/* View mode toggle */}
+        {onViewModeChange && (
+          <Button
+            variant='inherit'
+            surface='surface'
+            onClick={() => onViewModeChange(viewMode === 'grid' ? 'list' : 'grid')}
+            className='flex items-center gap-1.5 px-2.5'
+            title={viewMode === 'grid' ? 'List view' : 'Grid view'}
+          >
+            {viewMode === 'grid' ? (
+              <RowsIcon size={16} weight='duotone' />
+            ) : (
+              <SquaresFourIcon size={16} weight='duotone' />
+            )}
+          </Button>
         )}
       </div>
 

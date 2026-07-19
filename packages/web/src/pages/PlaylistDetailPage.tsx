@@ -1,7 +1,10 @@
 import type { Playlist, PlaylistDetail, Song, TagItem } from '@alfira/server/shared';
 import type { FetchSongsOptions } from '@alfira/server/shared/api';
 import { fetchTags, updatePlaylistTag } from '@alfira/server/shared/api';
-import { useVirtualizedInfiniteScroll } from '../hooks/useVirtualizedInfiniteScroll';
+import { AnimatePresence } from 'motion/react';
+import * as m from 'motion/react-m';
+import { pageVariants, viewTransition } from '../lib/motion';
+import { usePaginatedData } from '../hooks/usePaginatedData';
 
 type PlaylistDetailMeta = Omit<PlaylistDetail, 'songs'>;
 
@@ -42,6 +45,7 @@ import ListToolbar from '../components/ListToolbar';
 import NotificationToast from '../components/NotificationToast';
 
 import { Button } from '../components/ui/Button';
+import { VirtualSongGrid } from '../components/VirtualSongGrid';
 import { VirtualSongList } from '../components/VirtualSongList';
 import { useAdminView } from '../context/AdminViewContext';
 import { useAuth } from '../context/AuthContext';
@@ -56,7 +60,7 @@ import { onSocketEvent } from '../hooks/useSocket';
 import { apiErrorMessage, notifyUnlessRateLimit } from '../utils/api';
 import { getTagColorClasses } from '../utils/tagColors';
 
-const ITEMS_PER_PAGE = 24;
+const ITEMS_PER_PAGE = 48;
 
 export default function PlaylistDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -99,6 +103,9 @@ export default function PlaylistDetailPage() {
   const [bulkRemoveConfirm, setBulkRemoveConfirm] = useState(false);
   const [bulkEditingOpen, setBulkEditingOpen] = useState(false);
   const [bulkEditingApplying, setBulkEditingApplying] = useState(false);
+  const [viewMode, setViewMode] = useState<'list' | 'grid'>(
+    () => (localStorage.getItem('alfira-playlist-view') as 'list' | 'grid' | null) ?? 'list'
+  );
 
   const menuTriggerRef = useRef<HTMLButtonElement>(null);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -124,11 +131,6 @@ export default function PlaylistDetailPage() {
 
   // Search & filter state
   const [search, setSearch] = useState('');
-  const [viewMode, setViewMode] = useState<'grid' | 'list'>(() => {
-    const saved = localStorage.getItem('alfira-playlist-detail-view');
-    return saved === 'grid' ? 'grid' : 'list';
-  });
-
   // Sort & filter state
   const [sort, setSort] = useState('position');
   const [order, setOrder] = useState('desc');
@@ -202,10 +204,10 @@ export default function PlaylistDetailPage() {
     hasLoaded,
     updateItem,
     removeItem,
+    fetchNextPage,
     retry,
-    sentinelRef,
     refetch,
-  } = useVirtualizedInfiniteScroll<
+  } = usePaginatedData<
     PlaylistDetail['songs'][number],
     [string, boolean, FetchSongsOptions],
     PlaylistDetailMeta
@@ -709,11 +711,10 @@ export default function PlaylistDetailPage() {
           if (selectionMode) bulk.clearAll();
           setSelectionMode((v) => !v);
         }}
-        showViewToggle
         viewMode={viewMode}
-        onViewModeChange={(m) => {
-          setViewMode(m);
-          localStorage.setItem('alfira-playlist-detail-view', m);
+        onViewModeChange={(mode) => {
+          localStorage.setItem('alfira-playlist-view', mode);
+          setViewMode(mode);
         }}
       />
 
@@ -733,35 +734,85 @@ export default function PlaylistDetailPage() {
           />
         )
       ) : (
-        <VirtualSongList
-          items={songItems}
-          viewMode={viewMode}
-          isAdminView={isAdminView}
-          playlists={[]}
-          isLoading={isLoading}
-          isFetching={isFetching}
-          isError={isError}
-          hasMore={hasMore}
-          hasLoaded={!isLoading}
-          playingId={playingSongId}
-          onRetry={retry}
-          sentinelRef={sentinelRef}
-          onDelete={
-            selectionMode
-              ? undefined
-              : (id) => {
-                  const ps = songs.find((p) => p.songId === id);
-                  if (ps) setRemoveId(ps.songId);
+        <AnimatePresence mode='wait'>
+          {viewMode === 'list' ? (
+            <m.div
+              key='list'
+              variants={pageVariants}
+              initial='initial'
+              animate='animate'
+              exit='exit'
+              transition={viewTransition}
+            >
+              <VirtualSongList
+                items={songItems}
+                isAdminView={isAdminView}
+                playlists={[]}
+                isLoading={isLoading}
+                isFetching={isFetching}
+                isError={isError}
+                hasMore={hasMore}
+                hasLoaded={!isLoading}
+                playingId={playingSongId}
+                onRetry={retry}
+                onFetchMore={fetchNextPage}
+                onDelete={
+                  selectionMode
+                    ? undefined
+                    : (id) => {
+                        const ps = songs.find((p) => p.songId === id);
+                        if (ps) setRemoveId(ps.songId);
+                      }
                 }
-          }
-          onPlay={handlePlayFromSong}
-          onAddToQueue={handleAddToQueue}
-          selectionMode={selectionMode}
-          isSelected={bulk.isSelected}
-          onToggleSelect={bulk.toggle}
-          emptyTitle='No Songs'
-          emptyMessage='Add songs to this playlist'
-        />
+                onPlay={handlePlayFromSong}
+                onAddToQueue={handleAddToQueue}
+                selectionMode={selectionMode}
+                isSelected={bulk.isSelected}
+                onToggleSelect={bulk.toggle}
+                emptyTitle='No Songs'
+                emptyMessage='Add songs to this playlist'
+              />
+            </m.div>
+          ) : (
+            <m.div
+              key='grid'
+              variants={pageVariants}
+              initial='initial'
+              animate='animate'
+              exit='exit'
+              transition={viewTransition}
+            >
+              <VirtualSongGrid
+                items={songItems}
+                isAdminView={isAdminView}
+                playlists={[]}
+                isLoading={isLoading}
+                isFetching={isFetching}
+                isError={isError}
+                hasMore={hasMore}
+                hasLoaded={!isLoading}
+                playingId={playingSongId}
+                onRetry={retry}
+                onFetchMore={fetchNextPage}
+                onDelete={
+                  selectionMode
+                    ? undefined
+                    : (id) => {
+                        const ps = songs.find((p) => p.songId === id);
+                        if (ps) setRemoveId(ps.songId);
+                      }
+                }
+                onPlay={handlePlayFromSong}
+                onAddToQueue={handleAddToQueue}
+                selectionMode={selectionMode}
+                isSelected={bulk.isSelected}
+                onToggleSelect={bulk.toggle}
+                emptyTitle='No Songs'
+                emptyMessage='Add songs to this playlist'
+              />
+            </m.div>
+          )}
+        </AnimatePresence>
       )}
 
       {/* Modals */}

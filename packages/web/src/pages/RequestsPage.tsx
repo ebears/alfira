@@ -10,11 +10,11 @@ import { PageHeader } from '../components/ui/PageHeader';
 import VirtualRequestList from '../components/VirtualRequestList';
 import { useAdminView } from '../context/AdminViewContext';
 import { useAuth } from '../context/AuthContext';
-import { useVirtualizedInfiniteScroll } from '../hooks/useVirtualizedInfiniteScroll';
+import { usePaginatedData } from '../hooks/usePaginatedData';
 
 type Tab = 'pending' | 'closed';
 
-const ITEMS_PER_PAGE = 20;
+const ITEMS_PER_PAGE = 48;
 
 export default function RequestsPage() {
   const { user } = useAuth();
@@ -31,12 +31,13 @@ export default function RequestsPage() {
     isFetching,
     isError,
     total,
+    hasMore,
     hasLoaded,
     removeItem,
+    fetchNextPage,
     retry,
     reset,
-    sentinelRef,
-  } = useVirtualizedInfiniteScroll<SongRequest, [string, boolean]>({
+  } = usePaginatedData<SongRequest, [string, boolean]>({
     fetchPage: async (page, limit, currentTab, currentMineOnly) => {
       const status = currentTab === 'pending' ? 'pending' : 'all';
       const result = await fetchRequests(page, limit, {
@@ -165,11 +166,12 @@ export default function RequestsPage() {
         isLoading={isLoading}
         isFetching={isFetching}
         isError={isError}
+        hasMore={hasMore}
         isOwnFn={isOwnFn}
         isAdmin={isAdminView}
         hasLoaded={hasLoaded}
         onRetry={retry}
-        sentinelRef={sentinelRef}
+        onFetchMore={fetchNextPage}
         onApprove={handleApprove}
         onDeny={handleDeny}
         onCancel={handleCancel}

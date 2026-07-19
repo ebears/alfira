@@ -1,8 +1,11 @@
 import type { Playlist, Song } from '@alfira/server/shared';
 import type { FetchSongsOptions } from '@alfira/server/shared/api';
 import { MusicNotesIcon, QuestionIcon } from '@phosphor-icons/react';
+import { AnimatePresence } from 'motion/react';
+import * as m from 'motion/react-m';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
+import { pageVariants, viewTransition } from '../lib/motion';
 import {
   bulkDeleteSongs,
   bulkEditSongs,
@@ -19,6 +22,7 @@ import ListToolbar from '../components/ListToolbar';
 import NotificationToast from '../components/NotificationToast';
 
 import { PageHeader } from '../components/ui/PageHeader';
+import { VirtualSongGrid } from '../components/VirtualSongGrid';
 import { VirtualSongList } from '../components/VirtualSongList';
 import { useAdminView } from '../context/AdminViewContext';
 import { usePermissions } from '../context/PermissionsContext';
@@ -27,10 +31,10 @@ import { useAddToQueue } from '../hooks/useAddToQueue';
 import { useBulkSelection } from '../hooks/useBulkSelection';
 import { useNotification } from '../hooks/useNotification';
 import { onSocketEvent } from '../hooks/useSocket';
-import { useVirtualizedInfiniteScroll } from '../hooks/useVirtualizedInfiniteScroll';
+import { usePaginatedData } from '../hooks/usePaginatedData';
 import { apiErrorMessage, notifyUnlessRateLimit } from '../utils/api';
 
-const ITEMS_PER_PAGE = 24;
+const ITEMS_PER_PAGE = 48;
 
 type SortField = 'createdAt' | 'title' | 'artist' | 'album' | 'duration';
 
@@ -46,10 +50,7 @@ export default function SongsPage() {
   const { isAdminView } = useAdminView();
   const { hasPermission } = usePermissions();
   const { state: queueState } = usePlayerState();
-  const [viewMode, setViewMode] = useState<'grid' | 'list'>(() => {
-    const saved = localStorage.getItem('alfira-library-view');
-    return saved === 'grid' ? 'grid' : 'list';
-  });
+
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [playingId, setPlayingId] = useState<string | null>(null);
   const { handleAddToQueue, notification } = useAddToQueue();
@@ -58,6 +59,9 @@ export default function SongsPage() {
 
   // Bulk selection
   const bulk = useBulkSelection();
+  const [viewMode, setViewMode] = useState<'list' | 'grid'>(
+    () => (localStorage.getItem('alfira-song-view') as 'list' | 'grid' | null) ?? 'list'
+  );
   const [selectionMode, setSelectionMode] = useState(false);
   const [bulkDeleting, setBulkDeleting] = useState(false);
   const [bulkDeleteConfirm, setBulkDeleteConfirm] = useState(false);
@@ -183,9 +187,9 @@ export default function SongsPage() {
     prepend,
     updateItem,
     removeItem,
+    fetchNextPage,
     retry,
-    sentinelRef,
-  } = useVirtualizedInfiniteScroll<Song, [FetchSongsOptions]>({
+  } = usePaginatedData<Song, [FetchSongsOptions]>({
     fetchPage: async (page, limit, opts) => {
       const result = await getSongsPage(page, limit, opts);
       return {
@@ -373,45 +377,95 @@ export default function SongsPage() {
           if (selectionMode) bulk.clearAll();
           setSelectionMode((v) => !v);
         }}
-        showViewToggle
         viewMode={viewMode}
-        onViewModeChange={(m) => {
-          setViewMode(m);
-          localStorage.setItem('alfira-library-view', m);
+        onViewModeChange={(mode) => {
+          localStorage.setItem('alfira-song-view', mode);
+          setViewMode(mode);
         }}
       />
 
       {/* Content */}
-      <VirtualSongList
-        items={items}
-        viewMode={viewMode}
-        isAdminView={isAdminView}
-        playlists={playlists}
-        isLoading={isLoading}
-        isFetching={isFetching}
-        isError={isError}
-        hasMore={hasMore}
-        hasLoaded={hasLoaded}
-        playingId={playingId}
-        onRetry={retry}
-        sentinelRef={sentinelRef}
-        onDelete={selectionMode ? undefined : handleSetDeleteId}
-        onPlay={handlePlayFromSong}
-        onAddToQueue={handleAddToQueue}
-        selectionMode={selectionMode}
-        isSelected={bulk.isSelected}
-        onToggleSelect={bulk.toggle}
-        emptyTitle={
-          search || filterTags.length > 0 || filterSources.length > 0
-            ? 'No Matches'
-            : 'No Songs Yet'
-        }
-        emptyMessage={
-          search || filterTags.length > 0 || filterSources.length > 0
-            ? 'Try adjusting your search or filters'
-            : 'Submit a request to add songs'
-        }
-      />
+      <AnimatePresence mode='wait'>
+        {viewMode === 'list' ? (
+          <m.div
+            key='list'
+            variants={pageVariants}
+            initial='initial'
+            animate='animate'
+            exit='exit'
+            transition={viewTransition}
+          >
+            <VirtualSongList
+              items={items}
+              isAdminView={isAdminView}
+              playlists={playlists}
+              isLoading={isLoading}
+              isFetching={isFetching}
+              isError={isError}
+              hasMore={hasMore}
+              hasLoaded={hasLoaded}
+              playingId={playingId}
+              onRetry={retry}
+              onFetchMore={fetchNextPage}
+              onDelete={selectionMode ? undefined : handleSetDeleteId}
+              onPlay={handlePlayFromSong}
+              onAddToQueue={handleAddToQueue}
+              selectionMode={selectionMode}
+              isSelected={bulk.isSelected}
+              onToggleSelect={bulk.toggle}
+              emptyTitle={
+                search || filterTags.length > 0 || filterSources.length > 0
+                  ? 'No Matches'
+                  : 'No Songs Yet'
+              }
+              emptyMessage={
+                search || filterTags.length > 0 || filterSources.length > 0
+                  ? 'Try adjusting your search or filters'
+                  : 'Submit a request to add songs'
+              }
+            />
+          </m.div>
+        ) : (
+          <m.div
+            key='grid'
+            variants={pageVariants}
+            initial='initial'
+            animate='animate'
+            exit='exit'
+            transition={viewTransition}
+          >
+            <VirtualSongGrid
+              items={items}
+              isAdminView={isAdminView}
+              playlists={playlists}
+              isLoading={isLoading}
+              isFetching={isFetching}
+              isError={isError}
+              hasMore={hasMore}
+              hasLoaded={hasLoaded}
+              playingId={playingId}
+              onRetry={retry}
+              onFetchMore={fetchNextPage}
+              onDelete={selectionMode ? undefined : handleSetDeleteId}
+              onPlay={handlePlayFromSong}
+              onAddToQueue={handleAddToQueue}
+              selectionMode={selectionMode}
+              isSelected={bulk.isSelected}
+              onToggleSelect={bulk.toggle}
+              emptyTitle={
+                search || filterTags.length > 0 || filterSources.length > 0
+                  ? 'No Matches'
+                  : 'No Songs Yet'
+              }
+              emptyMessage={
+                search || filterTags.length > 0 || filterSources.length > 0
+                  ? 'Try adjusting your search or filters'
+                  : 'Submit a request to add songs'
+              }
+            />
+          </m.div>
+        )}
+      </AnimatePresence>
 
       {/* Modals */}
       {deleteId && (

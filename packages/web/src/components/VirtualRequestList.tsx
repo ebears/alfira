@@ -1,18 +1,23 @@
 import type { SongRequest } from '@alfira/server/shared';
 import { memo } from 'react';
 import RequestCard from './RequestCard';
-import VirtualListShell from './VirtualListShell';
+import { VirtualList } from './VirtualList';
+
+// ---------------------------------------------------------------------------
+// Types
+// ---------------------------------------------------------------------------
 
 export interface VirtualRequestListProps {
   items: SongRequest[];
   isLoading: boolean;
   isFetching: boolean;
   isError: boolean;
+  hasMore: boolean;
   hasLoaded: boolean;
   isOwnFn: (requestedBy: string) => boolean;
   isAdmin: boolean;
   onRetry: () => void;
-  sentinelRef: (el: HTMLDivElement | null) => void;
+  onFetchMore: () => void;
   onApprove: (id: string) => void;
   onDeny: (id: string) => void;
   onCancel: (id: string) => void;
@@ -20,12 +25,16 @@ export interface VirtualRequestListProps {
   emptyMessage?: string;
 }
 
+// ---------------------------------------------------------------------------
+// Skeleton
+// ---------------------------------------------------------------------------
+
 function SkeletonList() {
   return (
     <div className='space-y-3'>
       {Array.from({ length: 4 }).map((_, i) => (
+        // eslint-disable-next-line react/no-array-index-key -- static skeleton placeholders
         <div
-          // eslint-disable-next-line react/no-array-index-key -- static skeleton placeholders
           key={`skel-${i}`}
           className='flex items-center gap-4 p-4 rounded-xl bg-elevated clay-resting'
         >
@@ -41,16 +50,21 @@ function SkeletonList() {
   );
 }
 
+// ---------------------------------------------------------------------------
+// Component
+// ---------------------------------------------------------------------------
+
 export const VirtualRequestList = memo(function VirtualRequestList({
   items,
   isLoading,
   isFetching,
   isError,
+  hasMore,
   hasLoaded,
   isOwnFn,
   isAdmin,
   onRetry,
-  sentinelRef,
+  onFetchMore,
   onApprove,
   onDeny,
   onCancel,
@@ -58,32 +72,32 @@ export const VirtualRequestList = memo(function VirtualRequestList({
   emptyMessage,
 }: VirtualRequestListProps) {
   return (
-    <VirtualListShell
+    <VirtualList
+      items={items}
+      getItemKey={(req) => req.id}
+      renderItem={(req) => (
+        <RequestCard
+          req={req}
+          isOwn={isOwnFn(req.requestedBy)}
+          isAdmin={isAdmin}
+          onApprove={onApprove}
+          onDeny={onDeny}
+          onCancel={onCancel}
+        />
+      )}
+      estimateSize={95}
+      itemClassName='pb-4'
       isLoading={isLoading}
       hasLoaded={hasLoaded}
-      isEmpty={items.length === 0}
       isFetching={isFetching}
       isError={isError}
+      hasMore={hasMore}
       onRetry={onRetry}
-      sentinelRef={sentinelRef}
+      onFetchMore={onFetchMore}
       skeleton={<SkeletonList />}
       emptyTitle={emptyTitle}
       emptyMessage={emptyMessage}
-    >
-      <div className='flex flex-col gap-3'>
-        {items.map((req) => (
-          <RequestCard
-            key={req.id}
-            req={req}
-            isOwn={isOwnFn(req.requestedBy)}
-            isAdmin={isAdmin}
-            onApprove={onApprove}
-            onDeny={onDeny}
-            onCancel={onCancel}
-          />
-        ))}
-      </div>
-    </VirtualListShell>
+    />
   );
 });
 

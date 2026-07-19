@@ -406,30 +406,18 @@ export async function getPlaylistMetadataWithVideos(
 }
 
 export async function preloadTrack(guildId: string, sessionId: string, url: string): Promise<void> {
-  // Resolve the track via NodeLink's loadtracks endpoint.
-  const loadUrl = new URL('/v4/loadtracks', NODELINK_URL);
-  loadUrl.searchParams.set('identifier', url);
-
-  const headers: Record<string, string> = { 'Content-Type': 'application/json' };
-  if (NODELINK_AUTH) headers.Authorization = NODELINK_AUTH;
-
-  const resp = await fetch(loadUrl, { method: 'GET', headers });
-  if (!resp.ok) {
-    throw new Error(`NodeLink loadtracks returned ${resp.status}`);
-  }
-
-  const data = (await resp.json()) as LoadTrackResponse;
-  const encoded = data.data?.encoded;
+  // Resolve the track via NodeLink's loadtracks endpoint.  Use the same
+  // fallback as getStreamFormat: if data.encoded is missing (e.g.
+  // playlist/search response), grab the first track from data.tracks.
+  const data = await loadTrack(url);
+  const encoded = data.data?.encoded ?? data.data?.tracks?.[0]?.encoded;
   if (!encoded) {
     throw new Error('NodeLink returned no encoded track for preload');
   }
 
-  // Set nextTrack on the player. Only send nextTrack — do NOT include
-  // the current track in the PATCH body. The Lavalink v4 spec expects
-  // noReplace as a query parameter, not a body field. Including track
-  // in the body without a proper noReplace query param causes NodeLink
-  // to restart the currently-playing track (audible restart glitch
-  // ~500ms into playback).
+  // Set nextTrack on the player.  Only send nextTrack — do NOT include
+  // track in the PATCH body, otherwise NodeLink will restart the
+  // currently-playing track.
   const patchUrl = new URL(
     `/v4/sessions/${encodeURIComponent(sessionId)}/players/${encodeURIComponent(guildId)}`,
     NODELINK_URL
@@ -443,7 +431,7 @@ export async function preloadTrack(guildId: string, sessionId: string, url: stri
     throw new Error(`NodeLink preload PATCH returned ${patchResp.status}`);
   }
 
-  logger.debug({ guildId, url }, 'Gapless preload succeeded');
+  logger.info({ guildId, url }, 'Gapless preload succeeded');
 }
 
 // ---------------------------------------------------------------------------

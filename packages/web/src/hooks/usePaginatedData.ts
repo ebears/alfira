@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
-export interface UseInfiniteScrollOptions<T, A extends unknown[], M = undefined> {
+export interface UsePaginatedDataOptions<T, A extends unknown[], M = undefined> {
   fetchPage: (
     page: number,
     limit: number,
@@ -16,7 +16,7 @@ export interface UseInfiniteScrollOptions<T, A extends unknown[], M = undefined>
   compareFn?: (a: T, b: T) => number;
 }
 
-export interface UseInfiniteScrollReturn<T, M = undefined> {
+export interface UsePaginatedDataReturn<T, M = undefined> {
   items: T[];
   isLoading: boolean;
   isFetching: boolean;
@@ -25,21 +25,21 @@ export interface UseInfiniteScrollReturn<T, M = undefined> {
   total: number;
   hasLoaded: boolean;
   metadata: M | undefined;
+  fetchNextPage: () => void;
   prepend: (item: T) => void;
   updateItem: (item: T) => void;
   removeItem: (id: string) => void;
-  reset: (searchQuery?: string) => void;
+  reset: () => void;
   refetch: () => void;
   retry: () => void;
-  sentinelRef: (el: HTMLDivElement | null) => void;
 }
 
-export function useVirtualizedInfiniteScroll<T, A extends unknown[], M = undefined>({
+export function usePaginatedData<T, A extends unknown[], M = undefined>({
   fetchPage,
-  limit = 24,
+  limit = 48,
   deps = [] as unknown as A,
   compareFn,
-}: UseInfiniteScrollOptions<T, A, M>): UseInfiniteScrollReturn<T, M> {
+}: UsePaginatedDataOptions<T, A, M>): UsePaginatedDataReturn<T, M> {
   const [items, setItems] = useState<T[]>([]);
   const [metadata, setMetadata] = useState<M | undefined>(undefined);
   const [isLoading, setIsLoading] = useState(false);
@@ -69,14 +69,8 @@ export function useVirtualizedInfiniteScroll<T, A extends unknown[], M = undefin
   const compareFnRef = useRef(compareFn);
   compareFnRef.current = compareFn;
 
-  const sentinelRefInternal = useRef<HTMLDivElement | null>(null);
-  const observerRef = useRef<IntersectionObserver | null>(null);
-  // Initial value is a no-op; immediately overwritten after render
-  // biome-ignore lint/suspicious/noEmptyBlockStatements: initial no-op value is immediately replaced
-  const fetchMoreFnRef = useRef<() => void>(() => {});
-
   const loadPage = useCallback(
-    async (page: number, isInitial = false, searchOverride?: string) => {
+    async (page: number, isInitial = false) => {
       if (isFetchingRef.current) return;
       if (!isInitial && !hasMoreRef.current) return;
 
@@ -84,8 +78,6 @@ export function useVirtualizedInfiniteScroll<T, A extends unknown[], M = undefin
         resetInProgressRef.current = true;
         // Delay the skeleton by 200ms — if the fetch completes faster,
         // the skeleton is never rendered, avoiding a flash.
-        // On subsequent deps changes (tab switch, filter change), keep
-        // stale items visible instead.
         if (!hasEverLoadedRef.current) {
           loadingTimerRef.current = setTimeout(() => {
             if (isMountedRef.current) {
@@ -98,10 +90,8 @@ export function useVirtualizedInfiniteScroll<T, A extends unknown[], M = undefin
       }
       setIsError(false);
 
-      const searchArgs = (searchOverride !== undefined ? [searchOverride] : depsRef.current) as A;
-
       try {
-        const result = await fetchPageRef.current(page, limit, ...searchArgs);
+        const result = await fetchPageRef.current(page, limit, ...depsRef.current);
         if (!isMountedRef.current) return;
 
         hasEverLoadedRef.current = true;
@@ -136,13 +126,11 @@ export function useVirtualizedInfiniteScroll<T, A extends unknown[], M = undefin
     [limit]
   );
 
-  const fetchMore = useCallback(() => {
+  const fetchNextPage = useCallback(() => {
     if (!hasMoreRef.current || isFetchingRef.current || resetInProgressRef.current) return;
     const nextPage = pageRef.current + 1;
     void loadPage(nextPage);
   }, [loadPage]);
-
-  fetchMoreFnRef.current = fetchMore;
 
   const retry = useCallback(() => {
     setIsError(false);
@@ -180,25 +168,21 @@ export function useVirtualizedInfiniteScroll<T, A extends unknown[], M = undefin
     setItems((prev) => prev.filter((i) => (i as { id: string }).id !== id));
   }, []);
 
-  const reset = useCallback(
-    (searchQuery?: string) => {
-      setItems([]);
-      setMetadata(undefined);
-      pageRef.current = 1;
-      setHasMore(true);
-      setIsError(false);
-      void loadPage(1, true, searchQuery);
-    },
-    [loadPage]
-  );
+  const reset = useCallback(() => {
+    setItems([]);
+    setMetadata(undefined);
+    pageRef.current = 1;
+    setHasMore(true);
+    setIsError(false);
+    void loadPage(1, true);
+  }, [loadPage]);
 
   const refetch = useCallback(() => {
     if (resetInProgressRef.current) return;
     setIsFetching(true);
     setIsError(false);
-    const searchArgs = depsRef.current as A;
     fetchPageRef
-      .current(1, limit, ...searchArgs)
+      .current(1, limit, ...depsRef.current)
       .then((result) => {
         if (!isMountedRef.current) return;
         setItems(result.items);
@@ -218,7 +202,7 @@ export function useVirtualizedInfiniteScroll<T, A extends unknown[], M = undefin
       });
   }, [limit]);
 
-  // Initial load — extract deps array to a variable so the linter can statically check it
+  // Initial load
   const depsArray = [...deps, loadPage];
   useEffect(() => {
     isMountedRef.current = true;
@@ -235,36 +219,6 @@ export function useVirtualizedInfiniteScroll<T, A extends unknown[], M = undefin
     // eslint-disable-next-line react-hooks/exhaustive-deps -- intentionally depends on deps to refetch on search change; loadPage is stable via ref
   }, depsArray);
 
-  // IntersectionObserver — created once, reads fetchMore via ref so it never goes stale
-  const setSentinelRef = useCallback((el: HTMLDivElement | null) => {
-    if (sentinelRefInternal.current === el) return;
-
-    if (observerRef.current) {
-      observerRef.current.disconnect();
-      observerRef.current = null;
-    }
-
-    sentinelRefInternal.current = el;
-
-    if (!el) return;
-
-    observerRef.current = new IntersectionObserver(
-      () => {
-        fetchMoreFnRef.current();
-      },
-      { rootMargin: '300px' }
-    );
-
-    observerRef.current.observe(el);
-  }, []); // intentionally empty — reads fetchMore via ref
-
-  // Cleanup observer on unmount
-  useEffect(() => {
-    return () => {
-      observerRef.current?.disconnect();
-    };
-  }, []);
-
   return {
     items,
     metadata,
@@ -274,12 +228,12 @@ export function useVirtualizedInfiniteScroll<T, A extends unknown[], M = undefin
     hasMore,
     total,
     hasLoaded,
+    fetchNextPage,
     prepend,
     updateItem,
     removeItem,
     reset,
     refetch,
     retry,
-    sentinelRef: setSentinelRef,
   };
 }
