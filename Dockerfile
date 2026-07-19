@@ -16,8 +16,13 @@ ARG GIT_HASH
 ENV GIT_HASH=${GIT_HASH}
 RUN apk add --no-cache git
 WORKDIR /usr/local/nodelink
-ARG NODELINK_VERSION=v3.7.0
-RUN git clone --depth 1 --branch ${NODELINK_VERSION} https://github.com/PerformanC/NodeLink.git . && \
+# Pinned to dev @ e524ed7 (2025-07-17) — fixes gapless encoder silence present in v3.7.0.
+# Update periodically; when stable, pin a specific commit.
+ARG NODELINK_VERSION=e524ed7f38c01e0fc8f031134c86ee87e0bc7ffa
+RUN git init . && \
+    git remote add origin https://github.com/PerformanC/NodeLink.git && \
+    git fetch --depth 1 origin ${NODELINK_VERSION} && \
+    git checkout FETCH_HEAD && \
     bun install && \
     bun run build && \
     rm -rf .git
