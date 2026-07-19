@@ -1,6 +1,9 @@
 import type { Playlist, PlaylistDetail, Song, TagItem } from '@alfira/server/shared';
 import type { FetchSongsOptions } from '@alfira/server/shared/api';
 import { fetchTags, updatePlaylistTag } from '@alfira/server/shared/api';
+import { AnimatePresence } from 'motion/react';
+import * as m from 'motion/react-m';
+import { pageVariants, viewTransition } from '../lib/motion';
 import { usePaginatedData } from '../hooks/usePaginatedData';
 
 type PlaylistDetailMeta = Omit<PlaylistDetail, 'songs'>;
@@ -730,64 +733,86 @@ export default function PlaylistDetailPage() {
             addLabel='add some songs'
           />
         )
-      ) : viewMode === 'list' ? (
-        <VirtualSongList
-          items={songItems}
-          isAdminView={isAdminView}
-          playlists={[]}
-          isLoading={isLoading}
-          isFetching={isFetching}
-          isError={isError}
-          hasMore={hasMore}
-          hasLoaded={!isLoading}
-          playingId={playingSongId}
-          onRetry={retry}
-          onFetchMore={fetchNextPage}
-          onDelete={
-            selectionMode
-              ? undefined
-              : (id) => {
-                  const ps = songs.find((p) => p.songId === id);
-                  if (ps) setRemoveId(ps.songId);
-                }
-          }
-          onPlay={handlePlayFromSong}
-          onAddToQueue={handleAddToQueue}
-          selectionMode={selectionMode}
-          isSelected={bulk.isSelected}
-          onToggleSelect={bulk.toggle}
-          emptyTitle='No Songs'
-          emptyMessage='Add songs to this playlist'
-        />
       ) : (
-        <VirtualSongGrid
-          items={songItems}
-          isAdminView={isAdminView}
-          playlists={[]}
-          isLoading={isLoading}
-          isFetching={isFetching}
-          isError={isError}
-          hasMore={hasMore}
-          hasLoaded={!isLoading}
-          playingId={playingSongId}
-          onRetry={retry}
-          onFetchMore={fetchNextPage}
-          onDelete={
-            selectionMode
-              ? undefined
-              : (id) => {
-                  const ps = songs.find((p) => p.songId === id);
-                  if (ps) setRemoveId(ps.songId);
+        <AnimatePresence mode='wait'>
+          {viewMode === 'list' ? (
+            <m.div
+              key='list'
+              variants={pageVariants}
+              initial='initial'
+              animate='animate'
+              exit='exit'
+              transition={viewTransition}
+            >
+              <VirtualSongList
+                items={songItems}
+                isAdminView={isAdminView}
+                playlists={[]}
+                isLoading={isLoading}
+                isFetching={isFetching}
+                isError={isError}
+                hasMore={hasMore}
+                hasLoaded={!isLoading}
+                playingId={playingSongId}
+                onRetry={retry}
+                onFetchMore={fetchNextPage}
+                onDelete={
+                  selectionMode
+                    ? undefined
+                    : (id) => {
+                        const ps = songs.find((p) => p.songId === id);
+                        if (ps) setRemoveId(ps.songId);
+                      }
                 }
-          }
-          onPlay={handlePlayFromSong}
-          onAddToQueue={handleAddToQueue}
-          selectionMode={selectionMode}
-          isSelected={bulk.isSelected}
-          onToggleSelect={bulk.toggle}
-          emptyTitle='No Songs'
-          emptyMessage='Add songs to this playlist'
-        />
+                onPlay={handlePlayFromSong}
+                onAddToQueue={handleAddToQueue}
+                selectionMode={selectionMode}
+                isSelected={bulk.isSelected}
+                onToggleSelect={bulk.toggle}
+                emptyTitle='No Songs'
+                emptyMessage='Add songs to this playlist'
+              />
+            </m.div>
+          ) : (
+            <m.div
+              key='grid'
+              variants={pageVariants}
+              initial='initial'
+              animate='animate'
+              exit='exit'
+              transition={viewTransition}
+            >
+              <VirtualSongGrid
+                items={songItems}
+                isAdminView={isAdminView}
+                playlists={[]}
+                isLoading={isLoading}
+                isFetching={isFetching}
+                isError={isError}
+                hasMore={hasMore}
+                hasLoaded={!isLoading}
+                playingId={playingSongId}
+                onRetry={retry}
+                onFetchMore={fetchNextPage}
+                onDelete={
+                  selectionMode
+                    ? undefined
+                    : (id) => {
+                        const ps = songs.find((p) => p.songId === id);
+                        if (ps) setRemoveId(ps.songId);
+                      }
+                }
+                onPlay={handlePlayFromSong}
+                onAddToQueue={handleAddToQueue}
+                selectionMode={selectionMode}
+                isSelected={bulk.isSelected}
+                onToggleSelect={bulk.toggle}
+                emptyTitle='No Songs'
+                emptyMessage='Add songs to this playlist'
+              />
+            </m.div>
+          )}
+        </AnimatePresence>
       )}
 
       {/* Modals */}

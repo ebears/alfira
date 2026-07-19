@@ -60,3 +60,9 @@ export const metadataTransition: Transition = {
   duration: 0.18,
   ease: 'easeOut',
 };
+
+/** Shared crossfade transition used for page and view mode changes. */
+export const viewTransition: Transition = {
+  duration: 0.125,
+  ease: 'easeOut',
+};
