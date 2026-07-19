@@ -151,7 +151,7 @@ export default function ListToolbar({
   return (
     <>
       {/* ── Toolbar ── */}
-      <div className='flex items-center gap-2 mb-3'>
+      <div className='flex items-center gap-2 mb-1'>
         {/* Search */}
         <div className='relative flex-1'>
           <MagnifyingGlassIcon
@@ -269,7 +269,7 @@ export default function ListToolbar({
 
       {/* ── Filter chips ── */}
       {hasActiveFilters && (
-        <div className='mb-2'>
+        <div className='mb-1'>
           <FilterChips
             tags={filterTags}
             sources={filterSources}
