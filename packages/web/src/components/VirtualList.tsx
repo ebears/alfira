@@ -128,7 +128,7 @@ function VirtualListInner<T>({
   return (
     <div
       ref={containerRef}
-      className='relative'
+      className='relative flex-1 min-h-0 flex flex-col'
       style={{ opacity: 0, transition: 'opacity 120ms ease' }}
     >
       {showSkeleton && skeleton}
@@ -138,9 +138,8 @@ function VirtualListInner<T>({
       {showContent && (
         <div
           ref={scrollRef}
-          className='overflow-y-auto px-2 pt-3 pb-4 min-h-0'
+          className='overflow-y-auto px-2 pt-3 pb-24 md:pb-20 min-h-0 flex-1'
           style={{
-            maxHeight: 'calc(100vh - 245px)',
             WebkitMaskImage:
               'linear-gradient(to bottom, transparent 0%, black 20px, black calc(100% - 40px), transparent 100%)',
             maskImage:

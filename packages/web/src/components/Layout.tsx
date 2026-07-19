@@ -45,7 +45,7 @@ function LayoutContent() {
   };
 
   return (
-    <div className='flex h-full bg-surface'>
+    <div className='flex h-full bg-surface overflow-hidden'>
       {/* ------------------------------------------------------------------ */}
       {/* Mobile Navigation - visible on small screens */}
       {/* ------------------------------------------------------------------ */}
@@ -247,7 +247,7 @@ function QueueLayout() {
   return (
     <>
       <div className='flex-1 flex flex-col min-w-0 pt-14 md:pt-0 overflow-hidden'>
-        <main className='flex-1 overflow-y-auto pb-8 md:pb-8'>
+        <main className='flex-1 overflow-y-auto pb-24 md:pb-20'>
           <AnimatedOutlet />
         </main>
         <NowPlayingBar />

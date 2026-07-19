@@ -245,9 +245,8 @@ export const VirtualSongGrid = memo(function VirtualSongGrid({
   return (
     <div
       ref={scrollRefCallback}
-      className='pt-3 min-h-0'
+      className='pt-3 min-h-0 flex-1'
       style={{
-        maxHeight: 'calc(100vh - 260px)',
         overflowY: isContentReady ? 'auto' : 'hidden',
         WebkitMaskImage: isContentReady
           ? 'linear-gradient(to bottom, transparent 0%, black 20px, black calc(100% - 40px), transparent 100%)'
