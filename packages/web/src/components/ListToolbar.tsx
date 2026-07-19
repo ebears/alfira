@@ -177,7 +177,7 @@ export default function ListToolbar({
             }`}
             title={selectionMode ? 'Exit selection mode' : 'Select items'}
           >
-            <CheckSquareIcon size={16} weight='duotone' />
+            <CheckSquareIcon size={16} weight='fill' />
           </Button>
         )}
 
@@ -191,7 +191,7 @@ export default function ListToolbar({
           }`}
           title={`Filter${hasActiveFilters ? ` (${filterTags.length + filterSources.length} active)` : ''}`}
         >
-          <FunnelIcon size={16} weight='duotone' />
+          <FunnelIcon size={16} weight='fill' />
         </Button>
 
         {/* Sort dropdown */}
@@ -205,7 +205,7 @@ export default function ListToolbar({
             }`}
             title={`Sort by ${sortOptions.find((o) => o.value === sort)?.label ?? sort} (${order === 'asc' ? 'ascending' : 'descending'})`}
           >
-            <SortAscendingIcon size={16} weight='duotone' />
+            <SortAscendingIcon size={16} weight='fill' />
             <CaretDownIcon size={10} weight='fill' className='text-faint' />
           </Button>
 
@@ -259,9 +259,9 @@ export default function ListToolbar({
             title={viewMode === 'grid' ? 'List view' : 'Grid view'}
           >
             {viewMode === 'grid' ? (
-              <RowsIcon size={16} weight='duotone' />
+              <RowsIcon size={16} weight='fill' />
             ) : (
-              <SquaresFourIcon size={16} weight='duotone' />
+              <SquaresFourIcon size={16} weight='fill' />
             )}
           </Button>
         )}
