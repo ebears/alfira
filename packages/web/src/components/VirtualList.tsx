@@ -127,7 +127,7 @@ function VirtualListInner<T>({
   return (
     <div
       ref={containerRef}
-      className='relative flex-1 min-h-0 flex flex-col'
+      className='relative flex-1 min-h-0 flex flex-col overflow-x-hidden'
       style={{ opacity: 0, transition: 'opacity 120ms ease' }}
     >
       {showSkeleton && skeleton}
@@ -137,7 +137,7 @@ function VirtualListInner<T>({
       {showContent && (
         <div
           ref={scrollRef}
-          className='overflow-y-auto px-2 pt-3 pb-4 min-h-0 flex-1'
+          className='overflow-y-auto overflow-x-hidden px-2 pt-3 pb-4 min-h-0 flex-1'
           style={{
             WebkitMaskImage:
               'linear-gradient(to bottom, transparent 0%, black 20px, black calc(100% - 20px), transparent 100%)',
@@ -216,6 +216,7 @@ function VirtualListInner<T>({
                     width: '100%',
                     height: `${virtualRow.size}px`,
                     transform: `translateY(${virtualRow.start}px)`,
+                    overflow: 'hidden',
                   }}
                 >
                   <m.div layout initial='initial' animate='animate' variants={listItemVariants}>
