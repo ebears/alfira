@@ -1,9 +1,7 @@
-import { AnimatePresence, type Transition } from 'motion/react';
+import { AnimatePresence } from 'motion/react';
 import * as m from 'motion/react-m';
 import { useLocation, useOutlet } from 'react-router-dom';
-import { pageVariants } from '../lib/motion';
-
-const pageTransition: Transition = { duration: 0.18, ease: 'easeOut' };
+import { pageVariants, viewTransition } from '../lib/motion';
 
 /**
  * Drop-in replacement for react-router-dom's <Outlet /> that animates page
@@ -26,7 +24,7 @@ export function AnimatedOutlet() {
         initial='initial'
         animate='animate'
         exit='exit'
-        transition={pageTransition}
+        transition={viewTransition}
       >
         {outlet}
       </m.div>

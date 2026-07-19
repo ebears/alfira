@@ -140,7 +140,7 @@ function VirtualListInner<T>({
           ref={scrollRef}
           className='overflow-y-auto px-4 pt-4 pb-4 min-h-0'
           style={{
-            maxHeight: 'calc(100vh - 280px)',
+            maxHeight: 'calc(100vh - 340px)',
             WebkitMaskImage:
               'linear-gradient(to bottom, black 0%, black calc(100% - 40px), transparent 100%)',
             maskImage:

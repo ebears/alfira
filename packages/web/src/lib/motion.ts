@@ -31,7 +31,7 @@ export const listItemVariants: Variants = {
   animate: {
     opacity: 1,
     x: 0,
-    transition: { type: 'spring', stiffness: 650, damping: 22 },
+    transition: { type: 'spring', stiffness: 400, damping: 38 },
   },
   exit: { opacity: 0 },
 };
@@ -58,5 +58,11 @@ export const metadataVariants: Variants = {
 
 export const metadataTransition: Transition = {
   duration: 0.18,
+  ease: 'easeOut',
+};
+
+/** Shared crossfade transition used for page and view mode changes. */
+export const viewTransition: Transition = {
+  duration: 0.125,
   ease: 'easeOut',
 };

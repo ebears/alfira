@@ -388,7 +388,7 @@ function VolumeSlider({
           max={max}
           value={numeric}
           onChange={(e) => onChange(e.target.value)}
-          className='volume-range-input'
+          className='volume-range-input min-w-0'
           style={
             {
               ['--volume-pct' as string]: pct,
