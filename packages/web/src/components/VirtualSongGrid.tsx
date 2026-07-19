@@ -1,0 +1,252 @@
+import type { Playlist, Song } from '@alfira/server/shared';
+import { useContainerPosition, useMasonry, usePositioner, useResizeObserver } from 'masonic';
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import SongCard from './SongCard';
+
+// ---------------------------------------------------------------------------
+// Types
+// ---------------------------------------------------------------------------
+
+interface VirtualSongGridProps {
+  items: Song[];
+  isAdminView: boolean;
+  playlists: Playlist[];
+  isLoading: boolean;
+  isFetching: boolean;
+  isError: boolean;
+  hasMore: boolean;
+  hasLoaded: boolean;
+  playingId: string | null;
+  onRetry: () => void;
+  onFetchMore: () => void;
+  onDelete?: (id: string) => void;
+  onPlay: (id: string) => void;
+  onAddToQueue: (id: string) => void;
+  emptyTitle: string;
+  emptyMessage?: string;
+  // Bulk selection
+  selectionMode?: boolean;
+  isSelected?: (id: string) => boolean;
+  onToggleSelect?: (id: string) => void;
+}
+
+// ---------------------------------------------------------------------------
+// Skeleton
+// ---------------------------------------------------------------------------
+
+function SkeletonGrid() {
+  return (
+    <div className='px-4 pt-4'>
+      <div
+        className='grid gap-4'
+        style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))' }}
+      >
+        {Array.from({ length: 8 }).map((_, i) => (
+          // eslint-disable-next-line react/no-array-index-key -- static skeleton placeholders
+          <div
+            key={`skeleton-${i}`}
+            className='rounded-lg bg-elevated clay-resting overflow-hidden'
+          >
+            <div className='skeleton aspect-square m-3 rounded-lg' />
+            <div className='p-4 flex flex-col gap-2'>
+              <div className='skeleton h-3.5 w-3/5' />
+              <div className='skeleton h-3 w-4/5' />
+              <div className='skeleton h-3 w-2/5' />
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Main component
+// ---------------------------------------------------------------------------
+
+export const VirtualSongGrid = memo(function VirtualSongGrid({
+  items,
+  isAdminView,
+  playlists,
+  isLoading,
+  isFetching,
+  isError,
+  hasMore,
+  hasLoaded,
+  playingId,
+  onRetry,
+  onFetchMore,
+  onDelete,
+  onPlay,
+  onAddToQueue,
+  emptyTitle,
+  emptyMessage,
+  selectionMode = false,
+  isSelected,
+  onToggleSelect,
+}: VirtualSongGridProps) {
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const masonryContainerRef = useRef<HTMLDivElement>(null);
+  const [scrollTop, setScrollTop] = useState(0);
+  const [containerHeight, setContainerHeight] = useState(600);
+
+  // ── Track scroll container's scroll position and height ────────────
+  useEffect(() => {
+    const el = scrollContainerRef.current;
+    if (!el) return;
+
+    const onScroll = () => setScrollTop(el.scrollTop);
+    const onResize = () => setContainerHeight(el.clientHeight);
+
+    // Measure now, and also after a frame to catch CSS layout settling.
+    setContainerHeight(el.clientHeight);
+    requestAnimationFrame(() => {
+      if (scrollContainerRef.current) {
+        setContainerHeight(scrollContainerRef.current.clientHeight);
+      }
+    });
+
+    el.addEventListener('scroll', onScroll, { passive: true });
+    window.addEventListener('resize', onResize);
+
+    return () => {
+      el.removeEventListener('scroll', onScroll);
+      window.removeEventListener('resize', onResize);
+    };
+  }, [hasLoaded]);
+
+  // ── Masonry positioner ─────────────────────────────────────────────
+  const { width: measuredWidth } = useContainerPosition(scrollContainerRef);
+  const gridWidth =
+    measuredWidth || (typeof window !== 'undefined' ? window.innerWidth - 300 : 960);
+  const positioner = usePositioner({
+    width: gridWidth,
+    columnWidth: 260,
+    columnGutter: 0, // We handle padding in the render wrapper
+  });
+  const resizeObserver = useResizeObserver(positioner);
+
+  // ── Infinite scroll trigger ────────────────────────────────────────
+  const handleRender = useCallback(
+    (_startIndex: number, stopIndex: number | undefined, _currentItems: Song[]) => {
+      if (stopIndex !== undefined && stopIndex >= items.length - 10 && hasMore && !isFetching) {
+        onFetchMore();
+      }
+    },
+    [items.length, hasMore, isFetching, onFetchMore]
+  );
+
+  // ── Grid card renderer (closure capturing outer props) ─────────────
+  const GridCard = useMemo(() => {
+    const Component = ({
+      index: _index,
+      width,
+      data: song,
+    }: {
+      index: number;
+      width: number;
+      data: Song;
+    }) => (
+      <div style={{ width, padding: '0 8px 16px' }}>
+        <SongCard
+          song={song}
+          variant='grid'
+          isAdminView={isAdminView}
+          playlists={playlists}
+          onDelete={onDelete}
+          onPlay={() => onPlay(song.id)}
+          isPlaying={playingId === song.id}
+          onAddToQueue={() => onAddToQueue(song.id)}
+          selectionMode={selectionMode}
+          isSelected={isSelected?.(song.id) ?? false}
+          onToggleSelect={onToggleSelect ? () => onToggleSelect(song.id) : undefined}
+        />
+      </div>
+    );
+    Component.displayName = 'GridCard';
+    return Component;
+  }, [
+    isAdminView,
+    playlists,
+    onDelete,
+    onPlay,
+    playingId,
+    onAddToQueue,
+    selectionMode,
+    isSelected,
+    onToggleSelect,
+  ]);
+
+  // ── Build the masonry ──────────────────────────────────────────────
+  const showSkeleton = isLoading;
+  const showEmpty = hasLoaded && items.length === 0;
+  const isContentReady = !isLoading && hasLoaded && items.length > 0;
+
+  const masonry = useMasonry({
+    positioner,
+    resizeObserver,
+    items,
+    scrollTop,
+    height: containerHeight || 600,
+    containerRef: masonryContainerRef,
+    itemKey: (song: Song) => song.id,
+    itemHeightEstimate: 330,
+    overscanBy: 2,
+    render: GridCard as React.ComponentType<{ index: number; width: number; data: unknown }>,
+    onRender: isContentReady ? handleRender : undefined,
+  });
+
+  return (
+    <div
+      ref={scrollContainerRef}
+      className='min-h-0'
+      style={{
+        maxHeight: 'calc(100vh - 340px)',
+        overflowY: isContentReady ? 'auto' : 'hidden',
+        WebkitMaskImage: isContentReady
+          ? 'linear-gradient(to bottom, black 0%, black calc(100% - 40px), transparent 100%)'
+          : undefined,
+        maskImage: isContentReady
+          ? 'linear-gradient(to bottom, black 0%, black calc(100% - 40px), transparent 100%)'
+          : undefined,
+      }}
+    >
+      {showSkeleton && <SkeletonGrid />}
+
+      {showEmpty && (
+        <div className='px-4 pt-4'>
+          <div className='text-center py-16'>
+            <p className='text-fg font-semibold'>{emptyTitle}</p>
+            {emptyMessage && <p className='text-muted text-sm mt-1'>{emptyMessage}</p>}
+          </div>
+        </div>
+      )}
+
+      {/* Masonry is always in the DOM (ref attachment) but hidden until content is ready */}
+      <div style={{ display: isContentReady ? undefined : 'none' }}>{masonry}</div>
+
+      {isContentReady && isFetching && (
+        <div className='flex justify-center py-4 gap-2'>
+          {Array.from({ length: 3 }).map((_, i) => (
+            // eslint-disable-next-line react/no-array-index-key -- static loading indicator
+            <div key={`loading-dot-${i}`} className='skeleton h-3 w-3 rounded-full animate-pulse' />
+          ))}
+        </div>
+      )}
+
+      {isContentReady && isError && (
+        <div className='flex justify-center py-4'>
+          <button
+            type='button'
+            onClick={onRetry}
+            className='font-mono text-xs text-muted hover:text-fg transition-colors underline'
+          >
+            Failed to load more. Retry
+          </button>
+        </div>
+      )}
+    </div>
+  );
+});
+
+export default VirtualSongGrid;

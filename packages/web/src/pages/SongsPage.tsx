@@ -19,6 +19,7 @@ import ListToolbar from '../components/ListToolbar';
 import NotificationToast from '../components/NotificationToast';
 
 import { PageHeader } from '../components/ui/PageHeader';
+import { VirtualSongGrid } from '../components/VirtualSongGrid';
 import { VirtualSongList } from '../components/VirtualSongList';
 import { useAdminView } from '../context/AdminViewContext';
 import { usePermissions } from '../context/PermissionsContext';
@@ -55,6 +56,9 @@ export default function SongsPage() {
 
   // Bulk selection
   const bulk = useBulkSelection();
+  const [viewMode, setViewMode] = useState<'list' | 'grid'>(
+    () => (localStorage.getItem('alfira-song-view') as 'list' | 'grid' | null) ?? 'list'
+  );
   const [selectionMode, setSelectionMode] = useState(false);
   const [bulkDeleting, setBulkDeleting] = useState(false);
   const [bulkDeleteConfirm, setBulkDeleteConfirm] = useState(false);
@@ -370,38 +374,75 @@ export default function SongsPage() {
           if (selectionMode) bulk.clearAll();
           setSelectionMode((v) => !v);
         }}
+        viewMode={viewMode}
+        onViewModeChange={(mode) => {
+          localStorage.setItem('alfira-song-view', mode);
+          setViewMode(mode);
+        }}
       />
 
       {/* Content */}
-      <VirtualSongList
-        items={items}
-        isAdminView={isAdminView}
-        playlists={playlists}
-        isLoading={isLoading}
-        isFetching={isFetching}
-        isError={isError}
-        hasMore={hasMore}
-        hasLoaded={hasLoaded}
-        playingId={playingId}
-        onRetry={retry}
-        onFetchMore={fetchNextPage}
-        onDelete={selectionMode ? undefined : handleSetDeleteId}
-        onPlay={handlePlayFromSong}
-        onAddToQueue={handleAddToQueue}
-        selectionMode={selectionMode}
-        isSelected={bulk.isSelected}
-        onToggleSelect={bulk.toggle}
-        emptyTitle={
-          search || filterTags.length > 0 || filterSources.length > 0
-            ? 'No Matches'
-            : 'No Songs Yet'
-        }
-        emptyMessage={
-          search || filterTags.length > 0 || filterSources.length > 0
-            ? 'Try adjusting your search or filters'
-            : 'Submit a request to add songs'
-        }
-      />
+      {viewMode === 'list' ? (
+        <VirtualSongList
+          items={items}
+          isAdminView={isAdminView}
+          playlists={playlists}
+          isLoading={isLoading}
+          isFetching={isFetching}
+          isError={isError}
+          hasMore={hasMore}
+          hasLoaded={hasLoaded}
+          playingId={playingId}
+          onRetry={retry}
+          onFetchMore={fetchNextPage}
+          onDelete={selectionMode ? undefined : handleSetDeleteId}
+          onPlay={handlePlayFromSong}
+          onAddToQueue={handleAddToQueue}
+          selectionMode={selectionMode}
+          isSelected={bulk.isSelected}
+          onToggleSelect={bulk.toggle}
+          emptyTitle={
+            search || filterTags.length > 0 || filterSources.length > 0
+              ? 'No Matches'
+              : 'No Songs Yet'
+          }
+          emptyMessage={
+            search || filterTags.length > 0 || filterSources.length > 0
+              ? 'Try adjusting your search or filters'
+              : 'Submit a request to add songs'
+          }
+        />
+      ) : (
+        <VirtualSongGrid
+          items={items}
+          isAdminView={isAdminView}
+          playlists={playlists}
+          isLoading={isLoading}
+          isFetching={isFetching}
+          isError={isError}
+          hasMore={hasMore}
+          hasLoaded={hasLoaded}
+          playingId={playingId}
+          onRetry={retry}
+          onFetchMore={fetchNextPage}
+          onDelete={selectionMode ? undefined : handleSetDeleteId}
+          onPlay={handlePlayFromSong}
+          onAddToQueue={handleAddToQueue}
+          selectionMode={selectionMode}
+          isSelected={bulk.isSelected}
+          onToggleSelect={bulk.toggle}
+          emptyTitle={
+            search || filterTags.length > 0 || filterSources.length > 0
+              ? 'No Matches'
+              : 'No Songs Yet'
+          }
+          emptyMessage={
+            search || filterTags.length > 0 || filterSources.length > 0
+              ? 'Try adjusting your search or filters'
+              : 'Submit a request to add songs'
+          }
+        />
+      )}
 
       {/* Modals */}
       {deleteId && (

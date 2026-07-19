@@ -5,7 +5,9 @@ import {
   CheckSquareIcon,
   FunnelIcon,
   MagnifyingGlassIcon,
+  RowsIcon,
   SortAscendingIcon,
+  SquaresFourIcon,
 } from '@phosphor-icons/react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import AddFilterPopover from './AddFilterPopover';
@@ -52,6 +54,10 @@ export interface ListToolbarProps {
   showBulkToggle?: boolean;
   selectionMode?: boolean;
   onToggleSelectionMode?: () => void;
+
+  // ── View mode toggle ──
+  viewMode?: 'list' | 'grid';
+  onViewModeChange?: (mode: 'list' | 'grid') => void;
 }
 
 // ---------------------------------------------------------------------------
@@ -77,6 +83,8 @@ export default function ListToolbar({
   showBulkToggle = false,
   selectionMode = false,
   onToggleSelectionMode,
+  viewMode,
+  onViewModeChange,
 }: ListToolbarProps) {
   // ── Search (local mirror + debounce) ─────────────────────────────
   const [searchInput, setSearchInput] = useState(searchValue);
@@ -240,6 +248,23 @@ export default function ListToolbar({
             </div>
           )}
         </div>
+
+        {/* View mode toggle */}
+        {onViewModeChange && (
+          <Button
+            variant='inherit'
+            surface='surface'
+            onClick={() => onViewModeChange(viewMode === 'grid' ? 'list' : 'grid')}
+            className='flex items-center gap-1.5 px-2.5'
+            title={viewMode === 'grid' ? 'List view' : 'Grid view'}
+          >
+            {viewMode === 'grid' ? (
+              <RowsIcon size={16} weight='duotone' />
+            ) : (
+              <SquaresFourIcon size={16} weight='duotone' />
+            )}
+          </Button>
+        )}
       </div>
 
       {/* ── Filter chips ── */}
