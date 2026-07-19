@@ -145,36 +145,13 @@ export const VirtualSongGrid = memo(function VirtualSongGrid({
     [items.length, hasMore, isFetching, onFetchMore]
   );
 
-  // ── Grid card renderer (closure capturing outer props) ─────────────
-  const GridCard = useMemo(() => {
-    const Component = ({
-      index: _index,
-      width,
-      data: song,
-    }: {
-      index: number;
-      width: number;
-      data: Song;
-    }) => (
-      <div style={{ width, padding: '0 8px 16px' }}>
-        <SongCard
-          song={song}
-          variant='grid'
-          isAdminView={isAdminView}
-          playlists={playlists}
-          onDelete={onDelete}
-          onPlay={() => onPlay(song.id)}
-          isPlaying={playingId === song.id}
-          onAddToQueue={() => onAddToQueue(song.id)}
-          selectionMode={selectionMode}
-          isSelected={isSelected?.(song.id) ?? false}
-          onToggleSelect={onToggleSelect ? () => onToggleSelect(song.id) : undefined}
-        />
-      </div>
-    );
-    Component.displayName = 'GridCard';
-    return Component;
-  }, [
+  // ── Grid card renderer (stable component identity via refs) ─────────
+  // The masonry render component must stay referentially stable across
+  // re-renders. Changing component identity (e.g. when isAdminView
+  // toggles) causes React to unmount + remount every visible card,
+  // producing a visible flash. We store dynamic props in a ref so the
+  // component type identity never changes.
+  const cardPropsRef = useRef({
     isAdminView,
     playlists,
     onDelete,
@@ -184,7 +161,52 @@ export const VirtualSongGrid = memo(function VirtualSongGrid({
     selectionMode,
     isSelected,
     onToggleSelect,
-  ]);
+  });
+  cardPropsRef.current = {
+    isAdminView,
+    playlists,
+    onDelete,
+    onPlay,
+    playingId,
+    onAddToQueue,
+    selectionMode,
+    isSelected,
+    onToggleSelect,
+  };
+
+  const GridCard = useMemo(() => {
+    const Component = ({
+      index: _index,
+      width,
+      data: song,
+    }: {
+      index: number;
+      width: number;
+      data: Song;
+    }) => {
+      const p = cardPropsRef.current;
+      return (
+        <div style={{ width, padding: '0 8px 16px' }}>
+          <SongCard
+            song={song}
+            variant='grid'
+            isAdminView={p.isAdminView}
+            playlists={p.playlists}
+            onDelete={p.onDelete}
+            onPlay={() => p.onPlay(song.id)}
+            isPlaying={p.playingId === song.id}
+            onAddToQueue={() => p.onAddToQueue(song.id)}
+            selectionMode={p.selectionMode}
+            isSelected={p.isSelected?.(song.id) ?? false}
+            onToggleSelect={p.onToggleSelect ? () => p.onToggleSelect(song.id) : undefined}
+          />
+        </div>
+      );
+    };
+    Component.displayName = 'GridCard';
+    return Component;
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- intentionally stable; dynamic values come from ref
+  }, []);
 
   // ── Build the masonry ──────────────────────────────────────────────
   const showSkeleton = isLoading;
