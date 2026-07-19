@@ -138,13 +138,13 @@ function VirtualListInner<T>({
       {showContent && (
         <div
           ref={scrollRef}
-          className='overflow-y-auto px-4 pt-4 pb-4 min-h-0'
+          className='overflow-y-auto px-2 pt-3 pb-4 min-h-0'
           style={{
-            maxHeight: 'calc(100vh - 340px)',
+            maxHeight: 'calc(100vh - 245px)',
             WebkitMaskImage:
-              'linear-gradient(to bottom, black 0%, black calc(100% - 40px), transparent 100%)',
+              'linear-gradient(to bottom, transparent 0%, black 20px, black calc(100% - 40px), transparent 100%)',
             maskImage:
-              'linear-gradient(to bottom, black 0%, black calc(100% - 40px), transparent 100%)',
+              'linear-gradient(to bottom, transparent 0%, black 20px, black calc(100% - 40px), transparent 100%)',
           }}
         >
           <div

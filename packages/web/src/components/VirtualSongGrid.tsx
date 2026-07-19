@@ -200,7 +200,7 @@ export const VirtualSongGrid = memo(function VirtualSongGrid({
     }) => {
       const p = cardPropsRef.current;
       return (
-        <div style={{ width, padding: '0 8px 16px' }}>
+        <div style={{ width, padding: '0 6px 16px' }}>
           <SongCard
             song={song}
             variant='grid'
@@ -245,15 +245,15 @@ export const VirtualSongGrid = memo(function VirtualSongGrid({
   return (
     <div
       ref={scrollRefCallback}
-      className='min-h-0'
+      className='pt-3 min-h-0'
       style={{
-        maxHeight: 'calc(100vh - 340px)',
+        maxHeight: 'calc(100vh - 260px)',
         overflowY: isContentReady ? 'auto' : 'hidden',
         WebkitMaskImage: isContentReady
-          ? 'linear-gradient(to bottom, black 0%, black calc(100% - 40px), transparent 100%)'
+          ? 'linear-gradient(to bottom, transparent 0%, black 20px, black calc(100% - 40px), transparent 100%)'
           : undefined,
         maskImage: isContentReady
-          ? 'linear-gradient(to bottom, black 0%, black calc(100% - 40px), transparent 100%)'
+          ? 'linear-gradient(to bottom, transparent 0%, black 20px, black calc(100% - 40px), transparent 100%)'
           : undefined,
       }}
     >
