@@ -32,6 +32,12 @@ interface VirtualSongGridProps {
   onToggleSelect?: (id: string) => void;
 }
 
+/** Composite item passed to masonic so isPlaying changes trigger re-renders. */
+interface GridSongItem {
+  song: Song;
+  isPlaying: boolean;
+}
+
 // ---------------------------------------------------------------------------
 // Skeleton
 // ---------------------------------------------------------------------------
@@ -133,12 +139,22 @@ export const VirtualSongGrid = memo(function VirtualSongGrid({
 
   // ── Infinite scroll trigger ────────────────────────────────────────
   const handleRender = useCallback(
-    (_startIndex: number, stopIndex: number | undefined, _currentItems: Song[]) => {
+    (_startIndex: number, stopIndex: number | undefined, _currentItems: GridSongItem[]) => {
       if (stopIndex !== undefined && stopIndex >= items.length - 10 && hasMore && !isFetching) {
         onFetchMore();
       }
     },
     [items.length, hasMore, isFetching, onFetchMore]
+  );
+
+  // ── Grid items (song + playing state) ──────────────────────────────
+  // Bundling isPlaying into the item data lets masonic detect playingId
+  // changes as data changes and update cards in-place (same itemKey = no
+  // unmount/remount flash). The GridCard render component stays memoized
+  // with empty deps so its identity is stable across all re-renders.
+  const gridItems: GridSongItem[] = useMemo(
+    () => items.map((song) => ({ song, isPlaying: playingId === song.id })),
+    [items, playingId]
   );
 
   // ── Grid card renderer (stable component identity via refs) ─────────
@@ -147,12 +163,15 @@ export const VirtualSongGrid = memo(function VirtualSongGrid({
   // toggles) causes React to unmount + remount every visible card,
   // producing a visible flash. We store dynamic props in a ref so the
   // component type identity never changes.
+  //
+  // NB: playingId is NOT in the ref because it lives in gridItems (above);
+  // masonic re-renders individual cards when isPlaying flips without
+  // changing the render function identity.
   const cardPropsRef = useRef({
     isAdminView,
     playlists,
     onDelete,
     onPlay,
-    playingId,
     onAddToQueue,
     selectionMode,
     isSelected,
@@ -163,7 +182,6 @@ export const VirtualSongGrid = memo(function VirtualSongGrid({
     playlists,
     onDelete,
     onPlay,
-    playingId,
     onAddToQueue,
     selectionMode,
     isSelected,
@@ -174,11 +192,11 @@ export const VirtualSongGrid = memo(function VirtualSongGrid({
     const Component = ({
       index: _index,
       width,
-      data: song,
+      data: { song, isPlaying },
     }: {
       index: number;
       width: number;
-      data: Song;
+      data: GridSongItem;
     }) => {
       const p = cardPropsRef.current;
       return (
@@ -190,7 +208,7 @@ export const VirtualSongGrid = memo(function VirtualSongGrid({
             playlists={p.playlists}
             onDelete={p.onDelete}
             onPlay={() => p.onPlay(song.id)}
-            isPlaying={p.playingId === song.id}
+            isPlaying={isPlaying}
             onAddToQueue={() => p.onAddToQueue(song.id)}
             selectionMode={p.selectionMode}
             isSelected={p.isSelected?.(song.id) ?? false}
@@ -212,12 +230,12 @@ export const VirtualSongGrid = memo(function VirtualSongGrid({
   const masonry = useMasonry({
     positioner,
     resizeObserver,
-    items,
+    items: gridItems,
     scrollTop,
     isScrolling,
     height: containerHeight || 600,
     containerRef: masonryContainerRef,
-    itemKey: (song: Song) => song.id,
+    itemKey: (item: GridSongItem) => item.song.id,
     itemHeightEstimate: 330,
     overscanBy: 2,
     render: GridCard as React.ComponentType<{ index: number; width: number; data: unknown }>,
