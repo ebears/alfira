@@ -310,7 +310,7 @@ export default function SongsPage() {
   );
 
   return (
-    <div className='p-4 md:p-8'>
+    <div className='p-4 md:p-8 flex flex-col min-h-0 h-full' style={{ paddingBottom: 0 }}>
       <PageHeader
         icon={MusicNotesIcon}
         title='Songs'
@@ -389,6 +389,7 @@ export default function SongsPage() {
         {viewMode === 'list' ? (
           <m.div
             key='list'
+            className='flex-1 min-h-0 flex flex-col'
             variants={pageVariants}
             initial='initial'
             animate='animate'
@@ -428,6 +429,7 @@ export default function SongsPage() {
         ) : (
           <m.div
             key='grid'
+            className='flex-1 min-h-0 flex flex-col'
             variants={pageVariants}
             initial='initial'
             animate='animate'

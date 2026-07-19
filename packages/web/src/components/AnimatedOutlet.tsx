@@ -19,6 +19,7 @@ export function AnimatedOutlet() {
   return (
     <AnimatePresence mode='wait'>
       <m.div
+        className='flex-1 min-h-0'
         key={location.pathname}
         variants={pageVariants}
         initial='initial'

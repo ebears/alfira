@@ -16,7 +16,7 @@ export default function SettingsPage() {
   }, []);
 
   return (
-    <div className='p-4 md:p-8'>
+    <div className='p-4 md:p-8 h-full overflow-y-auto'>
       {/* Page header */}
       <div className='mb-6 md:mb-8 flex items-end justify-between'>
         <h1 className='font-display text-3xl md:text-4xl text-accent tracking-wider flex items-center gap-2'>
