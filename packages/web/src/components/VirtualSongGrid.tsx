@@ -1,6 +1,7 @@
 import type { Playlist, Song } from '@alfira/server/shared';
 import { useContainerPosition, useMasonry, usePositioner, useResizeObserver } from 'masonic';
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useWindowSize } from '../hooks/useWindowSize';
 import SongCard from './SongCard';
 
 // ---------------------------------------------------------------------------
@@ -87,6 +88,7 @@ export const VirtualSongGrid = memo(function VirtualSongGrid({
 }: VirtualSongGridProps) {
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const masonryContainerRef = useRef<HTMLDivElement>(null);
+  const [windowWidth, windowHeight] = useWindowSize();
   const [scrollTop, setScrollTop] = useState(0);
   const [containerHeight, setContainerHeight] = useState(600);
 
@@ -96,7 +98,6 @@ export const VirtualSongGrid = memo(function VirtualSongGrid({
     if (!el) return;
 
     const onScroll = () => setScrollTop(el.scrollTop);
-    const onResize = () => setContainerHeight(el.clientHeight);
 
     // Measure now, and also after a frame to catch CSS layout settling.
     setContainerHeight(el.clientHeight);
@@ -107,16 +108,24 @@ export const VirtualSongGrid = memo(function VirtualSongGrid({
     });
 
     el.addEventListener('scroll', onScroll, { passive: true });
-    window.addEventListener('resize', onResize);
 
     return () => {
       el.removeEventListener('scroll', onScroll);
-      window.removeEventListener('resize', onResize);
     };
   }, [hasLoaded]);
 
+  // ── Keep container height in sync with window resize ────────────────
+  useEffect(() => {
+    if (scrollContainerRef.current) {
+      setContainerHeight(scrollContainerRef.current.clientHeight);
+    }
+  }, [windowHeight]);
+
   // ── Masonry positioner ─────────────────────────────────────────────
-  const { width: measuredWidth } = useContainerPosition(scrollContainerRef);
+  const { width: measuredWidth } = useContainerPosition(scrollContainerRef, [
+    windowWidth,
+    windowHeight,
+  ]);
   const gridWidth =
     measuredWidth || (typeof window !== 'undefined' ? window.innerWidth - 300 : 960);
   const positioner = usePositioner({
