@@ -1,7 +1,8 @@
 import type { Playlist, Song } from '@alfira/server/shared';
-import { useContainerPosition, useMasonry, usePositioner, useResizeObserver } from 'masonic';
-import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { useWindowSize } from '../hooks/useWindowSize';
+import { useMasonry, usePositioner, useResizeObserver } from 'masonic';
+import { memo, useCallback, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { flushSync } from 'react-dom';
+import { useScrollObserver } from '../hooks/useScrollObserver';
 import SongCard from './SongCard';
 
 // ---------------------------------------------------------------------------
@@ -88,46 +89,41 @@ export const VirtualSongGrid = memo(function VirtualSongGrid({
 }: VirtualSongGridProps) {
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const masonryContainerRef = useRef<HTMLDivElement>(null);
-  const [windowWidth, windowHeight] = useWindowSize();
-  const [scrollTop, setScrollTop] = useState(0);
-  const [containerHeight, setContainerHeight] = useState(600);
 
-  // ── Track scroll container's scroll position and height ────────────
-  useEffect(() => {
+  // rAF-batched scroll tracking + isScrolling flag (enables masonic's
+  // will-change / pointer-events optimizations during scroll) + height
+  // measurement via ResizeObserver.
+  const { scrollTop, isScrolling, height: containerHeight } = useScrollObserver(scrollContainerRef);
+
+  // Width: state initializer provides a reasonable fallback for SSR / first
+  // page load. On subsequent mounts (view switches), a callback ref with
+  // flushSync reads the real element width during commit and forces React
+  // to process the state update synchronously before the browser paints.
+  // A ResizeObserver handles subsequent layout changes.
+  const [gridWidth, setGridWidth] = useState(() => {
+    if (typeof window === 'undefined') return 960;
+    return document.querySelector('main')?.clientWidth ?? 960;
+  });
+
+  const scrollRefCallback = useCallback((el: HTMLDivElement | null) => {
+    scrollContainerRef.current = el;
+    if (el) {
+      flushSync(() => {
+        setGridWidth(el.clientWidth);
+      });
+    }
+  }, []);
+
+  useLayoutEffect(() => {
     const el = scrollContainerRef.current;
     if (!el) return;
-
-    const onScroll = () => setScrollTop(el.scrollTop);
-
-    // Measure now, and also after a frame to catch CSS layout settling.
-    setContainerHeight(el.clientHeight);
-    requestAnimationFrame(() => {
-      if (scrollContainerRef.current) {
-        setContainerHeight(scrollContainerRef.current.clientHeight);
-      }
+    const ro = new ResizeObserver(([entry]) => {
+      if (entry) setGridWidth(entry.contentRect.width);
     });
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
 
-    el.addEventListener('scroll', onScroll, { passive: true });
-
-    return () => {
-      el.removeEventListener('scroll', onScroll);
-    };
-  }, [hasLoaded]);
-
-  // ── Keep container height in sync with window resize ────────────────
-  useEffect(() => {
-    if (scrollContainerRef.current) {
-      setContainerHeight(scrollContainerRef.current.clientHeight);
-    }
-  }, [windowHeight]);
-
-  // ── Masonry positioner ─────────────────────────────────────────────
-  const { width: measuredWidth } = useContainerPosition(scrollContainerRef, [
-    windowWidth,
-    windowHeight,
-  ]);
-  const gridWidth =
-    measuredWidth || (typeof window !== 'undefined' ? window.innerWidth - 300 : 960);
   const positioner = usePositioner({
     width: gridWidth,
     columnWidth: 260,
@@ -218,6 +214,7 @@ export const VirtualSongGrid = memo(function VirtualSongGrid({
     resizeObserver,
     items,
     scrollTop,
+    isScrolling,
     height: containerHeight || 600,
     containerRef: masonryContainerRef,
     itemKey: (song: Song) => song.id,
@@ -229,7 +226,7 @@ export const VirtualSongGrid = memo(function VirtualSongGrid({
 
   return (
     <div
-      ref={scrollContainerRef}
+      ref={scrollRefCallback}
       className='min-h-0'
       style={{
         maxHeight: 'calc(100vh - 340px)',
