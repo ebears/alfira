@@ -42,6 +42,7 @@ import ListToolbar from '../components/ListToolbar';
 import NotificationToast from '../components/NotificationToast';
 
 import { Button } from '../components/ui/Button';
+import { VirtualSongGrid } from '../components/VirtualSongGrid';
 import { VirtualSongList } from '../components/VirtualSongList';
 import { useAdminView } from '../context/AdminViewContext';
 import { useAuth } from '../context/AuthContext';
@@ -99,6 +100,9 @@ export default function PlaylistDetailPage() {
   const [bulkRemoveConfirm, setBulkRemoveConfirm] = useState(false);
   const [bulkEditingOpen, setBulkEditingOpen] = useState(false);
   const [bulkEditingApplying, setBulkEditingApplying] = useState(false);
+  const [viewMode, setViewMode] = useState<'list' | 'grid'>(
+    () => (localStorage.getItem('alfira-playlist-view') as 'list' | 'grid' | null) ?? 'list'
+  );
 
   const menuTriggerRef = useRef<HTMLButtonElement>(null);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -704,6 +708,11 @@ export default function PlaylistDetailPage() {
           if (selectionMode) bulk.clearAll();
           setSelectionMode((v) => !v);
         }}
+        viewMode={viewMode}
+        onViewModeChange={(mode) => {
+          localStorage.setItem('alfira-playlist-view', mode);
+          setViewMode(mode);
+        }}
       />
 
       {/* Song list */}
@@ -721,8 +730,37 @@ export default function PlaylistDetailPage() {
             addLabel='add some songs'
           />
         )
-      ) : (
+      ) : viewMode === 'list' ? (
         <VirtualSongList
+          items={songItems}
+          isAdminView={isAdminView}
+          playlists={[]}
+          isLoading={isLoading}
+          isFetching={isFetching}
+          isError={isError}
+          hasMore={hasMore}
+          hasLoaded={!isLoading}
+          playingId={playingSongId}
+          onRetry={retry}
+          onFetchMore={fetchNextPage}
+          onDelete={
+            selectionMode
+              ? undefined
+              : (id) => {
+                  const ps = songs.find((p) => p.songId === id);
+                  if (ps) setRemoveId(ps.songId);
+                }
+          }
+          onPlay={handlePlayFromSong}
+          onAddToQueue={handleAddToQueue}
+          selectionMode={selectionMode}
+          isSelected={bulk.isSelected}
+          onToggleSelect={bulk.toggle}
+          emptyTitle='No Songs'
+          emptyMessage='Add songs to this playlist'
+        />
+      ) : (
+        <VirtualSongGrid
           items={songItems}
           isAdminView={isAdminView}
           playlists={[]}
