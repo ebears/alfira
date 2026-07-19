@@ -8,6 +8,8 @@ export interface ScrollObserverResult {
   scrollTop: number;
   isScrolling: boolean;
   height: number;
+  /** Width of the observed element, throttled to avoid excessive masonry recalculations during animated resizes. */
+  width: number;
 }
 
 // ---------------------------------------------------------------------------
@@ -31,7 +33,14 @@ export function useScrollObserver(
 ): ScrollObserverResult {
   const [scrollTop, setScrollTop] = useState(0);
   const [isScrolling, setIsScrolling] = useState(false);
+  // Seed with a reasonable DOM-based fallback so the first render pass
+  // has a close-to-correct width for usePositioner. The useLayoutEffect
+  // below reads the real element dimensions and refines before paint.
   const [height, setHeight] = useState(0);
+  const [width, setWidth] = useState(() => {
+    if (typeof window === 'undefined') return 960;
+    return document.querySelector('main')?.clientWidth ?? 960;
+  });
 
   const didMountRef = useRef(0);
   const tickingRef = useRef(false);
@@ -100,18 +109,33 @@ export function useScrollObserver(
     };
   }, [fps, scrollTop]);
 
-  // ── Height tracking via ResizeObserver ─────────────────────────────
-  // useLayoutEffect reads the initial clientHeight before the first
-  // paint, avoiding a flash where the grid renders at the wrong height.
+  // ── Height + Width tracking via ResizeObserver ─────────────────────
+  // useLayoutEffect reads the initial dimensions before the first paint,
+  // avoiding a flash where the grid renders at the wrong size.
+  //
+  // Height updates immediately (masonic viewport sizing needs it).
+  // Width is throttled to at most one update per MIN_WIDTH_INTERVAL_MS —
+  // this prevents usePositioner from recalculating masonry columns on
+  // every animation frame during smooth resizes (e.g. queue panel
+  // open/close), while still feeling responsive on manual browser resizes.
+  const MIN_WIDTH_INTERVAL_MS = 64; // ~4 frames at 60fps
+  const lastWidthUpdateRef = useRef(0);
+
   useLayoutEffect(() => {
     const el = elementRef.current;
     if (!el) return;
 
     setHeight(el.clientHeight);
+    setWidth(el.clientWidth);
 
     const ro = new ResizeObserver(([entry]) => {
-      if (entry) {
-        setHeight(entry.contentRect.height);
+      if (!entry) return;
+      setHeight(entry.contentRect.height);
+
+      const now = performance.now();
+      if (now - lastWidthUpdateRef.current >= MIN_WIDTH_INTERVAL_MS) {
+        lastWidthUpdateRef.current = now;
+        setWidth(entry.contentRect.width);
       }
     });
     ro.observe(el);
@@ -120,5 +144,5 @@ export function useScrollObserver(
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  return { scrollTop, isScrolling, height };
+  return { scrollTop, isScrolling, height, width };
 }

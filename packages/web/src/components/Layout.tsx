@@ -267,7 +267,7 @@ function QueueLayout() {
         className='shrink-0 flex-col bg-elevated overflow-hidden clay-floating md:flex hidden h-full'
         animate={{ width: queueOpen ? 384 : 0 }}
         initial={false}
-        transition={{ type: 'spring', stiffness: 500, damping: 25 }}
+        transition={{ type: 'spring', stiffness: 500, damping: 45 }}
       >
         {queueOpen && <QueuePanel />}
       </m.aside>
