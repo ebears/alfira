@@ -581,7 +581,7 @@ export default function PlaylistDetailPage() {
   const songItems: Song[] = songs.map((ps) => ps.song);
 
   return (
-    <div className='p-4 md:p-8 flex flex-col min-h-0'>
+    <div className='p-4 md:p-8 flex flex-col min-h-0 h-full'>
       {/* Back */}
       <Button
         variant='inherit'

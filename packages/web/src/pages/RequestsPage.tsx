@@ -107,7 +107,7 @@ export default function RequestsPage() {
   const countLabel = hasLoaded ? `${total} request${total !== 1 ? 's' : ''}` : '—';
 
   return (
-    <div className='p-4 md:p-8 flex flex-col min-h-0'>
+    <div className='p-4 md:p-8 flex flex-col min-h-0 h-full'>
       <PageHeader
         icon={TrayIcon}
         title='Requests'

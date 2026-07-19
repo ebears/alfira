@@ -79,7 +79,7 @@ export default function PlaylistsPage() {
   );
 
   return (
-    <div className='p-4 md:p-8 flex flex-col min-h-0'>
+    <div className='p-4 md:p-8 flex flex-col min-h-0 h-full'>
       <PageHeader
         icon={PlaylistIcon}
         title='Playlists'

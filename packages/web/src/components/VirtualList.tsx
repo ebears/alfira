@@ -1,5 +1,4 @@
 import { useVirtualizer } from '@tanstack/react-virtual';
-import { type Transition } from 'motion/react';
 import * as m from 'motion/react-m';
 import { memo, useEffect, useLayoutEffect, useRef } from 'react';
 import { listItemVariants } from '../lib/motion';
@@ -219,12 +218,7 @@ function VirtualListInner<T>({
                     transform: `translateY(${virtualRow.start}px)`,
                   }}
                 >
-                  <m.div
-                    initial='initial'
-                    animate='animate'
-                    variants={listItemVariants}
-                    transition={{ duration: 0.2, ease: 'easeOut' } as Transition}
-                  >
+                  <m.div layout initial='initial' animate='animate' variants={listItemVariants}>
                     {renderItem(item, virtualRow.index)}
                   </m.div>
                   {spacer}

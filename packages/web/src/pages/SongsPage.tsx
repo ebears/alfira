@@ -310,7 +310,7 @@ export default function SongsPage() {
   );
 
   return (
-    <div className='p-4 md:p-8 flex flex-col min-h-0'>
+    <div className='p-4 md:p-8 flex flex-col min-h-0 h-full'>
       <PageHeader
         icon={MusicNotesIcon}
         title='Songs'
