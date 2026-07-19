@@ -1,6 +1,6 @@
 import type { User } from '@alfira/server/shared';
 import { SignOutIcon, UserIcon } from '@phosphor-icons/react';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 
 interface UserMenuProps {
@@ -42,14 +42,12 @@ export default function UserMenu({ user, collapsed, onLogout }: UserMenuProps) {
     setPosition({ top, left });
   }, []);
 
-  useEffect(() => {
+  // Position before paint (useLayoutEffect) to avoid a (0,0) flash.
+  useLayoutEffect(() => {
     if (!open) return;
-    // Wait for the portal content to be in the DOM before measuring
-    requestAnimationFrame(() => {
-      updatePosition();
-      window.addEventListener('resize', updatePosition);
-      window.addEventListener('scroll', updatePosition, true);
-    });
+    updatePosition();
+    window.addEventListener('resize', updatePosition);
+    window.addEventListener('scroll', updatePosition, true);
     return () => {
       window.removeEventListener('resize', updatePosition);
       window.removeEventListener('scroll', updatePosition, true);
