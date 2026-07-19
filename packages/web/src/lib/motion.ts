@@ -31,7 +31,7 @@ export const listItemVariants: Variants = {
   animate: {
     opacity: 1,
     x: 0,
-    transition: { type: 'spring', stiffness: 650, damping: 22 },
+    transition: { type: 'spring', stiffness: 400, damping: 38 },
   },
   exit: { opacity: 0 },
 };
