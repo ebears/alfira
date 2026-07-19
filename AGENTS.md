@@ -96,13 +96,20 @@ Every change follows this pipeline. The agent should guide the user through each
 4. **`/verify`** — The gate before `/submit`. Run `bun run check`, then `bun run --filter @alfira/server build && bun run --filter @alfira/web build` to verify both packages compile. Review the full diff and check for untracked files. Report pass/fail for each check. Do not proceed if anything fails.
 5. **`/submit`** — Create a feature branch from `dev`, commit with a semantic message, push, and open a PR targeting `dev`.
 6. **Review & Merge** — Address review feedback. CI must pass. Merge to `dev`.
-7. **`/release`** — Batch accumulated `dev` changes into a release PR targeting `main`. Show pending commits, determine version if applicable, open the PR with a changelog.
-
-After a release merges to `main`, sync `dev` with `main` to keep history clean:
-
-```bash
-git checkout dev && git merge main && git push origin dev
-```
+7. **`/release`** — Batch accumulated `dev` changes into a release PR targeting `main`:
+   1. Show pending commits between `main` and `dev` and determine the next version
+   2. Create a release branch from `dev`: `git checkout -b release/vX.Y.Z dev`
+   3. Bump the version in `package.json` and commit: `chore: bump version to vX.Y.Z`
+   4. Push and open a PR targeting `main` with the changelog in the description
+   5. After merge, create the GitHub Release **with the changelog** (not an empty body):
+      ```bash
+      git checkout main && git pull
+      gh release create vX.Y.Z --target main --notes "$(gh pr view <PR#> --json body -q .body)"
+      ```
+   6. Sync `dev` with `main` to keep history clean:
+      ```bash
+      git checkout dev && git merge main && git push origin dev
+      ```
 
 #### Agent rules for each phase
 
