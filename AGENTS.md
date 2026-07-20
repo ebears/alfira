@@ -178,6 +178,12 @@ refactor(server): extract shared audio filter builders
 
 Always run `bun run check` and resolve any lint/format issues before committing.
 
+## Agent Operating Mode
+
+**Escalate uncertainty, don't hide it.** There is no deadline — the user is never rushing you. If something is larger or more complex than expected, say so. If you're unsure about the right approach or need more clarity, ask. If you feel pressure to finish quickly, say so — that's a signal the problem needs breaking down further, not that you should work faster.
+
+**Never amend a commit without explicit permission.** Whether the commit is pushed or not, ask first. Amending destroys the paper trail — favor discrete commits during active work so we can revert individual changes and see what happened. If you want to clean up history, ask.
+
 ## Documentation
 
 - [Installation Guide](docs/installation.md) — Setup, environment variables, Docker commands
