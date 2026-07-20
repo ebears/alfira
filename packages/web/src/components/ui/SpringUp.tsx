@@ -1,5 +1,6 @@
-import { type ReactNode } from 'react';
 import * as m from 'motion/react-m';
+import { type ReactNode } from 'react';
+
 import { springUp } from '../../lib/motion';
 
 interface SpringUpProps {

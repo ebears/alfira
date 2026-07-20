@@ -1,5 +1,6 @@
 import { MagnifyingGlassIcon, XIcon } from '@phosphor-icons/react';
 import { useCallback, useEffect, useRef, useState } from 'react';
+
 import { type TagItem, useTagColors } from '../context/TagsContext';
 import { getTagColorClasses } from '../utils/tagColors';
 import { Backdrop } from './Backdrop';

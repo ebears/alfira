@@ -38,8 +38,8 @@ async function deleteCommand(
       const errText = await res.text();
       let retryAfter = 1000; // default 1s
       try {
-        const err = JSON.parse(errText);
-        retryAfter = Math.ceil((err.retry_after ?? 1) * 1000) + 100; // add buffer
+        const err = JSON.parse(errText) as Record<string, unknown>;
+        retryAfter = Math.ceil(((err.retry_after as number | undefined) ?? 1) * 1000) + 100; // add buffer
       } catch {
         // ignore parse errors
       }

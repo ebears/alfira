@@ -1,5 +1,7 @@
-import { CircleNotchIcon } from '@phosphor-icons/react';
 import type React from 'react';
+
+import { CircleNotchIcon } from '@phosphor-icons/react';
+
 import { Button } from './ui/Button';
 
 export function BarButton({

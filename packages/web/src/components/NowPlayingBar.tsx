@@ -12,14 +12,15 @@ import {
   ShuffleIcon,
   SkipForwardIcon,
 } from '@phosphor-icons/react';
-import { memo, useCallback, useEffect, useMemo, useRef } from 'react';
 import { AnimatePresence } from 'motion/react';
 import * as m from 'motion/react-m';
-import { metadataTransition, metadataVariants } from '../lib/motion';
+import { memo, useCallback, useEffect, useMemo, useRef } from 'react';
+
 import { usePlayer } from '../context/PlayerContext';
 import { useQueuePanel } from '../context/QueuePanelContext';
 import { useCooldownGuard, type CooldownState } from '../hooks/useCooldownGuard';
 import { useMutationHandler } from '../hooks/useMutationHandler';
+import { metadataTransition, metadataVariants } from '../lib/motion';
 import { getSourceKey } from '../utils/source';
 import { BarButton } from './BarButton';
 import QueuePanel from './QueuePanel';

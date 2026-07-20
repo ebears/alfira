@@ -1,5 +1,6 @@
 import { ArrowCounterClockwise, FloppyDisk } from '@phosphor-icons/react';
 import { useEffect, useState } from 'react';
+
 import { useAdminView } from '../../context/AdminViewContext';
 import { usePermissions } from '../../context/PermissionsContext';
 import { Button } from '../ui/Button';
@@ -43,7 +44,7 @@ export default function EqualizerSection() {
           const data = (await res.json()) as { bands: number[]; enabled: boolean };
           setBands(data.bands);
           setSavedBands(data.bands);
-          const enabled = data.enabled ?? true;
+          const enabled = data.enabled;
           setEqEnabled(enabled);
           setSavedEnabled(enabled);
         }

@@ -96,7 +96,7 @@ export function verify<T = Record<string, unknown>>(token: string, secret: strin
   // Decode and parse the payload
   let payload: Record<string, unknown>;
   try {
-    payload = JSON.parse(base64urlDecode(payloadB64));
+    payload = JSON.parse(base64urlDecode(payloadB64)) as Record<string, unknown>;
   } catch {
     return null;
   }

@@ -1,4 +1,5 @@
 import type React from 'react';
+
 import { createContext, useContext, useEffect, useMemo, useState } from 'react';
 
 // Color themes based on D&D 5e core classes
@@ -111,7 +112,7 @@ function resolveMode(mode: ColorMode): 'light' | 'dark' {
   if (mode !== 'auto') {
     return mode;
   }
-  if (window?.matchMedia('(prefers-color-scheme: light)')?.matches) {
+  if (window.matchMedia('(prefers-color-scheme: light)').matches) {
     return 'light';
   }
   return 'dark';

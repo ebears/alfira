@@ -2,6 +2,7 @@ import { type PlaylistDetail, type Song } from '@alfira/server/shared';
 import { formatDuration } from '@alfira/server/shared';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { memo, useCallback, useEffect, useRef, useState } from 'react';
+
 import { addSongToPlaylist, getSongsPage } from '../api/api';
 import { Backdrop } from './Backdrop';
 import { ArtworkImage } from './ui/ArtworkImage';

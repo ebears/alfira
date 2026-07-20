@@ -1,5 +1,6 @@
 import { ShieldCheckIcon, TrashIcon } from '@phosphor-icons/react';
 import { useCallback, useEffect, useMemo, useState } from 'react';
+
 import { fetchPermissions, type PermissionsResponse, updatePermission } from '../api/api';
 import ConfirmModal from '../components/ConfirmModal';
 import EmptyState from '../components/EmptyState';

@@ -1,14 +1,15 @@
+import { sql } from 'drizzle-orm';
 import { createHash } from 'node:crypto';
 import { readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
-import { sql } from 'drizzle-orm';
 import { initGuildId, VERSION } from './lib/config';
 import { type RouteContext } from './lib/context';
 import { ensureTagsMigrated } from './lib/ensureTagsMigrated';
 import { json } from './lib/json';
 import { lavalink } from './lib/lavalink';
 import { pruneRateLimitStores } from './lib/rateLimit';
+import { SECURITY_HEADERS } from './lib/securityHeaders';
 import { closeAllClients, registerClient, unregisterClient, type WsClient } from './lib/socket';
 import { verifySessionToken } from './middleware/requireAuth';
 import { handleAuth } from './routes/auth';
@@ -25,7 +26,6 @@ import { handleTags } from './routes/tags';
 import { $client, db } from './shared/db';
 import { logger } from './shared/logger';
 import { destroyAllPlayers, initEnabledSources, startDiscord } from './startDiscord';
-import { SECURITY_HEADERS } from './lib/securityHeaders';
 
 function parseCookies(header: string): Record<string, string> {
   const result: Record<string, string> = {};

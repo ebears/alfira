@@ -1,6 +1,6 @@
-import { lavalink } from './lavalink';
 import { updateNodeLinkPlayer } from '../utils/nodelink';
 import { type DiscordGateway } from './discordGateway';
+import { lavalink } from './lavalink';
 
 // ---------------------------------------------------------------------------
 // Gateway singleton

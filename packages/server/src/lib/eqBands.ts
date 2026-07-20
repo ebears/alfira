@@ -60,7 +60,8 @@ interface EqSettingsRow {
 
 export function eqBandsFromRow(row: EqSettingsRow | null | undefined): number[] {
   if (!row) {
-    return Array(15).fill(50);
+    const defaults = Array<number>(15).fill(50);
+    return defaults;
   }
   return BAND_KEYS.map((key) => row[key]);
 }

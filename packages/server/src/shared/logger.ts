@@ -16,8 +16,7 @@ const LABELS: Record<LogLevel, string> = {
   fatal: 'FATAL',
 };
 
-const currentLevel: number =
-  LEVELS[(process.env.LOG_LEVEL as LogLevel | undefined) ?? 'info'] ?? LEVELS.info;
+const currentLevel: number = LEVELS[(process.env.LOG_LEVEL as LogLevel | undefined) ?? 'info'];
 
 const useJson = process.env.LOG_FORMAT === 'json';
 const noColor = process.env.NO_COLOR !== undefined || process.env.NODE_ENV === 'production';

@@ -1,4 +1,5 @@
 import { type HTMLAttributes, memo } from 'react';
+
 import { SpringUp } from './SpringUp';
 
 interface CardProps extends HTMLAttributes<HTMLDivElement> {

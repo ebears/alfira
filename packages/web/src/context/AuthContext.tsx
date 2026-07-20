@@ -1,5 +1,6 @@
-import { type User } from '@alfira/server/shared';
 import type React from 'react';
+
+import { type User } from '@alfira/server/shared';
 import {
   createContext,
   useCallback,
@@ -9,6 +10,7 @@ import {
   useRef,
   useState,
 } from 'react';
+
 import { getMe, logout as logoutApi } from '../api/api';
 import { trySilentRefresh } from '../api/client';
 

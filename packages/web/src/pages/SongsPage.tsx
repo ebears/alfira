@@ -5,7 +5,7 @@ import { AnimatePresence } from 'motion/react';
 import * as m from 'motion/react-m';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { pageVariants, viewTransition } from '../lib/motion';
+
 import {
   bulkDeleteSongs,
   bulkEditSongs,
@@ -18,9 +18,7 @@ import BulkActionBar from '../components/BulkActionBar';
 import BulkEditModal from '../components/BulkEditModal';
 import ConfirmModal from '../components/ConfirmModal';
 import ListToolbar from '../components/ListToolbar';
-
 import NotificationToast from '../components/NotificationToast';
-
 import { PageHeader } from '../components/ui/PageHeader';
 import { VirtualSongGrid } from '../components/VirtualSongGrid';
 import { VirtualSongList } from '../components/VirtualSongList';
@@ -30,8 +28,9 @@ import { usePlayerState } from '../context/PlayerContext';
 import { useAddToQueue } from '../hooks/useAddToQueue';
 import { useBulkSelection } from '../hooks/useBulkSelection';
 import { useNotification } from '../hooks/useNotification';
-import { onSocketEvent } from '../hooks/useSocket';
 import { usePaginatedData } from '../hooks/usePaginatedData';
+import { onSocketEvent } from '../hooks/useSocket';
+import { pageVariants, viewTransition } from '../lib/motion';
 import { apiErrorMessage, notifyUnlessRateLimit } from '../utils/api';
 
 const ITEMS_PER_PAGE = 48;
@@ -158,13 +157,13 @@ export default function SongsPage() {
       switch (sort) {
         case 'title': {
           // Sort by display name: nickname if set, otherwise title
-          const aName = (a.nickname || a.title) ?? '';
-          const bName = (b.nickname || b.title) ?? '';
+          const aName = a.nickname || a.title || '';
+          const bName = b.nickname || b.title || '';
           return dir * aName.localeCompare(bName, undefined, { sensitivity: 'base' });
         }
         case 'artist': {
-          const aArt = a.artist ?? '';
-          const bArt = b.artist ?? '';
+          const aArt = a.artist || '';
+          const bArt = b.artist || '';
           // nulls last, regardless of direction
           if (!aArt && !bArt) {
             return 0;
@@ -178,8 +177,8 @@ export default function SongsPage() {
           return dir * aArt.localeCompare(bArt, undefined, { sensitivity: 'base' });
         }
         case 'album': {
-          const aAlb = a.album ?? '';
-          const bAlb = b.album ?? '';
+          const aAlb = a.album || '';
+          const bAlb = b.album || '';
           if (!aAlb && !bAlb) {
             return 0;
           }

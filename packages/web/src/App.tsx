@@ -1,7 +1,7 @@
 import { Navigate, Route, Routes } from 'react-router-dom';
+
 import Layout from './components/Layout';
 import ProtectedRoute from './components/ProtectedRoute';
-import { LazyMotion, domAnimation } from './lib/motion';
 import SettingsPage from './components/settings/SettingsPage';
 import { AdminViewProvider } from './context/AdminViewContext';
 import { AuthProvider } from './context/AuthContext';
@@ -12,6 +12,7 @@ import { SongEditProvider } from './context/SongEditContext';
 import { SongMenuProvider } from './context/SongMenuContext';
 import { TagsProvider } from './context/TagsContext';
 import { ThemeProvider } from './context/ThemeContext';
+import { LazyMotion, domAnimation } from './lib/motion';
 import AudioPage from './pages/AudioPage';
 import LoginPage from './pages/LoginPage';
 import PermissionsPage from './pages/PermissionsPage';

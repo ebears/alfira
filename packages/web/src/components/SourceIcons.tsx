@@ -182,7 +182,7 @@ export function GoogleDriveIcon(props: IconProps) {
   );
 }
 
-const SOURCE_ICONS: Record<string, React.FC<IconProps>> = {
+const SOURCE_ICONS: Partial<Record<string, React.FC<IconProps>>> = {
   youtube: YouTubeIcon,
   soundcloud: SoundCloudIcon,
   spotify: SpotifyIcon,

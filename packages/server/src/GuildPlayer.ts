@@ -1,13 +1,14 @@
 import { eq } from 'drizzle-orm';
+
 import { buildCompressorFilter } from './lib/applyNodeLinkFilter';
 import { buildEqualizerFilter, EQ_BAND_COLUMNS, eqBandsFromRow } from './lib/eqBands';
+import { connectToVoice, getClient } from './lib/gatewayState';
 import { lavalink, type TrackEndReason } from './lib/lavalink';
 import { emitPlayerUpdate } from './lib/socket';
 import { PlaybackCursor } from './PlaybackCursor';
 import { type LoopMode, type QueuedSong, type QueueState } from './shared';
 import { db, tables } from './shared/db';
 import { logger } from './shared/logger';
-import { connectToVoice, getClient } from './lib/gatewayState';
 import {
   destroyNodeLinkPlayer,
   getStreamFormat,
@@ -18,7 +19,7 @@ import {
 export class GuildPlayer {
   private static readonly MAX_CONSECUTIVE_FAILURES = 3;
 
-  private queue: PlaybackCursor<QueuedSong> = new PlaybackCursor();
+  private queue = new PlaybackCursor<QueuedSong>();
   private priorityQueue: QueuedSong[] = [];
   private currentSong: QueuedSong | null = null;
   private loopMode: LoopMode = 'off';

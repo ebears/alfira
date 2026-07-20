@@ -1,8 +1,8 @@
 import { eq } from 'drizzle-orm';
+
 import { type CompressorSettings, type Playlist, type QueueState, type User } from '../shared';
 import { db, tables } from '../shared/db';
 import { logger } from '../shared/logger';
-
 import { formatSong, type SerializedSong } from './serialization';
 
 // Accept both Date and string createdAt — Drizzle uses Date at the DB level,
@@ -15,8 +15,8 @@ type SerializedPlaylist = Omit<Playlist, 'createdAt'> & { createdAt: string | Da
 
 export interface WsClient {
   readonly id: number;
-  send(data: string): void;
-  close(): void;
+  send: (data: string) => void;
+  close: () => void;
 }
 
 const clients = new Set<WsClient>();

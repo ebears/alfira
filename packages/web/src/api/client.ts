@@ -125,9 +125,7 @@ export async function trySilentRefresh(): Promise<boolean> {
   // Retry up to 3 times total for transient failures (Discord 429/503, network).
   let result = await refreshToken();
   for (let attempt = 0; attempt < 2 && !result.ok && result.retryable; attempt++) {
-    console.warn(
-      `[auth] trySilentRefresh: retry ${attempt + 1}/2 after ${result.ok ? 'success' : 'retryable failure'}`
-    );
+    console.warn(`[auth] trySilentRefresh: retry ${attempt + 1}/2 after retryable failure`);
     await new Promise((resolve) => setTimeout(resolve, 1500));
     result = await refreshToken();
   }
@@ -222,11 +220,11 @@ async function wrappedFetch(
     let errorMessage = `API error: ${response.status}`;
     let errorCode: string | undefined;
     try {
-      const errorBody = await response.json();
-      if (errorBody?.error) {
+      const errorBody = (await response.json()) as { error?: string; code?: string };
+      if (errorBody.error) {
         errorMessage = errorBody.error;
       }
-      if (errorBody?.code) {
+      if (errorBody.code) {
         errorCode = errorBody.code;
       }
     } catch {

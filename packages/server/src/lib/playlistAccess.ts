@@ -1,4 +1,5 @@
 import { count, eq } from 'drizzle-orm';
+
 import { db, tables } from '../shared/db';
 import { json } from './json';
 
@@ -14,7 +15,7 @@ interface PlaylistLike {
   isPrivate: boolean;
 }
 
-type PlaylistRow = {
+interface PlaylistRow {
   id: string;
   name: string;
   createdBy: string;
@@ -22,7 +23,7 @@ type PlaylistRow = {
   tagNameLower: string | null;
   createdAt: Date;
   _count?: { songs: number };
-};
+}
 
 /**
  * Checks if user can view/modify a playlist.

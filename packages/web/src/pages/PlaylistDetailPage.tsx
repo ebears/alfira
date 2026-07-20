@@ -1,10 +1,6 @@
 import { type Playlist, type PlaylistDetail, type Song, type TagItem } from '@alfira/server/shared';
 import { type BulkEditData, type FetchSongsOptions } from '@alfira/server/shared/api';
 import { fetchTags, updatePlaylistTag } from '@alfira/server/shared/api';
-import { AnimatePresence } from 'motion/react';
-import * as m from 'motion/react-m';
-import { pageVariants, viewTransition } from '../lib/motion';
-import { usePaginatedData } from '../hooks/usePaginatedData';
 import {
   BombIcon,
   CaretLeftIcon,
@@ -18,8 +14,11 @@ import {
   ShuffleIcon,
   TagIcon,
 } from '@phosphor-icons/react';
+import { AnimatePresence } from 'motion/react';
+import * as m from 'motion/react-m';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
+
 import {
   bulkEditSongs,
   bulkRemoveSongsFromPlaylist,
@@ -38,10 +37,9 @@ import { type MenuItem } from '../components/ContextMenu';
 import { ContextMenu, ContextMenuTrigger } from '../components/ContextMenu';
 import EmptyState from '../components/EmptyState';
 import ListToolbar from '../components/ListToolbar';
-
 import NotificationToast from '../components/NotificationToast';
-
 import { Button } from '../components/ui/Button';
+import { cooldownButtonProps } from '../components/ui/cooldownButtonProps';
 import { VirtualSongGrid } from '../components/VirtualSongGrid';
 import { VirtualSongList } from '../components/VirtualSongList';
 import { useAdminView } from '../context/AdminViewContext';
@@ -51,9 +49,10 @@ import { usePlayerState } from '../context/PlayerContext';
 import { useAddToQueue } from '../hooks/useAddToQueue';
 import { useBulkSelection } from '../hooks/useBulkSelection';
 import { useCooldownGuard } from '../hooks/useCooldownGuard';
-import { cooldownButtonProps } from '../components/ui/cooldownButtonProps';
 import { useNotification } from '../hooks/useNotification';
+import { usePaginatedData } from '../hooks/usePaginatedData';
 import { onSocketEvent } from '../hooks/useSocket';
+import { pageVariants, viewTransition } from '../lib/motion';
 import { apiErrorMessage, notifyUnlessRateLimit } from '../utils/api';
 import { getTagColorClasses } from '../utils/tagColors';
 
@@ -169,13 +168,13 @@ export default function PlaylistDetailPage() {
       switch (sort) {
         case 'title': {
           // Sort by display name: nickname if set, otherwise title
-          const aName = (a.song.nickname || a.song.title) ?? '';
-          const bName = (b.song.nickname || b.song.title) ?? '';
+          const aName = a.song.nickname || a.song.title || '';
+          const bName = b.song.nickname || b.song.title || '';
           return dir * aName.localeCompare(bName, undefined, { sensitivity: 'base' });
         }
         case 'artist': {
-          const aArt = a.song.artist ?? '';
-          const bArt = b.song.artist ?? '';
+          const aArt = a.song.artist || '';
+          const bArt = b.song.artist || '';
           if (!aArt && !bArt) {
             return 0;
           }
@@ -188,8 +187,8 @@ export default function PlaylistDetailPage() {
           return dir * aArt.localeCompare(bArt, undefined, { sensitivity: 'base' });
         }
         case 'album': {
-          const aAlb = a.song.album ?? '';
-          const bAlb = b.song.album ?? '';
+          const aAlb = a.song.album || '';
+          const bAlb = b.song.album || '';
           if (!aAlb && !bAlb) {
             return 0;
           }
@@ -911,7 +910,7 @@ export default function PlaylistDetailPage() {
             <>
               Remove{' '}
               <span className='text-fg font-semibold'>
-                "{songs.find((ps) => ps.songId === removeId)?.song?.title}"
+                "{songs.find((ps) => ps.songId === removeId)?.song.title}"
               </span>{' '}
               from this playlist? The song won't be deleted from the library.
             </>

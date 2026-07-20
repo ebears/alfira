@@ -1,7 +1,7 @@
-import { logger } from '../shared/logger';
-import { connectToVoice, getClient, getUserVoiceChannel } from './gatewayState';
 import { createPlayer, getPlayer } from '../manager';
+import { logger } from '../shared/logger';
 import { getGuildId } from './config';
+import { connectToVoice, getClient, getUserVoiceChannel } from './gatewayState';
 import { json } from './json';
 import { lavalink } from './lavalink';
 

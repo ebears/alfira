@@ -1,6 +1,7 @@
 import { type Playlist, type Song } from '@alfira/server/shared';
 import { useMasonry, usePositioner, useResizeObserver } from 'masonic';
 import { memo, useCallback, useMemo, useRef } from 'react';
+
 import { useScrollObserver } from '../hooks/useScrollObserver';
 import SongCard from './SongCard';
 
@@ -221,6 +222,7 @@ export const VirtualSongGrid = memo(function VirtualSongGrid({
     }
   }
 
+  // oxlint-disable-next-line @typescript-eslint/no-unsafe-assignment
   const masonry = useMasonry({
     positioner,
     resizeObserver,

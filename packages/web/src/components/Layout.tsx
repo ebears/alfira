@@ -1,13 +1,14 @@
 import { CaretLeftIcon, CraneTowerIcon, GuitarIcon, LinkBreakIcon } from '@phosphor-icons/react';
+import * as m from 'motion/react-m';
 import { useEffect, useState } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
-import * as m from 'motion/react-m';
-import { AnimatedOutlet } from './AnimatedOutlet';
+
 import { ADMIN_NAV_ITEMS, NAV_ITEMS } from '../constants';
 import { useAdminView } from '../context/AdminViewContext';
 import { useAuth } from '../context/AuthContext';
 import { QueuePanelProvider, useQueuePanel } from '../context/QueuePanelContext';
 import { useConnectionStatus } from '../hooks/useSocket';
+import { AnimatedOutlet } from './AnimatedOutlet';
 import MobileNav from './MobileNav';
 import { NowPlayingBar } from './NowPlayingBar';
 import QueuePanel from './QueuePanel';

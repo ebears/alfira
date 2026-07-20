@@ -10,8 +10,14 @@ import { json } from './json';
 
 const MAX_URL_LENGTH = 2000;
 
-type ValidationSuccess<T> = { ok: true; value: T };
-type ValidationError = { ok: false; response: Response };
+interface ValidationSuccess<T> {
+  ok: true;
+  value: T;
+}
+interface ValidationError {
+  ok: false;
+  response: Response;
+}
 type ValidationResult<T> = ValidationSuccess<T> | ValidationError;
 
 /**

@@ -115,7 +115,7 @@ export default function UserMenu({ user, collapsed, onLogout }: UserMenuProps) {
       className={`${avatarSize} rounded-full bg-elevated flex items-center justify-center shrink-0`}
     >
       <span className={`font-mono ${avatarFallbackSize} text-muted`}>
-        {user.username?.[0]?.toUpperCase()}
+        {user.username[0]?.toUpperCase()}
       </span>
     </div>
   );
