@@ -81,9 +81,13 @@ export class GuildPlayer {
     const minutes = this.getIdleTimeoutMinutes();
     this.idleLeaveTimer = setTimeout(
       () => {
-        this.leaveOnIdle().catch(() => {
-          // noop — errors are already logged inside leaveOnIdle
-        });
+        void (async () => {
+          try {
+            await this.leaveOnIdle();
+          } catch {
+            // noop — errors are already logged inside leaveOnIdle
+          }
+        })();
       },
       minutes * 60 * 1000
     );
@@ -179,9 +183,13 @@ export class GuildPlayer {
         this.gaplessTransition = true;
       }
 
-      this.onTrackEnd().catch(() => {
-        // errors logged in handlePlaybackFailure
-      });
+      void (async () => {
+        try {
+          await this.onTrackEnd();
+        } catch {
+          // errors logged in handlePlaybackFailure
+        }
+      })();
     });
 
     this._unsubTrackError = lavalink.onTrackError(

@@ -10,9 +10,14 @@ export default function SettingsPage() {
   const [version, setVersion] = useState<string | null>(null);
 
   useEffect(() => {
-    fetchVersion()
-      .then(({ version }) => setVersion(version))
-      .catch(() => setVersion(null));
+    void (async () => {
+      try {
+        const { version } = await fetchVersion();
+        setVersion(version);
+      } catch {
+        setVersion(null);
+      }
+    })();
   }, []);
 
   return (

@@ -2,24 +2,9 @@ import { createHash } from 'node:crypto';
 import { readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
-function parseCookies(header: string): Record<string, string> {
-  const result: Record<string, string> = {};
-  for (const part of header.split(';')) {
-    const idx = part.indexOf('=');
-    if (idx === -1) continue;
-    const key = part.slice(0, idx).trim();
-    const raw = part.slice(idx + 1).trim();
-    try {
-      result[key] = decodeURIComponent(raw);
-    } catch {
-      result[key] = raw;
-    }
-  }
-  return result;
-}
-
 import { sql } from 'drizzle-orm';
 import { initGuildId, VERSION } from './lib/config';
+import type { RouteContext } from './lib/context';
 import { ensureTagsMigrated } from './lib/ensureTagsMigrated';
 import { json } from './lib/json';
 import { lavalink } from './lib/lavalink';
@@ -40,6 +25,23 @@ import { handleTags } from './routes/tags';
 import { $client, db } from './shared/db';
 import { logger } from './shared/logger';
 import { destroyAllPlayers, initEnabledSources, startDiscord } from './startDiscord';
+import { SECURITY_HEADERS } from './lib/securityHeaders';
+
+function parseCookies(header: string): Record<string, string> {
+  const result: Record<string, string> = {};
+  for (const part of header.split(';')) {
+    const idx = part.indexOf('=');
+    if (idx === -1) continue;
+    const key = part.slice(0, idx).trim();
+    const raw = part.slice(idx + 1).trim();
+    try {
+      result[key] = decodeURIComponent(raw);
+    } catch {
+      result[key] = raw;
+    }
+  }
+  return result;
+}
 
 // ---------------------------------------------------------------------------
 // Validate required environment variables.
@@ -62,25 +64,8 @@ if (missing.length > 0) {
 
 const PORT = 3001;
 
-// ---------------------------------------------------------------------------
-// Security headers
-// ---------------------------------------------------------------------------
-export const SECURITY_HEADERS = {
-  'Content-Security-Policy': "default-src 'none'",
-  'X-Content-Type-Options': 'nosniff',
-  'X-Frame-Options': 'DENY',
-  'X-XSS-Protection': '1; mode=block',
-  'Referrer-Policy': 'strict-origin-when-cross-origin',
-};
-
-// ---------------------------------------------------------------------------
-// Auth context
-// ---------------------------------------------------------------------------
-export type RouteContext = {
-  user: ReturnType<typeof verifySessionToken>;
-  isAdmin: boolean;
-  cookies: Record<string, string>;
-};
+// Re-export RouteContext for consumers that import from '../index'
+export type { RouteContext } from './lib/context';
 
 // ---------------------------------------------------------------------------
 // Response helpers
@@ -470,10 +455,14 @@ async function main(): Promise<void> {
   startServer();
 }
 
-main().catch((err) => {
-  logger.fatal(err, 'Fatal startup error');
-  process.exit(1);
-});
+void (async () => {
+  try {
+    await main();
+  } catch (err) {
+    logger.fatal(err, 'Fatal startup error');
+    process.exit(1);
+  }
+})();
 
 // ---------------------------------------------------------------------------
 // Graceful shutdown

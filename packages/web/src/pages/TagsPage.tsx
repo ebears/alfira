@@ -38,9 +38,11 @@ export default function TagsPage() {
   }, []);
 
   useEffect(() => {
-    void fetchTags()
-      .then(setAllTags)
-      .finally(() => setLoadingTags(false));
+    void (async () => {
+      const tags = await fetchTags();
+      setAllTags(tags);
+      setLoadingTags(false);
+    })();
   }, []);
 
   const filtered = useMemo(
@@ -52,9 +54,11 @@ export default function TagsPage() {
     setSelected(tag);
     setEditingName(tag.canonicalName);
     setLoadingSongs(true);
-    void fetchTagSongs(tag.nameLower)
-      .then(setTagSongs)
-      .finally(() => setLoadingSongs(false));
+    void (async () => {
+      const songs = await fetchTagSongs(tag.nameLower);
+      setTagSongs(songs);
+      setLoadingSongs(false);
+    })();
   }, []);
 
   const saveName = useCallback(

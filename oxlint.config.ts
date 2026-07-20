@@ -4,11 +4,12 @@ export default defineConfig({
   options: {
     typeAware: true,
     typeCheck: true,
+    reportUnusedDisableDirectives: 'error',
   },
 
   ignorePatterns: ['.pi/**', '.zed/**'],
 
-  plugins: ['react', 'jsx-a11y', 'typescript'],
+  plugins: ['react', 'jsx-a11y', 'typescript', 'promise', 'import'],
 
   rules: {
     // a11y
@@ -64,6 +65,16 @@ export default defineConfig({
     'require-await': 'error',
     'default-case-last': 'error',
     'react/no-array-index-key': 'warn',
+
+    // equality — 'smart' allows == null / != null (idiomatic nullish checks)
+    eqeqeq: ['error', 'smart'],
+
+    // imports
+    'import/first': 'warn',
+    'import/no-cycle': 'warn',
+
+    // promises
+    'promise/prefer-await-to-then': 'error',
 
     // style
     '@typescript-eslint/no-inferrable-types': 'warn',

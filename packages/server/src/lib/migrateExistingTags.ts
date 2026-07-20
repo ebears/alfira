@@ -59,8 +59,12 @@ export async function runTagMigration(): Promise<{ normalized: number; errors: n
 
 // Standalone entry point — run with: bun run packages/server/src/lib/migrateExistingTags.ts
 if (import.meta.filename.includes('migrateExistingTags')) {
-  runTagMigration().catch((err) => {
-    logger.fatal(err, 'Tag migration failed');
-    process.exit(1);
-  });
+  void (async () => {
+    try {
+      await runTagMigration();
+    } catch (err) {
+      logger.fatal(err, 'Tag migration failed');
+      process.exit(1);
+    }
+  })();
 }

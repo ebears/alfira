@@ -181,25 +181,23 @@ export function usePaginatedData<T, A extends unknown[], M = undefined>({
     if (resetInProgressRef.current) return;
     setIsFetching(true);
     setIsError(false);
-    fetchPageRef
-      .current(1, limit, ...depsRef.current)
-      .then((result) => {
+    void (async () => {
+      try {
+        const result = await fetchPageRef.current(1, limit, ...depsRef.current);
         if (!isMountedRef.current) return;
         setItems(result.items);
         setHasMore(result.hasMore);
         if (result.total !== undefined) setTotal(result.total);
         if (result.metadata !== undefined) setMetadata(result.metadata);
         pageRef.current = 1;
-      })
-      .catch(() => {
+      } catch {
         if (!isMountedRef.current) return;
         setIsError(true);
-      })
-      .finally(() => {
-        if (isMountedRef.current) {
-          setIsFetching(false);
-        }
-      });
+      }
+      if (isMountedRef.current) {
+        setIsFetching(false);
+      }
+    })();
   }, [limit]);
 
   // Initial load

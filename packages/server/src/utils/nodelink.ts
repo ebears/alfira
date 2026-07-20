@@ -1,3 +1,6 @@
+import { db, tables, eq } from '../shared/db';
+import { logger } from '../shared/logger';
+
 export interface SongMetadata {
   title: string;
   sourceId: string;
@@ -25,9 +28,6 @@ export interface PlaylistMetadata {
 
 const NODELINK_URL = 'http://127.0.0.1:2333';
 const NODELINK_AUTH = 'nodelink-internal';
-
-import { db, tables, eq } from '../shared/db';
-import { logger } from '../shared/logger';
 
 // ---------------------------------------------------------------------------
 // Internal fetch helper — only called with trusted paths

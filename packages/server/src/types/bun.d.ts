@@ -10,7 +10,6 @@ declare global {
 
 // Augment WebSocketPair as a global constructor
 declare global {
-  // eslint-disable-next-line no-var
   var WebSocketPair: () => { client: Bun.WebSocket; server: Bun.WebSocket };
 }
 

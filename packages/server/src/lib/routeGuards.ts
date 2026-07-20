@@ -1,5 +1,5 @@
 import { and, eq, inArray } from 'drizzle-orm';
-import type { RouteContext } from '../index';
+import type { RouteContext } from './context';
 import type { PermissionAction, User } from '../shared';
 import { db, tables } from '../shared/db';
 import { requireAdmin, requireAuth } from './guards';

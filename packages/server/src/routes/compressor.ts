@@ -1,4 +1,4 @@
-import type { RouteContext } from '../index';
+import type { RouteContext } from '../lib/context';
 import { applyNodeLinkFilter, buildCompressorFilter } from '../lib/applyNodeLinkFilter';
 import { json } from '../lib/json';
 import { checkGuards } from '../lib/routeGuards';

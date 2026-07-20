@@ -1,5 +1,5 @@
 import { eq } from 'drizzle-orm';
-import type { RouteContext } from '../index';
+import type { RouteContext } from '../lib/context';
 import { refreshGuildId } from '../lib/config';
 import { refreshEnabledSources } from '../startDiscord';
 import { botHeaders, fetchGuildRoles } from '../lib/discordRoles';

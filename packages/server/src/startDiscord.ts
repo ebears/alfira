@@ -138,11 +138,14 @@ function handleReady(data: unknown): void {
   const wsProtocol = nodelinkParsed.protocol === 'https:' ? 'wss:' : 'ws:';
   const wsUrl = `${wsProtocol}//${nodelinkParsed.hostname}:${nodelinkParsed.port || 2333}/v4/websocket`;
 
-  lavalink.connect(wsUrl, NODELINK_AUTH, ready.user.id).then(
-    () => logger.info('Lavalink WebSocket connected'),
-    (err: Error) =>
-      logger.error({ err }, 'Lavalink WebSocket connection failed — audio will be unavailable')
-  );
+  void (async () => {
+    try {
+      await lavalink.connect(wsUrl, NODELINK_AUTH, ready.user.id);
+      logger.info('Lavalink WebSocket connected');
+    } catch (err) {
+      logger.error({ err }, 'Lavalink WebSocket connection failed — audio will be unavailable');
+    }
+  })();
 }
 
 // ---------------------------------------------------------------------------

@@ -1,5 +1,5 @@
 import { and, eq, inArray, or, sql } from 'drizzle-orm';
-import type { RouteContext } from '../index';
+import type { RouteContext } from '../lib/context';
 import { getUserDisplayName, resolveDisplayNames } from '../lib/displayName';
 import { json } from '../lib/json';
 import { sendRequestDm, sendRequestNotification } from '../lib/notifications';
@@ -309,9 +309,13 @@ async function handleCreateRequest(ctx: RouteContext, request: Request): Promise
 
       // Notify the request channel
       if (reqRow) {
-        sendRequestNotification('approved', formatRequest(reqRow), user, ctx).catch((err) =>
-          logger.warn({ err }, 'Failed to send playlist auto-approve notification')
-        );
+        void (async () => {
+          try {
+            await sendRequestNotification('approved', formatRequest(reqRow), user, ctx);
+          } catch (err) {
+            logger.warn({ err }, 'Failed to send playlist auto-approve notification');
+          }
+        })();
       }
 
       return json(
@@ -458,9 +462,13 @@ async function handleCreateRequest(ctx: RouteContext, request: Request): Promise
 
     // Notify the request channel
     if (reqRow) {
-      sendRequestNotification('approved', formatRequest(reqRow), user, ctx).catch((err) =>
-        logger.warn({ err }, 'Failed to send auto-approve notification')
-      );
+      void (async () => {
+        try {
+          await sendRequestNotification('approved', formatRequest(reqRow), user, ctx);
+        } catch (err) {
+          logger.warn({ err }, 'Failed to send auto-approve notification');
+        }
+      })();
     }
 
     // Send DM if requested
@@ -623,9 +631,13 @@ async function handlePatchRequest(
     });
 
     // Notify the request channel
-    sendRequestNotification('denied', formatted, user, ctx).catch((err) =>
-      logger.warn({ err }, 'Failed to send denied notification')
-    );
+    void (async () => {
+      try {
+        await sendRequestNotification('denied', formatted, user, ctx);
+      } catch (err) {
+        logger.warn({ err }, 'Failed to send denied notification');
+      }
+    })();
 
     // Send DM if requested
     if (existing.notifyDm) {
@@ -711,9 +723,13 @@ async function handlePatchRequest(
     });
 
     // Notify the request channel
-    sendRequestNotification('approved', formatted, user, ctx).catch((err) =>
-      logger.warn({ err }, 'Failed to send playlist approved notification')
-    );
+    void (async () => {
+      try {
+        await sendRequestNotification('approved', formatted, user, ctx);
+      } catch (err) {
+        logger.warn({ err }, 'Failed to send playlist approved notification');
+      }
+    })();
 
     return json({
       request: formatted,
@@ -772,9 +788,13 @@ async function handlePatchRequest(
   });
 
   // Notify the request channel
-  sendRequestNotification('approved', formatted, user, ctx).catch((err) =>
-    logger.warn({ err }, 'Failed to send approved notification')
-  );
+  void (async () => {
+    try {
+      await sendRequestNotification('approved', formatted, user, ctx);
+    } catch (err) {
+      logger.warn({ err }, 'Failed to send approved notification');
+    }
+  })();
 
   return json({
     request: formatted,

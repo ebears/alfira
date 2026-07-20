@@ -49,12 +49,13 @@ export default function AddSongsModal({
     setHasMore(true);
     setLoading(true);
     debouncedSearchRef.current = debouncedSearch;
-    void getSongsPage(1, PAGE_SIZE, { search: debouncedSearch || undefined }).then((result) => {
+    void (async () => {
+      const result = await getSongsPage(1, PAGE_SIZE, { search: debouncedSearch || undefined });
       setSongs(result.items);
       setHasMore(result.items.length >= PAGE_SIZE);
       hasMoreRef.current = result.items.length >= PAGE_SIZE;
       setLoading(false);
-    });
+    })();
   }, [debouncedSearch]);
 
   // Debounce search input
@@ -71,9 +72,10 @@ export default function AddSongsModal({
     loadingMoreRef.current = true;
     setLoadingMore(true);
     const nextPage = pageRef.current + 1;
-    void getSongsPage(nextPage, PAGE_SIZE, {
-      search: debouncedSearchRef.current || undefined,
-    }).then((result) => {
+    void (async () => {
+      const result = await getSongsPage(nextPage, PAGE_SIZE, {
+        search: debouncedSearchRef.current || undefined,
+      });
       setSongs((prev) => [...prev, ...result.items]);
       setPage(nextPage);
       pageRef.current = nextPage;
@@ -81,7 +83,7 @@ export default function AddSongsModal({
       hasMoreRef.current = result.items.length >= PAGE_SIZE;
       loadingMoreRef.current = false;
       setLoadingMore(false);
-    });
+    })();
   }, []);
 
   // Check near-bottom on scroll

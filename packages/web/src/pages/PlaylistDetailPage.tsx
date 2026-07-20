@@ -5,9 +5,6 @@ import { AnimatePresence } from 'motion/react';
 import * as m from 'motion/react-m';
 import { pageVariants, viewTransition } from '../lib/motion';
 import { usePaginatedData } from '../hooks/usePaginatedData';
-
-type PlaylistDetailMeta = Omit<PlaylistDetail, 'songs'>;
-
 import {
   BombIcon,
   CaretLeftIcon,
@@ -59,6 +56,8 @@ import { useNotification } from '../hooks/useNotification';
 import { onSocketEvent } from '../hooks/useSocket';
 import { apiErrorMessage, notifyUnlessRateLimit } from '../utils/api';
 import { getTagColorClasses } from '../utils/tagColors';
+
+type PlaylistDetailMeta = Omit<PlaylistDetail, 'songs'>;
 
 const ITEMS_PER_PAGE = 48;
 
@@ -113,13 +112,15 @@ export default function PlaylistDetailPage() {
   // Fetch tags for tag change submenu
   useEffect(() => {
     if (isAdminView || user?.discordId) {
-      fetchTags()
-        .then(setTags)
-        .catch(() => {
+      void (async () => {
+        try {
+          const tags = await fetchTags();
+          setTags(tags);
+        } catch {
           // Tags are non-critical — fail silently
-        });
+        }
+      })();
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isAdminView, user?.discordId]);
 
   const { state: queueState } = usePlayerState();

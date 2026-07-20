@@ -22,14 +22,15 @@ export function TagsProvider({ children }: { children: ReactNode }) {
   const [tagColorMap, setTagColorMap] = useState<Record<string, string | null>>({});
 
   const refreshTags = useCallback(() => {
-    void fetchTags().then((fetched: TagItem[]) => {
+    void (async () => {
+      const fetched: TagItem[] = await fetchTags();
       setTags(fetched);
       const map: Record<string, string | null> = {};
       for (const tag of fetched) {
         map[tag.nameLower] = tag.color ?? null;
       }
       setTagColorMap(map);
-    });
+    })();
   }, []);
 
   useEffect(() => {

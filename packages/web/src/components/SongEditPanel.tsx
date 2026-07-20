@@ -266,10 +266,11 @@ export default function SongEditPanel({ song, isOpen, onClose }: SongEditPanelPr
               onClick={() => {
                 tagInputRef.current?.focus();
                 if (!fetchedTags) {
-                  void fetchTags().then((t) => {
+                  void (async () => {
+                    const t = await fetchTags();
                     setAvailableTags(t);
                     setFetchedTags(true);
-                  });
+                  })();
                 }
                 setShowTagDropdown(true);
               }}

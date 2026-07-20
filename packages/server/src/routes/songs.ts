@@ -1,5 +1,5 @@
 import { eq, inArray, sql } from 'drizzle-orm';
-import type { RouteContext } from '../index';
+import type { RouteContext } from '../lib/context';
 import { getGuildId } from '../lib/config';
 import { resolveDisplayNames } from '../lib/displayName';
 import { json } from '../lib/json';

@@ -33,7 +33,6 @@ function SkeletonList() {
   return (
     <div className='space-y-3'>
       {Array.from({ length: 4 }).map((_, i) => (
-        // eslint-disable-next-line react/no-array-index-key -- static skeleton placeholders
         <div
           key={`skel-${i}`}
           className='flex items-center gap-4 p-4 rounded-xl bg-elevated clay-resting'
