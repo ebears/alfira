@@ -1,8 +1,10 @@
-import { applyNodeLinkFilter, buildCompressorFilter } from '../lib/applyNodeLinkFilter';
+import { eq } from 'drizzle-orm';
+
 import { type RouteContext } from '../lib/context';
 import { json } from '../lib/json';
 import { checkGuards } from '../lib/routeGuards';
 import { routeTable } from '../lib/routeTable';
+import { syncAllFilters } from '../lib/syncAllFilters';
 import { db, tables } from '../shared/db';
 
 interface CompressorPayload {
@@ -14,7 +16,29 @@ interface CompressorPayload {
   gain: number;
 }
 
-async function handleCompressorRequest(
+function handleCompressorGet(
+  ctx: RouteContext,
+  _request: Request,
+  _params: Record<string, string>
+): Response {
+  const guards = checkGuards(ctx, { admin: true, permission: 'audio.manage' });
+  if (guards instanceof Response) {
+    return guards;
+  }
+
+  const row = db.select().from(tables.guildSettings).where(eq(tables.guildSettings.id, 1)).get();
+
+  return json({
+    enabled: row?.compressorEnabled ?? false,
+    threshold: row?.compressorThreshold ?? -6,
+    ratio: row?.compressorRatio ?? 4.0,
+    attack: row?.compressorAttack ?? 5,
+    release: row?.compressorRelease ?? 50,
+    gain: row?.compressorGain ?? 3,
+  });
+}
+
+async function handleCompressorPatch(
   ctx: RouteContext,
   request: Request,
   _params: Record<string, string>
@@ -77,15 +101,15 @@ async function handleCompressorRequest(
     })
     .run();
 
-  // Apply to live NodeLink player if connected
-  await applyNodeLinkFilter(enabled ? buildCompressorFilter(body) : {}, 'compressor');
+  // Apply all enabled filters to live NodeLink player
+  await syncAllFilters();
 
   return json({ enabled, threshold, ratio, attack, release, gain });
 }
 
 export const handleCompressor = routeTable('/api/settings/compressor', {
   routes: [
-    ['GET', '/', handleCompressorRequest],
-    ['PATCH', '/', handleCompressorRequest],
+    ['GET', '/', handleCompressorGet],
+    ['PATCH', '/', handleCompressorPatch],
   ],
 });

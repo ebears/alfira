@@ -13,16 +13,24 @@ import { SECURITY_HEADERS } from './lib/securityHeaders';
 import { closeAllClients, registerClient, unregisterClient, type WsClient } from './lib/socket';
 import { verifySessionToken } from './middleware/requireAuth';
 import { handleAuth } from './routes/auth';
+import { handleChannelMix } from './routes/channelMix';
 import { handleCompressor } from './routes/compressor';
+import { handleDistortion } from './routes/distortion';
 import { handleEqualizer } from './routes/equalizer';
 import { handleGeneralSettings } from './routes/generalSettings';
+import { handleKaraoke } from './routes/karaoke';
+import { handleLowPass } from './routes/lowPass';
 import { handlePermissions } from './routes/permissions';
 import { handlePlayer } from './routes/player';
 import { handlePlaylists } from './routes/playlists';
 import { handleRequests } from './routes/requests';
+import { handleRotation } from './routes/rotation';
 import { handleSetup } from './routes/setup';
 import { handleSongs } from './routes/songs';
 import { handleTags } from './routes/tags';
+import { handleTimescale } from './routes/timescale';
+import { handleTremolo } from './routes/tremolo';
+import { handleVibrato } from './routes/vibrato';
 import { $client, db } from './shared/db';
 import { logger } from './shared/logger';
 import { destroyAllPlayers, initEnabledSources, startDiscord } from './startDiscord';
@@ -209,10 +217,26 @@ function startServer(): void {
       '/api/playlists/*': apiRoute(handlePlaylists),
       '/api/player': apiRoute(handlePlayer),
       '/api/player/*': apiRoute(handlePlayer),
+      '/api/settings/channelmix': apiRoute(handleChannelMix),
+      '/api/settings/channelmix/*': apiRoute(handleChannelMix),
       '/api/settings/compressor': apiRoute(handleCompressor),
       '/api/settings/compressor/*': apiRoute(handleCompressor),
+      '/api/settings/distortion': apiRoute(handleDistortion),
+      '/api/settings/distortion/*': apiRoute(handleDistortion),
       '/api/settings/equalizer': apiRoute(handleEqualizer),
       '/api/settings/equalizer/*': apiRoute(handleEqualizer),
+      '/api/settings/karaoke': apiRoute(handleKaraoke),
+      '/api/settings/karaoke/*': apiRoute(handleKaraoke),
+      '/api/settings/lowpass': apiRoute(handleLowPass),
+      '/api/settings/lowpass/*': apiRoute(handleLowPass),
+      '/api/settings/rotation': apiRoute(handleRotation),
+      '/api/settings/rotation/*': apiRoute(handleRotation),
+      '/api/settings/timescale': apiRoute(handleTimescale),
+      '/api/settings/timescale/*': apiRoute(handleTimescale),
+      '/api/settings/tremolo': apiRoute(handleTremolo),
+      '/api/settings/tremolo/*': apiRoute(handleTremolo),
+      '/api/settings/vibrato': apiRoute(handleVibrato),
+      '/api/settings/vibrato/*': apiRoute(handleVibrato),
       '/api/permissions': apiRoute(handlePermissions),
       '/api/permissions/*': apiRoute(handlePermissions),
       '/api/settings/general': apiRoute(handleGeneralSettings),
