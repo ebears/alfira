@@ -23,7 +23,7 @@ import {
   UserIcon,
 } from '@phosphor-icons/react';
 import { useVirtualizer } from '@tanstack/react-virtual';
-import { AnimatePresence, type Transition } from 'motion/react';
+import { AnimatePresence } from 'motion/react';
 import * as m from 'motion/react-m';
 import { memo, useCallback, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
@@ -45,6 +45,29 @@ import { Button } from './ui/Button';
 import { cooldownButtonProps } from './ui/cooldownButtonProps';
 import { DurationBadge } from './ui/DurationBadge';
 import { VolumeBoostBadge } from './ui/VolumeBoostBadge';
+
+/* --------------------------------------------------------------------------
+ * Module-level constants — stable references for memoized components
+ * -------------------------------------------------------------------------- */
+
+const CARD_BG_STYLE = { background: 'var(--color-base)' } as const;
+const ZERO_WIDTH_STYLE = { width: '0%' } as const;
+const QUEUE_TRANSITION = { duration: 0.2, ease: 'easeOut' } as const;
+const SCROLL_MASK_STYLE = {
+  WebkitMaskImage:
+    'linear-gradient(to bottom, black 0%, black calc(100% - 40px), transparent 100%)',
+  maskImage: 'linear-gradient(to bottom, black 0%, black calc(100% - 40px), transparent 100%)',
+} as const;
+
+function getVirtualRowStyle(start: number): React.CSSProperties {
+  return {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    width: '100%',
+    transform: `translateY(${start}px)`,
+  };
+}
 
 export interface MobileQuickControls {
   currentSong: QueuedSong | null;
@@ -248,6 +271,24 @@ export default function QueuePanel({
     [reorderQueue]
   );
 
+  const handleToggleMenu = useCallback(() => setMenuOpen(!menuOpen), [menuOpen]);
+  const handleCloseMenu = useCallback(() => setMenuOpen(false), []);
+  const handleCloseQuickAdd = useCallback(() => setShowQuickAdd(false), []);
+  const handleAddedQuickAdd = useCallback(() => setShowQuickAdd(false), []);
+  const handleCloseOverride = useCallback(() => setShowOverride(false), []);
+  const handleOverrideDone = useCallback(() => setShowOverride(false), []);
+  const handleConfirmClear = useCallback(async () => {
+    setClearConfirm(false);
+    await handleClear();
+  }, [handleClear]);
+  const handleCancelClear = useCallback(() => setClearConfirm(false), []);
+
+  const totalHeight = virtualizer.getTotalSize();
+  const virtualContainerStyle = useMemo(
+    () => ({ height: `${totalHeight}px`, position: 'relative' as const }),
+    [totalHeight]
+  );
+
   const menuItems: MenuItem[] = useMemo(() => {
     const items: MenuItem[] = [];
     if (isAdminView || hasPermission('queue.quickadd')) {
@@ -286,7 +327,7 @@ export default function QueuePanel({
         <PanelHeader
           triggerRef={triggerRef}
           menuOpen={menuOpen}
-          onToggleMenu={() => setMenuOpen(!menuOpen)}
+          onToggleMenu={handleToggleMenu}
           mobileQuickControls={mobileQuickControls}
           showActions={false}
         />
@@ -305,7 +346,7 @@ export default function QueuePanel({
       <PanelHeader
         triggerRef={triggerRef}
         menuOpen={menuOpen}
-        onToggleMenu={() => setMenuOpen(!menuOpen)}
+        onToggleMenu={handleToggleMenu}
         mobileQuickControls={mobileQuickControls}
         showActions={menuItems.length > 0}
       />
@@ -320,7 +361,7 @@ export default function QueuePanel({
               initial='initial'
               animate='animate'
               exit='exit'
-              transition={{ duration: 0.2, ease: 'easeOut' } as Transition}
+              transition={QUEUE_TRANSITION}
             >
               <NowPlayingCard
                 song={currentSong}
@@ -335,7 +376,7 @@ export default function QueuePanel({
               initial='initial'
               animate='animate'
               exit='exit'
-              transition={{ duration: 0.2, ease: 'easeOut' } as Transition}
+              transition={QUEUE_TRANSITION}
             >
               <IdleCard />
             </m.div>
@@ -355,19 +396,9 @@ export default function QueuePanel({
         <div
           ref={scrollRef}
           className='flex-1 overflow-y-auto px-4 pb-4 min-h-0'
-          style={{
-            WebkitMaskImage:
-              'linear-gradient(to bottom, black 0%, black calc(100% - 40px), transparent 100%)',
-            maskImage:
-              'linear-gradient(to bottom, black 0%, black calc(100% - 40px), transparent 100%)',
-          }}
+          style={SCROLL_MASK_STYLE}
         >
-          <div
-            style={{
-              height: `${virtualizer.getTotalSize()}px`,
-              position: 'relative',
-            }}
-          >
+          <div style={virtualContainerStyle}>
             {virtualizer.getVirtualItems().map((virtualRow) => {
               const item = virtualItems[virtualRow.index];
               if (item == null) {
@@ -380,13 +411,7 @@ export default function QueuePanel({
                     key={item.key}
                     data-index={virtualRow.index}
                     ref={virtualizer.measureElement}
-                    style={{
-                      position: 'absolute',
-                      top: 0,
-                      left: 0,
-                      width: '100%',
-                      transform: `translateY(${virtualRow.start}px)`,
-                    }}
+                    style={getVirtualRowStyle(virtualRow.start)}
                   >
                     {item.variant === 'priority' ? (
                       <h2 className='font-display text-lg text-fg tracking-wider'>
@@ -416,19 +441,13 @@ export default function QueuePanel({
                   data-index={virtualRow.index}
                   ref={virtualizer.measureElement}
                   className='pb-1'
-                  style={{
-                    position: 'absolute',
-                    top: 0,
-                    left: 0,
-                    width: '100%',
-                    transform: `translateY(${virtualRow.start}px)`,
-                  }}
+                  style={getVirtualRowStyle(virtualRow.start)}
                 >
                   <m.div
                     initial='initial'
                     animate='animate'
                     variants={queueItemVariants}
-                    transition={{ duration: 0.2, ease: 'easeOut' } as Transition}
+                    transition={QUEUE_TRANSITION}
                   >
                     <QueueSongItem
                       song={item.song}
@@ -456,7 +475,7 @@ export default function QueuePanel({
         <ContextMenu
           items={menuItems}
           isOpen={menuOpen}
-          onClose={() => setMenuOpen(false)}
+          onClose={handleCloseMenu}
           triggerRef={triggerRef}
           align='right'
         />
@@ -465,22 +484,12 @@ export default function QueuePanel({
       {/* Modals rendered via portal to escape slideout stacking context */}
       {showQuickAdd &&
         createPortal(
-          <QuickAddModal
-            onClose={() => setShowQuickAdd(false)}
-            onAdded={() => {
-              setShowQuickAdd(false);
-            }}
-          />,
+          <QuickAddModal onClose={handleCloseQuickAdd} onAdded={handleAddedQuickAdd} />,
           document.body
         )}
       {showOverride &&
         createPortal(
-          <OverrideModal
-            onClose={() => setShowOverride(false)}
-            onOverride={() => {
-              setShowOverride(false);
-            }}
-          />,
+          <OverrideModal onClose={handleCloseOverride} onOverride={handleOverrideDone} />,
           document.body
         )}
       {clearConfirm &&
@@ -489,11 +498,8 @@ export default function QueuePanel({
             title='Clear Queue'
             message='All songs in the queue will be removed. This cannot be undone.'
             confirmLabel='Clear'
-            onConfirm={async () => {
-              setClearConfirm(false);
-              await handleClear();
-            }}
-            onCancel={() => setClearConfirm(false)}
+            onConfirm={handleConfirmClear}
+            onCancel={handleCancelClear}
           />,
           document.body
         )}
@@ -530,6 +536,11 @@ const QueueSongItem = memo(function QueueSongItem({
 }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const triggerRef = useRef<HTMLButtonElement>(null);
+  const handleToggleSongMenu = useCallback((e: React.MouseEvent) => {
+    e.stopPropagation();
+    setMenuOpen((prev) => !prev);
+  }, []);
+  const handleCloseSongMenu = useCallback(() => setMenuOpen(false), []);
   const isPriority = variant === 'priority';
   const isFirst = index === 0;
   const isLast = index >= targetQueue.length - 1;
@@ -622,7 +633,7 @@ const QueueSongItem = memo(function QueueSongItem({
   const sourceKey = useMemo(() => getSourceKey(song.sourceUrl), [song.sourceUrl]);
 
   return (
-    <div className='rounded-lg overflow-hidden' style={{ background: 'var(--color-base)' }}>
+    <div className='rounded-lg overflow-hidden' style={CARD_BG_STYLE}>
       <div className='flex items-center gap-3 px-3 py-2 group'>
         {/* Index */}
         <span
@@ -685,10 +696,7 @@ const QueueSongItem = memo(function QueueSongItem({
             aria-expanded={menuOpen}
             aria-label='Song actions'
             className={`opacity-0 group-hover:opacity-100 transition-opacity shrink-0 w-6 h-6 ${menuOpen ? 'pressed text-accent opacity-100' : 'text-muted hover:text-fg'}`}
-            onClick={(e) => {
-              e.stopPropagation();
-              setMenuOpen((prev) => !prev);
-            }}
+            onClick={handleToggleSongMenu}
           >
             <DotsThreeOutlineVerticalIcon size={14} weight='duotone' />
           </Button>
@@ -698,7 +706,7 @@ const QueueSongItem = memo(function QueueSongItem({
         <ContextMenu
           items={menuItems}
           isOpen={menuOpen}
-          onClose={() => setMenuOpen(false)}
+          onClose={handleCloseSongMenu}
           triggerRef={triggerRef}
           align='right'
         />
@@ -836,7 +844,7 @@ const NowPlayingCard = memo(function NowPlayingCard({
   const sourceKey = useMemo(() => getSourceKey(song.sourceUrl), [song.sourceUrl]);
 
   return (
-    <div className='card overflow-hidden' style={{ background: 'var(--color-base)' }}>
+    <div className='card overflow-hidden' style={CARD_BG_STYLE}>
       <div className='flex gap-4 p-4'>
         {/* Artwork */}
         <div className='relative shrink-0 overflow-hidden rounded-xl bg-elevated'>
@@ -884,7 +892,7 @@ const NowPlayingCard = memo(function NowPlayingCard({
               <div
                 ref={registerProgress}
                 className='absolute inset-y-0 left-0 bg-accent rounded-full'
-                style={{ width: '0%' }}
+                style={ZERO_WIDTH_STYLE}
               />
             </div>
             <div className='flex justify-between mt-1'>
@@ -903,10 +911,7 @@ const NowPlayingCard = memo(function NowPlayingCard({
 const IdleCard = memo(function IdleCard() {
   const [Icon] = useState(getRandomIdleIcon);
   return (
-    <div
-      className='card flex items-center justify-center py-8'
-      style={{ background: 'var(--color-base)' }}
-    >
+    <div className='card flex items-center justify-center py-8' style={CARD_BG_STYLE}>
       <div className='text-center'>
         <div className='w-12 h-12 rounded-full bg-elevated border border-border flex items-center justify-center mx-auto mb-3'>
           <Icon size={20} weight='duotone' className='text-faint' />
