@@ -2,6 +2,7 @@ import { type SongRequest } from '@alfira/server/shared';
 import { memo, useCallback, useMemo } from 'react';
 
 import RequestCard from './RequestCard';
+import { Skeleton } from './ui/Skeleton';
 import { VirtualList } from './VirtualList';
 
 // ---------------------------------------------------------------------------
@@ -38,12 +39,12 @@ function SkeletonList() {
           key={`skel-${i}`}
           className='flex items-center gap-4 p-4 rounded-xl bg-elevated clay-resting'
         >
-          <div className='skeleton w-14 h-14 rounded-lg shrink-0' />
+          <Skeleton className='w-14 h-14 rounded-lg shrink-0' />
           <div className='flex-1 min-w-0 space-y-2'>
-            <div className='skeleton h-3 w-3/4' />
-            <div className='skeleton h-2 w-1/2' />
+            <Skeleton className='h-3 w-3/4' />
+            <Skeleton className='h-2 w-1/2' />
           </div>
-          <div className='skeleton h-4 w-16 rounded-full shrink-0' />
+          <Skeleton className='h-4 w-16 rounded-full shrink-0' />
         </div>
       ))}
     </div>

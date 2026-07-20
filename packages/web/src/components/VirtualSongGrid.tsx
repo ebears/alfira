@@ -4,6 +4,7 @@ import { memo, useCallback, useMemo, useRef } from 'react';
 
 import { useScrollObserver } from '../hooks/useScrollObserver';
 import SongCard from './SongCard';
+import { Skeleton } from './ui/Skeleton';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -55,11 +56,11 @@ function SkeletonGrid() {
             key={`skeleton-${i}`}
             className='rounded-lg bg-elevated clay-resting overflow-hidden'
           >
-            <div className='skeleton aspect-square m-3 rounded-lg' />
+            <Skeleton className='aspect-square m-3 rounded-lg' />
             <div className='p-4 flex flex-col gap-2'>
-              <div className='skeleton h-3.5 w-3/5' />
-              <div className='skeleton h-3 w-4/5' />
-              <div className='skeleton h-3 w-2/5' />
+              <Skeleton className='h-3.5 w-3/5' />
+              <Skeleton className='h-3 w-4/5' />
+              <Skeleton className='h-3 w-2/5' />
             </div>
           </div>
         ))}
@@ -276,7 +277,10 @@ export const VirtualSongGrid = memo(function VirtualSongGrid({
       {isContentReady && isFetching && (
         <div className='flex justify-center py-4 gap-2'>
           {Array.from({ length: 3 }).map((_, i) => (
-            <div key={`loading-dot-${i}`} className='skeleton h-3 w-3 rounded-full animate-pulse' />
+            <div
+              key={`loading-dot-${i}`}
+              className='h-3 w-3 rounded-full bg-border animate-pulse'
+            />
           ))}
         </div>
       )}

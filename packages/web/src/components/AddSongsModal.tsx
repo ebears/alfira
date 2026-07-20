@@ -7,6 +7,7 @@ import { addSongToPlaylist, getSongsPage } from '../api/api';
 import { Backdrop } from './Backdrop';
 import { ArtworkImage } from './ui/ArtworkImage';
 import { Button } from './ui/Button';
+import { Skeleton } from './ui/Skeleton';
 import { SpringUp } from './ui/SpringUp';
 
 const PAGE_SIZE = 30;
@@ -167,8 +168,8 @@ export default function AddSongsModal({
             <div className='p-4 md:p-6 space-y-2'>
               {[1, 2, 3, 4, 5].map((n) => (
                 <div key={`skeleton-${n}`} className='flex items-center gap-3'>
-                  <div className='skeleton w-12 h-8 md:w-10 md:h-7 rounded' />
-                  <div className='skeleton h-3 flex-1' />
+                  <Skeleton className='w-12 h-8 md:w-10 md:h-7 rounded' />
+                  <Skeleton className='h-3 flex-1' />
                 </div>
               ))}
             </div>

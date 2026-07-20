@@ -44,6 +44,7 @@ import { ArtworkImage } from './ui/ArtworkImage';
 import { Button } from './ui/Button';
 import { cooldownButtonProps } from './ui/cooldownButtonProps';
 import { DurationBadge } from './ui/DurationBadge';
+import { Skeleton } from './ui/Skeleton';
 import { VolumeBoostBadge } from './ui/VolumeBoostBadge';
 
 /* --------------------------------------------------------------------------
@@ -332,10 +333,10 @@ export default function QueuePanel({
           showActions={false}
         />
         <div className='flex-1 p-4 space-y-3'>
-          <div className='skeleton h-5 w-48 rounded' />
-          <div className='skeleton h-12 w-full rounded' />
-          <div className='skeleton h-12 w-full rounded' />
-          <div className='skeleton h-12 w-full rounded' />
+          <Skeleton className='h-5 w-48 rounded' />
+          <Skeleton className='h-12 w-full rounded' />
+          <Skeleton className='h-12 w-full rounded' />
+          <Skeleton className='h-12 w-full rounded' />
         </div>
       </div>
     );
