@@ -1,5 +1,6 @@
 import { type HTMLAttributes, memo } from 'react';
 
+import { ClayPressable } from './ClayPressable';
 import { SpringUp } from './SpringUp';
 
 interface CardProps extends HTMLAttributes<HTMLDivElement> {
@@ -16,15 +17,14 @@ export const Card = memo(function Card({
   children,
   ...rest
 }: CardProps) {
-  const hoverClasses = hoverable
-    ? 'hover:clay-raised hover:-translate-y-px [&:active:not(:has(button:active))]:clay-flat [&:active:not(:has(button:active))]:translate-y-0'
-    : '';
+  const baseClass = `bg-elevated overflow-hidden ${className}`;
 
-  const card = (
-    <div
-      className={`bg-elevated clay-resting transition-all duration-100 ${hoverClasses} ${className}`}
-      {...rest}
-    >
+  const card = hoverable ? (
+    <ClayPressable depth='medium' className={baseClass} {...rest}>
+      {children}
+    </ClayPressable>
+  ) : (
+    <div className={`clay-resting ${baseClass}`} {...rest}>
       {children}
     </div>
   );

@@ -5,6 +5,7 @@ import { fetchPermissions, type PermissionsResponse, updatePermission } from '..
 import ConfirmModal from '../components/ConfirmModal';
 import EmptyState from '../components/EmptyState';
 import { Button } from '../components/ui/Button';
+import { Card } from '../components/ui/Card';
 import Checkbox from '../components/ui/Checkbox';
 import { ErrorBanner } from '../components/ui/ErrorBanner';
 import { PageHeader } from '../components/ui/PageHeader';
@@ -389,7 +390,7 @@ function RoleCard({
   );
 
   return (
-    <div className='bg-elevated clay-resting rounded-xl overflow-hidden hover:clay-raised hover:-translate-y-px active:clay-flat active:translate-y-0 transition-all duration-100'>
+    <Card hoverable className='rounded-xl overflow-hidden'>
       {/* Header row — clickable to toggle expand */}
       <button
         type='button'
@@ -445,7 +446,7 @@ function RoleCard({
           </div>
         </div>
       )}
-    </div>
+    </Card>
   );
 }
 

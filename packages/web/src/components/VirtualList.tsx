@@ -230,7 +230,6 @@ function VirtualListInner<T>({
                     width: '100%',
                     height: `${virtualRow.size}px`,
                     transform: `translateY(${virtualRow.start}px)`,
-                    overflow: 'hidden',
                   }}
                 >
                   <m.div layout initial='initial' animate='animate' variants={listItemVariants}>
