@@ -31,7 +31,7 @@ concurrency:
 
 jobs:
   lint-and-typecheck:
-    name: Lint & Typecheck
+    name: Lint, Typecheck & Build
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
@@ -48,8 +48,8 @@ jobs:
       - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2
       - name: Install dependencies
         run: bun install --frozen-lockfile
-      - name: Lint (oxlint)
-        run: bun run lint
+      - name: Lint, typecheck, and format check
+        run: bun run check
       - name: Build server
         run: bun run --filter @alfira/server build
       - name: Build web
