@@ -1,6 +1,6 @@
 import { useVirtualizer } from '@tanstack/react-virtual';
 import * as m from 'motion/react-m';
-import { memo, useEffect, useLayoutEffect, useRef } from 'react';
+import { memo, useEffect, useLayoutEffect, useMemo, useRef } from 'react';
 
 import { listItemVariants } from '../lib/motion';
 import EmptyState from './EmptyState';
@@ -122,6 +122,19 @@ function VirtualListInner<T>({
   const showEmpty = hasLoaded && items.length === 0;
   const showContent = !isLoading && hasLoaded && items.length > 0;
 
+  // Stable styles for the outer containers.
+  const containerStyle = useMemo(() => ({ opacity: 0, transition: 'opacity 120ms ease' }), []);
+
+  const scrollMaskStyle = useMemo(
+    () => ({
+      WebkitMaskImage:
+        'linear-gradient(to bottom, transparent 0%, black 20px, black calc(100% - 20px), transparent 100%)',
+      maskImage:
+        'linear-gradient(to bottom, transparent 0%, black 20px, black calc(100% - 20px), transparent 100%)',
+    }),
+    []
+  );
+
   useLayoutEffect(() => {
     if (!containerRef.current) {
       return;
@@ -133,7 +146,7 @@ function VirtualListInner<T>({
     <div
       ref={containerRef}
       className='relative flex-1 min-h-0 flex flex-col overflow-x-hidden'
-      style={{ opacity: 0, transition: 'opacity 120ms ease' }}
+      style={containerStyle}
     >
       {showSkeleton && skeleton}
 
@@ -143,12 +156,7 @@ function VirtualListInner<T>({
         <div
           ref={scrollRef}
           className='overflow-y-auto overflow-x-hidden px-2 pt-3 min-h-0 flex-1 bg-surface'
-          style={{
-            WebkitMaskImage:
-              'linear-gradient(to bottom, transparent 0%, black 20px, black calc(100% - 20px), transparent 100%)',
-            maskImage:
-              'linear-gradient(to bottom, transparent 0%, black 20px, black calc(100% - 20px), transparent 100%)',
-          }}
+          style={scrollMaskStyle}
         >
           <div
             style={{

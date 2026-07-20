@@ -9,7 +9,7 @@ export default defineConfig({
 
   ignorePatterns: ['.pi/**', '.zed/**'],
 
-  plugins: ['react', 'jsx-a11y', 'typescript', 'promise', 'import'],
+  plugins: ['react', 'react-perf', 'jsx-a11y', 'typescript', 'promise', 'import'],
 
   rules: {
     // -----------------------------------------------------------------------
@@ -216,6 +216,19 @@ export default defineConfig({
     'react/no-unstable-nested-components': 'warn',
 
     // -----------------------------------------------------------------------
+    // react-perf — rendering performance anti-patterns
+    // -----------------------------------------------------------------------
+    // Inline functions/objects/JSX as props break React.memo and cause
+    // unnecessary re-renders. Fix with useCallback / useMemo / extract outside.
+    'react-perf/jsx-no-new-function-as-prop': 'warn',
+    'react-perf/jsx-no-new-object-as-prop': 'warn',
+    'react-perf/jsx-no-jsx-as-prop': 'warn',
+    // Context value objects constructed inline cause full subtree re-renders
+    'react/jsx-no-constructed-context-values': 'warn',
+    // Default prop arrays/objects break referential equality
+    'react/no-object-type-as-default-prop': 'warn',
+
+    // -----------------------------------------------------------------------
     // typescript strictness — close the `any` escape hatch
     // -----------------------------------------------------------------------
     '@typescript-eslint/no-unsafe-assignment': 'warn',
@@ -346,6 +359,35 @@ export default defineConfig({
       },
     },
 
+    // EQ slider bands: fixed-length array with stable order, index is the correct key
+    {
+      files: ['packages/web/src/components/settings/EqualizerSection.tsx'],
+      rules: {
+        'react/no-array-index-key': 'off',
+      },
+    },
+
+    // VirtualList: dynamic virtualizer styles are generated per-item from scroll position —
+    // height/transform values are inherently unique and cannot be statically extracted.
+    {
+      files: ['packages/web/src/components/VirtualList.tsx'],
+      rules: {
+        'react-perf/jsx-no-new-object-as-prop': 'off',
+      },
+    },
+
+    // VirtualSongGrid: GridCard created inside useMemo([]) for masonry stable identity.
+    // Inline functions/objects in the render body are intentional — cardPropsRef.current
+    // provides latest values while keeping component type identity stable.
+    {
+      files: ['packages/web/src/components/VirtualSongGrid.tsx'],
+      rules: {
+        'react/no-unstable-nested-components': 'off',
+        'react-perf/jsx-no-new-function-as-prop': 'off',
+        'react-perf/jsx-no-new-object-as-prop': 'off',
+      },
+    },
+
     // Song/Playlist rows and panels: relaxed a11y
     {
       files: [
@@ -391,6 +433,43 @@ export default defineConfig({
       files: ['packages/server/src/shared/logger.ts'],
       rules: {
         'no-console': 'off',
+      },
+    },
+
+    // =======================================================================
+    // react-perf: temporary overrides while fixing file-by-file.
+    // Remove files from this list as they are cleaned up.
+    // When the list is empty, delete this entire override block.
+    // =======================================================================
+    {
+      files: [
+        'packages/web/src/App.tsx',
+        'packages/web/src/components/AddSongModal.tsx',
+        'packages/web/src/components/AddSongsModal.tsx',
+        'packages/web/src/components/BulkEditModal.tsx',
+        'packages/web/src/components/ContextMenu.tsx',
+        'packages/web/src/components/Layout.tsx',
+        'packages/web/src/components/ListToolbar.tsx',
+        'packages/web/src/components/MobileNav.tsx',
+        'packages/web/src/components/NowPlayingBar.tsx',
+        'packages/web/src/components/QueuePanel.tsx',
+        'packages/web/src/components/SongCard.tsx',
+        'packages/web/src/components/SongEditPanel.tsx',
+        'packages/web/src/components/settings/AdminSection.tsx',
+        'packages/web/src/pages/PermissionsPage.tsx',
+        'packages/web/src/pages/PlaylistDetailPage.tsx',
+        'packages/web/src/pages/PlaylistsPage.tsx',
+        'packages/web/src/pages/RequestsPage.tsx',
+        'packages/web/src/pages/SongsPage.tsx',
+        'packages/web/src/pages/SetupWizard.tsx',
+        'packages/web/src/pages/TagsPage.tsx',
+      ],
+      rules: {
+        'react-perf/jsx-no-new-function-as-prop': 'off',
+        'react-perf/jsx-no-new-object-as-prop': 'off',
+        'react-perf/jsx-no-jsx-as-prop': 'off',
+        'react/jsx-no-constructed-context-values': 'off',
+        'react/no-object-type-as-default-prop': 'off',
       },
     },
 

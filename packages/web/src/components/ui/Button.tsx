@@ -1,6 +1,6 @@
 import type React from 'react';
 
-import { forwardRef } from 'react';
+import { forwardRef, useMemo } from 'react';
 
 type ButtonVariant = 'primary' | 'secondary' | 'surface' | 'inherit' | 'danger';
 type ButtonSize = 'default' | 'icon';
@@ -49,10 +49,13 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button
   ref
 ) {
   const base = size === 'icon' ? iconClasses[variant] : defaultClasses[variant];
-  const inheritStyle: React.CSSProperties =
-    variant === 'inherit'
-      ? ({ ...style, '--btn-surface': surfaceVars[surface] } as React.CSSProperties)
-      : style || {};
+  const inheritStyle: React.CSSProperties = useMemo(
+    () =>
+      variant === 'inherit'
+        ? ({ ...style, '--btn-surface': surfaceVars[surface] } as React.CSSProperties)
+        : style || {},
+    [variant, style, surface]
+  );
 
   // dimmed = visually disabled but still clickable (for cooldown toasts).
   // Don't pass disabled to the native element when dimmed.

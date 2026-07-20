@@ -1,4 +1,5 @@
 import { CaretLeftIcon } from '@phosphor-icons/react';
+import { memo, useCallback } from 'react';
 
 import { type SubmenuConfig } from '../ContextMenu';
 import { SpringUp } from '../ui/SpringUp';
@@ -8,6 +9,29 @@ interface SubmenuPanelProps {
   onBack: () => void;
   onSelect: (id: string) => void;
 }
+
+interface SubmenuItemProps {
+  item: SubmenuConfig['items'][number];
+  onSelect: (id: string) => void;
+}
+
+const SubmenuItem = memo(function SubmenuItem({ item, onSelect }: SubmenuItemProps) {
+  const handleClick = useCallback(() => onSelect(item.id), [onSelect, item.id]);
+
+  return (
+    <button
+      type='button'
+      role='menuitem'
+      tabIndex={-1}
+      disabled={item.disabled}
+      onClick={handleClick}
+      className='w-full text-left px-3 py-1.5 text-xs font-mono text-fg hover:bg-border/50 transition-colors duration-100 disabled:opacity-50 flex items-center gap-2'
+    >
+      {item.icon && <span className='shrink-0'>{item.icon}</span>}
+      <span className='truncate'>{item.label}</span>
+    </button>
+  );
+});
 
 export function SubmenuPanel({ config, onBack, onSelect }: SubmenuPanelProps) {
   return (
@@ -32,17 +56,7 @@ export function SubmenuPanel({ config, onBack, onSelect }: SubmenuPanelProps) {
           config.items.map((item, idx) => (
             <div key={item.id}>
               {idx > 0 && <div className='border-b border-border' />}
-              <button
-                type='button'
-                role='menuitem'
-                tabIndex={-1}
-                disabled={item.disabled}
-                onClick={() => onSelect(item.id)}
-                className='w-full text-left px-3 py-1.5 text-xs font-mono text-fg hover:bg-border/50 transition-colors duration-100 disabled:opacity-50 flex items-center gap-2'
-              >
-                {item.icon && <span className='shrink-0'>{item.icon}</span>}
-                <span className='truncate'>{item.label}</span>
-              </button>
+              <SubmenuItem item={item} onSelect={onSelect} />
             </div>
           ))
         )}

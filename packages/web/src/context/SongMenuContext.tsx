@@ -1,4 +1,4 @@
-import { createContext, type ReactNode, useCallback, useContext, useState } from 'react';
+import { createContext, type ReactNode, useCallback, useContext, useMemo, useState } from 'react';
 
 const SongMenuContext = createContext<{
   activeMenuSongId: string | null;
@@ -17,9 +17,12 @@ export function SongMenuProvider({ children }: { children: ReactNode }) {
     setActiveMenuSongIdState(id);
   }, []);
 
-  return (
-    <SongMenuContext value={{ activeMenuSongId, setActiveMenuSongId }}>{children}</SongMenuContext>
+  const value = useMemo(
+    () => ({ activeMenuSongId, setActiveMenuSongId }),
+    [activeMenuSongId, setActiveMenuSongId]
   );
+
+  return <SongMenuContext value={value}>{children}</SongMenuContext>;
 }
 
 export function useSongMenu() {

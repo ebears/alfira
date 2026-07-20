@@ -1,5 +1,5 @@
 import { type Playlist } from '@alfira/server/shared';
-import { memo } from 'react';
+import { memo, useCallback, useMemo } from 'react';
 
 import PlaylistRow from './PlaylistRow';
 import { VirtualList } from './VirtualList';
@@ -60,18 +60,27 @@ export const VirtualPlaylistList = memo(function VirtualPlaylistList({
   emptyTitle,
   emptyMessage,
 }: VirtualPlaylistListProps) {
+  const getItemKey = useCallback((playlist: Playlist) => playlist.id, []);
+
+  const renderItem = useCallback(
+    (playlist: Playlist) => (
+      <PlaylistRow
+        playlist={playlist}
+        animationDelay='0ms'
+        onClick={onRowClick}
+        data-playlist-id={playlist.id}
+      />
+    ),
+    [onRowClick]
+  );
+
+  const skeleton = useMemo(() => <SkeletonList />, []);
+
   return (
     <VirtualList
       items={items}
-      getItemKey={(playlist) => playlist.id}
-      renderItem={(playlist) => (
-        <PlaylistRow
-          playlist={playlist}
-          animationDelay='0ms'
-          onClick={onRowClick}
-          data-playlist-id={playlist.id}
-        />
-      )}
+      getItemKey={getItemKey}
+      renderItem={renderItem}
       estimateSize={120}
       itemClassName='pb-4'
       isLoading={isLoading}
@@ -81,7 +90,7 @@ export const VirtualPlaylistList = memo(function VirtualPlaylistList({
       hasMore={hasMore}
       onRetry={onRetry}
       onFetchMore={onFetchMore}
-      skeleton={<SkeletonList />}
+      skeleton={skeleton}
       emptyTitle={emptyTitle}
       emptyMessage={emptyMessage}
     />
