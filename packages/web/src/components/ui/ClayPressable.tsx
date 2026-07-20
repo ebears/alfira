@@ -1,5 +1,6 @@
+import { useAnimate } from 'motion/react';
 import * as m from 'motion/react-m';
-import { useCallback, useEffect, useMemo, useState, type HTMLAttributes } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type HTMLAttributes } from 'react';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -137,7 +138,12 @@ export function ClayPressable({
   const preset = depthPresets[depth];
   const mode = useColorMode();
 
-  // ── Event handlers — track clay state for CSS shadow ──────────────────
+  // Imperative tap animation — gated on target so buttons inside don't sink the card.
+  const [scope, animate] = useAnimate();
+  const didPressRef = useRef(false);
+  const isHoveringRef = useRef(false);
+
+  // ── Event handlers ────────────────────────────────────────────────────
 
   const handleHoverStart = useCallback(() => {
     if (disabled) {
@@ -153,29 +159,51 @@ export function ClayPressable({
     setClayState('resting');
   }, [disabled]);
 
-  const handleTapStart = useCallback(() => {
-    if (disabled) {
-      return;
-    }
-    setClayState('pressing');
-  }, [disabled]);
+  const handleTapStart = useCallback(
+    (e: MouseEvent | TouchEvent | PointerEvent) => {
+      if (disabled) {
+        return;
+      }
+      const target = e.target as HTMLElement;
+      if (target.closest('button')) {
+        didPressRef.current = false;
+        return;
+      }
+      didPressRef.current = true;
+      setClayState('pressing');
+      animate(scope.current, { y: preset.tapY }, claySpring);
+    },
+    [disabled, animate, scope, preset.tapY]
+  );
 
   const handleTapEnd = useCallback(() => {
-    if (disabled) {
+    if (disabled || !didPressRef.current) {
       return;
     }
-    setClayState('resting');
-  }, [disabled]);
+    // If the pointer is still over the card after the tap, go back to hovering
+    // instead of resting — the cursor never left, so it should still look active.
+    if (isHoveringRef.current) {
+      setClayState('hovering');
+      animate(scope.current, { y: preset.hoverY }, claySpring);
+    } else {
+      setClayState('resting');
+      animate(scope.current, { y: 0 }, claySpring);
+    }
+  }, [disabled, animate, scope, preset.hoverY]);
+
+  const handleMouseEnter = useCallback(() => {
+    isHoveringRef.current = true;
+  }, []);
+
+  const handleMouseLeave = useCallback(() => {
+    isHoveringRef.current = false;
+  }, []);
 
   // ── Motion props ──────────────────────────────────────────────────────
 
   const whileHover = useMemo(
     () => (disabled ? undefined : { y: preset.hoverY }),
     [disabled, preset.hoverY]
-  );
-  const whileTap = useMemo(
-    () => (disabled ? undefined : { y: preset.tapY }),
-    [disabled, preset.tapY]
   );
 
   // ── Render ────────────────────────────────────────────────────────────
@@ -185,16 +213,18 @@ export function ClayPressable({
   return (
     // @ts-expect-error motion component props are compatible but TypeScript can't infer
     <Component
+      ref={scope}
       className={className}
       style={clayStyle(clayState, mode)}
       whileHover={whileHover}
-      whileTap={whileTap}
       transition={claySpring}
       onHoverStart={handleHoverStart}
       onHoverEnd={handleHoverEnd}
       onTapStart={handleTapStart}
       onTap={handleTapEnd}
       onTapCancel={handleTapEnd}
+      onMouseEnter={handleMouseEnter}
+      onMouseLeave={handleMouseLeave}
       {...rest}
     >
       {children}
