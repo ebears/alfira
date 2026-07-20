@@ -436,25 +436,6 @@ export default defineConfig({
       },
     },
 
-    // =======================================================================
-    // react-perf: temporary overrides while fixing file-by-file.
-    // Remove files from this list as they are cleaned up.
-    // When the list is empty, delete this entire override block.
-    // =======================================================================
-    {
-      files: [
-        'packages/web/src/components/NowPlayingBar.tsx',
-        'packages/web/src/components/QueuePanel.tsx',
-      ],
-      rules: {
-        'react-perf/jsx-no-new-function-as-prop': 'off',
-        'react-perf/jsx-no-new-object-as-prop': 'off',
-        'react-perf/jsx-no-jsx-as-prop': 'off',
-        'react/jsx-no-constructed-context-values': 'off',
-        'react/no-object-type-as-default-prop': 'off',
-      },
-    },
-
     // Server entry: startup banner uses console intentionally
     {
       files: ['packages/web/src/server.ts'],
