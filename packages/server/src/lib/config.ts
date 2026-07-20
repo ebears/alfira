@@ -5,10 +5,14 @@ import { db, tables } from '../shared/db';
 function resolveVersion(): string {
   const envVersion = process.env.ALFIRA_VERSION;
   // Explicit non-dev version — use as-is (e.g., v0.1.0 from Docker build arg).
-  if (envVersion && envVersion !== 'dev') return envVersion;
+  if (envVersion && envVersion !== 'dev') {
+    return envVersion;
+  }
 
   // Dev — check for explicit git hash override (e.g., from Docker build arg).
-  if (process.env.GIT_HASH) return `dev (${process.env.GIT_HASH})`;
+  if (process.env.GIT_HASH) {
+    return `dev (${process.env.GIT_HASH})`;
+  }
 
   // Dev — try to read the commit hash from the mounted .git directory.
   try {
@@ -17,7 +21,9 @@ function resolveVersion(): string {
     const hash = match
       ? readFileSync(`/app/.git/${match[1]}`, 'utf-8').trim().slice(0, 7)
       : head.slice(0, 7);
-    if (hash) return `dev (${hash})`;
+    if (hash) {
+      return `dev (${hash})`;
+    }
   } catch {
     // No .git available — fall through to plain 'dev'.
   }
@@ -43,7 +49,9 @@ export function getGuildId(): string {
 
 /** Must be called once during startup, after migrations and DB are ready. */
 export function initGuildId(): void {
-  if (_guildIdLoaded) return;
+  if (_guildIdLoaded) {
+    return;
+  }
 
   try {
     const row = db

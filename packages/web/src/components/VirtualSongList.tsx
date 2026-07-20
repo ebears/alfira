@@ -108,7 +108,7 @@ export const VirtualSongList = memo(function VirtualSongList({
   const estimateSize = useCallback(
     (index: number) => {
       const song = items[index];
-      return song && song.id === effectiveOpenId ? EXPANDED_ROW_HEIGHT : COLLAPSED_ROW_HEIGHT;
+      return song?.id === effectiveOpenId ? EXPANDED_ROW_HEIGHT : COLLAPSED_ROW_HEIGHT;
     },
     [items, effectiveOpenId]
   );

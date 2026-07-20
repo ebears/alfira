@@ -97,7 +97,9 @@ export default function RequestsPage() {
       mounted.current = true;
       return;
     }
-    if (autoRedirected.current) return;
+    if (autoRedirected.current) {
+      return;
+    }
     if (tab === 'pending' && total === 0) {
       autoRedirected.current = true;
       setTab('closed');

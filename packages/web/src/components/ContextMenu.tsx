@@ -142,17 +142,23 @@ export function ContextMenu({
 
   // Position calculation — useLayoutEffect runs before paint, preventing a (0,0) flash.
   useLayoutEffect(() => {
-    if (!isOpen || !triggerRef.current) return;
+    if (!isOpen || !triggerRef.current) {
+      return;
+    }
 
     const lastUpdateRef = { current: 0 };
 
     const updatePosition = () => {
       const now = Date.now();
-      if (now - lastUpdateRef.current < 16) return; // ~60fps throttle
+      if (now - lastUpdateRef.current < 16) {
+        return;
+      } // ~60fps throttle
       lastUpdateRef.current = now;
 
       const trigger = triggerRef.current;
-      if (!trigger) return;
+      if (!trigger) {
+        return;
+      }
 
       const rect = trigger.getBoundingClientRect();
       const menuWidth = 192; // min-w-48 = 12rem = 192px
@@ -165,7 +171,9 @@ export function ContextMenu({
       if (top + menuHeight > window.innerHeight - 8) {
         top = rect.top - menuHeight - 4;
       }
-      if (left < 8) left = 8;
+      if (left < 8) {
+        left = 8;
+      }
       if (left + menuWidth > window.innerWidth - 8) {
         left = window.innerWidth - menuWidth - 8;
       }
@@ -193,7 +201,9 @@ export function ContextMenu({
 
   // Close on outside click
   useEffect(() => {
-    if (!isOpen) return;
+    if (!isOpen) {
+      return;
+    }
 
     const handler = (e: MouseEvent | TouchEvent) => {
       const target = e.target as Node;
@@ -213,7 +223,9 @@ export function ContextMenu({
 
   // Close on Escape (or go back from submenu)
   useEffect(() => {
-    if (!isOpen) return;
+    if (!isOpen) {
+      return;
+    }
 
     const handler = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
@@ -249,11 +261,15 @@ export function ContextMenu({
       const enabledIndices = items
         .map((item, i) => (!item.disabled ? i : -1))
         .filter((i) => i >= 0);
-      if (enabledIndices.length === 0) return;
+      if (enabledIndices.length === 0) {
+        return;
+      }
 
       const findNextEnabled = (current: number, direction: 1 | -1): number => {
         const pos = enabledIndices.indexOf(current);
-        if (pos === -1) return enabledIndices[0];
+        if (pos === -1) {
+          return enabledIndices[0];
+        }
         const nextPos = (pos + direction + enabledIndices.length) % enabledIndices.length;
         return enabledIndices[nextPos];
       };
@@ -272,7 +288,9 @@ export function ContextMenu({
     [onClose, triggerRef]
   );
 
-  if (!isOpen) return null;
+  if (!isOpen) {
+    return null;
+  }
 
   return createPortal(
     <div

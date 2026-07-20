@@ -20,7 +20,9 @@ function handleGetTagsList(
   _params: Record<string, string>
 ): Response {
   const guards = checkGuards(ctx);
-  if (guards instanceof Response) return guards;
+  if (guards instanceof Response) {
+    return guards;
+  }
 
   const tags = db
     .select({
@@ -45,9 +47,13 @@ async function handleGetTag(
 ): Promise<Response> {
   const { nameLower } = params;
   const guards = checkGuards(ctx);
-  if (guards instanceof Response) return guards;
+  if (guards instanceof Response) {
+    return guards;
+  }
   const [tag] = await db.select().from(tagTable).where(eq(tagTable.nameLower, nameLower)).limit(1);
-  if (!tag) return json({ error: 'Tag not found.' }, 404);
+  if (!tag) {
+    return json({ error: 'Tag not found.' }, 404);
+  }
   return json({ tag });
 }
 
@@ -58,7 +64,9 @@ function handleGetTagSongs(
 ): Response {
   const { nameLower } = params;
   const guards = checkGuards(ctx);
-  if (guards instanceof Response) return guards;
+  if (guards instanceof Response) {
+    return guards;
+  }
 
   // Fetch all songs where tags JSON array contains this tag (case-insensitive match)
   const songs = db
@@ -85,7 +93,9 @@ async function handlePatchTag(
     return json({ error: 'Invalid JSON body.' }, 400);
   }
   const guards = checkGuards(ctx, { admin: true, permission: 'tags.manage' });
-  if (guards instanceof Response) return guards;
+  if (guards instanceof Response) {
+    return guards;
+  }
 
   const [existing] = await db
     .select()
@@ -135,7 +145,9 @@ async function handleDeleteTag(
 ): Promise<Response> {
   const { nameLower } = params;
   const guards = checkGuards(ctx, { admin: true, permission: 'tags.manage' });
-  if (guards instanceof Response) return guards;
+  if (guards instanceof Response) {
+    return guards;
+  }
 
   const [existing] = await db
     .select()

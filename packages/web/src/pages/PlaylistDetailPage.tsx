@@ -1,5 +1,5 @@
 import type { Playlist, PlaylistDetail, Song, TagItem } from '@alfira/server/shared';
-import type { FetchSongsOptions } from '@alfira/server/shared/api';
+import type { BulkEditData, FetchSongsOptions } from '@alfira/server/shared/api';
 import { fetchTags, updatePlaylistTag } from '@alfira/server/shared/api';
 import { AnimatePresence } from 'motion/react';
 import * as m from 'motion/react-m';
@@ -141,13 +141,23 @@ export default function PlaylistDetailPage() {
   // Build stable fetch options for the hook
   const songsOpts = useMemo<FetchSongsOptions>(() => {
     const opts: FetchSongsOptions = {};
-    if (search) opts.search = search;
-    if (sort !== 'position') opts.sort = sort;
-    if (order !== 'desc') opts.order = order;
+    if (search) {
+      opts.search = search;
+    }
+    if (sort !== 'position') {
+      opts.sort = sort;
+    }
+    if (order !== 'desc') {
+      opts.order = order;
+    }
     const t = filterTags.join(',');
     const s = filterSources.join(',');
-    if (t) opts.tags = t;
-    if (s) opts.source = s;
+    if (t) {
+      opts.tags = t;
+    }
+    if (s) {
+      opts.source = s;
+    }
     return opts;
   }, [search, sort, order, filterTags, filterSources]);
 
@@ -166,17 +176,29 @@ export default function PlaylistDetailPage() {
         case 'artist': {
           const aArt = a.song.artist ?? '';
           const bArt = b.song.artist ?? '';
-          if (!aArt && !bArt) return 0;
-          if (!aArt) return dir;
-          if (!bArt) return -dir;
+          if (!aArt && !bArt) {
+            return 0;
+          }
+          if (!aArt) {
+            return dir;
+          }
+          if (!bArt) {
+            return -dir;
+          }
           return dir * aArt.localeCompare(bArt, undefined, { sensitivity: 'base' });
         }
         case 'album': {
           const aAlb = a.song.album ?? '';
           const bAlb = b.song.album ?? '';
-          if (!aAlb && !bAlb) return 0;
-          if (!aAlb) return dir;
-          if (!bAlb) return -dir;
+          if (!aAlb && !bAlb) {
+            return 0;
+          }
+          if (!aAlb) {
+            return dir;
+          }
+          if (!bAlb) {
+            return -dir;
+          }
           return dir * aAlb.localeCompare(bAlb, undefined, { sensitivity: 'base' });
         }
         case 'duration':
@@ -260,7 +282,9 @@ export default function PlaylistDetailPage() {
   // ── Socket: playlist updated (rename, visibility, song count changes) ──
   useEffect(() => {
     const handlePlaylistUpdated = (updated: Playlist) => {
-      if (updated.id !== idRef.current) return;
+      if (updated.id !== idRef.current) {
+        return;
+      }
       refetch();
     };
     const offUpdated = onSocketEvent('playlists:updated', handlePlaylistUpdated);
@@ -309,7 +333,9 @@ export default function PlaylistDetailPage() {
   };
 
   const handleRemoveSong = async (songId: string) => {
-    if (!playlistDetail) return;
+    if (!playlistDetail) {
+      return;
+    }
     const junction = songsRef.current.find((ps) => ps.songId === songId);
     if (!junction) {
       setRemoveId(null);
@@ -330,7 +356,9 @@ export default function PlaylistDetailPage() {
 
   const executeBulkRemove = useCallback(async () => {
     const pd = playlistDetailRef.current;
-    if (!pd || bulk.count === 0) return;
+    if (!pd || bulk.count === 0) {
+      return;
+    }
     setBulkRemoveConfirm(false);
     setBulkRemoving(true);
     try {
@@ -357,8 +385,10 @@ export default function PlaylistDetailPage() {
   }, [bulk, notify, removeItem]);
 
   const handleBulkEdit = useCallback(
-    async (data: import('@alfira/server/shared/api').BulkEditData) => {
-      if (bulk.count === 0) return;
+    async (data: BulkEditData) => {
+      if (bulk.count === 0) {
+        return;
+      }
       setBulkEditingApplying(true);
       try {
         const allIds = [...bulk.selectedIds];
@@ -380,13 +410,17 @@ export default function PlaylistDetailPage() {
   );
 
   const handleDeletePlaylist = async () => {
-    if (!playlistDetail) return;
+    if (!playlistDetail) {
+      return;
+    }
     await deletePlaylist(playlistDetail.id);
     void navigate('/playlists');
   };
 
   const handleToggleVisibility = async () => {
-    if (!playlistDetail) return;
+    if (!playlistDetail) {
+      return;
+    }
     try {
       const updated = await togglePlaylistVisibility(
         playlistDetail.id,
@@ -407,7 +441,9 @@ export default function PlaylistDetailPage() {
       { throwErrors = false }: { throwErrors?: boolean } = {}
     ) => {
       const pd = playlistDetailRef.current;
-      if (!pd) return;
+      if (!pd) {
+        return;
+      }
       setPlayingSongId(songId);
       try {
         await startPlayback({
@@ -430,7 +466,9 @@ export default function PlaylistDetailPage() {
 
   const handleConvertToRegular = useCallback(async () => {
     const pd = playlistDetailRef.current;
-    if (!pd) return;
+    if (!pd) {
+      return;
+    }
     try {
       await updatePlaylistTag(pd.id, null);
       refetch();
@@ -443,7 +481,9 @@ export default function PlaylistDetailPage() {
   const handleChangeTag = useCallback(
     async (tagNameLower: string) => {
       const pd = playlistDetailRef.current;
-      if (!pd) return;
+      if (!pd) {
+        return;
+      }
       try {
         await updatePlaylistTag(pd.id, tagNameLower);
         refetch();
@@ -458,7 +498,9 @@ export default function PlaylistDetailPage() {
   const handleMakeSmart = useCallback(
     async (tagNameLower: string) => {
       const pd = playlistDetailRef.current;
-      if (!pd) return;
+      if (!pd) {
+        return;
+      }
       setTagSmartConfirm(null);
       try {
         await updatePlaylistTag(pd.id, tagNameLower);
@@ -473,7 +515,9 @@ export default function PlaylistDetailPage() {
 
   const handleAddPlaylistToQueue = useCallback(async () => {
     const pd = playlistDetailRef.current;
-    if (!pd) return;
+    if (!pd) {
+      return;
+    }
     try {
       await startPlayback({
         playlistId: pd.id,
@@ -575,8 +619,12 @@ export default function PlaylistDetailPage() {
       : []),
   ];
 
-  if (isLoading || !hasLoaded) return <DetailSkeleton />;
-  if (!playlistDetail) return null;
+  if (isLoading || !hasLoaded) {
+    return <DetailSkeleton />;
+  }
+  if (!playlistDetail) {
+    return null;
+  }
 
   // Extract plain songs from PlaylistDetailSong[]
   const songItems: Song[] = songs.map((ps) => ps.song);
@@ -709,7 +757,9 @@ export default function PlaylistDetailPage() {
         showBulkToggle={canBulk}
         selectionMode={selectionMode}
         onToggleSelectionMode={() => {
-          if (selectionMode) bulk.clearAll();
+          if (selectionMode) {
+            bulk.clearAll();
+          }
           setSelectionMode((v) => !v);
         }}
         viewMode={viewMode}
@@ -763,7 +813,9 @@ export default function PlaylistDetailPage() {
                     ? undefined
                     : (id) => {
                         const ps = songs.find((p) => p.songId === id);
-                        if (ps) setRemoveId(ps.songId);
+                        if (ps) {
+                          setRemoveId(ps.songId);
+                        }
                       }
                 }
                 onPlay={handlePlayFromSong}
@@ -802,7 +854,9 @@ export default function PlaylistDetailPage() {
                     ? undefined
                     : (id) => {
                         const ps = songs.find((p) => p.songId === id);
-                        if (ps) setRemoveId(ps.songId);
+                        if (ps) {
+                          setRemoveId(ps.songId);
+                        }
                       }
                 }
                 onPlay={handlePlayFromSong}

@@ -11,10 +11,14 @@ export function Backdrop({
     <div
       className='fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-4 cursor-default'
       onMouseDown={(e) => {
-        if (e.target === e.currentTarget) onClose();
+        if (e.target === e.currentTarget) {
+          onClose();
+        }
       }}
       onKeyDown={(e) => {
-        if (e.key === 'Escape') onClose();
+        if (e.key === 'Escape') {
+          onClose();
+        }
       }}
       role='presentation'
     >

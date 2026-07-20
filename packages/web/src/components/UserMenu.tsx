@@ -17,7 +17,9 @@ export default function UserMenu({ user, collapsed, onLogout }: UserMenuProps) {
 
   // Position the popover above the trigger, falling back to below if needed
   const updatePosition = useCallback(() => {
-    if (!triggerRef.current || !menuRef.current) return;
+    if (!triggerRef.current || !menuRef.current) {
+      return;
+    }
     const trigger = triggerRef.current.getBoundingClientRect();
     const menu = menuRef.current.getBoundingClientRect();
     const gap = 8;
@@ -34,7 +36,9 @@ export default function UserMenu({ user, collapsed, onLogout }: UserMenuProps) {
     }
 
     let left = trigger.left + trigger.width / 2 - menu.width / 2;
-    if (left < gap) left = gap;
+    if (left < gap) {
+      left = gap;
+    }
     if (left + menu.width > window.innerWidth - gap) {
       left = window.innerWidth - menu.width - gap;
     }
@@ -44,7 +48,9 @@ export default function UserMenu({ user, collapsed, onLogout }: UserMenuProps) {
 
   // Position before paint (useLayoutEffect) to avoid a (0,0) flash.
   useLayoutEffect(() => {
-    if (!open) return;
+    if (!open) {
+      return;
+    }
     updatePosition();
     window.addEventListener('resize', updatePosition);
     window.addEventListener('scroll', updatePosition, true);
@@ -56,10 +62,14 @@ export default function UserMenu({ user, collapsed, onLogout }: UserMenuProps) {
 
   // Close on click outside
   useEffect(() => {
-    if (!open) return;
+    if (!open) {
+      return;
+    }
     const handler = (e: MouseEvent | TouchEvent) => {
       const target = e.target as Node;
-      if (menuRef.current?.contains(target) || triggerRef.current?.contains(target)) return;
+      if (menuRef.current?.contains(target) || triggerRef.current?.contains(target)) {
+        return;
+      }
       setOpen(false);
     };
     document.addEventListener('mousedown', handler);
@@ -72,7 +82,9 @@ export default function UserMenu({ user, collapsed, onLogout }: UserMenuProps) {
 
   // Close on Escape
   useEffect(() => {
-    if (!open) return;
+    if (!open) {
+      return;
+    }
     const handler = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
         setOpen(false);

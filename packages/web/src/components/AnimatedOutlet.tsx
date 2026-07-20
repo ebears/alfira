@@ -14,7 +14,9 @@ export function AnimatedOutlet() {
   const outlet = useOutlet();
   const location = useLocation();
 
-  if (!outlet) return null;
+  if (!outlet) {
+    return null;
+  }
 
   return (
     <AnimatePresence mode='wait'>

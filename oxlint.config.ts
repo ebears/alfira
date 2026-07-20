@@ -25,6 +25,7 @@ export default defineConfig({
 
     // correctness
     'no-const-assign': 'error',
+    'no-constant-binary-expression': 'error',
     'no-constant-condition': 'warn',
     'no-empty-character-class': 'error',
     'no-empty-pattern': 'error',
@@ -34,11 +35,17 @@ export default defineConfig({
     'no-setter-return': 'error',
     'no-unreachable': 'error',
     'no-unsafe-finally': 'error',
+    'no-unsafe-optional-chaining': 'error',
     'no-unused-labels': 'error',
     'no-unused-vars': 'warn',
     'use-isnan': 'error',
     'for-direction': 'error',
     'require-yield': 'error',
+    '@typescript-eslint/only-throw-error': 'error',
+    '@typescript-eslint/no-floating-promises': 'error',
+    '@typescript-eslint/switch-exhaustiveness-check': 'error',
+    'unicorn/throw-new-error': 'error',
+    'unicorn/error-message': 'error',
 
     // suspicious
     'no-async-promise-executor': 'error',
@@ -72,17 +79,32 @@ export default defineConfig({
     // imports
     'import/first': 'warn',
     'import/no-cycle': 'warn',
+    'unicorn/prefer-node-protocol': 'warn',
 
     // promises
     'promise/prefer-await-to-then': 'error',
+    'promise/valid-params': 'error',
+    'promise/catch-or-return': 'error',
+    '@typescript-eslint/no-misused-promises': [
+      'error',
+      { checksVoidReturn: { attributes: false, properties: false } },
+    ],
 
     // style
+    curly: 'error',
+    'no-useless-concat': 'warn',
+    'object-shorthand': 'warn',
+    '@typescript-eslint/array-type': 'warn',
+    '@typescript-eslint/consistent-type-imports': 'warn',
     '@typescript-eslint/no-inferrable-types': 'warn',
     '@typescript-eslint/no-namespace': 'error',
     '@typescript-eslint/no-non-null-assertion': 'warn',
-    'prefer-const': 'error',
     '@typescript-eslint/prefer-for-of': 'warn',
+    '@typescript-eslint/prefer-optional-chain': 'warn',
+    '@typescript-eslint/prefer-ts-expect-error': 'warn',
+    'prefer-const': 'error',
     'prefer-template': 'warn',
+    'unicorn/catch-error-name': 'warn',
   },
 
   overrides: [

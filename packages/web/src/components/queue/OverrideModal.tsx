@@ -19,7 +19,9 @@ export default function OverrideModal({
   const [error, setError] = useState('');
 
   const handleSubmit = async () => {
-    if (!sourceUrl.trim()) return;
+    if (!sourceUrl.trim()) {
+      return;
+    }
     setSubmitting(true);
     setError('');
     try {

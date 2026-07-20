@@ -51,8 +51,12 @@ export default function AddFilterPopover({
   const sortedTags = [...allTags].sort((a, b) => {
     const aActive = activeTags.includes(a.nameLower);
     const bActive = activeTags.includes(b.nameLower);
-    if (aActive && !bActive) return -1;
-    if (!aActive && bActive) return 1;
+    if (aActive && !bActive) {
+      return -1;
+    }
+    if (!aActive && bActive) {
+      return 1;
+    }
     return a.canonicalName.localeCompare(b.canonicalName);
   });
 

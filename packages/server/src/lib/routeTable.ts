@@ -44,13 +44,17 @@ export interface RouteTableConfig {
 export function matchPath(path: string, template: string): Record<string, string> | null {
   const pathParts = path.split('/').filter(Boolean);
   const tplParts = template.split('/').filter(Boolean);
-  if (pathParts.length !== tplParts.length) return null;
+  if (pathParts.length !== tplParts.length) {
+    return null;
+  }
 
   const params: Record<string, string> = {};
   for (let i = 0; i < tplParts.length; i++) {
     const tpl = tplParts[i];
     const seg = pathParts[i];
-    if (!tpl || !seg) return null;
+    if (!tpl || !seg) {
+      return null;
+    }
     if (tpl.startsWith(':')) {
       params[tpl.slice(1)] = seg;
     } else if (tpl !== seg) {
@@ -101,10 +105,14 @@ export function routeTable(
     }
 
     for (const [method, pattern, handler] of routes) {
-      if (request.method !== method) continue;
+      if (request.method !== method) {
+        continue;
+      }
 
       const params = matchPath(path, pattern);
-      if (params === null) continue;
+      if (params === null) {
+        continue;
+      }
 
       let response = await handler(ctx, request, params);
 

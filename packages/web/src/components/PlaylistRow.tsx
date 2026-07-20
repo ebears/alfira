@@ -13,7 +13,9 @@ interface PlaylistRowProps {
 
 /** Fill an array of artwork URLs to exactly 4 slots, repeating as needed. */
 function spreadUrls(urls: string[]): (string | null)[] {
-  if (urls.length === 0) return [null, null, null, null];
+  if (urls.length === 0) {
+    return [null, null, null, null];
+  }
   const result: (string | null)[] = [];
   for (let i = 0; i < 4; i++) {
     result.push(urls[i % urls.length] ?? null);

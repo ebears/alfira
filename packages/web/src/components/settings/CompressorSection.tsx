@@ -50,8 +50,11 @@ export default function CompressorSection() {
         setLoaded(true);
       }
     }
-    if (canManage) void load();
-    else setLoaded(true);
+    if (canManage) {
+      void load();
+    } else {
+      setLoaded(true);
+    }
   }, [canManage]);
 
   const hasChanges = JSON.stringify(values) !== JSON.stringify(savedValues);
@@ -84,7 +87,9 @@ export default function CompressorSection() {
 
   const dimmed = !canManage;
 
-  if (!loaded) return null;
+  if (!loaded) {
+    return null;
+  }
 
   return (
     <div className={`space-y-3 ${dimmed ? 'opacity-40 pointer-events-none' : ''}`}>

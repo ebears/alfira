@@ -53,8 +53,11 @@ export default function EqualizerSection() {
         setLoaded(true);
       }
     }
-    if (canManage) void load();
-    else setLoaded(true);
+    if (canManage) {
+      void load();
+    } else {
+      setLoaded(true);
+    }
   }, [canManage]);
 
   // When off, save sends flat bands; when on, save sends real bands
@@ -93,7 +96,9 @@ export default function EqualizerSection() {
 
   function gainDisplay(value: number): string {
     const offset = value - 50;
-    if (offset === 0) return '0';
+    if (offset === 0) {
+      return '0';
+    }
     return `${offset > 0 ? '+' : ''}${offset}`;
   }
 
@@ -116,7 +121,9 @@ export default function EqualizerSection() {
   const dimmed = !canManage;
   const slidersDimmed = !eqEnabled;
 
-  if (!loaded) return null;
+  if (!loaded) {
+    return null;
+  }
 
   return (
     <div className={`space-y-4 ${dimmed ? 'opacity-40 pointer-events-none' : ''}`}>

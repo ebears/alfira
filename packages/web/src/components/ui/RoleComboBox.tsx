@@ -45,7 +45,9 @@ export default function RoleComboBox({
 
   // Click outside to close
   useEffect(() => {
-    if (!isOpen) return;
+    if (!isOpen) {
+      return;
+    }
     const handler = (e: MouseEvent) => {
       if (
         listRef.current &&

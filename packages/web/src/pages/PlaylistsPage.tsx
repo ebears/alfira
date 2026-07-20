@@ -73,7 +73,9 @@ export default function PlaylistsPage() {
     (e: React.MouseEvent) => {
       const row = e.currentTarget.closest('[data-playlist-id]');
       const playlistId = row?.getAttribute('data-playlist-id');
-      if (playlistId) void navigate(`/playlists/${playlistId}`);
+      if (playlistId) {
+        void navigate(`/playlists/${playlistId}`);
+      }
     },
     [navigate]
   );
@@ -159,7 +161,9 @@ function CreatePlaylistModal({ onClose }: { onClose: () => void }) {
               setName(e.target.value);
             }}
             onKeyDown={(e) => {
-              if (e.key === 'Escape') onClose();
+              if (e.key === 'Escape') {
+                onClose();
+              }
             }}
             required
           />

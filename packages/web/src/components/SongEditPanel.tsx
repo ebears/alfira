@@ -84,7 +84,9 @@ export default function SongEditPanel({ song, isOpen, onClose }: SongEditPanelPr
 
   const addTag = useCallback(() => {
     const trimmed = tagInput.trim();
-    if (!trimmed || tags.includes(trimmed)) return;
+    if (!trimmed || tags.includes(trimmed)) {
+      return;
+    }
     setTags((prev) => [...prev, trimmed]);
     setTagInput('');
   }, [tagInput, tags]);
@@ -105,8 +107,11 @@ export default function SongEditPanel({ song, isOpen, onClose }: SongEditPanelPr
         e.preventDefault();
         if (showTagDropdown && highlightedIndex >= 0 && filteredTags[highlightedIndex]) {
           const tag = filteredTags[highlightedIndex];
-          if (tags.includes(tag.canonicalName)) removeTag(tag.canonicalName);
-          else setTags((prev) => [...prev, tag.canonicalName]);
+          if (tags.includes(tag.canonicalName)) {
+            removeTag(tag.canonicalName);
+          } else {
+            setTags((prev) => [...prev, tag.canonicalName]);
+          }
           setTagInput('');
           setHighlightedIndex(-1);
         } else {
@@ -133,7 +138,9 @@ export default function SongEditPanel({ song, isOpen, onClose }: SongEditPanelPr
   );
 
   const doSave = useCallback(async () => {
-    if (savingRef.current) return;
+    if (savingRef.current) {
+      return;
+    }
     savingRef.current = true;
     try {
       const {
@@ -151,12 +158,24 @@ export default function SongEditPanel({ song, isOpen, onClose }: SongEditPanelPr
       // Build a partial update — only include fields that actually changed.
       // This prevents concurrent edits from clobbering each other (last-write-wins).
       const data: SongUpdateData = {};
-      if (nk !== (originalNicknameRef.current ?? '')) data.nickname = nk.trim() || null;
-      if (ar !== (originalArtistRef.current ?? '')) data.artist = ar.trim() || null;
-      if (al !== (originalAlbumRef.current ?? '')) data.album = al.trim() || null;
-      if (aw !== (originalArtworkRef.current ?? '')) data.artwork = aw.trim() || null;
-      if (JSON.stringify(t) !== JSON.stringify(originalTagsRef.current)) data.tags = t;
-      if (parsedBoost !== originalVolumeBoostRef.current) data.volumeBoost = parsedBoost;
+      if (nk !== (originalNicknameRef.current ?? '')) {
+        data.nickname = nk.trim() || null;
+      }
+      if (ar !== (originalArtistRef.current ?? '')) {
+        data.artist = ar.trim() || null;
+      }
+      if (al !== (originalAlbumRef.current ?? '')) {
+        data.album = al.trim() || null;
+      }
+      if (aw !== (originalArtworkRef.current ?? '')) {
+        data.artwork = aw.trim() || null;
+      }
+      if (JSON.stringify(t) !== JSON.stringify(originalTagsRef.current)) {
+        data.tags = t;
+      }
+      if (parsedBoost !== originalVolumeBoostRef.current) {
+        data.volumeBoost = parsedBoost;
+      }
 
       // Skip if nothing changed
       if (Object.keys(data).length === 0) {
@@ -187,12 +206,24 @@ export default function SongEditPanel({ song, isOpen, onClose }: SongEditPanelPr
         parsedRaw != null && !Number.isNaN(parsedRaw) && parsedRaw !== 0 ? parsedRaw : null;
 
       const data: SongUpdateData = {};
-      if (nk !== (originalNicknameRef.current ?? '')) data.nickname = nk.trim() || null;
-      if (ar !== (originalArtistRef.current ?? '')) data.artist = ar.trim() || null;
-      if (al !== (originalAlbumRef.current ?? '')) data.album = al.trim() || null;
-      if (aw !== (originalArtworkRef.current ?? '')) data.artwork = aw.trim() || null;
-      if (JSON.stringify(t) !== JSON.stringify(originalTagsRef.current)) data.tags = t;
-      if (parsedBoost !== originalVolumeBoostRef.current) data.volumeBoost = parsedBoost;
+      if (nk !== (originalNicknameRef.current ?? '')) {
+        data.nickname = nk.trim() || null;
+      }
+      if (ar !== (originalArtistRef.current ?? '')) {
+        data.artist = ar.trim() || null;
+      }
+      if (al !== (originalAlbumRef.current ?? '')) {
+        data.album = al.trim() || null;
+      }
+      if (aw !== (originalArtworkRef.current ?? '')) {
+        data.artwork = aw.trim() || null;
+      }
+      if (JSON.stringify(t) !== JSON.stringify(originalTagsRef.current)) {
+        data.tags = t;
+      }
+      if (parsedBoost !== originalVolumeBoostRef.current) {
+        data.volumeBoost = parsedBoost;
+      }
 
       if (Object.keys(data).length > 0) {
         void doSave();
@@ -200,7 +231,9 @@ export default function SongEditPanel({ song, isOpen, onClose }: SongEditPanelPr
     }
   }, [isOpen, doSave]);
 
-  if (!isOpen && !closing) return null;
+  if (!isOpen && !closing) {
+    return null;
+  }
 
   return (
     <div
@@ -219,7 +252,9 @@ export default function SongEditPanel({ song, isOpen, onClose }: SongEditPanelPr
             inputRef={inputRef}
             placeholder={song.title}
             onKeyDown={(e) => {
-              if (e.key === 'Enter') void doSave();
+              if (e.key === 'Enter') {
+                void doSave();
+              }
             }}
           />
           <Field
@@ -229,7 +264,9 @@ export default function SongEditPanel({ song, isOpen, onClose }: SongEditPanelPr
             onChange={setArtist}
             placeholder='Artist name'
             onKeyDown={(e) => {
-              if (e.key === 'Enter') void doSave();
+              if (e.key === 'Enter') {
+                void doSave();
+              }
             }}
           />
           <Field
@@ -239,7 +276,9 @@ export default function SongEditPanel({ song, isOpen, onClose }: SongEditPanelPr
             onChange={setAlbum}
             placeholder='Album name'
             onKeyDown={(e) => {
-              if (e.key === 'Enter') void doSave();
+              if (e.key === 'Enter') {
+                void doSave();
+              }
             }}
           />
           <Field
@@ -249,7 +288,9 @@ export default function SongEditPanel({ song, isOpen, onClose }: SongEditPanelPr
             onChange={setArtwork}
             placeholder={song.thumbnailUrl}
             onKeyDown={(e) => {
-              if (e.key === 'Enter') void doSave();
+              if (e.key === 'Enter') {
+                void doSave();
+              }
             }}
           />
 
@@ -309,8 +350,9 @@ export default function SongEditPanel({ song, isOpen, onClose }: SongEditPanelPr
                   tags={tags}
                   highlightedIndex={highlightedIndex}
                   onToggle={(tag) => {
-                    if (tags.includes(tag)) removeTag(tag);
-                    else {
+                    if (tags.includes(tag)) {
+                      removeTag(tag);
+                    } else {
                       flushSync(() => setTags((prev) => [...prev, tag]));
                     }
                   }}
@@ -332,7 +374,9 @@ export default function SongEditPanel({ song, isOpen, onClose }: SongEditPanelPr
             min={-100}
             max={200}
             onKeyDown={(e) => {
-              if (e.key === 'Enter') void doSave();
+              if (e.key === 'Enter') {
+                void doSave();
+              }
             }}
           />
         </div>
@@ -368,7 +412,9 @@ function VolumeSlider({
           value={value}
           onChange={(e) => {
             const v = e.target.value;
-            if (v === '' || /^\d*$/.test(v)) onChange(v);
+            if (v === '' || /^\d*$/.test(v)) {
+              onChange(v);
+            }
           }}
           onKeyDown={onKeyDown}
           onBlur={() => {
@@ -512,9 +558,13 @@ function TagDropdown({
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   useLayoutEffect(() => {
-    if (!dropdownRef.current) return;
+    if (!dropdownRef.current) {
+      return;
+    }
     const input = tagInputRef.current;
-    if (!input) return;
+    if (!input) {
+      return;
+    }
     const rect = input.getBoundingClientRect();
     dropdownRef.current.style.top = `${rect.bottom + window.scrollY + 4}px`;
     dropdownRef.current.style.left = `${rect.left + window.scrollX}px`;

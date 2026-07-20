@@ -39,8 +39,12 @@ export function EditSubmenuPanel({ config, onBack, onSave }: EditSubmenuPanelPro
           onChange={(e) => config.onChange(e.target.value)}
           onKeyDown={(e) => {
             e.stopPropagation();
-            if (e.key === 'Enter') onSave();
-            if (e.key === 'Escape') onBack();
+            if (e.key === 'Enter') {
+              onSave();
+            }
+            if (e.key === 'Escape') {
+              onBack();
+            }
           }}
           disabled={config.saving}
           placeholder={config.placeholder ?? 'Enter value...'}

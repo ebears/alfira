@@ -73,12 +73,16 @@ export default function PermissionsPage() {
     async function load() {
       try {
         const result = await fetchPermissions();
-        if (cancelled) return;
+        if (cancelled) {
+          return;
+        }
         setData(result);
         setMapping(result.mapping);
         setSavedMapping(result.mapping);
       } catch {
-        if (cancelled) return;
+        if (cancelled) {
+          return;
+        }
         setError('Could not load permissions.');
       }
     }
@@ -94,7 +98,9 @@ export default function PermissionsPage() {
     const normalize = (m: Record<string, string[]>) => {
       const out: Record<string, string[]> = {};
       for (const [k, v] of Object.entries(m)) {
-        if (v.length > 0) out[k] = v;
+        if (v.length > 0) {
+          out[k] = v;
+        }
       }
       return JSON.stringify(out);
     };
@@ -108,12 +114,16 @@ export default function PermissionsPage() {
   }, [mapping, explicitlyManaged]);
 
   const managedRoles = useMemo(() => {
-    if (!data) return [];
+    if (!data) {
+      return [];
+    }
     return data.roles.filter((r) => managedRoleIds.has(r.id));
   }, [data, managedRoleIds]);
 
   const unmanagedRoles = useMemo(() => {
-    if (!data) return [];
+    if (!data) {
+      return [];
+    }
     return data.roles.filter((r) => !managedRoleIds.has(r.id));
   }, [data, managedRoleIds]);
 
@@ -140,7 +150,9 @@ export default function PermissionsPage() {
   }, []);
 
   const removeRole = useCallback(() => {
-    if (!roleToRemove) return;
+    if (!roleToRemove) {
+      return;
+    }
     const roleId = roleToRemove;
     setRoleToRemove(null);
 
@@ -166,14 +178,19 @@ export default function PermissionsPage() {
   const toggleExpanded = useCallback((roleId: string) => {
     setExpandedRoles((prev) => {
       const next = new Set(prev);
-      if (next.has(roleId)) next.delete(roleId);
-      else next.add(roleId);
+      if (next.has(roleId)) {
+        next.delete(roleId);
+      } else {
+        next.add(roleId);
+      }
       return next;
     });
   }, []);
 
   const handleSave = useCallback(async () => {
-    if (!data) return;
+    if (!data) {
+      return;
+    }
     setSaving(true);
     setError(null);
     setSuccessMsg(null);

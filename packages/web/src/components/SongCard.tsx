@@ -230,7 +230,9 @@ const SongCardInner = ({
         onKeyDown={(e) => {
           if ((e.key === 'Enter' || e.key === ' ') && !selectionMode) {
             e.preventDefault();
-            if (canEdit) setOpenSongId(isOpen ? null : song.id);
+            if (canEdit) {
+              setOpenSongId(isOpen ? null : song.id);
+            }
           }
         }}
         style={canEdit || selectionMode ? { cursor: 'pointer' } : undefined}

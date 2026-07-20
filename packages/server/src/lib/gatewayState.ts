@@ -50,14 +50,20 @@ const pendingVoiceConnections = new Map<string, PendingVoiceConnection>();
 
 async function tryCompleteVoiceConnection(guildId: string): Promise<void> {
   const pending = pendingVoiceConnections.get(guildId);
-  if (!pending) return;
-  if (!pending.sessionId || !pending.token || !pending.endpoint) return;
+  if (!pending) {
+    return;
+  }
+  if (!pending.sessionId || !pending.token || !pending.endpoint) {
+    return;
+  }
 
   const sessionId = lavalink.getSessionId();
   if (!sessionId) {
     // Lavalink WebSocket hasn't received its 'ready' event yet.
     // Retry in 200ms — the connection was just initiated.
-    setTimeout(() => tryCompleteVoiceConnection(guildId), 200);
+    setTimeout(() => {
+      void tryCompleteVoiceConnection(guildId);
+    }, 200);
     return;
   }
 

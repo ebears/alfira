@@ -312,14 +312,14 @@ export interface SongRequestPlaylist {
     name: string;
     videoCount: number;
     thumbnailUrl?: string | null;
-    videos?: Array<{
+    videos?: {
       id: string;
       title: string;
       duration: number;
       thumbnailUrl?: string | null;
       artist?: string | null;
       artworkUrl?: string | null;
-    }>;
+    }[];
   } | null;
   status: 'pending' | 'approved' | 'denied';
   reviewedBy: string | null;

@@ -36,7 +36,9 @@ export function checkGuards(ctx: RouteContext, options: GuardOptions = {}): Guar
   const { admin = false, setupMode = false, voice = false } = options;
 
   const authResult = requireAuth(ctx);
-  if (authResult instanceof Response) return authResult;
+  if (authResult instanceof Response) {
+    return authResult;
+  }
   const user = authResult;
 
   // Setup mode: grant access to the first user who logs in during setup.
@@ -44,7 +46,9 @@ export function checkGuards(ctx: RouteContext, options: GuardOptions = {}): Guar
   if (setupMode && user.isSetupAdmin) {
     if (voice) {
       const inVoice = requireUserInVoice(user.discordId);
-      if (inVoice instanceof Response) return inVoice;
+      if (inVoice instanceof Response) {
+        return inVoice;
+      }
     }
     return { user };
   }
@@ -62,13 +66,17 @@ export function checkGuards(ctx: RouteContext, options: GuardOptions = {}): Guar
     } else {
       // No granular permission — super-admin only.
       const adminErr = requireAdmin(ctx);
-      if (adminErr) return adminErr;
+      if (adminErr) {
+        return adminErr;
+      }
     }
   }
 
   if (voice) {
     const inVoice = requireUserInVoice(user.discordId);
-    if (inVoice instanceof Response) return inVoice;
+    if (inVoice instanceof Response) {
+      return inVoice;
+    }
   }
 
   return { user };
@@ -79,7 +87,9 @@ export function checkGuards(ctx: RouteContext, options: GuardOptions = {}): Guar
  * granular permission via the rolePermission table.
  */
 function checkRolePermission(userRoles: string[], action: PermissionAction): boolean {
-  if (userRoles.length === 0) return false;
+  if (userRoles.length === 0) {
+    return false;
+  }
 
   const rows = db
     .select({ roleId: tables.rolePermission.roleId })

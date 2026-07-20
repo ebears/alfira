@@ -61,7 +61,9 @@ export default function AddSongModal({
   }, [successMsg, onClose]);
 
   const handleFetch = async () => {
-    if (!url.trim()) return;
+    if (!url.trim()) {
+      return;
+    }
     setLoading(true);
     setError('');
 
@@ -91,7 +93,9 @@ export default function AddSongModal({
   };
 
   const handleImportPlaylist = async () => {
-    if (!url.trim()) return;
+    if (!url.trim()) {
+      return;
+    }
     setLoading(true);
     setError('');
     setSuccessMsg('');
@@ -118,7 +122,9 @@ export default function AddSongModal({
   };
 
   const handleSubmit = async () => {
-    if (!url.trim()) return;
+    if (!url.trim()) {
+      return;
+    }
     setLoading(true);
     setError('');
     setSuccessMsg('');
@@ -160,14 +166,19 @@ export default function AddSongModal({
       void handleFetch();
     }
     if (e.key === 'Escape') {
-      if (step === 'metadata') setStep('url');
-      else onClose();
+      if (step === 'metadata') {
+        setStep('url');
+      } else {
+        onClose();
+      }
     }
   };
 
   const addTag = () => {
     const trimmed = tagInput.trim();
-    if (!trimmed || tags.includes(trimmed)) return;
+    if (!trimmed || tags.includes(trimmed)) {
+      return;
+    }
     setTags((prev) => [...prev, trimmed]);
     setTagInput('');
   };
@@ -381,7 +392,9 @@ export default function AddSongModal({
                   value={volumeBoost}
                   onChange={(e) => {
                     const v = e.target.value;
-                    if (v === '' || /^-?\d*$/.test(v)) setVolumeBoost(v);
+                    if (v === '' || /^-?\d*$/.test(v)) {
+                      setVolumeBoost(v);
+                    }
                   }}
                   onBlur={() => {
                     if (volumeBoost.trim() === '' || volumeBoost === '-') {
@@ -486,7 +499,9 @@ function Field({
 }
 
 function formatSeconds(totalSeconds: number): string {
-  if (!Number.isFinite(totalSeconds) || totalSeconds < 0) return '0:00';
+  if (!Number.isFinite(totalSeconds) || totalSeconds < 0) {
+    return '0:00';
+  }
   const minutes = Math.floor(totalSeconds / 60);
   const seconds = Math.floor(totalSeconds % 60);
   return `${minutes}:${seconds.toString().padStart(2, '0')}`;

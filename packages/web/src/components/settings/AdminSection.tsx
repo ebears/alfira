@@ -57,7 +57,9 @@ export default function AdminSection() {
     async function load() {
       try {
         const settings = await fetchGeneralSettings();
-        if (cancelled) return;
+        if (cancelled) {
+          return;
+        }
         setSaved(settings);
         setAdminRoleIds(settings.adminRoleIds);
         setTimeoutMinutes(settings.voiceIdleTimeoutMinutes);
@@ -75,15 +77,21 @@ export default function AdminSection() {
             fetchSetupRoles(settings.guildId),
             fetchSetupChannels(settings.guildId),
           ]);
-          if (cancelled) return;
+          if (cancelled) {
+            return;
+          }
           setRoles(rolesRes.roles);
           setChannels(channelsRes.channels);
         }
       } catch {
-        if (cancelled) return;
+        if (cancelled) {
+          return;
+        }
         setError('Could not load settings.');
       } finally {
-        if (!cancelled) setLoaded(true);
+        if (!cancelled) {
+          setLoaded(true);
+        }
       }
     }
     void load();
@@ -135,7 +143,9 @@ export default function AdminSection() {
       .filter(Boolean);
     const set = new Set(current);
     if (set.has(id)) {
-      if (set.size === 1) return; // Last one — can't remove.
+      if (set.size === 1) {
+        return;
+      } // Last one — can't remove.
       set.delete(id);
     } else {
       set.add(id);
@@ -150,9 +160,14 @@ export default function AdminSection() {
         .map((s) => s.trim())
         .filter(Boolean)
     );
-    if (current.size === 1 && current.has(key)) return; // Last one — can't disable.
-    if (current.has(key)) current.delete(key);
-    else current.add(key);
+    if (current.size === 1 && current.has(key)) {
+      return;
+    } // Last one — can't disable.
+    if (current.has(key)) {
+      current.delete(key);
+    } else {
+      current.add(key);
+    }
     setEnabledSources([...current].join(','));
   }
 
@@ -163,7 +178,9 @@ export default function AdminSection() {
       .filter(Boolean)
   );
 
-  if (!loaded) return null;
+  if (!loaded) {
+    return null;
+  }
 
   return (
     <div className='space-y-6'>

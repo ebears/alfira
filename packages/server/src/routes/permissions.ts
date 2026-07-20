@@ -17,7 +17,9 @@ async function handleGetPermissions(
   _params: Record<string, string>
 ): Promise<Response> {
   const guards = checkGuards(ctx, { admin: true });
-  if (guards instanceof Response) return guards;
+  if (guards instanceof Response) {
+    return guards;
+  }
 
   const guildId = getGuildId();
 
@@ -41,7 +43,9 @@ async function handleGetPermissions(
   // Build mapping: action → roleIds
   const mapping: Record<string, string[]> = {};
   for (const row of allRows) {
-    if (!mapping[row.action]) mapping[row.action] = [];
+    if (!mapping[row.action]) {
+      mapping[row.action] = [];
+    }
     mapping[row.action].push(row.roleId);
   }
 
@@ -63,7 +67,9 @@ async function handlePatchPermissions(
   _params: Record<string, string>
 ): Promise<Response> {
   const guards = checkGuards(ctx, { admin: true });
-  if (guards instanceof Response) return guards;
+  if (guards instanceof Response) {
+    return guards;
+  }
 
   let body: { action?: unknown; roleIds?: unknown };
   try {

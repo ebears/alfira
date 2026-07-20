@@ -26,7 +26,9 @@ const RECONNECT_DELAYS = [1000, 2000, 4000, 8000, 16000, 30000];
 function setStatus(status: ConnectionStatus) {
   if (connectionStatus !== status) {
     connectionStatus = status;
-    for (const listener of statusListeners) listener();
+    for (const listener of statusListeners) {
+      listener();
+    }
   }
 }
 

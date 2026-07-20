@@ -40,10 +40,14 @@ export async function applyNodeLinkFilter(
     logger.warn(`GUILD_ID not set, skipping NodeLink ${label} filter update`);
     return;
   }
-  if (!lavalink.isGuildConnected(guildId)) return;
+  if (!lavalink.isGuildConnected(guildId)) {
+    return;
+  }
 
   const sessionId = lavalink.getSessionId();
-  if (!sessionId) return;
+  if (!sessionId) {
+    return;
+  }
 
   try {
     await updateNodeLinkPlayer(guildId, sessionId, { filters });

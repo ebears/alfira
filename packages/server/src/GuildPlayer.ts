@@ -170,7 +170,9 @@ export class GuildPlayer {
     this._unsubTrackEnd = lavalink.onTrackEnd(this.guildId, (reason: TrackEndReason) => {
       // 'replaced' fires when a new track replaces the current one (normal).
       // 'stopped' fires when we explicitly stop/clear.
-      if (reason === 'replaced' || reason === 'stopped') return;
+      if (reason === 'replaced' || reason === 'stopped') {
+        return;
+      }
 
       logger.debug(
         { guildId: this.guildId, reason, track: this.currentSong?.title },
@@ -299,7 +301,9 @@ export class GuildPlayer {
   }
 
   async skip(): Promise<void> {
-    if (this.currentSong === null) return;
+    if (this.currentSong === null) {
+      return;
+    }
 
     // Stop the current track via REST.
     const sessionId = this.getSessionId();
@@ -372,7 +376,9 @@ export class GuildPlayer {
    */
   promoteSong(songId: string): boolean {
     const removed = this.queue.removeWhere((s) => s.id === songId);
-    if (removed.length === 0) return false;
+    if (removed.length === 0) {
+      return false;
+    }
 
     // Push to the end of priority — earlier promotions play first
     this.priorityQueue.push(...removed);
@@ -387,7 +393,9 @@ export class GuildPlayer {
    */
   demoteSong(songId: string): boolean {
     const prioIdx = this.priorityQueue.findIndex((s) => s.id === songId);
-    if (prioIdx === -1) return false;
+    if (prioIdx === -1) {
+      return false;
+    }
 
     // Remove from priority and insert at the front of the regular queue
     // so it plays first among unplayed regular songs.
@@ -460,10 +468,14 @@ export class GuildPlayer {
   }
 
   async togglePause(): Promise<boolean> {
-    if (!this.currentSong) return false;
+    if (!this.currentSong) {
+      return false;
+    }
 
     const sessionId = this.getSessionId();
-    if (!sessionId) return false;
+    if (!sessionId) {
+      return false;
+    }
 
     if (this.paused) {
       this.cancelIdleLeave();
@@ -488,10 +500,14 @@ export class GuildPlayer {
   }
 
   async seek(positionMs: number): Promise<void> {
-    if (!this.currentSong) return;
+    if (!this.currentSong) {
+      return;
+    }
 
     const sessionId = this.getSessionId();
-    if (!sessionId) return;
+    if (!sessionId) {
+      return;
+    }
 
     const durationMs = this.currentSong.duration * 1000;
     const clampedMs = Math.max(0, Math.min(positionMs, durationMs));
@@ -511,10 +527,14 @@ export class GuildPlayer {
   }
 
   public updateVolumeBoost(boost: number): void {
-    if (!this.currentSong) return;
+    if (!this.currentSong) {
+      return;
+    }
 
     const sessionId = this.getSessionId();
-    if (!sessionId) return;
+    if (!sessionId) {
+      return;
+    }
 
     void updateNodeLinkPlayer(this.guildId, sessionId, {
       volume: 100 + boost,
@@ -544,12 +564,24 @@ export class GuildPlayer {
 
     const merge = (s: QueuedSong): QueuedSong => {
       const updated = { ...s };
-      if ('nickname' in fields) updated.nickname = fields.nickname ?? undefined;
-      if ('artist' in fields) updated.artist = fields.artist ?? undefined;
-      if ('album' in fields) updated.album = fields.album ?? undefined;
-      if ('artwork' in fields) updated.artwork = fields.artwork ?? undefined;
-      if ('tags' in fields) updated.tags = fields.tags;
-      if ('volumeBoost' in fields) updated.volumeBoost = fields.volumeBoost ?? undefined;
+      if ('nickname' in fields) {
+        updated.nickname = fields.nickname ?? undefined;
+      }
+      if ('artist' in fields) {
+        updated.artist = fields.artist ?? undefined;
+      }
+      if ('album' in fields) {
+        updated.album = fields.album ?? undefined;
+      }
+      if ('artwork' in fields) {
+        updated.artwork = fields.artwork ?? undefined;
+      }
+      if ('tags' in fields) {
+        updated.tags = fields.tags;
+      }
+      if ('volumeBoost' in fields) {
+        updated.volumeBoost = fields.volumeBoost ?? undefined;
+      }
       return updated;
     };
 
@@ -572,7 +604,9 @@ export class GuildPlayer {
 
     // Regular queue
     const regularUpdated = this.queue.updateWhere((s) => idSet.has(s.id), merge);
-    if (regularUpdated > 0) changed = true;
+    if (regularUpdated > 0) {
+      changed = true;
+    }
 
     if (changed) {
       this.broadcast();
@@ -588,7 +622,9 @@ export class GuildPlayer {
   }
 
   isPlaying(): boolean {
-    if (this.currentSong === null || this.paused) return false;
+    if (this.currentSong === null || this.paused) {
+      return false;
+    }
     return true;
   }
 
@@ -639,7 +675,9 @@ export class GuildPlayer {
   }
 
   private async playNext(): Promise<void> {
-    if (this.playNextLock) return;
+    if (this.playNextLock) {
+      return;
+    }
     this.playNextLock = true;
     try {
       await this.playNextUnlocked();
@@ -903,7 +941,9 @@ export class GuildPlayer {
 
   private preloadNextTrack(sessionId: string): void {
     const nextTrack = this.peekNextTrack();
-    if (!nextTrack) return;
+    if (!nextTrack) {
+      return;
+    }
 
     const attempt = async () => {
       try {
@@ -963,7 +1003,9 @@ export class GuildPlayer {
   }
 
   private async onTrackEnd(): Promise<void> {
-    if (this.playNextLock) return;
+    if (this.playNextLock) {
+      return;
+    }
 
     this.trackStartedAt = null;
     this.pausedAt = null;
@@ -973,7 +1015,9 @@ export class GuildPlayer {
       return;
     }
 
-    if (!this.currentSong) return;
+    if (!this.currentSong) {
+      return;
+    }
 
     await this.playNext();
   }

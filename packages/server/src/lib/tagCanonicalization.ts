@@ -13,10 +13,14 @@ const { tag: tagTable } = tables;
  * Example: ["rock"] (first time) → ["rock"]
  */
 export async function canonicalizeTags(rawTags: string[]): Promise<string[]> {
-  if (rawTags.length === 0) return [];
+  if (rawTags.length === 0) {
+    return [];
+  }
 
   const trimmed = rawTags.map((t) => t.trim()).filter((t) => t.length > 0);
-  if (trimmed.length === 0) return [];
+  if (trimmed.length === 0) {
+    return [];
+  }
 
   // Deduplicate case-insensitively, preserving first-seen spelling
   const seen = new Map<string, string>();

@@ -132,8 +132,12 @@ class LavalinkSocket extends EventEmitter<LavalinkEvents> {
     logger.info({ url: this.url }, 'Lavalink: attempting WebSocket connection');
 
     const headers: Record<string, string> = {};
-    if (this.auth) headers.Authorization = this.auth;
-    if (this._userId) headers['User-Id'] = this._userId;
+    if (this.auth) {
+      headers.Authorization = this.auth;
+    }
+    if (this._userId) {
+      headers['User-Id'] = this._userId;
+    }
     headers['Client-Name'] = 'Alfira';
 
     // Bun extends WebSocket constructor with { headers } option
@@ -211,7 +215,9 @@ class LavalinkSocket extends EventEmitter<LavalinkEvents> {
 
   onTrackEnd(guildId: string, handler: (reason: TrackEndReason) => void): () => void {
     const wrapped = (gid: string, reason: TrackEndReason) => {
-      if (gid === guildId) handler(reason);
+      if (gid === guildId) {
+        handler(reason);
+      }
     };
     this.on('trackEnd', wrapped);
     return () => this.off('trackEnd', wrapped);
@@ -219,7 +225,9 @@ class LavalinkSocket extends EventEmitter<LavalinkEvents> {
 
   onTrackError(guildId: string, handler: (exception: { message?: string }) => void): () => void {
     const wrapped = (gid: string, exception: { message?: string }) => {
-      if (gid === guildId) handler(exception);
+      if (gid === guildId) {
+        handler(exception);
+      }
     };
     this.on('trackError', wrapped);
     return () => this.off('trackError', wrapped);
@@ -230,7 +238,9 @@ class LavalinkSocket extends EventEmitter<LavalinkEvents> {
     handler: (code: number, reason: string, byRemote: boolean) => void
   ): () => void {
     const wrapped = (gid: string, code: number, reason: string, byRemote: boolean) => {
-      if (gid === guildId) handler(code, reason, byRemote);
+      if (gid === guildId) {
+        handler(code, reason, byRemote);
+      }
     };
     this.on('socketClosed', wrapped);
     return () => this.off('socketClosed', wrapped);
@@ -308,7 +318,9 @@ class LavalinkSocket extends EventEmitter<LavalinkEvents> {
   }
 
   private scheduleReconnect(): void {
-    if (this.intentionalClose) return;
+    if (this.intentionalClose) {
+      return;
+    }
 
     const baseDelay = 1_000;
     const maxDelay = 30_000;

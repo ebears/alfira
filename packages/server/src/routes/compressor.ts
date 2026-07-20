@@ -20,7 +20,9 @@ async function handleCompressorRequest(
   _params: Record<string, string>
 ): Promise<Response> {
   const guards = checkGuards(ctx, { admin: true, permission: 'audio.manage' });
-  if (guards instanceof Response) return guards;
+  if (guards instanceof Response) {
+    return guards;
+  }
 
   let body: CompressorPayload;
   try {
@@ -32,17 +34,24 @@ async function handleCompressorRequest(
   const { enabled, threshold, ratio, attack, release, gain } = body;
 
   // Validate ranges
-  if (typeof enabled !== 'boolean') return json({ error: 'enabled must be boolean' }, 400);
-  if (!Number.isInteger(threshold) || threshold < -60 || threshold > 0)
+  if (typeof enabled !== 'boolean') {
+    return json({ error: 'enabled must be boolean' }, 400);
+  }
+  if (!Number.isInteger(threshold) || threshold < -60 || threshold > 0) {
     return json({ error: 'threshold must be integer -60 to 0' }, 400);
-  if (typeof ratio !== 'number' || ratio < 1 || ratio > 20)
+  }
+  if (typeof ratio !== 'number' || ratio < 1 || ratio > 20) {
     return json({ error: 'ratio must be number 1 to 20' }, 400);
-  if (!Number.isInteger(attack) || attack < 0 || attack > 100)
+  }
+  if (!Number.isInteger(attack) || attack < 0 || attack > 100) {
     return json({ error: 'attack must be integer 0 to 100' }, 400);
-  if (!Number.isInteger(release) || release < 10 || release > 1000)
+  }
+  if (!Number.isInteger(release) || release < 10 || release > 1000) {
     return json({ error: 'release must be integer 10 to 1000' }, 400);
-  if (!Number.isInteger(gain) || gain < 0 || gain > 24)
+  }
+  if (!Number.isInteger(gain) || gain < 0 || gain > 24) {
     return json({ error: 'gain must be integer 0 to 24' }, 400);
+  }
 
   // Upsert into DB
   db.insert(tables.guildSettings)

@@ -18,7 +18,9 @@ export default function ProtectedRoute({ children }: { children: React.ReactNode
     );
   }
 
-  if (!user) return <Navigate to='/login' replace />;
+  if (!user) {
+    return <Navigate to='/login' replace />;
+  }
 
   // During first-run setup, lock all routes except /setup.
   if (user.isSetupAdmin && location.pathname !== '/setup') {

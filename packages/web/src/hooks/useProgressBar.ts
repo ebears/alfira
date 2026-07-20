@@ -97,8 +97,12 @@ export function useProgressBar(
 
     if (!isPlaying) {
       // Cancel all loops
-      if (rafIdRef.current) cancelAnimationFrame(rafIdRef.current);
-      if (intervalIdRef.current) clearInterval(intervalIdRef.current);
+      if (rafIdRef.current) {
+        cancelAnimationFrame(rafIdRef.current);
+      }
+      if (intervalIdRef.current) {
+        clearInterval(intervalIdRef.current);
+      }
       rafIdRef.current = 0;
       intervalIdRef.current = 0;
 
@@ -106,8 +110,12 @@ export function useProgressBar(
       if (!hasSong && !isPaused) {
         accumulatedMsRef.current = 0;
         setElapsed(0);
-        for (const ref of progressBars.current) ref.style.width = '0%';
-        for (const ref of thumbs.current) ref.style.left = '0%';
+        for (const ref of progressBars.current) {
+          ref.style.width = '0%';
+        }
+        for (const ref of thumbs.current) {
+          ref.style.left = '0%';
+        }
       }
 
       // When pausing (song exists + paused), capture current elapsed
@@ -117,16 +125,24 @@ export function useProgressBar(
         const pausedSec = Math.min(Math.round(accumulatedMsRef.current / 1000), duration);
         setElapsed(pausedSec);
         const pct = (pausedSec / duration) * 100;
-        for (const ref of progressBars.current) ref.style.width = `${pct}%`;
-        for (const ref of thumbs.current) ref.style.left = `${pct}%`;
+        for (const ref of progressBars.current) {
+          ref.style.width = `${pct}%`;
+        }
+        for (const ref of thumbs.current) {
+          ref.style.left = `${pct}%`;
+        }
       }
 
       return;
     }
 
     // ---- Starting loops ----
-    if (rafIdRef.current) cancelAnimationFrame(rafIdRef.current);
-    if (intervalIdRef.current) clearInterval(intervalIdRef.current);
+    if (rafIdRef.current) {
+      cancelAnimationFrame(rafIdRef.current);
+    }
+    if (intervalIdRef.current) {
+      clearInterval(intervalIdRef.current);
+    }
 
     // Compute effective start
     let effectiveStart: number;
@@ -154,7 +170,9 @@ export function useProgressBar(
     const tick = () => {
       const elapsedMs = Date.now() - effectiveStart;
       const pct = Math.min((elapsedMs / (duration * 1000)) * 100, 100);
-      if (pct >= 100) return;
+      if (pct >= 100) {
+        return;
+      }
       const pctStr = `${pct}%`;
       for (const ref of progressBars.current) {
         ref.style.width = pctStr;
@@ -173,8 +191,12 @@ export function useProgressBar(
     }, 1000);
 
     return () => {
-      if (rafIdRef.current) cancelAnimationFrame(rafIdRef.current);
-      if (intervalIdRef.current) clearInterval(intervalIdRef.current);
+      if (rafIdRef.current) {
+        cancelAnimationFrame(rafIdRef.current);
+      }
+      if (intervalIdRef.current) {
+        clearInterval(intervalIdRef.current);
+      }
       rafIdRef.current = 0;
       intervalIdRef.current = 0;
     };
