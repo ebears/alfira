@@ -1,12 +1,12 @@
 import { eq } from 'drizzle-orm';
-import type { RouteContext } from '../lib/context';
+import { type RouteContext } from '../lib/context';
 import { refreshGuildId } from '../lib/config';
 import { refreshEnabledSources } from '../startDiscord';
 import { botHeaders, fetchGuildRoles } from '../lib/discordRoles';
 import { json } from '../lib/json';
 import { checkGuards } from '../lib/routeGuards';
 import { routeTable } from '../lib/routeTable';
-import type { SetupChannel, SetupGuild } from '../shared';
+import { type SetupChannel, type SetupGuild } from '../shared';
 import { db, tables } from '../shared/db';
 import { logger } from '../shared/logger';
 

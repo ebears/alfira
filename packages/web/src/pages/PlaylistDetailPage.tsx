@@ -1,5 +1,5 @@
-import type { Playlist, PlaylistDetail, Song, TagItem } from '@alfira/server/shared';
-import type { BulkEditData, FetchSongsOptions } from '@alfira/server/shared/api';
+import { type Playlist, type PlaylistDetail, type Song, type TagItem } from '@alfira/server/shared';
+import { type BulkEditData, type FetchSongsOptions } from '@alfira/server/shared/api';
 import { fetchTags, updatePlaylistTag } from '@alfira/server/shared/api';
 import { AnimatePresence } from 'motion/react';
 import * as m from 'motion/react-m';
@@ -34,7 +34,7 @@ import AddSongsModal from '../components/AddSongsModal';
 import BulkActionBar from '../components/BulkActionBar';
 import BulkEditModal from '../components/BulkEditModal';
 import ConfirmModal from '../components/ConfirmModal';
-import type { MenuItem } from '../components/ContextMenu';
+import { type MenuItem } from '../components/ContextMenu';
 import { ContextMenu, ContextMenuTrigger } from '../components/ContextMenu';
 import EmptyState from '../components/EmptyState';
 import ListToolbar from '../components/ListToolbar';
@@ -249,7 +249,7 @@ export default function PlaylistDetailPage() {
           isPrivate: pl.isPrivate,
           tagNameLower: pl.tagNameLower,
           createdAt: pl.createdAt,
-        } as PlaylistDetailMeta,
+        },
       };
     },
     limit: ITEMS_PER_PAGE,
@@ -264,10 +264,10 @@ export default function PlaylistDetailPage() {
 
   // Derive PlaylistDetail for JSX — metadata from the hook, songs from items
   const playlistDetail = playlistMeta
-    ? ({
+    ? {
         ...playlistMeta,
         songs,
-      } as PlaylistDetail)
+      }
     : null;
 
   // Stable ref for callbacks — avoids playlistDetail changing every render

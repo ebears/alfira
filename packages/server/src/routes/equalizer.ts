@@ -1,5 +1,5 @@
 import { eq } from 'drizzle-orm';
-import type { RouteContext } from '../lib/context';
+import { type RouteContext } from '../lib/context';
 import { applyNodeLinkFilter } from '../lib/applyNodeLinkFilter';
 import {
   buildEqualizerFilter,

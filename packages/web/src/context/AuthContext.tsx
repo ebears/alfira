@@ -1,4 +1,4 @@
-import type { User } from '@alfira/server/shared';
+import { type User } from '@alfira/server/shared';
 import type React from 'react';
 import {
   createContext,

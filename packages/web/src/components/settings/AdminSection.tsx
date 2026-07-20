@@ -388,7 +388,7 @@ export default function AdminSection() {
               className='flex-1 range-input range-input-h'
               style={
                 {
-                  ['--range-pct' as string]: `${((timeoutMinutes - 1) / (120 - 1)) * 100}%`,
+                  '--range-pct': `${((timeoutMinutes - 1) / (120 - 1)) * 100}%`,
                 } as React.CSSProperties
               }
             />

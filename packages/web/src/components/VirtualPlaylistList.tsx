@@ -1,4 +1,4 @@
-import type { Playlist } from '@alfira/server/shared';
+import { type Playlist } from '@alfira/server/shared';
 import { memo } from 'react';
 import PlaylistRow from './PlaylistRow';
 import { VirtualList } from './VirtualList';

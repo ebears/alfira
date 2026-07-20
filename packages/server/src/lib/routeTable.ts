@@ -1,4 +1,4 @@
-import type { RouteContext } from './context';
+import { type RouteContext } from './context';
 import { json } from './json';
 import {
   attachRateLimitHeaders,

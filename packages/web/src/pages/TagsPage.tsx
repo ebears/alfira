@@ -1,5 +1,5 @@
 import { deleteTag, fetchTagSongs, fetchTags, updateTag } from '@alfira/server/shared/api';
-import type { Song } from '@alfira/server/shared/types';
+import { type Song } from '@alfira/server/shared/types';
 import { MagnifyingGlassIcon, TagIcon, TrashIcon } from '@phosphor-icons/react';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import ConfirmModal from '../components/ConfirmModal';

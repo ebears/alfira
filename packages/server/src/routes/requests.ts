@@ -1,5 +1,5 @@
 import { and, eq, inArray, or, sql } from 'drizzle-orm';
-import type { RouteContext } from '../lib/context';
+import { type RouteContext } from '../lib/context';
 import { getUserDisplayName, resolveDisplayNames } from '../lib/displayName';
 import { json } from '../lib/json';
 import { sendRequestDm, sendRequestNotification } from '../lib/notifications';
@@ -22,7 +22,7 @@ import {
 } from '../lib/validation';
 import { db, tables } from '../shared/db';
 import { logger } from '../shared/logger';
-import type { SongRequest } from '../shared/types';
+import { type SongRequest } from '../shared/types';
 import { isPlaylistUrl } from '../startDiscord';
 
 const { song: songTable, songRequest: requestTable } = tables;
@@ -36,7 +36,7 @@ function formatRequest(row: typeof requestTable.$inferSelect): SongRequest {
     ...row,
     createdAt: new Date(row.createdAt).toISOString(),
     closedAt: row.closedAt ? new Date(row.closedAt).toISOString() : null,
-    playlistData: row.playlistData as SongRequest['playlistData'],
+    playlistData: row.playlistData,
     type: row.type as 'track' | 'playlist',
   };
   return base as SongRequest;
@@ -591,9 +591,7 @@ async function handleGetRequests(ctx: RouteContext, request: Request): Promise<R
   const total = parseInt(String(countResult[0]?.count ?? 0), 10);
 
   // Resolve display names for requesters
-  const nameMap = await resolveDisplayNames(
-    requests.map((r) => ({ addedBy: r.requestedBy }) as { addedBy: string })
-  );
+  const nameMap = await resolveDisplayNames(requests.map((r) => ({ addedBy: r.requestedBy })));
 
   const formattedRequests = requests.map((r) => ({
     ...formatRequest(r),
@@ -647,7 +645,7 @@ async function handlePatchRequest(
     return json({ error: 'This request has already been processed.' }, 409);
   }
 
-  const newStatus = body.status as 'approved' | 'denied';
+  const newStatus = body.status;
   const closedAt = new Date();
 
   if (newStatus === 'denied') {
@@ -687,7 +685,7 @@ async function handlePatchRequest(
 
   // Approve
   if (existing.type === 'playlist' && existing.playlistData) {
-    const pd = existing.playlistData as NonNullable<typeof existing.playlistData>;
+    const pd = existing.playlistData;
     const videos = pd.videos ?? [];
 
     if (videos.length === 0) {

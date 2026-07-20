@@ -1,5 +1,5 @@
 import { verify } from '../lib/jwt';
-import type { User } from '../shared';
+import { type User } from '../shared';
 
 /**
  * Verifies a JWT session token and returns the decoded payload.

@@ -1,4 +1,4 @@
-import type { verifySessionToken } from '../middleware/requireAuth';
+import { type verifySessionToken } from '../middleware/requireAuth';
 
 // ---------------------------------------------------------------------------
 // Auth context

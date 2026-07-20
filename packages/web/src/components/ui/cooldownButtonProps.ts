@@ -1,4 +1,4 @@
-import type { CooldownState } from '../../hooks/useCooldownGuard';
+import { type CooldownState } from '../../hooks/useCooldownGuard';
 
 interface CooldownButtonOpts {
   onClick: () => void;

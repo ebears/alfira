@@ -134,7 +134,7 @@ export default function CompressorSection() {
               className='flex-1 range-input range-input-h'
               style={
                 {
-                  ['--range-pct' as string]: `${((values[key] - min) / (max - min)) * 100}%`,
+                  '--range-pct': `${((values[key] - min) / (max - min)) * 100}%`,
                 } as React.CSSProperties
               }
             />

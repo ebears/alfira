@@ -1,4 +1,4 @@
-import type { RequestPreview, Song } from '@alfira/server/shared';
+import { type RequestPreview, type Song } from '@alfira/server/shared';
 import { useEffect, useRef, useState } from 'react';
 import { createRequest, previewRequest } from '../api/api';
 import { useTagColors } from '../context/TagsContext';
@@ -421,7 +421,7 @@ export default function AddSongModal({
                   className='volume-range-input'
                   style={
                     {
-                      ['--volume-pct' as string]: `${
+                      '--volume-pct': `${
                         ((Math.min(200, Math.max(-100, parseInt(volumeBoost, 10) || 0)) + 100) /
                           300) *
                         100

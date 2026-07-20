@@ -4,7 +4,7 @@ import { buildEqualizerFilter, EQ_BAND_COLUMNS, eqBandsFromRow } from './lib/eqB
 import { lavalink, type TrackEndReason } from './lib/lavalink';
 import { emitPlayerUpdate } from './lib/socket';
 import { PlaybackCursor } from './PlaybackCursor';
-import type { LoopMode, QueuedSong, QueueState } from './shared';
+import { type LoopMode, type QueuedSong, type QueueState } from './shared';
 import { db, tables } from './shared/db';
 import { logger } from './shared/logger';
 import { connectToVoice, getClient } from './lib/gatewayState';
@@ -810,11 +810,7 @@ export class GuildPlayer {
       }
 
       const t1 = Date.now();
-      await updateNodeLinkPlayer(
-        this.guildId,
-        sessionId,
-        patch as Parameters<typeof updateNodeLinkPlayer>[2]
-      );
+      await updateNodeLinkPlayer(this.guildId, sessionId, patch);
       const t2 = Date.now();
 
       this.consecutiveFailures = 0;
@@ -907,11 +903,7 @@ export class GuildPlayer {
       }
     }
 
-    await updateNodeLinkPlayer(
-      this.guildId,
-      sessionId,
-      patch as Parameters<typeof updateNodeLinkPlayer>[2]
-    );
+    await updateNodeLinkPlayer(this.guildId, sessionId, patch);
     const tCold3 = Date.now();
 
     this.consecutiveFailures = 0;

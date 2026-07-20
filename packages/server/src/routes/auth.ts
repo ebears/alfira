@@ -1,7 +1,7 @@
 import crypto from 'node:crypto';
 import { and, eq, lt } from 'drizzle-orm';
 import { sign, verify } from '../lib/jwt';
-import type { RouteContext } from '../lib/context';
+import { type RouteContext } from '../lib/context';
 import { getGuildId, refreshGuildId } from '../lib/config';
 import { json } from '../lib/json';
 import { getClientIp } from '../lib/rateLimit';
@@ -505,7 +505,7 @@ async function withRetry<T>(fn: () => Promise<T>, attempts = 3, baseDelayMs = 50
     } catch (err) {
       lastErr = err;
       if (i < attempts - 1) {
-        await new Promise((r) => setTimeout(r, baseDelayMs * 2 ** i));
+        await new Promise((resolve) => setTimeout(resolve, baseDelayMs * 2 ** i));
       }
     }
   }

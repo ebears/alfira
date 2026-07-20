@@ -1,4 +1,4 @@
-import type { Playlist, Song } from '@alfira/server/shared';
+import { type Playlist, type Song } from '@alfira/server/shared';
 import { useMasonry, usePositioner, useResizeObserver } from 'masonic';
 import { memo, useCallback, useMemo, useRef } from 'react';
 import { useScrollObserver } from '../hooks/useScrollObserver';
@@ -170,6 +170,7 @@ export const VirtualSongGrid = memo(function VirtualSongGrid({
   };
 
   const GridCard = useMemo(() => {
+    // eslint-disable-next-line react/no-unstable-nested-components -- must be created inside useMemo([]) for stable type identity; masonic's render prop requires a component, not an element
     const Component = ({
       index: _index,
       width,

@@ -62,7 +62,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button
     <button
       ref={ref}
       type='button'
-      disabled={dimmed ? undefined : (_disabled as boolean | undefined)}
+      disabled={dimmed ? undefined : _disabled}
       className={[base, dimmedClass, className].filter(Boolean).join(' ')}
       style={inheritStyle}
       {...restProps}

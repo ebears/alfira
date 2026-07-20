@@ -1,4 +1,4 @@
-import type { SetupRole } from '../shared/types';
+import { type SetupRole } from '../shared/types';
 import { logger } from '../shared/logger';
 
 const DISCORD_API = 'https://discord.com/api/v10';

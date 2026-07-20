@@ -80,9 +80,9 @@ export function verify<T = Record<string, unknown>>(token: string, secret: strin
     return null;
   }
 
-  const headerB64 = parts[0] as string;
-  const payloadB64 = parts[1] as string;
-  const signatureB64 = parts[2] as string;
+  const headerB64 = parts[0];
+  const payloadB64 = parts[1];
+  const signatureB64 = parts[2];
 
   // Verify the signature using constant-time comparison
   const data = `${headerB64}.${payloadB64}`;

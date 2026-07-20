@@ -14,7 +14,7 @@ Bun.serve({
         method: req.method,
         headers: req.headers,
         body: ['GET', 'HEAD'].includes(req.method) ? undefined : req.body,
-      } as RequestInit);
+      });
       return new Response(response.body, {
         status: response.status,
         headers: response.headers,
@@ -28,7 +28,7 @@ Bun.serve({
         method: req.method,
         headers: req.headers,
         body: ['GET', 'HEAD'].includes(req.method) ? undefined : req.body,
-      } as RequestInit);
+      });
       return new Response(response.body, {
         status: response.status,
         headers: response.headers,
