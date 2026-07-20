@@ -50,7 +50,7 @@ export default function CompressorSection() {
         setLoaded(true);
       }
     }
-    if (canManage) load();
+    if (canManage) void load();
     else setLoaded(true);
   }, [canManage]);
 

@@ -188,10 +188,10 @@ export function getEnabledSourceDisplayNames(): string[] {
     .filter(Boolean) as string[];
 }
 
-export async function initEnabledSources(): Promise<void> {
+export function initEnabledSources(): void {
   if (_enabledSourcesLoaded) return;
   try {
-    const row = await db
+    const row = db
       .select({ enabledSources: tables.guildSettings.enabledSources })
       .from(tables.guildSettings)
       .where(eq(tables.guildSettings.id, 1))

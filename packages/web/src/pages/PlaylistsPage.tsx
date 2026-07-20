@@ -73,7 +73,7 @@ export default function PlaylistsPage() {
     (e: React.MouseEvent) => {
       const row = e.currentTarget.closest('[data-playlist-id]');
       const playlistId = row?.getAttribute('data-playlist-id');
-      if (playlistId) navigate(`/playlists/${playlistId}`);
+      if (playlistId) void navigate(`/playlists/${playlistId}`);
     },
     [navigate]
   );

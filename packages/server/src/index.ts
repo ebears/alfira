@@ -147,7 +147,7 @@ async function handleHealth(): Promise<Response> {
 
   // Database
   try {
-    await db.all(sql`SELECT 1`);
+    db.all(sql`SELECT 1`);
     checks.database = 'ok';
   } catch {
     checks.database = 'error';
@@ -404,7 +404,7 @@ function startNodeLink(): Promise<void> {
       }
       setTimeout(checkReady, 500);
     };
-    checkReady();
+    void checkReady();
   });
 }
 
@@ -426,7 +426,7 @@ async function main(): Promise<void> {
 
   // 2. Verify database connectivity.
   try {
-    await db.all(sql`SELECT 1`);
+    db.all(sql`SELECT 1`);
     logger.info('Connected to database');
   } catch (error) {
     logger.error(error, 'Could not connect to the database');
@@ -435,7 +435,7 @@ async function main(): Promise<void> {
 
   // 2.5. Initialize guild ID cache.
   try {
-    await initGuildId();
+    initGuildId();
     logger.info('Guild ID cache initialized');
   } catch (error) {
     logger.error(error, 'Failed to initialize guild settings');
@@ -443,7 +443,7 @@ async function main(): Promise<void> {
 
   // 2.6. Initialize enabled sources cache.
   try {
-    await initEnabledSources();
+    initEnabledSources();
     logger.info('Enabled sources cache initialized');
   } catch (error) {
     logger.error(error, 'Failed to initialize enabled sources cache');
@@ -492,7 +492,7 @@ function shutdown(signal: string): void {
   logger.info('NodeLink stopped');
 
   // 2. Stop accepting connections and close all WebSocket clients.
-  server?.stop();
+  void server?.stop();
   closeAllClients();
   logger.info('Server stopped');
 
@@ -508,5 +508,5 @@ function shutdown(signal: string): void {
   process.exit(0);
 }
 
-process.on('SIGTERM', () => void shutdown('SIGTERM'));
-process.on('SIGINT', () => void shutdown('SIGINT'));
+process.on('SIGTERM', () => shutdown('SIGTERM'));
+process.on('SIGINT', () => shutdown('SIGINT'));

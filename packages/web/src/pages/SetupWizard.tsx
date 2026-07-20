@@ -93,7 +93,7 @@ export default function SetupWizard() {
       try {
         const status = await fetchSetupStatus();
         if (status.setupCompleted) {
-          navigate('/', { replace: true });
+          void navigate('/', { replace: true });
           return;
         }
         setClientId(status.clientId);
@@ -102,7 +102,7 @@ export default function SetupWizard() {
       }
       setLoading(false);
     }
-    check();
+    void check();
   }, [navigate]);
 
   // Auto-refresh guild list when on the guild step and no guilds are found.
@@ -127,7 +127,7 @@ export default function SetupWizard() {
       }
     }
 
-    poll();
+    void poll();
     const interval = setInterval(poll, 3000);
     return () => {
       cancelled = true;

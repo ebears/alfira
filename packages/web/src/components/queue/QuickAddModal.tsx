@@ -73,7 +73,7 @@ export default function QuickAddModal({
               disabled={submitting}
               onKeyDown={(e) => {
                 if (e.key === 'Enter' && sourceUrl.trim()) {
-                  handleSubmit();
+                  void handleSubmit();
                 }
               }}
             />

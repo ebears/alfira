@@ -122,6 +122,19 @@ export default defineConfig({
       },
     },
 
+    // Virtual list components: array index as key is safe for static skeleton/loading placeholders
+    {
+      files: [
+        'packages/web/src/components/VirtualList.tsx',
+        'packages/web/src/components/VirtualSongList.tsx',
+        'packages/web/src/components/VirtualSongGrid.tsx',
+        'packages/web/src/components/VirtualRequestList.tsx',
+      ],
+      rules: {
+        'react/no-array-index-key': 'off',
+      },
+    },
+
     // Song/Playlist rows and panels: relaxed a11y
     {
       files: [

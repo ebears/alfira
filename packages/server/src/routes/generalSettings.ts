@@ -34,15 +34,15 @@ const SETTINGS_COLUMNS = {
 // ---------------------------------------------------------------------------
 // GET /api/settings/general
 // ---------------------------------------------------------------------------
-async function handleGetGeneral(
+function handleGetGeneral(
   ctx: RouteContext,
   _request: Request,
   _params: Record<string, string>
-): Promise<Response> {
-  const guards = await checkGuards(ctx, { admin: true });
+): Response {
+  const guards = checkGuards(ctx, { admin: true });
   if (guards instanceof Response) return guards;
 
-  const row = await db
+  const row = db
     .select(SETTINGS_COLUMNS)
     .from(tables.guildSettings)
     .where(eq(tables.guildSettings.id, 1))
@@ -87,7 +87,7 @@ async function handlePatchGeneral(
   request: Request,
   _params: Record<string, string>
 ): Promise<Response> {
-  const guards = await checkGuards(ctx, { admin: true });
+  const guards = checkGuards(ctx, { admin: true });
   if (guards instanceof Response) return guards;
 
   let body: GeneralSettingsPatch;
@@ -169,8 +169,7 @@ async function handlePatchGeneral(
     return json({ error: 'No fields to update' }, 400);
   }
 
-  await db
-    .insert(tables.guildSettings)
+  db.insert(tables.guildSettings)
     .values({ id: 1, ...updates })
     .onConflictDoUpdate({
       target: tables.guildSettings.id,
@@ -184,7 +183,7 @@ async function handlePatchGeneral(
   }
 
   // Return the full updated row.
-  const row = await db
+  const row = db
     .select(SETTINGS_COLUMNS)
     .from(tables.guildSettings)
     .where(eq(tables.guildSettings.id, 1))

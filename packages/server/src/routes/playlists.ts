@@ -47,7 +47,7 @@ function formatPlaylistSongWithSong(
 // GET /api/playlists — paginated list of playlists
 // ---------------------------------------------------------------------------
 async function handleGetPlaylists(ctx: RouteContext, request: Request): Promise<Response> {
-  const guards = await checkGuards(ctx);
+  const guards = checkGuards(ctx);
   if (guards instanceof Response) return guards;
   const { user } = guards;
 
@@ -123,7 +123,7 @@ async function handleGetPlaylists(ctx: RouteContext, request: Request): Promise<
 // POST /api/playlists — create a new empty playlist
 // ---------------------------------------------------------------------------
 async function handlePostPlaylist(ctx: RouteContext, request: Request): Promise<Response> {
-  const guards = await checkGuards(ctx);
+  const guards = checkGuards(ctx);
   if (guards instanceof Response) return guards;
   const { user } = guards;
 
@@ -175,7 +175,7 @@ async function handleGetPlaylist(
   params: Record<string, string>
 ): Promise<Response> {
   const { id } = params;
-  const guards = await checkGuards(ctx);
+  const guards = checkGuards(ctx);
   if (guards instanceof Response) return guards;
   const { user } = guards;
 
@@ -375,7 +375,7 @@ async function handlePatchVisibility(
   params: Record<string, string>
 ): Promise<Response> {
   const { id } = params;
-  const guards = await checkGuards(ctx);
+  const guards = checkGuards(ctx);
   if (guards instanceof Response) return guards;
   const { user } = guards;
 
@@ -419,7 +419,7 @@ async function handlePatchPlaylist(
   params: Record<string, string>
 ): Promise<Response> {
   const { id } = params;
-  const guards = await checkGuards(ctx);
+  const guards = checkGuards(ctx);
   if (guards instanceof Response) return guards;
   const { user } = guards;
 
@@ -483,7 +483,7 @@ async function handleDeletePlaylist(
   params: Record<string, string>
 ): Promise<Response> {
   const { id } = params;
-  const guards = await checkGuards(ctx);
+  const guards = checkGuards(ctx);
   if (guards instanceof Response) return guards;
   const { user } = guards;
 
@@ -504,7 +504,7 @@ async function handleAddSong(
   params: Record<string, string>
 ): Promise<Response> {
   const { id } = params;
-  const guards = await checkGuards(ctx);
+  const guards = checkGuards(ctx);
   if (guards instanceof Response) return guards;
   const { user } = guards;
 
@@ -596,7 +596,7 @@ async function handleRemoveSong(
   params: Record<string, string>
 ): Promise<Response> {
   const { id: playlistId, songId } = params;
-  const guards = await checkGuards(ctx);
+  const guards = checkGuards(ctx);
   if (guards instanceof Response) return guards;
   const { user } = guards;
 
@@ -652,7 +652,7 @@ async function handleBulkRemoveSongs(
   params: Record<string, string>
 ): Promise<Response> {
   const { id: playlistId } = params;
-  const guards = await checkGuards(ctx);
+  const guards = checkGuards(ctx);
   if (guards instanceof Response) return guards;
   const { user } = guards;
 

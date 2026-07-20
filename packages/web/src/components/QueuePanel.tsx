@@ -178,7 +178,7 @@ export default function QueuePanel({
         newOrder[idx - 1] = a;
         newOrder[idx] = b;
       }
-      reorderQueue(
+      void reorderQueue(
         newOrder.map((s) => s.id),
         target
       );
@@ -197,7 +197,7 @@ export default function QueuePanel({
         newOrder[idx] = b;
         newOrder[idx + 1] = a;
       }
-      reorderQueue(
+      void reorderQueue(
         newOrder.map((s) => s.id),
         target
       );
@@ -212,7 +212,7 @@ export default function QueuePanel({
       const newOrder = [...targetQueue];
       const [item] = newOrder.splice(idx, 1);
       if (item) newOrder.unshift(item);
-      reorderQueue(
+      void reorderQueue(
         newOrder.map((s) => s.id),
         target
       );
@@ -227,7 +227,7 @@ export default function QueuePanel({
       const newOrder = [...targetQueue];
       const [item] = newOrder.splice(idx, 1);
       if (item) newOrder.push(item);
-      reorderQueue(
+      void reorderQueue(
         newOrder.map((s) => s.id),
         target
       );

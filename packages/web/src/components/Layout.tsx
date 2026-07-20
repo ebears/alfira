@@ -41,7 +41,7 @@ function LayoutContent() {
 
   const handleLogout = async () => {
     await logout();
-    navigate('/login');
+    void navigate('/login');
   };
 
   return (

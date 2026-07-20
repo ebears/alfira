@@ -14,15 +14,15 @@ type TagColor = (typeof TAG_COLORS)[number];
 // ---------------------------------------------------------------------------
 // GET /api/tags — list all tags
 // ---------------------------------------------------------------------------
-async function handleGetTagsList(
+function handleGetTagsList(
   ctx: RouteContext,
   _request: Request,
   _params: Record<string, string>
-): Promise<Response> {
-  const guards = await checkGuards(ctx);
+): Response {
+  const guards = checkGuards(ctx);
   if (guards instanceof Response) return guards;
 
-  const tags = await db
+  const tags = db
     .select({
       nameLower: tagTable.nameLower,
       canonicalName: tagTable.canonicalName,
@@ -44,24 +44,24 @@ async function handleGetTag(
   params: Record<string, string>
 ): Promise<Response> {
   const { nameLower } = params;
-  const guards = await checkGuards(ctx);
+  const guards = checkGuards(ctx);
   if (guards instanceof Response) return guards;
   const [tag] = await db.select().from(tagTable).where(eq(tagTable.nameLower, nameLower)).limit(1);
   if (!tag) return json({ error: 'Tag not found.' }, 404);
   return json({ tag });
 }
 
-async function handleGetTagSongs(
+function handleGetTagSongs(
   ctx: RouteContext,
   _request: Request,
   params: Record<string, string>
-): Promise<Response> {
+): Response {
   const { nameLower } = params;
-  const guards = await checkGuards(ctx);
+  const guards = checkGuards(ctx);
   if (guards instanceof Response) return guards;
 
   // Fetch all songs where tags JSON array contains this tag (case-insensitive match)
-  const songs = await db
+  const songs = db
     .select()
     .from(songTable)
     .where(sql`lower(${songTable.tags}) LIKE lower(${`%${nameLower}%`})`)
@@ -84,7 +84,7 @@ async function handlePatchTag(
   } catch {
     return json({ error: 'Invalid JSON body.' }, 400);
   }
-  const guards = await checkGuards(ctx, { admin: true, permission: 'tags.manage' });
+  const guards = checkGuards(ctx, { admin: true, permission: 'tags.manage' });
   if (guards instanceof Response) return guards;
 
   const [existing] = await db
@@ -134,7 +134,7 @@ async function handleDeleteTag(
   params: Record<string, string>
 ): Promise<Response> {
   const { nameLower } = params;
-  const guards = await checkGuards(ctx, { admin: true, permission: 'tags.manage' });
+  const guards = checkGuards(ctx, { admin: true, permission: 'tags.manage' });
   if (guards instanceof Response) return guards;
 
   const [existing] = await db
@@ -147,7 +147,7 @@ async function handleDeleteTag(
   }
 
   // Remove this tag from all songs that have it
-  const songsWithTag = await db
+  const songsWithTag = db
     .select({ id: songTable.id, tags: songTable.tags })
     .from(songTable)
     .where(sql`lower(${songTable.tags}) LIKE lower(${`%${nameLower}%`})`)
@@ -156,16 +156,12 @@ async function handleDeleteTag(
   for (const song of songsWithTag) {
     if (song.tags && Array.isArray(song.tags)) {
       const updatedTags = song.tags.filter((t) => t.toLowerCase() !== nameLower);
-      await db
-        .update(songTable)
-        .set({ tags: updatedTags })
-        .where(eq(songTable.id, song.id))
-        .returning();
+      db.update(songTable).set({ tags: updatedTags }).where(eq(songTable.id, song.id)).returning();
     }
   }
 
   // Convert any smart playlists tracking this tag to regular playlists
-  const smartPlaylists = await db
+  const smartPlaylists = db
     .select()
     .from(playlistTable)
     .where(eq(playlistTable.tagNameLower, nameLower))

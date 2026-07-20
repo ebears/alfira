@@ -21,8 +21,8 @@ export interface WsClient {
 
 const clients = new Set<WsClient>();
 
-export async function getCompressorSettings(): Promise<CompressorSettings | null> {
-  const row = await db
+export function getCompressorSettings(): CompressorSettings | null {
+  const row = db
     .select({
       enabled: tables.guildSettings.compressorEnabled,
       threshold: tables.guildSettings.compressorThreshold,
@@ -68,8 +68,8 @@ export function unregisterClient(ws: WsClient): void {
 /**
  * Emit the full queue state to all connected clients.
  */
-export async function emitPlayerUpdate(state: QueueState): Promise<void> {
-  const compressor = await getCompressorSettings();
+export function emitPlayerUpdate(state: QueueState): void {
+  const compressor = getCompressorSettings();
   const message = JSON.stringify({
     event: 'player:update',
     data: { ...state, compressorSettings: compressor },

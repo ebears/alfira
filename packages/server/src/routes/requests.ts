@@ -64,7 +64,7 @@ async function userCanAutoApprove(ctx: RouteContext): Promise<boolean> {
 // POST /api/requests/preview — resolve URL metadata without creating.
 // ---------------------------------------------------------------------------
 async function handlePreviewRequest(ctx: RouteContext, request: Request): Promise<Response> {
-  const guards = await checkGuards(ctx);
+  const guards = checkGuards(ctx);
   if (guards instanceof Response) return guards;
 
   let body: { url?: unknown };
@@ -149,7 +149,7 @@ async function handlePreviewRequest(ctx: RouteContext, request: Request): Promis
 // POST /api/requests — create a song or playlist request.
 // ---------------------------------------------------------------------------
 async function handleCreateRequest(ctx: RouteContext, request: Request): Promise<Response> {
-  const guards = await checkGuards(ctx);
+  const guards = checkGuards(ctx);
   if (guards instanceof Response) return guards;
   const { user } = guards;
 
@@ -510,7 +510,7 @@ async function handleCreateRequest(ctx: RouteContext, request: Request): Promise
 // ?mine=true (filter to own requests)
 // ---------------------------------------------------------------------------
 async function handleGetRequests(ctx: RouteContext, request: Request): Promise<Response> {
-  const guards = await checkGuards(ctx);
+  const guards = checkGuards(ctx);
   if (guards instanceof Response) return guards;
   const { user } = guards;
 
@@ -580,7 +580,7 @@ async function handlePatchRequest(
   params: Record<string, string>
 ): Promise<Response> {
   const { id } = params;
-  const guards = await checkGuards(ctx, { admin: true });
+  const guards = checkGuards(ctx, { admin: true });
   if (guards instanceof Response) return guards;
   const { user } = guards;
 
@@ -791,7 +791,7 @@ async function handleDeleteRequest(
   params: Record<string, string>
 ): Promise<Response> {
   const { id } = params;
-  const guards = await checkGuards(ctx);
+  const guards = checkGuards(ctx);
   if (guards instanceof Response) return guards;
   const { user } = guards;
 

@@ -86,7 +86,7 @@ export default function AdminSection() {
         if (!cancelled) setLoaded(true);
       }
     }
-    load();
+    void load();
     return () => {
       cancelled = true;
     };

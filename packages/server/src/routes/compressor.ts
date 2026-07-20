@@ -19,7 +19,7 @@ async function handleCompressorRequest(
   request: Request,
   _params: Record<string, string>
 ): Promise<Response> {
-  const guards = await checkGuards(ctx, { admin: true, permission: 'audio.manage' });
+  const guards = checkGuards(ctx, { admin: true, permission: 'audio.manage' });
   if (guards instanceof Response) return guards;
 
   let body: CompressorPayload;
@@ -45,8 +45,7 @@ async function handleCompressorRequest(
     return json({ error: 'gain must be integer 0 to 24' }, 400);
 
   // Upsert into DB
-  await db
-    .insert(tables.guildSettings)
+  db.insert(tables.guildSettings)
     .values({
       id: 1,
       compressorEnabled: enabled,

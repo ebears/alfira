@@ -381,7 +381,7 @@ export default function PlaylistDetailPage() {
   const handleDeletePlaylist = async () => {
     if (!playlistDetail) return;
     await deletePlaylist(playlistDetail.id);
-    navigate('/playlists');
+    void navigate('/playlists');
   };
 
   const handleToggleVisibility = async () => {
@@ -873,7 +873,7 @@ export default function PlaylistDetailPage() {
           confirmLabel='Delete'
           onConfirm={() => {
             setDeleteConfirm(false);
-            handleDeletePlaylist();
+            void handleDeletePlaylist();
           }}
           onCancel={() => setDeleteConfirm(false)}
         />

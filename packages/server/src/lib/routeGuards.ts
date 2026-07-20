@@ -32,10 +32,7 @@ interface GuardResult {
  * Always authenticates the user by default. Admin and voice checks are
  * additive and run after authentication.
  */
-export async function checkGuards(
-  ctx: RouteContext,
-  options: GuardOptions = {}
-): Promise<GuardResult | Response> {
+export function checkGuards(ctx: RouteContext, options: GuardOptions = {}): GuardResult | Response {
   const { admin = false, setupMode = false, voice = false } = options;
 
   const authResult = requireAuth(ctx);
@@ -46,7 +43,7 @@ export async function checkGuards(
   // This bypasses the normal admin check since admin roles aren't configured yet.
   if (setupMode && user.isSetupAdmin) {
     if (voice) {
-      const inVoice = await requireUserInVoice(user.discordId);
+      const inVoice = requireUserInVoice(user.discordId);
       if (inVoice instanceof Response) return inVoice;
     }
     return { user };
@@ -58,7 +55,7 @@ export async function checkGuards(
       // Fall through to voice check below.
     } else if (options.permission) {
       // Granular permission check for non-admin users.
-      const hasPermission = await checkRolePermission(user.roles ?? [], options.permission);
+      const hasPermission = checkRolePermission(user.roles ?? [], options.permission);
       if (!hasPermission) {
         return json({ error: 'You do not have permission to perform this action.' }, 403);
       }
@@ -70,7 +67,7 @@ export async function checkGuards(
   }
 
   if (voice) {
-    const inVoice = await requireUserInVoice(user.discordId);
+    const inVoice = requireUserInVoice(user.discordId);
     if (inVoice instanceof Response) return inVoice;
   }
 
@@ -81,13 +78,10 @@ export async function checkGuards(
  * Check if any of the user's Discord roles have been granted a specific
  * granular permission via the rolePermission table.
  */
-async function checkRolePermission(
-  userRoles: string[],
-  action: PermissionAction
-): Promise<boolean> {
+function checkRolePermission(userRoles: string[], action: PermissionAction): boolean {
   if (userRoles.length === 0) return false;
 
-  const rows = await db
+  const rows = db
     .select({ roleId: tables.rolePermission.roleId })
     .from(tables.rolePermission)
     .where(
@@ -95,7 +89,8 @@ async function checkRolePermission(
         eq(tables.rolePermission.action, action),
         inArray(tables.rolePermission.roleId, userRoles)
       )
-    );
+    )
+    .all();
 
   return rows.length > 0;
 }

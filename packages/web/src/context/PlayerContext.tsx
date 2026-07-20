@@ -124,7 +124,7 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
   // ---------------------------------------------------------------------------
   useEffect(() => {
     // Fetch immediately when the context mounts.
-    refetch();
+    void refetch();
 
     const handlePlayerUpdate = (data: QueueState) => {
       setState(data);
@@ -144,7 +144,7 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
   const connectionStatus = useConnectionStatus();
   useEffect(() => {
     if (connectionStatus === 'connected') {
-      refetch();
+      void refetch();
     }
   }, [connectionStatus, refetch]);
 

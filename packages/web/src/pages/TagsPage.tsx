@@ -38,7 +38,7 @@ export default function TagsPage() {
   }, []);
 
   useEffect(() => {
-    fetchTags()
+    void fetchTags()
       .then(setAllTags)
       .finally(() => setLoadingTags(false));
   }, []);
@@ -52,7 +52,7 @@ export default function TagsPage() {
     setSelected(tag);
     setEditingName(tag.canonicalName);
     setLoadingSongs(true);
-    fetchTagSongs(tag.nameLower)
+    void fetchTagSongs(tag.nameLower)
       .then(setTagSongs)
       .finally(() => setLoadingSongs(false));
   }, []);
