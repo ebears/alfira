@@ -118,16 +118,7 @@ git commit -m "chore(release): bump version to v<version>"
 git push -u origin HEAD
 ```
 
-## 7. Push the tag
-
-```bash
-git tag v<version>
-git push origin v<version>
-```
-
-This triggers the `release.yml` workflow immediately — Docker build, Docker push to GHCR, and GitHub Release creation with changelog notes and assets. The GitHub Release will be live before the PR is even merged.
-
-## 8. Create release PR
+## 7. Create release PR
 
 ```bash
 gh pr create \
@@ -147,13 +138,24 @@ EOF
 
 Open the PR URL for the user.
 
-## 9. Post-merge instructions
+## 8. Post-merge instructions
 
 Remind the user:
 
-1. The GitHub Release and Docker image are already live (the tag was pushed in step 7, triggering the workflow).
-2. After the release PR merges to `main`, sync `dev` with `main` to keep history linear:
+1. After the release PR merges to `main`, pull the latest `main` and tag it:
+
+   ```bash
+   git checkout main && git pull origin main
+   git tag v<version>
+   git push origin v<version>
+   ```
+
+   This triggers the `release.yml` workflow — Docker build, Docker push to GHCR, and GitHub Release creation with changelog notes and assets. Tagging `main` (not the release branch) ensures the release points to the merged commit.
+
+2. Sync `dev` with `main` to keep history linear:
+
    ```bash
    git checkout dev && git merge main && git push origin dev
    ```
+
 3. If the PR required changes (code, not just changelog), the tag and release point to the old commit. Delete the release and tag, then re-run from step 6.
