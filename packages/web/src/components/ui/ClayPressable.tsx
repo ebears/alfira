@@ -56,13 +56,13 @@ const DARK_PRESSING =
 // ── Light mode ─────────────────────────────────────────────────────────
 
 // No negative-spread shadows — they cause corner flattening on rounded elements.
-// A subtle 1px ring defines all edges so the top corners don't blend into the
-// background, and a white inset highlight at the top edge sells the raised surface.
+// A subtle blurred shadow above and below defines all edges without the harsh
+// 1px ring that can alias at corners on light backgrounds.
 
 const LIGHT_RESTING =
-  '0 2px 0 0 color-mix(in srgb, var(--color-surface) 60%, black), 0 2px 6px 0 rgba(0, 0, 0, 0.1), 0 0 0 1px rgba(0, 0, 0, 0.06)';
+  '0 2px 0 0 color-mix(in srgb, var(--color-surface) 60%, black), 0 2px 6px 0 rgba(0, 0, 0, 0.1), 0 0 1px 1px rgba(0, 0, 0, 0.06)';
 const LIGHT_HOVERING =
-  '0 4px 0 0 color-mix(in srgb, var(--color-surface) 60%, black), 0 4px 6px 0 rgba(0, 0, 0, 0.14), 0 0 0 1px rgba(0, 0, 0, 0.1)';
+  '0 4px 0 0 color-mix(in srgb, var(--color-surface) 60%, black), 0 4px 6px 0 rgba(0, 0, 0, 0.14), 0 0 1px 1px rgba(0, 0, 0, 0.1)';
 const LIGHT_PRESSING =
   '0 1px 0 0 color-mix(in srgb, var(--color-surface) 80%, black), inset 0 2px 3px 0 rgba(0, 0, 0, 0.1), inset 0 1px 1px 0 rgba(0, 0, 0, 0.06)';
 
