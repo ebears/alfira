@@ -103,13 +103,21 @@ const shadows: Record<'dark' | 'light', Record<'resting' | 'hovering' | 'pressin
   light: { resting: LIGHT_RESTING, hovering: LIGHT_HOVERING, pressing: LIGHT_PRESSING },
 };
 
-function clayShadowStyle(
+function clayStyle(
   state: 'resting' | 'hovering' | 'pressing',
   mode: 'dark' | 'light'
 ): React.CSSProperties {
+  const bg =
+    state === 'resting'
+      ? undefined
+      : state === 'hovering'
+        ? 'color-mix(in srgb, var(--color-elevated) 88%, white)'
+        : 'color-mix(in srgb, var(--color-elevated) 92%, black)';
+
   return {
     boxShadow: shadows[mode][state],
-    transition: `box-shadow ${state === 'pressing' ? '0.08s' : '0.15s'} ease-out`,
+    backgroundColor: bg,
+    transition: `box-shadow ${state === 'pressing' ? '0.08s' : '0.15s'} ease-out, background-color 0.15s ease-out`,
   };
 }
 
@@ -178,7 +186,7 @@ export function ClayPressable({
     // @ts-expect-error motion component props are compatible but TypeScript can't infer
     <Component
       className={className}
-      style={clayShadowStyle(clayState, mode)}
+      style={clayStyle(clayState, mode)}
       whileHover={whileHover}
       whileTap={whileTap}
       transition={claySpring}
