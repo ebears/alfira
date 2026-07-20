@@ -443,14 +443,8 @@ export default defineConfig({
     // =======================================================================
     {
       files: [
-        'packages/web/src/components/AddSongModal.tsx',
-        'packages/web/src/components/BulkEditModal.tsx',
         'packages/web/src/components/NowPlayingBar.tsx',
         'packages/web/src/components/QueuePanel.tsx',
-        'packages/web/src/components/SongEditPanel.tsx',
-        'packages/web/src/pages/PlaylistDetailPage.tsx',
-        'packages/web/src/pages/SongsPage.tsx',
-        'packages/web/src/pages/SetupWizard.tsx',
       ],
       rules: {
         'react-perf/jsx-no-new-function-as-prop': 'off',
