@@ -1,7 +1,7 @@
 import crypto from 'node:crypto';
 import { and, eq, lt } from 'drizzle-orm';
 import { sign, verify } from '../lib/jwt';
-import type { RouteContext } from '../index';
+import type { RouteContext } from '../lib/context';
 import { getGuildId, refreshGuildId } from '../lib/config';
 import { json } from '../lib/json';
 import { getClientIp } from '../lib/rateLimit';

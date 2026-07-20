@@ -1,5 +1,5 @@
 import { and, count, desc, eq, inArray, sql } from 'drizzle-orm';
-import type { RouteContext } from '../index';
+import type { RouteContext } from '../lib/context';
 import { getUserDisplayName, resolveDisplayNames } from '../lib/displayName';
 import { json } from '../lib/json';
 import { parsePagination } from '../lib/pagination';

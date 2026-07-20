@@ -137,7 +137,6 @@ export function ContextMenu({
         ? []
         : items
   ) as { id: string; label: string; icon?: ReactNode; disabled?: boolean }[];
-  // eslint-disable-next-line react-hooks/exhaustive-deps -- currentItems is derived from stable state, use via ref in callbacks
   const currentItemsRef = useRef(currentItems);
   currentItemsRef.current = currentItems;
 

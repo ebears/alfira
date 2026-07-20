@@ -1,5 +1,5 @@
 import { eq } from 'drizzle-orm';
-import type { RouteContext } from '../index';
+import type { RouteContext } from './context';
 import { db, tables } from '../shared/db';
 import { logger } from '../shared/logger';
 import type { SongRequest } from '../shared/types';

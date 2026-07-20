@@ -131,11 +131,14 @@ export default function SongsPage() {
   // ── Lazy playlists fetch ────────────────────────────────────────────
   const [playlists, setPlaylists] = useState<Playlist[]>([]);
   useEffect(() => {
-    void getPlaylistsPage(isAdminView, 1, 100)
-      .then((p) => setPlaylists(p.items))
-      .catch(() => {
+    void (async () => {
+      try {
+        const p = await getPlaylistsPage(isAdminView, 1, 100);
+        setPlaylists(p.items);
+      } catch {
         /* Silently ignore playlist fetch error */
-      });
+      }
+    })();
   }, [isAdminView]);
 
   // ── Comparator for re-sorting after real-time mutations ──────────────

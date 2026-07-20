@@ -506,7 +506,13 @@ export function NowPlayingBar() {
   );
 
   const handleStop = useCallback(() => {
-    leave().catch((e) => console.error(e));
+    void (async () => {
+      try {
+        await leave();
+      } catch (e) {
+        console.error(e);
+      }
+    })();
   }, [leave]);
 
   const handleSeek = useCallback(

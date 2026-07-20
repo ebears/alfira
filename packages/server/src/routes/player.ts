@@ -1,5 +1,5 @@
 import type { GuildPlayer } from '../GuildPlayer';
-import type { RouteContext } from '../index';
+import type { RouteContext } from '../lib/context';
 import { getGuildId } from '../lib/config';
 import { json } from '../lib/json';
 import { lavalink } from '../lib/lavalink';

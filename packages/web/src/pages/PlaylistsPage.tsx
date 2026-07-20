@@ -125,11 +125,14 @@ function CreatePlaylistModal({ onClose }: { onClose: () => void }) {
   const [selectedTag, setSelectedTag] = useState('');
 
   useEffect(() => {
-    fetchTags()
-      .then(setTags)
-      .catch(() => {
+    void (async () => {
+      try {
+        const tags = await fetchTags();
+        setTags(tags);
+      } catch {
         // Tags are non-critical — fail silently
-      });
+      }
+    })();
   }, []);
 
   // Close modal on success (error === null means success)

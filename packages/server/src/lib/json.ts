@@ -1,4 +1,4 @@
-import { SECURITY_HEADERS } from '../index';
+import { SECURITY_HEADERS } from './securityHeaders';
 
 export function json(data: unknown, status = 200): Response {
   return new Response(JSON.stringify(data), {

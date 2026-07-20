@@ -68,11 +68,14 @@ export default function BulkEditModal({ count, onApply, onClose, isApplying }: B
 
   // Fetch available tags on mount
   useEffect(() => {
-    fetchTags()
-      .then(setAvailableTags)
-      .catch(() => {
+    void (async () => {
+      try {
+        const tags = await fetchTags();
+        setAvailableTags(tags);
+      } catch {
         // Non-critical
-      });
+      }
+    })();
   }, []);
 
   const filtered = availableTags.filter(
@@ -195,7 +198,6 @@ export default function BulkEditModal({ count, onApply, onClose, isApplying }: B
 
   return (
     <Backdrop onClose={onClose}>
-      {/* eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-static-element-interactions -- modal container, keyboard not applicable */}
       <SpringUp
         className='w-full max-w-md mx-4 p-6 glass-modal max-h-[85vh] overflow-y-auto'
         onClick={(e) => e.stopPropagation()}

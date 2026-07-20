@@ -49,7 +49,6 @@ export function AdminViewProvider({ children }: { children: React.ReactNode }) {
   );
 }
 
-// eslint-disable-next-line react-refresh/only-export-components
 export function useAdminView(): AdminViewContextValue {
   const ctx = useContext(AdminViewContext);
   if (!ctx) throw new Error('useAdminView must be used inside AdminViewProvider');

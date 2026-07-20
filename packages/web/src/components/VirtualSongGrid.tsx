@@ -49,7 +49,6 @@ function SkeletonGrid() {
         style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))' }}
       >
         {Array.from({ length: 8 }).map((_, i) => (
-          // eslint-disable-next-line react/no-array-index-key -- static skeleton placeholders
           <div
             key={`skeleton-${i}`}
             className='rounded-lg bg-elevated clay-resting overflow-hidden'
@@ -201,7 +200,6 @@ export const VirtualSongGrid = memo(function VirtualSongGrid({
     };
     Component.displayName = 'GridCard';
     return Component;
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- intentionally stable; dynamic values come from ref
   }, []);
 
   // ── Build the masonry ──────────────────────────────────────────────
@@ -269,7 +267,6 @@ export const VirtualSongGrid = memo(function VirtualSongGrid({
       {isContentReady && isFetching && (
         <div className='flex justify-center py-4 gap-2'>
           {Array.from({ length: 3 }).map((_, i) => (
-            // eslint-disable-next-line react/no-array-index-key -- static loading indicator
             <div key={`loading-dot-${i}`} className='skeleton h-3 w-3 rounded-full animate-pulse' />
           ))}
         </div>

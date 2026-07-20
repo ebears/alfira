@@ -29,7 +29,6 @@ export const PlaylistRow = memo(
     const hasArtwork = coverUrls.length > 0;
 
     return (
-      // eslint-disable-next-line jsx-a11y/prefer-tag-over-role -- uses Card wrapper which renders a div; keyboard handling present
       <Card
         hoverable
         animate
@@ -43,7 +42,7 @@ export const PlaylistRow = memo(
             onClick(e as unknown as React.MouseEvent);
           }
         }}
-        role='button' // eslint-disable-line jsx-a11y/prefer-tag-over-role -- uses Card wrapper div; keyboard handling present
+        role='button'
         tabIndex={0}
       >
         {/* Cover art grid or fallback icon */}

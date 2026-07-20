@@ -64,7 +64,6 @@ export function PermissionsProvider({ children }: { children: React.ReactNode })
   );
 }
 
-// eslint-disable-next-line react-refresh/only-export-components
 export function usePermissions(): PermissionsContextValue {
   const ctx = useContext(PermissionsContext);
   if (!ctx) throw new Error('usePermissions must be used inside PermissionsProvider');
