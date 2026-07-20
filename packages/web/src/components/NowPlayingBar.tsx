@@ -20,7 +20,7 @@ import { usePlayer } from '../context/PlayerContext';
 import { useQueuePanel } from '../context/QueuePanelContext';
 import { useCooldownGuard, type CooldownState } from '../hooks/useCooldownGuard';
 import { useMutationHandler } from '../hooks/useMutationHandler';
-import { metadataTransition, metadataVariants } from '../lib/motion';
+import { metadataTransition, metadataVariants, slideUp, slideUpTransition } from '../lib/motion';
 import { getSourceKey } from '../utils/source';
 import { BarButton } from './BarButton';
 import QueuePanel from './QueuePanel';
@@ -727,9 +727,16 @@ export function NowPlayingBar() {
             onClick={handleQueueClose}
             role='presentation'
           />
-          <div className='absolute bottom-0 left-0 right-0 max-h-[85vh] bg-surface rounded-t-2xl flex flex-col clay-floating animate-slide-up'>
+          <m.div
+            className='absolute bottom-0 left-0 right-0 max-h-[85vh] bg-surface rounded-t-2xl flex flex-col clay-floating'
+            initial='initial'
+            animate='animate'
+            exit='exit'
+            variants={slideUp}
+            transition={slideUpTransition}
+          >
             <QueuePanel mobileQuickControls={mobileQuickControls} />
-          </div>
+          </m.div>
         </div>
       )}
     </div>

@@ -3,6 +3,7 @@ import { memo, useCallback, useEffect, useMemo, useState } from 'react';
 
 import { useSongEdit } from '../context/SongEditContext';
 import SongCard from './SongCard';
+import { Skeleton } from './ui/Skeleton';
 import { VirtualList } from './VirtualList';
 
 /** Height allocated to an expanded row (card + edit panel + spacer). */
@@ -49,13 +50,13 @@ function SkeletonList() {
           key={`skeleton-${i}`}
           className='flex items-center gap-3 md:gap-4 px-4 py-4 rounded-lg bg-elevated clay-resting'
         >
-          <div className='skeleton w-16 h-16 rounded border border-border shrink-0' />
+          <Skeleton className='w-16 h-16 rounded border border-border shrink-0' />
           <div className='flex-1 min-w-0 flex flex-col gap-2'>
-            <div className='skeleton h-3.5 w-2/5' />
-            <div className='skeleton h-3 w-3/5' />
+            <Skeleton className='h-3.5 w-2/5' />
+            <Skeleton className='h-3 w-3/5' />
           </div>
-          <div className='skeleton h-6 w-6 shrink-0' />
-          <div className='skeleton h-4 w-4 shrink-0' />
+          <Skeleton className='h-6 w-6 shrink-0' />
+          <Skeleton className='h-4 w-4 shrink-0' />
         </div>
       ))}
     </div>

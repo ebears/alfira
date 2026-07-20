@@ -41,49 +41,6 @@
   src: url(/fonts/jetbrains-mono-500-latin.woff2) format('woff2');
 }
 
-@keyframes slideUp {
-  0% {
-    transform: translateY(100%);
-  }
-  100% {
-    transform: translateY(0);
-  }
-}
-
-@keyframes skeleton-appear {
-  to {
-    opacity: 1;
-  }
-}
-
-@keyframes shimmer {
-  0% {
-    background-position: -400px 0;
-  }
-  100% {
-    background-position: 400px 0;
-  }
-}
-
-@keyframes pulseGentle {
-  0%,
-  100% {
-    opacity: 1;
-  }
-  50% {
-    opacity: 0.55;
-  }
-}
-
-@keyframes ticker-scroll {
-  from {
-    transform: translateX(0);
-  }
-  to {
-    transform: translateX(-50%);
-  }
-}
-
 /* ============================================
    COLOR THEME DEFINITIONS
    Each theme defines accent colors and palette
@@ -502,9 +459,6 @@
   --font-display: 'Cherry Bomb One', regular;
   --font-body: 'Chiron GoRound TC', regular;
   --font-mono: 'JetBrains Mono', monospace;
-  /* Animations */
-  --animate-slide-up: slideUp 0.3s ease forwards;
-  --animate-pulse-gentle: pulseGentle 2.4s ease-in-out infinite;
   /* Clay radius tokens — consistent "pebble" proportions */
   --clay-radius-sm: 9px;
   --clay-radius-md: 12px;
@@ -609,21 +563,6 @@
 }
 
 @layer components {
-  .skeleton {
-    opacity: 0;
-    background: linear-gradient(
-      90deg,
-      var(--color-elevated) 25%,
-      var(--color-border) 50%,
-      var(--color-elevated) 75%
-    );
-    background-size: 400px 100%;
-    animation:
-      skeleton-appear 0s 0.2s forwards,
-      shimmer 1.4s 0.2s infinite linear;
-    border-radius: 4px;
-  }
-
   .btn-primary {
     @apply font-body text-sm px-4 py-2.5 md:py-2
            transition-all duration-150 cursor-pointer disabled:opacity-40

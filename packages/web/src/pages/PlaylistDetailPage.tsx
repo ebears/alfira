@@ -40,6 +40,7 @@ import ListToolbar from '../components/ListToolbar';
 import NotificationToast from '../components/NotificationToast';
 import { Button } from '../components/ui/Button';
 import { cooldownButtonProps } from '../components/ui/cooldownButtonProps';
+import { Skeleton } from '../components/ui/Skeleton';
 import { VirtualSongGrid } from '../components/VirtualSongGrid';
 import { VirtualSongList } from '../components/VirtualSongList';
 import { useAdminView } from '../context/AdminViewContext';
@@ -1027,15 +1028,15 @@ export default function PlaylistDetailPage() {
 function DetailSkeleton() {
   return (
     <div className='p-8'>
-      <div className='skeleton h-3 w-20 mb-6 rounded' />
-      <div className='skeleton h-12 w-64 mb-2 rounded' />
-      <div className='skeleton h-3 w-24 mb-8 rounded' />
+      <Skeleton className='h-3 w-20 mb-6 rounded' />
+      <Skeleton className='h-12 w-64 mb-2 rounded' />
+      <Skeleton className='h-3 w-24 mb-8 rounded' />
       {Array.from({ length: 5 }).map((_, i) => (
         <div key={`skeleton-${i}`} className='flex items-center gap-4 py-3'>
-          <div className='skeleton w-6 h-3 rounded' />
-          <div className='skeleton w-10 h-7 rounded' />
-          <div className='skeleton h-3 flex-1 rounded' />
-          <div className='skeleton h-3 w-12 rounded' />
+          <Skeleton className='w-6 h-3 rounded' />
+          <Skeleton className='w-10 h-7 rounded' />
+          <Skeleton className='h-3 flex-1 rounded' />
+          <Skeleton className='h-3 w-12 rounded' />
         </div>
       ))}
     </div>

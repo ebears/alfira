@@ -197,7 +197,7 @@ function VirtualListInner<T>({
                         {Array.from({ length: 3 }).map((_, i) => (
                           <div
                             key={`loading-dot-${i}`}
-                            className='skeleton h-3 w-3 rounded-full animate-pulse'
+                            className='h-3 w-3 rounded-full bg-border animate-pulse'
                           />
                         ))}
                       </div>
