@@ -36,7 +36,7 @@ async function handleGetStatus(
   _params: Record<string, string>
 ): Promise<Response> {
   try {
-    const row = await db
+    const row = db
       .select({
         setupCompleted: tables.guildSettings.setupCompleted,
         guildId: tables.guildSettings.guildId,
@@ -91,7 +91,7 @@ async function handleGetGuilds(
   _request: Request,
   _params: Record<string, string>
 ): Promise<Response> {
-  const guards = await checkGuards(ctx, { setupMode: true });
+  const guards = checkGuards(ctx, { setupMode: true });
   if (guards instanceof Response) return guards;
 
   try {
@@ -133,7 +133,7 @@ async function handleGetRoles(
   _params: Record<string, string>
 ): Promise<Response> {
   const url = new URL(request.url);
-  const guards = await checkGuards(ctx, { setupMode: true });
+  const guards = checkGuards(ctx, { setupMode: true });
   if (guards instanceof Response) return guards;
 
   const guildId = url.searchParams.get('guildId');
@@ -155,7 +155,7 @@ async function handleGetChannels(
   _params: Record<string, string>
 ): Promise<Response> {
   const url = new URL(request.url);
-  const guards = await checkGuards(ctx, { setupMode: true });
+  const guards = checkGuards(ctx, { setupMode: true });
   if (guards instanceof Response) return guards;
 
   const guildId = url.searchParams.get('guildId');
@@ -210,7 +210,7 @@ async function handlePostComplete(
   request: Request,
   _params: Record<string, string>
 ): Promise<Response> {
-  const guards = await checkGuards(ctx, { setupMode: true });
+  const guards = checkGuards(ctx, { setupMode: true });
   if (guards instanceof Response) return guards;
 
   let body: {
@@ -273,8 +273,7 @@ async function handlePostComplete(
       : 'youtube,soundcloud';
 
   try {
-    await db
-      .insert(tables.guildSettings)
+    db.insert(tables.guildSettings)
       .values({
         id: 1,
         guildId: body.guildId,

@@ -22,7 +22,7 @@ export async function sendRequestNotification(
   _ctx: RouteContext
 ): Promise<void> {
   try {
-    const row = await db
+    const row = db
       .select({
         channelId: tables.guildSettings.requestNotificationChannelId,
         notifyOnApproved: tables.guildSettings.notifyOnApproved,

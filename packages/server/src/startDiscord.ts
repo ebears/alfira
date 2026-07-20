@@ -107,7 +107,7 @@ function handleVoiceStateUpdate(data: unknown): void {
         if (humanCount === 0) {
           humanVoiceMembers.delete(botChannelId);
           if (guildPlayer.getCurrentSong() && guildPlayer.isPlaying()) {
-            guildPlayer.togglePause();
+            void guildPlayer.togglePause();
             logger.info({ guildId }, "Auto-paused: no humans left in the bot's voice channel.");
           }
         }

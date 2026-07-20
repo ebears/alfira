@@ -42,11 +42,11 @@ export function getGuildId(): string {
 }
 
 /** Must be called once during startup, after migrations and DB are ready. */
-export async function initGuildId(): Promise<void> {
+export function initGuildId(): void {
   if (_guildIdLoaded) return;
 
   try {
-    const row = await db
+    const row = db
       .select({ guildId: tables.guildSettings.guildId })
       .from(tables.guildSettings)
       .where(eq(tables.guildSettings.id, 1))

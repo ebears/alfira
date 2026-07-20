@@ -61,7 +61,7 @@ export default function MobileNav() {
 
   const handleLogout = async () => {
     await logout();
-    navigate('/login');
+    void navigate('/login');
   };
 
   return (

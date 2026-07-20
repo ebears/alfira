@@ -32,7 +32,7 @@ const { song: songTable } = tables;
 // POST /api/songs/bulk-delete — delete multiple songs at once.
 // ---------------------------------------------------------------------------
 async function handleBulkDelete(ctx: RouteContext, request: Request): Promise<Response> {
-  const guards = await checkGuards(ctx, { admin: true, permission: 'songs.delete' });
+  const guards = checkGuards(ctx, { admin: true, permission: 'songs.delete' });
   if (guards instanceof Response) return guards;
 
   let body: { ids?: unknown };
@@ -63,7 +63,7 @@ async function handleBulkDelete(ctx: RouteContext, request: Request): Promise<Re
 // POST /api/songs/bulk-tag — add or set tags on multiple songs at once.
 // ---------------------------------------------------------------------------
 async function handleBulkTag(ctx: RouteContext, request: Request): Promise<Response> {
-  const guards = await checkGuards(ctx, { admin: true, permission: 'songs.edit' });
+  const guards = checkGuards(ctx, { admin: true, permission: 'songs.edit' });
   if (guards instanceof Response) return guards;
 
   let body: { ids?: unknown; tags?: unknown; mode?: unknown };
@@ -123,7 +123,7 @@ async function handleBulkTag(ctx: RouteContext, request: Request): Promise<Respo
 // Fields left undefined are skipped. Fields listed in clearFields are set to null.
 // ---------------------------------------------------------------------------
 async function handleBulkEdit(ctx: RouteContext, request: Request): Promise<Response> {
-  const guards = await checkGuards(ctx, { admin: true, permission: 'songs.edit' });
+  const guards = checkGuards(ctx, { admin: true, permission: 'songs.edit' });
   if (guards instanceof Response) return guards;
 
   let body: {
@@ -251,7 +251,7 @@ async function handleBulkEdit(ctx: RouteContext, request: Request): Promise<Resp
 // GET /api/songs — paginated list of songs with sort & filter.
 // ---------------------------------------------------------------------------
 async function handleGetSongs(ctx: RouteContext, request: Request): Promise<Response> {
-  const guards = await checkGuards(ctx);
+  const guards = checkGuards(ctx);
   if (guards instanceof Response) return guards;
 
   const url = new URL(request.url);
@@ -331,7 +331,7 @@ async function handleDeleteSong(
   params: Record<string, string>
 ): Promise<Response> {
   const { id } = params;
-  const guards = await checkGuards(ctx, { admin: true, permission: 'songs.delete' });
+  const guards = checkGuards(ctx, { admin: true, permission: 'songs.delete' });
   if (guards instanceof Response) return guards;
 
   const [existing] = await db.select().from(songTable).where(eq(songTable.id, id)).limit(1);
@@ -356,7 +356,7 @@ async function handlePatchSong(
   params: Record<string, string>
 ): Promise<Response> {
   const { id } = params;
-  const guards = await checkGuards(ctx, { admin: true, permission: 'songs.edit' });
+  const guards = checkGuards(ctx, { admin: true, permission: 'songs.edit' });
   if (guards instanceof Response) return guards;
 
   let body: Record<string, unknown>;

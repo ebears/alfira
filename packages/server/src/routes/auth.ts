@@ -39,9 +39,9 @@ const JWT_SECRET_: string = JWT_SECRET;
 const isProduction = process.env.NODE_ENV === 'production';
 
 /** Read admin role IDs from the database (set via setup wizard or admin settings). */
-async function getAdminRoleIdSet(): Promise<Set<string>> {
+function getAdminRoleIdSet(): Set<string> {
   try {
-    const row = await db
+    const row = db
       .select({ adminRoleIds: guildSettingsTable.adminRoleIds })
       .from(guildSettingsTable)
       .where(eq(guildSettingsTable.id, 1))
@@ -63,9 +63,9 @@ async function getAdminRoleIdSet(): Promise<Set<string>> {
 }
 
 /** Check whether the setup wizard has been completed. */
-async function isSetupCompleted(): Promise<boolean> {
+function isSetupCompleted(): boolean {
   try {
-    const row = await db
+    const row = db
       .select({ setupCompleted: guildSettingsTable.setupCompleted })
       .from(guildSettingsTable)
       .where(eq(guildSettingsTable.id, 1))
@@ -76,8 +76,8 @@ async function isSetupCompleted(): Promise<boolean> {
   }
 }
 
-async function isAdminUser(memberRoles: string[]): Promise<boolean> {
-  const adminSet = await getAdminRoleIdSet();
+function isAdminUser(memberRoles: string[]): boolean {
+  const adminSet = getAdminRoleIdSet();
   return memberRoles.some((roleId) => adminSet.has(roleId));
 }
 
@@ -234,7 +234,7 @@ async function fetchUserAdminStatus(
     if (roles === null || roles === 'not-in-guild') return null;
 
     return {
-      isAdmin: await isAdminUser(roles),
+      isAdmin: isAdminUser(roles),
       username,
       avatar: avatar ? `https://cdn.discordapp.com/avatars/${discordId}/${avatar}.png` : null,
       roles,
@@ -400,7 +400,7 @@ async function handleCallback(
   }
 
   // 3. Check if setup has been completed.
-  const setupDone = await isSetupCompleted();
+  const setupDone = isSetupCompleted();
 
   if (!setupDone) {
     // If GUILD_ID and ADMIN_ROLE_IDS are in env (existing deployment),
@@ -408,8 +408,7 @@ async function handleCallback(
     const envGuildId = process.env.GUILD_ID;
     if (envGuildId) {
       // Seed env vars into DB and mark setup complete.
-      await db
-        .insert(guildSettingsTable)
+      db.insert(guildSettingsTable)
         .values({
           id: 1,
           guildId: envGuildId,
@@ -458,7 +457,7 @@ async function handleCallback(
   const memberRoles = rolesResult;
 
   // 5. Determine admin status.
-  const isAdmin = await isAdminUser(memberRoles);
+  const isAdmin = isAdminUser(memberRoles);
 
   // 6. Generate and store tokens.
   const { accessToken, refreshToken } = await generateAndStoreTokens(discordUser, isAdmin, {
@@ -556,7 +555,7 @@ async function handleRefresh(
   //    This runs BEFORE we burn the old refresh token — if Discord is
   //    unreachable, the client can retry with the same token.
   //    During setup mode, skip guild membership check.
-  const setupDone = await isSetupCompleted();
+  const setupDone = isSetupCompleted();
   let username: string;
   let avatar: string | null;
   let isAdmin: boolean;
@@ -655,18 +654,14 @@ async function handleRefresh(
   return new Response(JSON.stringify({ user: payload }), { status: 200, headers });
 }
 
-async function handleMe(
-  ctx: RouteContext,
-  _request: Request,
-  _params: Record<string, string>
-): Promise<Response> {
+function handleMe(ctx: RouteContext, _request: Request, _params: Record<string, string>): Response {
   if (!ctx.user) {
     return json({ error: 'Not authenticated. Please log in at /auth/login.' }, 401);
   }
   // If setup hasn't been completed (e.g., DB was wiped), flag the user as
   // a setup admin so the frontend redirects to the setup wizard instead of
   // showing a broken main UI with a valid-but-stale session cookie.
-  const setupDone = await isSetupCompleted();
+  const setupDone = isSetupCompleted();
   if (!setupDone) {
     return json({ user: { ...ctx.user, isSetupAdmin: true } });
   }

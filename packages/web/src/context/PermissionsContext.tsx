@@ -33,12 +33,14 @@ export function PermissionsProvider({ children }: { children: React.ReactNode })
 
   // Fetch on mount and when user changes
   useEffect(() => {
-    refresh();
+    void refresh();
   }, [refresh]);
 
   // Re-fetch on tab focus so permission changes take effect without re-login
   useEffect(() => {
-    const onFocus = () => refresh();
+    const onFocus = () => {
+      void refresh();
+    };
     window.addEventListener('focus', onFocus);
     return () => window.removeEventListener('focus', onFocus);
   }, [refresh]);

@@ -17,15 +17,15 @@ interface EqualizerPayload {
   enabled: boolean;
 }
 
-async function handleEqualizerGet(
+function handleEqualizerGet(
   ctx: RouteContext,
   _request: Request,
   _params: Record<string, string>
-): Promise<Response> {
-  const guards = await checkGuards(ctx, { admin: true, permission: 'audio.manage' });
+): Response {
+  const guards = checkGuards(ctx, { admin: true, permission: 'audio.manage' });
   if (guards instanceof Response) return guards;
 
-  const row = await db
+  const row = db
     .select({
       ...EQ_BAND_COLUMNS,
       eqEnabled: tables.guildSettings.eqEnabled,
@@ -45,7 +45,7 @@ async function handleEqualizerPatch(
   request: Request,
   _params: Record<string, string>
 ): Promise<Response> {
-  const guards = await checkGuards(ctx, { admin: true, permission: 'audio.manage' });
+  const guards = checkGuards(ctx, { admin: true, permission: 'audio.manage' });
   if (guards instanceof Response) return guards;
 
   let body: EqualizerPayload;
@@ -74,8 +74,7 @@ async function handleEqualizerPatch(
   }
 
   // Upsert into DB
-  await db
-    .insert(tables.guildSettings)
+  db.insert(tables.guildSettings)
     .values({ id: 1, eqEnabled: enabled, ...eqBandValues(bands) })
     .onConflictDoUpdate({
       target: tables.guildSettings.id,

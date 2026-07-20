@@ -53,7 +53,7 @@ export default function EqualizerSection() {
         setLoaded(true);
       }
     }
-    if (canManage) load();
+    if (canManage) void load();
     else setLoaded(true);
   }, [canManage]);
 

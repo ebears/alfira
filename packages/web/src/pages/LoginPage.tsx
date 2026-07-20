@@ -10,7 +10,7 @@ export default function LoginPage() {
 
   // If already authenticated, go straight to songs.
   useEffect(() => {
-    if (!loading && user) navigate('/songs', { replace: true });
+    if (!loading && user) void navigate('/songs', { replace: true });
   }, [user, loading, navigate]);
 
   if (loading) return null;

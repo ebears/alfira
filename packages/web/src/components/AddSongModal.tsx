@@ -157,7 +157,7 @@ export default function AddSongModal({
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && step === 'url') {
-      handleFetch();
+      void handleFetch();
     }
     if (e.key === 'Escape') {
       if (step === 'metadata') setStep('url');

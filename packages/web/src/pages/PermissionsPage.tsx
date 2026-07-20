@@ -82,7 +82,7 @@ export default function PermissionsPage() {
         setError('Could not load permissions.');
       }
     }
-    load();
+    void load();
     return () => {
       cancelled = true;
     };

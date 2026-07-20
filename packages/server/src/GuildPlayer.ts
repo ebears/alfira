@@ -55,10 +55,10 @@ export class GuildPlayer {
   // Auto-leave idle timer.
   private idleLeaveTimer: ReturnType<typeof setTimeout> | null = null;
 
-  private async getIdleTimeoutMinutes(): Promise<number> {
+  private getIdleTimeoutMinutes(): number {
     // Read from DB first (set via setup wizard or admin settings).
     try {
-      const row = await db
+      const row = db
         .select({ timeout: tables.guildSettings.voiceIdleTimeoutMinutes })
         .from(tables.guildSettings)
         .where(eq(tables.guildSettings.id, 1))
@@ -76,9 +76,9 @@ export class GuildPlayer {
     return Number.isFinite(parsed) && parsed > 0 ? parsed : 5;
   }
 
-  private async scheduleIdleLeave(): Promise<void> {
+  private scheduleIdleLeave(): void {
     this.cancelIdleLeave();
-    const minutes = await this.getIdleTimeoutMinutes();
+    const minutes = this.getIdleTimeoutMinutes();
     this.idleLeaveTimer = setTimeout(
       () => {
         this.leaveOnIdle().catch(() => {
@@ -106,7 +106,7 @@ export class GuildPlayer {
   ];
 
   private async leaveOnIdle(): Promise<void> {
-    const timeoutMinutes = await this.getIdleTimeoutMinutes();
+    const timeoutMinutes = this.getIdleTimeoutMinutes();
     logger.info(
       { guildId: this.guildId },
       `Auto-leaving voice channel after idle (${timeoutMinutes} minutes).`
@@ -116,7 +116,7 @@ export class GuildPlayer {
 
     // Send notification to the configured channel, if any.
     try {
-      const row = await db
+      const row = db
         .select({ channelId: tables.guildSettings.afkNotificationChannelId })
         .from(tables.guildSettings)
         .where(eq(tables.guildSettings.id, 1))
@@ -210,7 +210,7 @@ export class GuildPlayer {
   private destroyPlayer(): void {
     const sessionId = this.getSessionId();
     if (sessionId) {
-      destroyNodeLinkPlayer(this.guildId, sessionId);
+      void destroyNodeLinkPlayer(this.guildId, sessionId);
     }
 
     // Force-reset playing state so a subsequent play sends a new track
@@ -472,7 +472,7 @@ export class GuildPlayer {
       this.pausedAt = Date.now();
       await updateNodeLinkPlayer(this.guildId, sessionId, { paused: true });
       this.paused = true;
-      await this.scheduleIdleLeave();
+      this.scheduleIdleLeave();
     }
 
     this.broadcast();
@@ -508,7 +508,7 @@ export class GuildPlayer {
     const sessionId = this.getSessionId();
     if (!sessionId) return;
 
-    updateNodeLinkPlayer(this.guildId, sessionId, {
+    void updateNodeLinkPlayer(this.guildId, sessionId, {
       volume: 100 + boost,
     });
   }
@@ -608,7 +608,7 @@ export class GuildPlayer {
   }
 
   private broadcast(): void {
-    void emitPlayerUpdate(this.getQueueState());
+    emitPlayerUpdate(this.getQueueState());
   }
 
   private peekNextTrack(): QueuedSong | null {
@@ -673,7 +673,7 @@ export class GuildPlayer {
         this.currentSong = null;
         this.queue.clear();
         this.broadcast();
-        await this.scheduleIdleLeave();
+        this.scheduleIdleLeave();
         return;
       }
     }
@@ -710,7 +710,7 @@ export class GuildPlayer {
     }
 
     // Load guild settings once for both code paths.
-    const settings = await db
+    const settings = db
       .select({
         enabled: tables.guildSettings.compressorEnabled,
         threshold: tables.guildSettings.compressorThreshold,
@@ -915,7 +915,7 @@ export class GuildPlayer {
         }
       }
     };
-    attempt(); // fire-and-forget — don't block the caller
+    void attempt(); // fire-and-forget — don't block the caller
   }
 
   private async fetchStreamWithRetry(

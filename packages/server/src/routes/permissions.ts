@@ -16,20 +16,18 @@ async function handleGetPermissions(
   _request: Request,
   _params: Record<string, string>
 ): Promise<Response> {
-  const guards = await checkGuards(ctx, { admin: true });
+  const guards = checkGuards(ctx, { admin: true });
   if (guards instanceof Response) return guards;
 
   const guildId = getGuildId();
 
-  const [allRows, roles, settingsRow] = await Promise.all([
-    db.select().from(tables.rolePermission),
-    guildId ? fetchGuildRoles(guildId) : [],
-    db
-      .select({ adminRoleIds: tables.guildSettings.adminRoleIds })
-      .from(tables.guildSettings)
-      .where(eq(tables.guildSettings.id, 1))
-      .get(),
-  ]);
+  const allRows = db.select().from(tables.rolePermission).all();
+  const settingsRow = db
+    .select({ adminRoleIds: tables.guildSettings.adminRoleIds })
+    .from(tables.guildSettings)
+    .where(eq(tables.guildSettings.id, 1))
+    .get();
+  const roles = guildId ? await fetchGuildRoles(guildId) : [];
 
   // Filter out roles that are already super-admins (implied full access).
   const adminRoleIdSet = new Set(
@@ -64,7 +62,7 @@ async function handlePatchPermissions(
   request: Request,
   _params: Record<string, string>
 ): Promise<Response> {
-  const guards = await checkGuards(ctx, { admin: true });
+  const guards = checkGuards(ctx, { admin: true });
   if (guards instanceof Response) return guards;
 
   let body: { action?: unknown; roleIds?: unknown };
