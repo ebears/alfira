@@ -442,7 +442,7 @@ export default function BulkEditModal({ count, onApply, onClose, isApplying }: B
                   onChange={(e) => setVolumeBoost(e.target.value)}
                   className={`volume-range-input${clearFields.has('volumeBoost') ? ' opacity-30 pointer-events-none' : ''}`}
                   disabled={clearFields.has('volumeBoost')}
-                  style={{ ['--volume-pct' as string]: volumePct } as React.CSSProperties}
+                  style={{ '--volume-pct': volumePct } as React.CSSProperties}
                 />
               </div>
             </div>

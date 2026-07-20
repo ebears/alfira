@@ -1,9 +1,9 @@
 import { eq } from 'drizzle-orm';
-import type { RouteContext } from '../lib/context';
+import { type RouteContext } from '../lib/context';
 import { json } from '../lib/json';
 import { checkGuards } from '../lib/routeGuards';
 import { routeTable } from '../lib/routeTable';
-import type { GeneralSettings } from '../shared';
+import { type GeneralSettings } from '../shared';
 import { db, tables } from '../shared/db';
 import { refreshEnabledSources, SOURCE_DEFINITIONS } from '../startDiscord';
 
@@ -67,7 +67,7 @@ function handleGetGeneral(
     );
   }
 
-  return json(attachAvailableSources(row as Omit<GeneralSettings, 'availableSources'>));
+  return json(attachAvailableSources(row));
 }
 
 // ---------------------------------------------------------------------------

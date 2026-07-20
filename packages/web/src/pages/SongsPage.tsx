@@ -1,5 +1,5 @@
-import type { Playlist, Song } from '@alfira/server/shared';
-import type { BulkEditData, FetchSongsOptions } from '@alfira/server/shared/api';
+import { type Playlist, type Song } from '@alfira/server/shared';
+import { type BulkEditData, type FetchSongsOptions } from '@alfira/server/shared/api';
 import { MusicNotesIcon, QuestionIcon } from '@phosphor-icons/react';
 import { AnimatePresence } from 'motion/react';
 import * as m from 'motion/react-m';

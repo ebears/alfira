@@ -1,5 +1,5 @@
 import { eq } from 'drizzle-orm';
-import type { CompressorSettings, Playlist, QueueState, User } from '../shared';
+import { type CompressorSettings, type Playlist, type QueueState, type User } from '../shared';
 import { db, tables } from '../shared/db';
 import { logger } from '../shared/logger';
 

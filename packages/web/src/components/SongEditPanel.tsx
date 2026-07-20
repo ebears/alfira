@@ -1,5 +1,5 @@
-import type { Song } from '@alfira/server/shared';
-import type { SongUpdateData, TagItem } from '@alfira/server/shared/api';
+import { type Song } from '@alfira/server/shared';
+import { type SongUpdateData, type TagItem } from '@alfira/server/shared/api';
 import { fetchTags, updateSong } from '@alfira/server/shared/api';
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal, flushSync } from 'react-dom';
@@ -438,7 +438,7 @@ function VolumeSlider({
           className='volume-range-input min-w-0'
           style={
             {
-              ['--volume-pct' as string]: pct,
+              '--volume-pct': pct,
             } as React.CSSProperties
           }
         />

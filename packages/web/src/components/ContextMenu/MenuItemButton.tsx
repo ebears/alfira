@@ -1,6 +1,6 @@
 import { CaretRightIcon } from '@phosphor-icons/react';
-import type { ReactNode } from 'react';
-import type { MenuItem, SubmenuConfig } from '../ContextMenu';
+import { type ReactNode } from 'react';
+import { type MenuItem, type SubmenuConfig } from '../ContextMenu';
 
 interface MenuItemButtonProps {
   item: {

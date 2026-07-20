@@ -1,4 +1,4 @@
-import type { QueuedSong } from '@alfira/server/shared';
+import { type QueuedSong } from '@alfira/server/shared';
 import { formatDuration } from '@alfira/server/shared';
 import {
   ArrowDownIcon,
@@ -27,7 +27,7 @@ import { memo, useCallback, useMemo, useRef, useState } from 'react';
 import { AnimatePresence, type Transition } from 'motion/react';
 import * as m from 'motion/react-m';
 import { queueItemVariants } from '../lib/motion';
-import type { CooldownState } from '../hooks/useCooldownGuard';
+import { type CooldownState } from '../hooks/useCooldownGuard';
 import { createPortal } from 'react-dom';
 import ConfirmModal from '../components/ConfirmModal';
 import { ContextMenu, type MenuItem } from '../components/ContextMenu';

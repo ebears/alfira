@@ -1,4 +1,4 @@
-import type { Notification } from '../hooks/useNotification';
+import { type Notification } from '../hooks/useNotification';
 import { SpringUp } from './ui/SpringUp';
 
 interface NotificationToastProps {

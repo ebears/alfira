@@ -1,4 +1,4 @@
-import type { LoopMode, QueueState } from '@alfira/server/shared';
+import { type LoopMode, type QueueState } from '@alfira/server/shared';
 import {
   clearQueue,
   demoteQueueSong,

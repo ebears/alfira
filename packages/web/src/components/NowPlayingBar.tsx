@@ -1,4 +1,4 @@
-import type { QueuedSong } from '@alfira/server/shared';
+import { type QueuedSong } from '@alfira/server/shared';
 import { formatDuration } from '@alfira/server/shared';
 import {
   CircleNotchIcon,

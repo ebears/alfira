@@ -1,4 +1,4 @@
-import type { QueueState } from '@alfira/server/shared';
+import { type QueueState } from '@alfira/server/shared';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 /**

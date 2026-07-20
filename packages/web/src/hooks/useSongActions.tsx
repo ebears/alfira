@@ -1,4 +1,4 @@
-import type { Playlist, Song } from '@alfira/server/shared';
+import { type Playlist, type Song } from '@alfira/server/shared';
 import {
   ArrowSquareOutIcon,
   BombIcon,
@@ -8,7 +8,7 @@ import {
 } from '@phosphor-icons/react';
 import { useCallback, useMemo, useOptimistic, useRef, useState } from 'react';
 import { addSongToPlaylist } from '../api/api';
-import type { MenuItem } from '../components/ContextMenu';
+import { type MenuItem } from '../components/ContextMenu';
 import { useSongMenu } from '../context/SongMenuContext';
 import { useNotification } from './useNotification';
 

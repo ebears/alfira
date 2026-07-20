@@ -1,4 +1,4 @@
-import type { Playlist, TagItem } from '@alfira/server/shared';
+import { type Playlist, type TagItem } from '@alfira/server/shared';
 import { fetchTags } from '@alfira/server/shared/api';
 import { PlaylistIcon } from '@phosphor-icons/react';
 import { useCallback, useEffect, useState } from 'react';

@@ -1,6 +1,6 @@
 import { CaretLeftIcon } from '@phosphor-icons/react';
 import { useEffect, useRef } from 'react';
-import type { MenuItem } from '../ContextMenu';
+import { type MenuItem } from '../ContextMenu';
 import { SpringUp } from '../ui/SpringUp';
 
 interface EditSubmenuPanelProps {

@@ -12,18 +12,24 @@ export default defineConfig({
   plugins: ['react', 'jsx-a11y', 'typescript', 'promise', 'import'],
 
   rules: {
+    // -----------------------------------------------------------------------
     // a11y
+    // -----------------------------------------------------------------------
     'react/button-has-type': 'error',
     'jsx-a11y/no-static-element-interactions': 'warn',
     'jsx-a11y/click-events-have-key-events': 'warn',
 
+    // -----------------------------------------------------------------------
     // complexity
+    // -----------------------------------------------------------------------
     'no-extra-boolean-cast': 'error',
     'no-useless-catch': 'error',
     '@typescript-eslint/no-this-alias': 'error',
     '@typescript-eslint/no-unnecessary-type-constraint': 'error',
 
+    // -----------------------------------------------------------------------
     // correctness
+    // -----------------------------------------------------------------------
     'no-const-assign': 'error',
     'no-constant-binary-expression': 'error',
     'no-constant-condition': 'warn',
@@ -46,8 +52,40 @@ export default defineConfig({
     '@typescript-eslint/switch-exhaustiveness-check': 'error',
     'unicorn/throw-new-error': 'error',
     'unicorn/error-message': 'error',
+    // Reassigning parameters is confusing — mutate properties instead
+    'no-param-reassign': 'warn',
+    // Comma operator outside for-loops is almost always a mistake
+    'no-sequences': 'error',
+    // Assignment in return (e.g. return x = 5) is never intentional
+    'no-return-assign': 'error',
+    // Functions inside loops capture mutable variables — a classic footgun
+    'no-loop-func': 'error',
+    // a = b = c leaks globals in sloppy mode; confusing in strict
+    'no-multi-assign': 'warn',
+    // delete obj[computed] breaks type safety — use Map or undefined
+    '@typescript-eslint/no-dynamic-delete': 'error',
+    // require() has no place in an ESM codebase
+    '@typescript-eslint/no-require-imports': 'error',
+    // e.g. -someString is almost always a bug
+    '@typescript-eslint/no-unsafe-unary-minus': 'error',
 
+    // -----------------------------------------------------------------------
+    // security
+    // -----------------------------------------------------------------------
+    'no-eval': 'error',
+    'no-implied-eval': 'error',
+    'no-new-func': 'error',
+    'no-new-wrappers': 'error',
+    'no-extend-native': 'error',
+    'no-iterator': 'error',
+    'unicorn/no-new-buffer': 'error',
+    'react/jsx-no-script-url': 'error',
+    'react/no-danger': 'error',
+    'react/jsx-no-target-blank': 'error',
+
+    // -----------------------------------------------------------------------
     // suspicious
+    // -----------------------------------------------------------------------
     'no-async-promise-executor': 'error',
     'no-ex-assign': 'error',
     'no-class-assign': 'error',
@@ -72,16 +110,46 @@ export default defineConfig({
     'require-await': 'error',
     'default-case-last': 'error',
     'react/no-array-index-key': 'warn',
+    // Duplicate props in JSX — second silently wins
+    'react/jsx-no-duplicate-props': 'error',
+    // Comments rendered as text nodes are always a mistake
+    'react/jsx-no-comment-textnodes': 'error',
+    // this.state.x = 5 is a pre-hooks anti-pattern
+    'react/no-direct-mutation-state': 'error',
+    // isMounted() anti-pattern — use cleanup functions
+    'react/no-is-mounted': 'error',
+    // Legacy string refs — use createRef or useRef
+    'react/no-string-refs': 'error',
+    // Typos in JSX attributes (class → className, for → htmlFor, etc.)
+    'react/no-unknown-property': 'error',
+    // new Promise.resolve() / new Promise.reject() — nonsensical
+    'promise/no-new-statics': 'error',
+    // A module importing itself is always a mistake
+    'import/no-self-import': 'error',
+    // Merge duplicate imports from the same module
+    'import/no-duplicates': 'warn',
 
+    // -----------------------------------------------------------------------
     // equality — 'smart' allows == null / != null (idiomatic nullish checks)
+    // -----------------------------------------------------------------------
     eqeqeq: ['error', 'smart'],
+    // typeof x === 'undefined' → x === undefined
+    'unicorn/no-typeof-undefined': 'warn',
 
+    // -----------------------------------------------------------------------
     // imports
+    // -----------------------------------------------------------------------
     'import/first': 'warn',
     'import/no-cycle': 'warn',
     'unicorn/prefer-node-protocol': 'warn',
+    // export let can cause cross-module side-channel bugs
+    'import/no-mutable-exports': 'warn',
+    // Enforce consistent type-only import style — codebase uses inline
+    'import/consistent-type-specifier-style': ['warn', 'prefer-inline'],
 
+    // -----------------------------------------------------------------------
     // promises
+    // -----------------------------------------------------------------------
     'promise/prefer-await-to-then': 'error',
     'promise/valid-params': 'error',
     'promise/catch-or-return': 'error',
@@ -89,8 +157,14 @@ export default defineConfig({
       'error',
       { checksVoidReturn: { attributes: false, properties: false } },
     ],
+    // Every .then() should return or throw
+    'promise/always-return': 'warn',
+    // Enforce resolve/reject naming in new Promise() callbacks
+    'promise/param-names': 'warn',
 
+    // -----------------------------------------------------------------------
     // style
+    // -----------------------------------------------------------------------
     curly: 'error',
     'no-useless-concat': 'warn',
     'object-shorthand': 'warn',
@@ -105,6 +179,65 @@ export default defineConfig({
     'prefer-const': 'error',
     'prefer-template': 'warn',
     'unicorn/catch-error-name': 'warn',
+    // { ['foo']: 1 } → { foo: 1 }
+    'no-useless-computed-key': 'warn',
+    // Empty constructor() { super() } is implicit
+    'no-useless-constructor': 'warn',
+    // { import { foo as foo } } is noise
+    'no-useless-rename': 'warn',
+    // Standalone { } blocks are almost never needed in ES modules
+    'no-lone-blocks': 'warn',
+    // foo.call(undefined, x) → foo(x)
+    'no-useless-call': 'warn',
+    // Object.hasOwn(obj, key) over hasOwnProperty.call(obj, key)
+    'prefer-object-has-own': 'warn',
+    // Prefer function type to interface with call signature
+    '@typescript-eslint/prefer-function-type': 'warn',
+    // Remove type arguments that can be inferred
+    '@typescript-eslint/no-unnecessary-type-arguments': 'warn',
+    // Remove redundant type assertions
+    '@typescript-eslint/no-unnecessary-type-assertion': 'warn',
+    // export { } without purpose
+    '@typescript-eslint/no-useless-empty-export': 'warn',
+    // <></> around a single child is unnecessary
+    'react/jsx-no-useless-fragment': 'warn',
+
+    // Components defined inside other components lose state on every render
+    'react/no-unstable-nested-components': 'warn',
+
+    // -----------------------------------------------------------------------
+    // modern JS/TS — prefer modern, idiomatic APIs
+    // -----------------------------------------------------------------------
+    // catch { } over catch (_e) { }
+    'unicorn/prefer-optional-catch-binding': 'warn',
+    // Collapse if { ... } else { if { } } into else if
+    'unicorn/no-lonely-if': 'warn',
+    // arr.includes(x) over arr.indexOf(x) !== -1
+    'unicorn/prefer-includes': 'warn',
+    // [...arr] over Array.from(arr) for iterables
+    'unicorn/prefer-spread': 'warn',
+    // for-of over Array#forEach — faster, supports break, better type-narrowing
+    'unicorn/no-array-for-each': 'warn',
+    // 1.0 → 1, 1.50 → 1.5
+    'unicorn/no-zero-fractions': 'warn',
+    // Drop unnecessary undefined in return / ?? undefined
+    'unicorn/no-useless-undefined': 'warn',
+    // .flatMap(fn) over .map(fn).flat()
+    'unicorn/prefer-array-flat-map': 'warn',
+    // Date.now() over new Date().getTime()
+    'unicorn/prefer-date-now': 'warn',
+    // arr.at(-1) over arr[arr.length - 1]
+    'unicorn/prefer-negative-index': 'warn',
+    // throw new TypeError(...) for type errors
+    'unicorn/prefer-type-error': 'warn',
+    // Use [] literal over new Array()
+    'unicorn/no-new-array': 'error',
+    // DOM: el.dataset.foo over el.getAttribute('data-foo')
+    'unicorn/prefer-dom-node-dataset': 'warn',
+    // DOM: event.key over event.keyCode
+    'unicorn/prefer-keyboard-event-key': 'warn',
+    // DOM: el.replaceWith() over parent.replaceChild()
+    'unicorn/prefer-modern-dom-apis': 'warn',
   },
 
   overrides: [
@@ -115,6 +248,16 @@ export default defineConfig({
       globals: {
         Bun: 'readonly',
         WebSocketPair: 'readonly',
+      },
+    },
+
+    // Server-only: DOM unicorn rules don't apply
+    {
+      files: ['packages/server/**'],
+      rules: {
+        'unicorn/prefer-dom-node-dataset': 'off',
+        'unicorn/prefer-keyboard-event-key': 'off',
+        'unicorn/prefer-modern-dom-apis': 'off',
       },
     },
 

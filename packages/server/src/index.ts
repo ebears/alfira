@@ -4,7 +4,7 @@ import { join } from 'node:path';
 
 import { sql } from 'drizzle-orm';
 import { initGuildId, VERSION } from './lib/config';
-import type { RouteContext } from './lib/context';
+import { type RouteContext } from './lib/context';
 import { ensureTagsMigrated } from './lib/ensureTagsMigrated';
 import { json } from './lib/json';
 import { lavalink } from './lib/lavalink';

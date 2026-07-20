@@ -1,5 +1,5 @@
 import { eq, inArray, sql } from 'drizzle-orm';
-import type { RouteContext } from '../lib/context';
+import { type RouteContext } from '../lib/context';
 import { getGuildId } from '../lib/config';
 import { resolveDisplayNames } from '../lib/displayName';
 import { json } from '../lib/json';
@@ -266,10 +266,7 @@ async function handleBulkEdit(ctx: RouteContext, request: Request): Promise<Resp
     if ('volumeBoost' in data) {
       bulkFields.volumeBoost = data.volumeBoost;
     }
-    bulkPlayer.updateSongMetadata(
-      ids,
-      bulkFields as Parameters<typeof bulkPlayer.updateSongMetadata>[1]
-    );
+    bulkPlayer.updateSongMetadata(ids, bulkFields);
   }
 
   return json({ updated: ids.length });
@@ -510,7 +507,7 @@ async function handlePatchSong(
     if ('volumeBoost' in data) {
       fields.volumeBoost = data.volumeBoost;
     }
-    player.updateSongMetadata(id, fields as Parameters<typeof player.updateSongMetadata>[1]);
+    player.updateSongMetadata(id, fields);
   }
 
   return json(formatSong(updatedSong));

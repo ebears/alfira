@@ -70,7 +70,7 @@ export function eqBandValues(bands: number[]): Record<EqBandKey, number> {
   for (let i = 0; i < 15; i++) {
     result[`eqBand${i}`] = bands[i];
   }
-  return result as Record<EqBandKey, number>;
+  return result;
 }
 
 /**

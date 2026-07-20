@@ -1,4 +1,4 @@
-import type { QueuedSong, Song } from './types';
+import { type QueuedSong, type Song } from './types';
 
 /**
  * Converts a Song (database record) into a QueuedSong by attaching the

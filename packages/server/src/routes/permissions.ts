@@ -1,5 +1,5 @@
 import { eq, inArray } from 'drizzle-orm';
-import type { RouteContext } from '../lib/context';
+import { type RouteContext } from '../lib/context';
 import { getGuildId } from '../lib/config';
 import { fetchGuildRoles } from '../lib/discordRoles';
 import { json } from '../lib/json';

@@ -1,4 +1,4 @@
-import type { User } from '@alfira/server/shared';
+import { type User } from '@alfira/server/shared';
 import { SignOutIcon, UserIcon } from '@phosphor-icons/react';
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';

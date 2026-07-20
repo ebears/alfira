@@ -1,4 +1,4 @@
-import type { RouteContext } from './context';
+import { type RouteContext } from './context';
 import { json } from './json';
 
 export function requireAuth(ctx: RouteContext): NonNullable<RouteContext['user']> | Response {
