@@ -44,7 +44,7 @@ export function useScrollObserver(
 
   const didMountRef = useRef(0);
   const tickingRef = useRef(false);
-  const timeoutRef = useRef<ReturnType<typeof setTimeout>>();
+  const timeoutRef = useRef<ReturnType<typeof setTimeout>>(undefined);
   const scrollTopRef = useRef(0);
 
   // ── rAF-batched scroll tracking ────────────────────────────────────

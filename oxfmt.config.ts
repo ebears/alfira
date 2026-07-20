@@ -1,7 +1,7 @@
 import { defineConfig } from 'oxfmt';
 
 export default defineConfig({
-  ignorePatterns: ['dist/**', '**/public/**', '**/*.webmanifest'],
+  ignorePatterns: ['dist/**', '**/public/**', '**/*.webmanifest', '.cache/**'],
   printWidth: 100,
   tabWidth: 2,
   useTabs: false,

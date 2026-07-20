@@ -194,7 +194,7 @@ export const VirtualSongGrid = memo(function VirtualSongGrid({
             onAddToQueue={() => p.onAddToQueue(song.id)}
             selectionMode={p.selectionMode}
             isSelected={p.isSelected?.(song.id) ?? false}
-            onToggleSelect={p.onToggleSelect ? () => p.onToggleSelect(song.id) : undefined}
+            onToggleSelect={p.onToggleSelect ? () => p.onToggleSelect?.(song.id) : undefined}
           />
         </div>
       );
@@ -233,7 +233,7 @@ export const VirtualSongGrid = memo(function VirtualSongGrid({
     itemKey: (item: GridSongItem) => item.song.id,
     itemHeightEstimate: 330,
     overscanBy: 2,
-    render: GridCard as React.ComponentType<{ index: number; width: number; data: unknown }>,
+    render: GridCard,
     onRender: isContentReady ? handleRender : undefined,
   });
 

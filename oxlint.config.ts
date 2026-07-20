@@ -1,6 +1,13 @@
 import { defineConfig } from 'oxlint';
 
 export default defineConfig({
+  options: {
+    typeAware: true,
+    typeCheck: true,
+  },
+
+  ignorePatterns: ['.pi/**'],
+
   plugins: ['react', 'jsx-a11y', 'typescript'],
 
   rules: {

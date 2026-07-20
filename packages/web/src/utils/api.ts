@@ -13,7 +13,7 @@ export function isRateLimitError(err: unknown): boolean {
   return err instanceof ApiError && err.status === 429;
 }
 
-type NotifyFn = (message: string, type: 'success' | 'error' | 'info', duration?: number) => void;
+type NotifyFn = (message: string, type: 'success' | 'error', duration?: number) => void;
 
 /**
  * Show an error notification for an API error, unless it's a 429 rate limit.

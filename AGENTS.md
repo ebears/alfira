@@ -11,16 +11,17 @@ The bot and API run in a **single Bun process**. For detailed architecture (star
 
 ## Tech Stack
 
-| Component | Technology                  |
-| --------- | --------------------------- |
-| Runtime   | Bun                         |
-| Language  | TypeScript                  |
-| Discord   | Custom gateway (WebSocket)  |
-| Audio     | NodeLink (Lavalink v4)      |
-| API       | Bun native HTTP + WebSocket |
-| Database  | SQLite + Drizzle ORM        |
-| Frontend  | React 19 + Tailwind CSS 4   |
-| Linting   | oxlint + oxfmt              |
+| Component    | Technology                                    |
+| ------------ | --------------------------------------------- |
+| Runtime      | Bun                                           |
+| Language     | TypeScript                                    |
+| Discord      | Custom gateway (WebSocket)                    |
+| Audio        | NodeLink (Lavalink v4)                        |
+| API          | Bun native HTTP + WebSocket                   |
+| Database     | SQLite + Drizzle ORM                          |
+| Frontend     | React 19 + Tailwind CSS 4                     |
+| Linting      | oxlint + oxfmt                                |
+| Typechecking | oxlint (--type-aware --type-check, uses tsgo) |
 
 ## Design Principles
 
@@ -40,8 +41,11 @@ bun run dev
 # Build the web UI (needed after web/src changes before docker compose restart)
 bun run web:build
 
-# Lint + format with auto-fix (run before committing)
+# Lint + typecheck + format (run before committing)
 bun run check
+
+# Typecheck only
+bun run typecheck
 
 # Lint only, with auto-fix
 bun run lint:fix
@@ -60,9 +64,10 @@ See the `alfira-database` skill for full details.
 
 ## Code Style
 
-- oxlint + oxfmt for linting and formatting
+- oxlint + oxfmt for linting, typechecking, and formatting
+- Typechecking uses oxlint's `--type-aware --type-check` flags, which leverage tsgo (the Go-based TypeScript compiler) for full type resolution — no separate `typescript` dependency needed
 - Run `bun run check` before committing
-- CI runs `bun run lint` — code must pass before merging
+- CI runs `bun run check` — code must pass before merging
 
 ## Domain Knowledge
 
