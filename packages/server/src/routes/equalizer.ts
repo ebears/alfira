@@ -1,16 +1,11 @@
 import { eq } from 'drizzle-orm';
 
-import { applyNodeLinkFilter } from '../lib/applyNodeLinkFilter';
 import { type RouteContext } from '../lib/context';
-import {
-  buildEqualizerFilter,
-  EQ_BAND_COLUMNS,
-  eqBandsFromRow,
-  eqBandValues,
-} from '../lib/eqBands';
+import { EQ_BAND_COLUMNS, eqBandsFromRow, eqBandValues } from '../lib/eqBands';
 import { json } from '../lib/json';
 import { checkGuards } from '../lib/routeGuards';
 import { routeTable } from '../lib/routeTable';
+import { syncAllFilters } from '../lib/syncAllFilters';
 import { db, tables } from '../shared/db';
 
 interface EqualizerPayload {
@@ -87,8 +82,8 @@ async function handleEqualizerPatch(
     })
     .run();
 
-  // Apply to live NodeLink player if connected
-  await applyNodeLinkFilter({ equalizer: buildEqualizerFilter(bands) }, 'equalizer');
+  // Apply all enabled filters to live NodeLink player
+  await syncAllFilters();
 
   return json({ bands, enabled });
 }
