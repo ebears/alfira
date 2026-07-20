@@ -6,7 +6,7 @@ export default defineConfig({
     typeCheck: true,
   },
 
-  ignorePatterns: ['.pi/**'],
+  ignorePatterns: ['.pi/**', '.zed/**'],
 
   plugins: ['react', 'jsx-a11y', 'typescript'],
 
