@@ -13,6 +13,12 @@ export default defineConfig({
 
   rules: {
     // -----------------------------------------------------------------------
+    // react hooks — correctness rules that prevent subtle bugs
+    // -----------------------------------------------------------------------
+    'react/rules-of-hooks': 'error',
+    'react/exhaustive-deps': 'error',
+
+    // -----------------------------------------------------------------------
     // a11y
     // -----------------------------------------------------------------------
     'react/button-has-type': 'error',
@@ -110,6 +116,10 @@ export default defineConfig({
     'require-await': 'error',
     'default-case-last': 'error',
     'react/no-array-index-key': 'warn',
+    // Missing key on iterator elements breaks React reconciliation
+    'react/jsx-key': 'error',
+    // Children passed as an explicit prop break composition
+    'react/no-children-prop': 'error',
     // Duplicate props in JSX — second silently wins
     'react/jsx-no-duplicate-props': 'error',
     // Comments rendered as text nodes are always a mistake
@@ -204,6 +214,31 @@ export default defineConfig({
 
     // Components defined inside other components lose state on every render
     'react/no-unstable-nested-components': 'warn',
+
+    // -----------------------------------------------------------------------
+    // typescript strictness — close the `any` escape hatch
+    // -----------------------------------------------------------------------
+    '@typescript-eslint/no-unsafe-assignment': 'warn',
+    '@typescript-eslint/no-unsafe-argument': 'warn',
+    '@typescript-eslint/no-unsafe-member-access': 'warn',
+    '@typescript-eslint/no-unsafe-call': 'warn',
+    '@typescript-eslint/no-unsafe-return': 'warn',
+    // Conditions that are always truthy/falsy — dead code detector
+    '@typescript-eslint/no-unnecessary-condition': 'warn',
+
+    // -----------------------------------------------------------------------
+    // style consistency — enforce one idiomatic pattern
+    // -----------------------------------------------------------------------
+    // Require `interface` over `type` for object types (or vice versa)
+    '@typescript-eslint/consistent-type-definitions': ['warn', 'interface'],
+    // new Map<string>() vs new Map() with type annotation — pick one style
+    '@typescript-eslint/consistent-generic-constructors': ['warn', 'constructor'],
+    // fn(): void vs fn: () => void — pick method shorthand
+    '@typescript-eslint/method-signature-style': 'warn',
+    // console.log has no place next to a proper logger
+    'no-console': 'warn',
+    // Set.has(x) over arr.includes(x) — O(1) vs O(n), better signaling
+    'unicorn/prefer-set-has': 'warn',
 
     // -----------------------------------------------------------------------
     // modern JS/TS — prefer modern, idiomatic APIs
@@ -334,6 +369,90 @@ export default defineConfig({
       files: ['packages/web/src/components/Backdrop.tsx', 'packages/web/src/components/Layout.tsx'],
       rules: {
         'jsx-a11y/no-static-element-interactions': 'off',
+      },
+    },
+
+    // Plain JS files: type-aware rules produce noise on untyped code
+    {
+      files: ['nodelink-config/**', 'packages/web/public/**'],
+      rules: {
+        '@typescript-eslint/no-unsafe-assignment': 'off',
+        '@typescript-eslint/no-unsafe-member-access': 'off',
+        '@typescript-eslint/no-unsafe-call': 'off',
+        '@typescript-eslint/no-unsafe-return': 'off',
+        '@typescript-eslint/no-unsafe-argument': 'off',
+        '@typescript-eslint/no-unnecessary-condition': 'off',
+        'no-console': 'off',
+      },
+    },
+
+    // Logger: console is the implementation, not a mistake
+    {
+      files: ['packages/server/src/shared/logger.ts'],
+      rules: {
+        'no-console': 'off',
+      },
+    },
+
+    // Server entry: startup banner uses console intentionally
+    {
+      files: ['packages/web/src/server.ts'],
+      rules: {
+        'no-console': 'off',
+      },
+    },
+
+    // Web client files: console is the debug/error logger for browser-side code
+    {
+      files: [
+        'packages/web/src/api/client.ts',
+        'packages/web/src/context/AuthContext.tsx',
+        'packages/web/src/components/settings/CompressorSection.tsx',
+        'packages/web/src/components/settings/EqualizerSection.tsx',
+        'packages/web/src/components/NowPlayingBar.tsx',
+      ],
+      rules: {
+        'no-console': 'off',
+      },
+    },
+
+    // Route handler files: "always falsy/truthy" checks on Drizzle query results
+    // are defensive guards. The type system says the value can't be null, but
+    // these checks exist as runtime safety. Suppress no-unnecessary-condition
+    // here and fix types incrementally.
+    {
+      files: [
+        'packages/server/src/routes/auth.ts',
+        'packages/server/src/routes/permissions.ts',
+        'packages/server/src/routes/player.ts',
+        'packages/server/src/routes/playlists.ts',
+        'packages/server/src/routes/songs.ts',
+        'packages/server/src/routes/tags.ts',
+        'packages/server/src/routes/requests.ts',
+        'packages/server/src/lib/migrateExistingTags.ts',
+        'packages/server/src/lib/ensureTagsMigrated.ts',
+        'packages/server/src/lib/playlistAccess.ts',
+        'packages/server/src/lib/syncPlaylistToTag.ts',
+        'packages/server/src/lib/search.ts',
+        'packages/server/src/utils/nodelink.ts',
+        'packages/server/src/GuildPlayer.ts',
+        'packages/server/src/routes/equalizer.ts',
+        'packages/server/src/index.ts',
+        // Web files with known false positives for this pedantic rule:
+        // optional chains on union types (User | null) and defensive checks
+        'packages/web/src/components/MobileNav.tsx',
+        'packages/web/src/components/QueuePanel.tsx',
+        'packages/web/src/components/settings/AdminSection.tsx',
+        'packages/web/src/hooks/usePaginatedData.ts',
+        'packages/web/src/hooks/useScrollObserver.ts',
+        'packages/web/src/components/AddSongsModal.tsx',
+        'packages/web/src/components/VirtualList.tsx',
+        'packages/web/src/components/VirtualSongList.tsx',
+        'packages/web/src/pages/PlaylistDetailPage.tsx',
+        'packages/web/src/pages/SongsPage.tsx',
+      ],
+      rules: {
+        '@typescript-eslint/no-unnecessary-condition': 'off',
       },
     },
   ],

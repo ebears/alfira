@@ -1,4 +1,5 @@
 import { ArrowsDownUp, SlidersHorizontal } from '@phosphor-icons/react';
+
 import CompressorSection from '../components/settings/CompressorSection';
 import EqualizerSection from '../components/settings/EqualizerSection';
 import { PageHeader } from '../components/ui/PageHeader';

@@ -23,12 +23,11 @@ import {
   UserIcon,
 } from '@phosphor-icons/react';
 import { useVirtualizer } from '@tanstack/react-virtual';
-import { memo, useCallback, useMemo, useRef, useState } from 'react';
 import { AnimatePresence, type Transition } from 'motion/react';
 import * as m from 'motion/react-m';
-import { queueItemVariants } from '../lib/motion';
-import { type CooldownState } from '../hooks/useCooldownGuard';
+import { memo, useCallback, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
+
 import ConfirmModal from '../components/ConfirmModal';
 import { ContextMenu, type MenuItem } from '../components/ContextMenu';
 import OverrideModal from '../components/queue/OverrideModal';
@@ -37,6 +36,8 @@ import { SourceIcon } from '../components/SourceIcons';
 import { useAdminView } from '../context/AdminViewContext';
 import { usePermissions } from '../context/PermissionsContext';
 import { usePlayer } from '../context/PlayerContext';
+import { type CooldownState } from '../hooks/useCooldownGuard';
+import { queueItemVariants } from '../lib/motion';
 import { getSourceKey } from '../utils/source';
 import { getRandomIdleIcon } from './EmptyState';
 import { ArtworkImage } from './ui/ArtworkImage';

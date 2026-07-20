@@ -1,5 +1,6 @@
 import { eq } from 'drizzle-orm';
 import { readFileSync } from 'node:fs';
+
 import { db, tables } from '../shared/db';
 
 function resolveVersion(): string {

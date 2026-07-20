@@ -1,8 +1,9 @@
 import { DiscordLogoIcon } from '@phosphor-icons/react';
 import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../context/AuthContext';
+
 import { SpringUp } from '../components/ui/SpringUp';
+import { useAuth } from '../context/AuthContext';
 
 export default function LoginPage() {
   const { user, loading } = useAuth();

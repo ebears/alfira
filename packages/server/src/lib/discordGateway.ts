@@ -180,13 +180,13 @@ export class DiscordGateway {
     ws.onmessage = (event: MessageEvent): void => {
       let msg: { op: number; d: unknown; s: number | null; t: string | null };
       try {
-        msg = JSON.parse(event.data as string);
+        msg = JSON.parse(event.data as string) as typeof msg;
       } catch {
         return;
       }
 
       // Track sequence number for resume.
-      if (msg.s !== null && msg.s !== undefined) {
+      if (msg.s !== null) {
         this.lastSeq = msg.s;
       }
 

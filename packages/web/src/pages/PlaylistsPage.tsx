@@ -3,6 +3,7 @@ import { fetchTags } from '@alfira/server/shared/api';
 import { PlaylistIcon } from '@phosphor-icons/react';
 import { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+
 import { getPlaylistsPage } from '../api/api';
 import { Backdrop } from '../components/Backdrop';
 import NotificationToast from '../components/NotificationToast';
@@ -13,8 +14,8 @@ import { VirtualPlaylistList } from '../components/VirtualPlaylistList';
 import { useAdminView } from '../context/AdminViewContext';
 import { CreatePlaylistSubmitButton, useCreatePlaylist } from '../hooks/useCreatePlaylist';
 import { useNotification } from '../hooks/useNotification';
-import { onSocketEvent } from '../hooks/useSocket';
 import { usePaginatedData } from '../hooks/usePaginatedData';
+import { onSocketEvent } from '../hooks/useSocket';
 
 const ITEMS_PER_PAGE = 48;
 

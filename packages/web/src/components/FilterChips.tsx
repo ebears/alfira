@@ -1,4 +1,5 @@
 import { TagIcon, XIcon } from '@phosphor-icons/react';
+
 import { getTagColorClasses } from '../utils/tagColors';
 import { SourceIcon } from './SourceIcons';
 

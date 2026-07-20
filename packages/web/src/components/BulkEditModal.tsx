@@ -1,6 +1,7 @@
 import { type BulkEditData, fetchTags, type TagItem } from '@alfira/server/shared/api';
 import { EraserIcon, XIcon } from '@phosphor-icons/react';
 import { useCallback, useEffect, useRef, useState } from 'react';
+
 import { useTagColors } from '../context/TagsContext';
 import { getTagColorClasses } from '../utils/tagColors';
 import { Backdrop } from './Backdrop';

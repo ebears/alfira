@@ -1,4 +1,5 @@
 import { DesktopIcon, MoonIcon, SunIcon } from '@phosphor-icons/react';
+
 import { useTheme } from '../../context/ThemeContext';
 
 export default function UserSection() {

@@ -1,6 +1,7 @@
 import { AnimatePresence } from 'motion/react';
 import * as m from 'motion/react-m';
 import { useLocation, useOutlet } from 'react-router-dom';
+
 import { pageVariants, viewTransition } from '../lib/motion';
 
 /**

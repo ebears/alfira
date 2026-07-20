@@ -10,6 +10,7 @@ import {
   SquaresFourIcon,
 } from '@phosphor-icons/react';
 import { useCallback, useEffect, useRef, useState } from 'react';
+
 import AddFilterPopover from './AddFilterPopover';
 import FilterChips from './FilterChips';
 import { Button } from './ui/Button';
