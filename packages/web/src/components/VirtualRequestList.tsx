@@ -1,5 +1,5 @@
 import { type SongRequest } from '@alfira/server/shared';
-import { memo } from 'react';
+import { memo, useCallback, useMemo } from 'react';
 
 import RequestCard from './RequestCard';
 import { VirtualList } from './VirtualList';
@@ -71,20 +71,29 @@ export const VirtualRequestList = memo(function VirtualRequestList({
   emptyTitle,
   emptyMessage,
 }: VirtualRequestListProps) {
+  const getItemKey = useCallback((req: SongRequest) => req.id, []);
+
+  const renderItem = useCallback(
+    (req: SongRequest) => (
+      <RequestCard
+        req={req}
+        isOwn={isOwnFn(req.requestedBy)}
+        isAdmin={isAdmin}
+        onApprove={onApprove}
+        onDeny={onDeny}
+        onCancel={onCancel}
+      />
+    ),
+    [isOwnFn, isAdmin, onApprove, onDeny, onCancel]
+  );
+
+  const skeleton = useMemo(() => <SkeletonList />, []);
+
   return (
     <VirtualList
       items={items}
-      getItemKey={(req) => req.id}
-      renderItem={(req) => (
-        <RequestCard
-          req={req}
-          isOwn={isOwnFn(req.requestedBy)}
-          isAdmin={isAdmin}
-          onApprove={onApprove}
-          onDeny={onDeny}
-          onCancel={onCancel}
-        />
-      )}
+      getItemKey={getItemKey}
+      renderItem={renderItem}
       estimateSize={95}
       itemClassName='pb-4'
       isLoading={isLoading}
@@ -94,7 +103,7 @@ export const VirtualRequestList = memo(function VirtualRequestList({
       hasMore={hasMore}
       onRetry={onRetry}
       onFetchMore={onFetchMore}
-      skeleton={<SkeletonList />}
+      skeleton={skeleton}
       emptyTitle={emptyTitle}
       emptyMessage={emptyMessage}
     />

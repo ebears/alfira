@@ -1,3 +1,5 @@
+import { useCallback } from 'react';
+
 interface SettingsToggleProps {
   label: string;
   description?: string;
@@ -13,6 +15,11 @@ export default function SettingsToggle({
   onChange,
   disabled = false,
 }: SettingsToggleProps) {
+  const handleClick = useCallback(
+    () => !disabled && onChange(!checked),
+    [disabled, onChange, checked]
+  );
+
   return (
     <div className={`flex items-start gap-4 ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}>
       <div className='flex-1 min-w-0'>
@@ -25,7 +32,7 @@ export default function SettingsToggle({
         aria-checked={checked}
         aria-label={label}
         disabled={disabled}
-        onClick={() => !disabled && onChange(!checked)}
+        onClick={handleClick}
         className={`relative shrink-0 w-11 h-6 rounded-full transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-accent/50 focus:ring-offset-2 focus:ring-offset-surface mt-1.5 ${
           checked ? 'bg-accent' : 'bg-elevated'
         } ${disabled ? 'cursor-not-allowed' : 'cursor-pointer'}`}

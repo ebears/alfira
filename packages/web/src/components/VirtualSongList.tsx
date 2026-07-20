@@ -1,5 +1,5 @@
 import { type Playlist, type Song } from '@alfira/server/shared';
-import { memo, useCallback, useEffect, useState } from 'react';
+import { memo, useCallback, useEffect, useMemo, useState } from 'react';
 
 import { useSongEdit } from '../context/SongEditContext';
 import SongCard from './SongCard';
@@ -63,6 +63,59 @@ function SkeletonList() {
 }
 
 // ---------------------------------------------------------------------------
+// Item wrapper — creates stable event callbacks per song
+// ---------------------------------------------------------------------------
+
+interface SongListItemProps {
+  song: Song;
+  isAdminView: boolean;
+  playlists: Playlist[];
+  playingId: string | null;
+  selectionMode: boolean;
+  isSelected: boolean;
+  onDelete?: (id: string) => void;
+  onPlay: (id: string) => void;
+  onAddToQueue: (id: string) => void;
+  onToggleSelect?: (id: string) => void;
+}
+
+const SongListItem = memo(function SongListItem({
+  song,
+  isAdminView,
+  playlists,
+  playingId,
+  selectionMode,
+  isSelected,
+  onDelete,
+  onPlay,
+  onAddToQueue,
+  onToggleSelect,
+}: SongListItemProps) {
+  const handlePlay = useCallback(() => onPlay(song.id), [onPlay, song.id]);
+  const handleAddToQueue = useCallback(() => onAddToQueue(song.id), [onAddToQueue, song.id]);
+  const handleToggleSelect = useCallback(
+    () => onToggleSelect?.(song.id),
+    [onToggleSelect, song.id]
+  );
+
+  return (
+    <SongCard
+      song={song}
+      variant='list'
+      isAdminView={isAdminView}
+      playlists={playlists}
+      onDelete={onDelete}
+      onPlay={handlePlay}
+      isPlaying={playingId === song.id}
+      onAddToQueue={handleAddToQueue}
+      selectionMode={selectionMode}
+      isSelected={isSelected}
+      onToggleSelect={onToggleSelect ? handleToggleSelect : undefined}
+    />
+  );
+});
+
+// ---------------------------------------------------------------------------
 // Component
 // ---------------------------------------------------------------------------
 
@@ -114,25 +167,43 @@ export const VirtualSongList = memo(function VirtualSongList({
     [items, effectiveOpenId]
   );
 
+  const getItemKey = useCallback((song: Song) => song.id, []);
+
+  const renderItem = useCallback(
+    (song: Song) => (
+      <SongListItem
+        song={song}
+        isAdminView={isAdminView}
+        playlists={playlists}
+        playingId={playingId}
+        selectionMode={selectionMode}
+        isSelected={isSelected?.(song.id) ?? false}
+        onDelete={onDelete}
+        onPlay={onPlay}
+        onAddToQueue={onAddToQueue}
+        onToggleSelect={onToggleSelect}
+      />
+    ),
+    [
+      isAdminView,
+      playlists,
+      playingId,
+      selectionMode,
+      isSelected,
+      onDelete,
+      onPlay,
+      onAddToQueue,
+      onToggleSelect,
+    ]
+  );
+
+  const skeleton = useMemo(() => <SkeletonList />, []);
+
   return (
     <VirtualList
       items={items}
-      getItemKey={(song) => song.id}
-      renderItem={(song) => (
-        <SongCard
-          song={song}
-          variant='list'
-          isAdminView={isAdminView}
-          playlists={playlists}
-          onDelete={onDelete}
-          onPlay={() => onPlay(song.id)}
-          isPlaying={playingId === song.id}
-          onAddToQueue={() => onAddToQueue(song.id)}
-          selectionMode={selectionMode}
-          isSelected={isSelected?.(song.id) ?? false}
-          onToggleSelect={onToggleSelect ? () => onToggleSelect(song.id) : undefined}
-        />
-      )}
+      getItemKey={getItemKey}
+      renderItem={renderItem}
       estimateSize={estimateSize}
       itemClassName='pb-3'
       isLoading={isLoading}
@@ -142,7 +213,7 @@ export const VirtualSongList = memo(function VirtualSongList({
       hasMore={hasMore}
       onRetry={onRetry}
       onFetchMore={onFetchMore}
-      skeleton={<SkeletonList />}
+      skeleton={skeleton}
       emptyTitle={emptyTitle}
       emptyMessage={emptyMessage}
     />

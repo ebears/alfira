@@ -1,4 +1,7 @@
+import type React from 'react';
+
 import { Check } from '@phosphor-icons/react';
+import { useCallback } from 'react';
 
 interface CheckboxProps {
   checked: boolean;
@@ -34,6 +37,11 @@ export default function Checkbox({
 }: CheckboxProps) {
   const s = sizeConfig[size];
 
+  const handleChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => onChange(e.target.checked),
+    [onChange]
+  );
+
   return (
     <span
       className={`group relative inline-flex shrink-0 ${disabled ? 'opacity-50 pointer-events-none' : ''}`}
@@ -43,7 +51,7 @@ export default function Checkbox({
         type='checkbox'
         checked={checked}
         disabled={disabled}
-        onChange={(e) => onChange(e.target.checked)}
+        onChange={handleChange}
         className={`opacity-0 absolute inset-0 z-10 ${disabled ? 'cursor-not-allowed' : 'cursor-pointer'}`}
       />
       <span

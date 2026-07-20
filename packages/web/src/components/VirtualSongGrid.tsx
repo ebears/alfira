@@ -42,13 +42,14 @@ interface GridSongItem {
 // Skeleton
 // ---------------------------------------------------------------------------
 
+const SKELETON_GRID_STYLE = {
+  gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))',
+} as const;
+
 function SkeletonGrid() {
   return (
     <div className='px-4 pt-4'>
-      <div
-        className='grid gap-4'
-        style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))' }}
-      >
+      <div className='grid gap-4' style={SKELETON_GRID_STYLE}>
         {Array.from({ length: 8 }).map((_, i) => (
           <div
             key={`skeleton-${i}`}
@@ -171,7 +172,6 @@ export const VirtualSongGrid = memo(function VirtualSongGrid({
   };
 
   const GridCard = useMemo(() => {
-    // eslint-disable-next-line react/no-unstable-nested-components -- must be created inside useMemo([]) for stable type identity; masonic's render prop requires a component, not an element
     const Component = ({
       index: _index,
       width,
@@ -238,21 +238,27 @@ export const VirtualSongGrid = memo(function VirtualSongGrid({
     onRender: isContentReady ? handleRender : undefined,
   });
 
+  const scrollStyle = useMemo(
+    () => ({
+      overflowX: 'hidden' as const,
+      overflowY: isContentReady ? ('auto' as const) : ('hidden' as const),
+      WebkitMaskImage: isContentReady
+        ? 'linear-gradient(to bottom, transparent 0%, black 20px, black calc(100% - 20px), transparent 100%)'
+        : undefined,
+      maskImage: isContentReady
+        ? 'linear-gradient(to bottom, transparent 0%, black 20px, black calc(100% - 20px), transparent 100%)'
+        : undefined,
+    }),
+    [isContentReady]
+  );
+
+  const masonryWrapperStyle = useMemo(
+    () => ({ display: isContentReady ? undefined : ('none' as const) }),
+    [isContentReady]
+  );
+
   return (
-    <div
-      ref={scrollRefCallback}
-      className='pt-3 min-h-0 flex-1'
-      style={{
-        overflowX: 'hidden',
-        overflowY: isContentReady ? 'auto' : 'hidden',
-        WebkitMaskImage: isContentReady
-          ? 'linear-gradient(to bottom, transparent 0%, black 20px, black calc(100% - 20px), transparent 100%)'
-          : undefined,
-        maskImage: isContentReady
-          ? 'linear-gradient(to bottom, transparent 0%, black 20px, black calc(100% - 20px), transparent 100%)'
-          : undefined,
-      }}
-    >
+    <div ref={scrollRefCallback} className='pt-3 min-h-0 flex-1' style={scrollStyle}>
       {showSkeleton && <SkeletonGrid />}
 
       {showEmpty && (
@@ -265,7 +271,7 @@ export const VirtualSongGrid = memo(function VirtualSongGrid({
       )}
 
       {/* Masonry is always in the DOM (ref attachment) but hidden until content is ready */}
-      <div style={{ display: isContentReady ? undefined : 'none' }}>{masonry}</div>
+      <div style={masonryWrapperStyle}>{masonry}</div>
 
       {isContentReady && isFetching && (
         <div className='flex justify-center py-4 gap-2'>

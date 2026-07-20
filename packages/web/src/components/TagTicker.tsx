@@ -107,17 +107,45 @@ const TagTicker = memo(({ tags, isHovered: externalHovered }: TagTickerProps) =>
     }
   }, [effectiveHovered, shouldScroll]);
 
+  const animationStyle: React.CSSProperties = useMemo(
+    () =>
+      shouldScroll
+        ? {
+            width: 'max-content',
+            animation: `ticker-scroll ${duration}s linear infinite`,
+            animationPlayState: effectiveHovered ? 'running' : 'paused',
+          }
+        : {},
+    [shouldScroll, duration, effectiveHovered]
+  );
+
+  const maskStyle: React.CSSProperties = useMemo(
+    () =>
+      shouldScroll
+        ? {
+            maskImage: 'linear-gradient(to right, transparent, black 8%, black 80%, transparent)',
+            WebkitMaskImage:
+              'linear-gradient(to right, transparent, black 8%, black 80%, transparent)',
+          }
+        : {},
+    [shouldScroll]
+  );
+
+  const handleMouseEnter = useCallback(() => {
+    if (externalHovered === undefined) {
+      setIsHovered(true);
+    }
+  }, [externalHovered]);
+
+  const handleMouseLeave = useCallback(() => {
+    if (externalHovered === undefined) {
+      setIsHovered(false);
+    }
+  }, [externalHovered]);
+
   if (dedupedTags.length === 0) {
     return null;
   }
-
-  const animationStyle: React.CSSProperties = shouldScroll
-    ? {
-        width: 'max-content',
-        animation: `ticker-scroll ${duration}s linear infinite`,
-        animationPlayState: effectiveHovered ? 'running' : 'paused',
-      }
-    : {};
 
   return (
     // eslint-disable-next-line jsx-a11y/no-noninteractive-element-interactions -- hover state pauses ticker; marquee has dedicated role
@@ -125,23 +153,9 @@ const TagTicker = memo(({ tags, isHovered: externalHovered }: TagTickerProps) =>
       role='marquee'
       className='overflow-hidden py-0 max-w-[60%]'
       ref={outerRef}
-      style={{
-        ...(shouldScroll && {
-          maskImage: 'linear-gradient(to right, transparent, black 8%, black 80%, transparent)',
-          WebkitMaskImage:
-            'linear-gradient(to right, transparent, black 8%, black 80%, transparent)',
-        }),
-      }}
-      onMouseEnter={() => {
-        if (externalHovered === undefined) {
-          setIsHovered(true);
-        }
-      }}
-      onMouseLeave={() => {
-        if (externalHovered === undefined) {
-          setIsHovered(false);
-        }
-      }}
+      style={maskStyle}
+      onMouseEnter={handleMouseEnter}
+      onMouseLeave={handleMouseLeave}
     >
       <div className='flex gap-1' ref={innerRef} style={animationStyle}>
         {renderTags('a')}

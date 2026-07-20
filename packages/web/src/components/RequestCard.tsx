@@ -1,7 +1,7 @@
 import { type SongRequest } from '@alfira/server/shared';
 import { formatDuration } from '@alfira/server/shared';
 import { CheckCircleIcon, TrashIcon, XCircleIcon } from '@phosphor-icons/react';
-import { memo } from 'react';
+import { memo, useCallback } from 'react';
 
 import { SourceIcon } from './SourceIcons';
 import { ArtworkImage } from './ui/ArtworkImage';
@@ -37,6 +37,10 @@ export const RequestCard = memo(function RequestCard({
     ? req.playlistData?.thumbnailUrl || req.thumbnailUrl
     : req.artworkUrl || req.thumbnailUrl;
   const dateLabel = new Date(req.createdAt).toLocaleDateString();
+
+  const handleCancel = useCallback(() => onCancel(req.id), [onCancel, req.id]);
+  const handleApprove = useCallback(() => onApprove(req.id), [onApprove, req.id]);
+  const handleDeny = useCallback(() => onDeny(req.id), [onDeny, req.id]);
 
   return (
     <Card className='rounded-xl flex items-center gap-4 p-4'>
@@ -93,7 +97,7 @@ export const RequestCard = memo(function RequestCard({
           {isOwn && (
             <Button
               variant='inherit'
-              onClick={() => onCancel(req.id)}
+              onClick={handleCancel}
               surface='elevated'
               title='Cancel request'
             >
@@ -102,20 +106,10 @@ export const RequestCard = memo(function RequestCard({
           )}
           {isAdmin && (
             <>
-              <Button
-                variant='inherit'
-                onClick={() => onApprove(req.id)}
-                surface='elevated'
-                title='Approve'
-              >
+              <Button variant='inherit' onClick={handleApprove} surface='elevated' title='Approve'>
                 <CheckCircleIcon size={16} weight='duotone' className='text-emerald-400' />
               </Button>
-              <Button
-                variant='inherit'
-                onClick={() => onDeny(req.id)}
-                surface='elevated'
-                title='Deny'
-              >
+              <Button variant='inherit' onClick={handleDeny} surface='elevated' title='Deny'>
                 <XCircleIcon size={16} weight='duotone' className='text-danger' />
               </Button>
             </>

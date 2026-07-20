@@ -4,6 +4,7 @@ import {
   useCallback,
   useContext,
   useEffect,
+  useMemo,
   useRef,
   useState,
 } from 'react';
@@ -87,11 +88,12 @@ export function SongEditProvider({ children }: { children: ReactNode }) {
     return () => document.removeEventListener('mousedown', handleMouseDown);
   }, [openSongId, setOpenSongIdSequenced]);
 
-  return (
-    <SongEditContext value={{ openSongId, closingSongId, setOpenSongId: setOpenSongIdSequenced }}>
-      {children}
-    </SongEditContext>
+  const value = useMemo(
+    () => ({ openSongId, closingSongId, setOpenSongId: setOpenSongIdSequenced }),
+    [openSongId, closingSongId, setOpenSongIdSequenced]
   );
+
+  return <SongEditContext value={value}>{children}</SongEditContext>;
 }
 
 export function useSongEdit() {

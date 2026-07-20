@@ -1,6 +1,8 @@
+import type React from 'react';
+
 import { type User } from '@alfira/server/shared';
 import { SignOutIcon, UserIcon } from '@phosphor-icons/react';
-import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 
 interface UserMenuProps {
@@ -95,10 +97,19 @@ export default function UserMenu({ user, collapsed, onLogout }: UserMenuProps) {
     return () => document.removeEventListener('keydown', handler);
   }, [open]);
 
-  const handleLogout = () => {
+  const handleLogout = useCallback(() => {
     setOpen(false);
     onLogout();
-  };
+  }, [onLogout]);
+
+  const handleToggle = useCallback(() => setOpen((o) => !o), []);
+
+  const handleStopPropagation = useCallback((e: React.SyntheticEvent) => e.stopPropagation(), []);
+
+  const portalStyle = useMemo(
+    () => ({ position: 'fixed' as const, top: position.top, left: position.left }),
+    [position.top, position.left]
+  );
 
   const avatarSize = collapsed ? 'size-[22px]' : 'w-7 h-7';
   const avatarFallbackSize = collapsed ? 'text-[11px]' : 'text-sm';
@@ -120,7 +131,10 @@ export default function UserMenu({ user, collapsed, onLogout }: UserMenuProps) {
     </div>
   );
 
-  const triggerSurfaceVar = { '--btn-surface': 'var(--color-elevated)' } as React.CSSProperties;
+  const triggerSurfaceVar = useMemo(
+    () => ({ '--btn-surface': 'var(--color-elevated)' }) as React.CSSProperties,
+    []
+  );
 
   return (
     <>
@@ -128,7 +142,7 @@ export default function UserMenu({ user, collapsed, onLogout }: UserMenuProps) {
       <button
         ref={triggerRef}
         type='button'
-        onClick={() => setOpen((o) => !o)}
+        onClick={handleToggle}
         title={user.username}
         className={`flex items-center rounded-xl font-body transition-all duration-150 cursor-pointer w-full btn-inherit ${
           collapsed ? 'justify-center px-0 py-3' : 'gap-3 px-3 py-2.5'
@@ -150,10 +164,10 @@ export default function UserMenu({ user, collapsed, onLogout }: UserMenuProps) {
             ref={menuRef}
             role='menu'
             tabIndex={-1}
-            style={{ position: 'fixed', top: position.top, left: position.left }}
+            style={portalStyle}
             className='z-9999 min-w-40'
-            onKeyDown={(e) => e.stopPropagation()}
-            onClick={(e) => e.stopPropagation()}
+            onKeyDown={handleStopPropagation}
+            onClick={handleStopPropagation}
           >
             <div className='glass-popover outline-2 outline-accent/20'>
               {/* Username header — mirrors ContextMenu InfoRow */}
