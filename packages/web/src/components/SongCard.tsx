@@ -64,8 +64,8 @@ const SongCardInner = ({
   const [isRowHovered, setIsRowHovered] = useState(false);
   const sourceKey = useMemo(() => getSourceKey(song.sourceUrl), [song.sourceUrl]);
 
-  const canEdit = isAdminView || hasPermission('songs.edit');
-  const canDelete = isAdminView || hasPermission('songs.delete');
+  const canEdit = isAdminView ?? hasPermission('songs.edit');
+  const canDelete = isAdminView ?? hasPermission('songs.delete');
 
   // Stable wrapper for onDelete callback — song.id is stable per render cycle
   const handleDelete = useCallback(() => onDelete?.(song.id), [onDelete, song.id]);
@@ -174,7 +174,7 @@ const SongCardInner = ({
           <div className='flex items-center justify-between gap-2'>
             <p className='text-sm font-semibold text-fg leading-tight flex items-center gap-1.5 min-w-0'>
               <MusicNoteIcon size={13} weight='fill' className='shrink-0 text-muted' />
-              <span className='line-clamp-2'>{song.nickname || song.title}</span>
+              <span className='line-clamp-2'>{song.nickname ?? song.title}</span>
             </p>
             {sourceKey && (
               <span className='flex items-center shrink-0 [&_svg]:w-3.5 [&_svg]:h-3.5'>
@@ -279,7 +279,7 @@ const SongCardInner = ({
         <div className='overflow-hidden w-16 h-16 rounded border border-border shrink-0 bg-elevated'>
           <ArtworkImage
             src={song.artwork ?? song.thumbnailUrl}
-            alt={song.nickname || song.title}
+            alt={song.nickname ?? song.title}
             className='w-full h-full'
             imageClassName='scale-[1.33]'
           />
@@ -287,7 +287,7 @@ const SongCardInner = ({
         <div className='flex-1 min-w-0 flex flex-col justify-center gap-1.5'>
           <p className='text-sm font-semibold text-fg leading-tight flex items-center gap-1.5 min-w-0'>
             <MusicNoteIcon size={13} weight='fill' className='shrink-0 text-muted' />
-            <span className='truncate'>{song.nickname || song.title}</span>
+            <span className='truncate'>{song.nickname ?? song.title}</span>
           </p>
           <div className='flex items-center gap-2.5 flex-wrap text-xs text-muted min-w-0'>
             {song.artist && (

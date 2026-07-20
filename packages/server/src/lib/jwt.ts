@@ -26,7 +26,7 @@ function base64urlDecode(input: string): string {
 
 /** Parse an expiresIn string like "1h", "30d", "15m" to seconds. */
 function parseExpiresIn(expiresIn: string): number {
-  const match = expiresIn.match(/^(\d+)([smhd])$/);
+  const match = /^(\d+)([smhd])$/.exec(expiresIn);
   if (!match?.[1] || !match[2]) {
     throw new Error(`Invalid expiresIn format: ${expiresIn}`);
   }

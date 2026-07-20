@@ -153,17 +153,18 @@ export default function SongsPage() {
   // ── Comparator for re-sorting after real-time mutations ──────────────
   const songCompareFn = useMemo(() => {
     const dir = order === 'asc' ? 1 : -1;
+    // eslint-disable-next-line typescript/consistent-return
     return (a: Song, b: Song): number => {
       switch (sort) {
         case 'title': {
           // Sort by display name: nickname if set, otherwise title
-          const aName = a.nickname || a.title || '';
-          const bName = b.nickname || b.title || '';
+          const aName = (a.nickname ?? a.title) || '';
+          const bName = (b.nickname ?? b.title) || '';
           return dir * aName.localeCompare(bName, undefined, { sensitivity: 'base' });
         }
         case 'artist': {
-          const aArt = a.artist || '';
-          const bArt = b.artist || '';
+          const aArt = a.artist ?? '';
+          const bArt = b.artist ?? '';
           // nulls last, regardless of direction
           if (!aArt && !bArt) {
             return 0;
@@ -177,8 +178,8 @@ export default function SongsPage() {
           return dir * aArt.localeCompare(bArt, undefined, { sensitivity: 'base' });
         }
         case 'album': {
-          const aAlb = a.album || '';
-          const bAlb = b.album || '';
+          const aAlb = a.album ?? '';
+          const bAlb = b.album ?? '';
           if (!aAlb && !bAlb) {
             return 0;
           }
@@ -629,7 +630,7 @@ function DeleteConfirmDialog({
       title='Delete Song'
       message={
         <>
-          Remove <span className='text-fg font-semibold'>"{song.nickname || song.title}"</span> from
+          Remove <span className='text-fg font-semibold'>"{song.nickname ?? song.title}"</span> from
           the library?{' '}
           <span className='font-mono text-xs text-danger/70'>
             this will remove it from all playlists too.

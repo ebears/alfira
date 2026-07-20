@@ -34,8 +34,8 @@ export const RequestCard = memo(function RequestCard({
   const isPending = req.status === 'pending';
   const isPlaylist = req.type === 'playlist';
   const thumbnailUrl = isPlaylist
-    ? req.playlistData?.thumbnailUrl || req.thumbnailUrl
-    : req.artworkUrl || req.thumbnailUrl;
+    ? (req.playlistData?.thumbnailUrl ?? req.thumbnailUrl)
+    : (req.artworkUrl ?? req.thumbnailUrl);
   const dateLabel = new Date(req.createdAt).toLocaleDateString();
 
   const handleCancel = useCallback(() => onCancel(req.id), [onCancel, req.id]);

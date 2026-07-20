@@ -18,7 +18,7 @@ function resolveVersion(): string {
   // Dev — try to read the commit hash from the mounted .git directory.
   try {
     const head = readFileSync('/app/.git/HEAD', 'utf-8').trim();
-    const match = head.match(/^ref: (.+)$/);
+    const match = /^ref: (.+)$/.exec(head);
     const hash = match
       ? readFileSync(`/app/.git/${match[1]}`, 'utf-8').trim().slice(0, 7)
       : head.slice(0, 7);

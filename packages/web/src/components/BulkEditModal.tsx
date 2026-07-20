@@ -46,7 +46,7 @@ export default function BulkEditModal({ count, onApply, onClose, isApplying }: B
   // Close tag dropdown when clicking outside
   useEffect(() => {
     if (!showDropdown) {
-      return;
+      return undefined;
     }
     const handler = (e: MouseEvent) => {
       const target = e.target as Node;

@@ -398,7 +398,7 @@ const TagSongItem = memo(function TagSongItem({
       </div>
       <div className='flex-1 min-w-0'>
         <p className='font-body text-sm text-fg truncate leading-snug'>
-          {song.nickname || song.title}
+          {song.nickname ?? song.title}
         </p>
         <div className='flex items-center gap-2 flex-wrap'>
           {song.artist && (

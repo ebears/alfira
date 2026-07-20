@@ -240,6 +240,81 @@ export default defineConfig({
     '@typescript-eslint/no-unnecessary-condition': 'warn',
 
     // -----------------------------------------------------------------------
+    // type-aware safety — tsgolint rules that catch runtime bugs
+    // -----------------------------------------------------------------------
+    // `x as Type` assertion that contradicts known types — silent type lie
+    // TODO: fix 148 violations, then change to 'warn'
+    '@typescript-eslint/no-unsafe-type-assertion': 'off',
+    // String coercion of an object without .toString() — produces "[object Object]"
+    '@typescript-eslint/no-base-to-string': 'warn',
+    // `for (const k in arr)` — iterates string indices, a classic footgun
+    '@typescript-eslint/no-for-in-array': 'warn',
+    // `delete arr[0]` — leaves a sparse-hole, TypeScript doesn't catch it
+    '@typescript-eslint/no-array-delete': 'warn',
+    // `${maybeNull}` when it could be null/undefined — produces "null" string
+    '@typescript-eslint/restrict-template-expressions': 'warn',
+    // `a + b` where both sides are not strings or numbers — type-unsafe coercion
+    '@typescript-eslint/restrict-plus-operands': 'warn',
+    // `await` on a value whose type has no `.then()` — wasted microtask
+    '@typescript-eslint/await-thenable': 'warn',
+    // `return await` vs `return` — matters for stack traces and try/catch
+    '@typescript-eslint/return-await': 'warn',
+    // Passing `obj.method` as a callback — loses `this` binding
+    '@typescript-eslint/unbound-method': 'warn',
+    // Using a deprecated type or function from your own codebase
+    '@typescript-eslint/no-deprecated': 'warn',
+    // Spreading a non-iterable, or into a non-object — type-level nonsense
+    '@typescript-eslint/no-misused-spread': 'warn',
+    // Mixing string and numeric enum members breaks reverse mapping
+    '@typescript-eslint/no-mixed-enums': 'warn',
+    // `` `${'string literal'}` `` — pointless template expression
+    '@typescript-eslint/no-unnecessary-template-expression': 'warn',
+    // `Number(x)` when x is already `number` — pure noise
+    '@typescript-eslint/no-unnecessary-type-conversion': 'warn',
+    // Duplicate constituents in a union (`string | string`)
+    '@typescript-eslint/no-duplicate-type-constituents': 'warn',
+    // Redundant constituents (`string & unknown` simplifies to `string`)
+    '@typescript-eslint/no-redundant-type-constituents': 'warn',
+    // `x === true` or `x === false` when `x` is already `boolean`
+    '@typescript-eslint/no-unnecessary-boolean-literal-compare': 'warn',
+    // Comparing enums from different types — always `false`
+    '@typescript-eslint/no-unsafe-enum-comparison': 'warn',
+    // Default `= undefined` when the type says the param is always passed
+    '@typescript-eslint/no-useless-default-assignment': 'warn',
+    // `x!` non-null assertion where the type already excludes null
+    '@typescript-eslint/non-nullable-type-assertion-style': 'warn',
+    // `void` operator used meaninglessly (`void console.log(x)`)
+    '@typescript-eslint/no-meaningless-void-operator': 'warn',
+    // Unnecessary namespace qualifier on a type that's already in scope
+    '@typescript-eslint/no-unnecessary-qualifier': 'warn',
+    // `Promise.reject(nonError)` — loses stack trace info
+    '@typescript-eslint/prefer-promise-reject-errors': 'warn',
+    // `arr.filter(fn)[0]` → `arr.find(fn)` — O(n) vs early-exit
+    '@typescript-eslint/prefer-find': 'warn',
+    // `arr.sort()` without a compare function — lexicographic sort of numbers
+    '@typescript-eslint/require-array-sort-compare': 'warn',
+    // Getters and setters should come in pairs when one exists
+    '@typescript-eslint/related-getter-setter-pairs': 'warn',
+    // Prefer nullish coalescing over `||` for null/undefined checks
+    '@typescript-eslint/prefer-nullish-coalescing': 'warn',
+    // `unknown` in catch callback variables rather than `any`
+    '@typescript-eslint/use-unknown-in-catch-callback-variable': 'warn',
+    // `String#match` over `RegExp#exec` when no global flag
+    '@typescript-eslint/prefer-regexp-exec': 'warn',
+    // `x.startsWith('a')` over `x[0] === 'a'` — clearer intent
+    '@typescript-eslint/prefer-string-starts-ends-with': 'warn',
+    // Return type of `.reduce()` should match the type parameter
+    '@typescript-eslint/prefer-reduce-type-parameter': 'warn',
+    // Returning `this` from a method should use `this` as the return type
+    '@typescript-eslint/prefer-return-this-type': 'warn',
+    // Explicit dot notation for property access when the key is a static name
+    '@typescript-eslint/dot-notation': 'warn',
+    // Consistent return — all code paths should return a value (or none)
+    '@typescript-eslint/consistent-return': 'warn',
+    // `export type { Foo }` over re-exporting types as values
+    '@typescript-eslint/consistent-type-exports': 'warn',
+
+    // -----------------------------------------------------------------------
     // style consistency — enforce one idiomatic pattern
     // -----------------------------------------------------------------------
     // Require `interface` over `type` for object types (or vice versa)
@@ -495,6 +570,30 @@ export default defineConfig({
       ],
       rules: {
         '@typescript-eslint/no-unnecessary-condition': 'off',
+      },
+    },
+
+    // nodelink.ts: intentional || undefined to normalize empty strings to undefined
+    {
+      files: ['packages/server/src/utils/nodelink.ts'],
+      rules: {
+        'prefer-nullish-coalescing': 'off',
+      },
+    },
+
+    // displayName.ts: intentional || for empty-string fallthrough chain
+    {
+      files: ['packages/server/src/lib/displayName.ts'],
+      rules: {
+        'prefer-nullish-coalescing': 'off',
+      },
+    },
+
+    // useSocket.ts: as WebSocket is clearer intent than !
+    {
+      files: ['packages/web/src/hooks/useSocket.ts'],
+      rules: {
+        'non-nullable-type-assertion-style': 'off',
       },
     },
   ],

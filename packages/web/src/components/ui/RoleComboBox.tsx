@@ -1,6 +1,6 @@
 import type React from 'react';
 
-import { CaretDown } from '@phosphor-icons/react';
+import { CaretDownIcon } from '@phosphor-icons/react';
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 interface RoleOption {
@@ -105,7 +105,7 @@ export default function RoleComboBox({
   // Click outside to close
   useEffect(() => {
     if (!isOpen) {
-      return;
+      return undefined;
     }
     const handler = (e: MouseEvent) => {
       if (
@@ -196,7 +196,7 @@ export default function RoleComboBox({
                      focus:outline-none focus:border-accent/50 focus:ring-1 focus:ring-accent/30
                      transition-colors'
         />
-        <CaretDown
+        <CaretDownIcon
           size={16}
           weight='bold'
           className='absolute right-3 top-1/2 -translate-y-1/2 text-muted pointer-events-none transition-transform'

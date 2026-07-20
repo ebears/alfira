@@ -525,7 +525,7 @@ async function handleAddToPriority(ctx: RouteContext, request: Request): Promise
   await player.addToPriorityQueue(queuedSong);
 
   return json({
-    message: `Added "${song.nickname || song.title}" to Up Next.`,
+    message: `Added "${song.nickname ?? song.title}" to Up Next.`,
     song: queuedSong,
   });
 }

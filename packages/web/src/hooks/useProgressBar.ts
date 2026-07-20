@@ -133,7 +133,7 @@ export function useProgressBar(
         }
       }
 
-      return;
+      return undefined;
     }
 
     // ---- Starting loops ----

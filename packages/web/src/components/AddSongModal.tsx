@@ -59,6 +59,7 @@ export default function AddSongModal({
       const id = setTimeout(() => onClose(), 1500);
       return () => clearTimeout(id);
     }
+    return undefined;
   }, [successMsg, onClose]);
 
   const handleFetch = useCallback(async () => {
@@ -351,10 +352,10 @@ export default function AddSongModal({
           <div className='flex flex-col gap-3'>
             {/* Thumbnail + title + duration + source */}
             <div className='flex items-center gap-3 -mb-1'>
-              {(preview.artworkUrl || preview.thumbnailUrl) && (
+              {(preview.artworkUrl ?? preview.thumbnailUrl) && (
                 <div className='w-12 h-12 rounded border border-border shrink-0 overflow-hidden bg-elevated'>
                   <ArtworkImage
-                    src={preview.artworkUrl || preview.thumbnailUrl}
+                    src={preview.artworkUrl ?? preview.thumbnailUrl}
                     alt='Album art'
                     className='w-full h-full'
                   />

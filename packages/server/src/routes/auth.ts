@@ -90,7 +90,7 @@ const ACCESS_COOKIE_NAME = 'session';
 const REFRESH_COOKIE_NAME = 'refresh_token';
 
 const REFRESH_TOKEN_MAX_AGE = (() => {
-  const match = REFRESH_TOKEN_EXPIRES_IN.match(/^(\d+)([dhms])$/);
+  const match = /^(\d+)([dhms])$/.exec(REFRESH_TOKEN_EXPIRES_IN);
   if (!match) {
     logger.warn(`Invalid JWT_EXPIRES_IN format "${REFRESH_TOKEN_EXPIRES_IN}", defaulting to 30d`);
     return 30 * 24 * 60 * 60 * 1000;

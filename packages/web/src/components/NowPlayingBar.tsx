@@ -444,7 +444,7 @@ const MetadataSection = memo(function MetadataSection({
     );
   }
 
-  const displayName = currentSong.nickname || currentSong.title;
+  const displayName = currentSong.nickname ?? currentSong.title;
   const sourceKey = getSourceKey(currentSong.sourceUrl);
   const songKey = currentSong.id;
 
@@ -678,7 +678,7 @@ export function NowPlayingBar() {
                 transition={metadataTransition}
               >
                 <p className='font-body text-sm font-semibold text-fg truncate text-right'>
-                  {currentSong.nickname || currentSong.title}
+                  {currentSong.nickname ?? currentSong.title}
                 </p>
                 {currentSong.artist && (
                   <p className='font-body text-xs text-muted truncate text-right'>

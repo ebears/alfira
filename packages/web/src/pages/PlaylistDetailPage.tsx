@@ -7,7 +7,7 @@ import {
   GhostIcon,
   LockIcon,
   LockOpenIcon,
-  PencilSimple,
+  PencilSimpleIcon,
   PlayCircleIcon,
   PlayIcon,
   PlusCircleIcon,
@@ -168,13 +168,13 @@ export default function PlaylistDetailPage() {
       switch (sort) {
         case 'title': {
           // Sort by display name: nickname if set, otherwise title
-          const aName = a.song.nickname || a.song.title || '';
-          const bName = b.song.nickname || b.song.title || '';
+          const aName = (a.song.nickname ?? a.song.title) || '';
+          const bName = (b.song.nickname ?? b.song.title) || '';
           return dir * aName.localeCompare(bName, undefined, { sensitivity: 'base' });
         }
         case 'artist': {
-          const aArt = a.song.artist || '';
-          const bArt = b.song.artist || '';
+          const aArt = a.song.artist ?? '';
+          const bArt = b.song.artist ?? '';
           if (!aArt && !bArt) {
             return 0;
           }
@@ -187,8 +187,8 @@ export default function PlaylistDetailPage() {
           return dir * aArt.localeCompare(bArt, undefined, { sensitivity: 'base' });
         }
         case 'album': {
-          const aAlb = a.song.album || '';
-          const bAlb = b.song.album || '';
+          const aAlb = a.song.album ?? '';
+          const bAlb = b.song.album ?? '';
           if (!aAlb && !bAlb) {
             return 0;
           }
@@ -628,7 +628,7 @@ export default function PlaylistDetailPage() {
           {
             id: 'rename',
             label: 'Rename',
-            icon: <PencilSimple size={14} weight='duotone' />,
+            icon: <PencilSimpleIcon size={14} weight='duotone' />,
             editSubmenu: {
               title: 'Rename',
               value: renameValue,
@@ -757,7 +757,7 @@ export default function PlaylistDetailPage() {
                 {' • '}
                 {isOwner
                   ? 'Created by you'
-                  : `Created by ${playlistDetail.createdByDisplayName || playlistDetail.createdBy}`}
+                  : `Created by ${playlistDetail.createdByDisplayName ?? playlistDetail.createdBy}`}
               </>
             )}
           </p>

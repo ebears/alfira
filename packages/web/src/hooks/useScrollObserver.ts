@@ -56,7 +56,7 @@ export function useScrollObserver(
   useEffect(() => {
     const el = elementRef.current;
     if (!el) {
-      return;
+      return undefined;
     }
 
     const onScroll = () => {
@@ -128,7 +128,7 @@ export function useScrollObserver(
   useLayoutEffect(() => {
     const el = elementRef.current;
     if (!el) {
-      return;
+      return undefined;
     }
 
     setHeight(el.clientHeight);

@@ -51,7 +51,7 @@ export default function UserMenu({ user, collapsed, onLogout }: UserMenuProps) {
   // Position before paint (useLayoutEffect) to avoid a (0,0) flash.
   useLayoutEffect(() => {
     if (!open) {
-      return;
+      return undefined;
     }
     updatePosition();
     window.addEventListener('resize', updatePosition);
@@ -65,7 +65,7 @@ export default function UserMenu({ user, collapsed, onLogout }: UserMenuProps) {
   // Close on click outside
   useEffect(() => {
     if (!open) {
-      return;
+      return undefined;
     }
     const handler = (e: MouseEvent | TouchEvent) => {
       const target = e.target as Node;
@@ -85,7 +85,7 @@ export default function UserMenu({ user, collapsed, onLogout }: UserMenuProps) {
   // Close on Escape
   useEffect(() => {
     if (!open) {
-      return;
+      return undefined;
     }
     const handler = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {

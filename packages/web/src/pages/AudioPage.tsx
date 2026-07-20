@@ -1,4 +1,4 @@
-import { ArrowsDownUp, SlidersHorizontal } from '@phosphor-icons/react';
+import { ArrowsDownUpIcon, SlidersHorizontalIcon } from '@phosphor-icons/react';
 
 import CompressorSection from '../components/settings/CompressorSection';
 import EqualizerSection from '../components/settings/EqualizerSection';
@@ -15,7 +15,7 @@ export default function AudioPage() {
   return (
     <div className='p-4 md:p-8 h-full overflow-y-auto'>
       <PageHeader
-        icon={SlidersHorizontal}
+        icon={SlidersHorizontalIcon}
         title='Audio'
         subtitle='Equalizer and compressor settings'
       />
@@ -33,7 +33,7 @@ export default function AudioPage() {
           {/* Equalizer */}
           <section className='mb-8 lg:mb-0'>
             <h2 className='font-mono text-xs text-muted uppercase tracking-wider mb-4 flex items-center gap-2'>
-              <SlidersHorizontal size={14} weight='duotone' />
+              <SlidersHorizontalIcon size={14} weight='duotone' />
               Equalizer
             </h2>
             <div className='bg-elevated clay-resting rounded-lg p-5'>
@@ -44,7 +44,7 @@ export default function AudioPage() {
           {/* Compressor */}
           <section>
             <h2 className='font-mono text-xs text-muted uppercase tracking-wider mb-4 flex items-center gap-2'>
-              <ArrowsDownUp size={14} weight='duotone' />
+              <ArrowsDownUpIcon size={14} weight='duotone' />
               Compressor
             </h2>
             <div className='bg-elevated clay-resting rounded-lg p-5'>

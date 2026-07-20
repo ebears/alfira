@@ -97,7 +97,7 @@ export default function AddSongsModal({
   useEffect(() => {
     const el = scrollRef.current;
     if (!el) {
-      return;
+      return undefined;
     }
     const check = () => {
       if (el.scrollHeight - el.scrollTop - el.clientHeight < 300) {
@@ -238,13 +238,13 @@ const SongRow = memo(function SongRow({
       <div className='overflow-hidden w-10 h-10 md:w-8 md:h-8 rounded border border-border shrink-0 bg-elevated'>
         <ArtworkImage
           src={song.artwork ?? song.thumbnailUrl}
-          alt={song.nickname || song.title}
+          alt={song.nickname ?? song.title}
           className='w-full h-full'
           imageClassName='scale-[1.33]'
         />
       </div>
       <span className='flex-1 font-body text-sm text-fg truncate'>
-        {song.nickname || song.title}
+        {song.nickname ?? song.title}
       </span>
       <span className='font-mono text-xs text-muted hidden sm:block'>
         {formatDuration(song.duration)}

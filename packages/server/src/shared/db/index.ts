@@ -17,8 +17,8 @@ if (!DATABASE_URL) {
 }
 
 const sqliteDb = new Database(DATABASE_URL, { create: true, strict: true });
-sqliteDb.exec('PRAGMA journal_mode=WAL;');
-sqliteDb.exec('PRAGMA foreign_keys=ON;');
+sqliteDb.run('PRAGMA journal_mode=WAL;');
+sqliteDb.run('PRAGMA foreign_keys=ON;');
 export const db = drizzle(sqliteDb, { schema });
 
 export type * from './schema';

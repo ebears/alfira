@@ -95,7 +95,7 @@ async function wrapBotCall<T>(
 
     // If it's a fetch error with response status, propagate the actual status
     if (error instanceof Error && error.message.startsWith('NodeLink REST')) {
-      const match = error.message.match(/NodeLink REST (\d+):/);
+      const match = /NodeLink REST (\d+):/.exec(error.message);
       if (match?.[1]) {
         const status = parseInt(match[1], 10);
         return { ok: false, response: json({ error: error.message }, status) };
@@ -173,7 +173,7 @@ export function validateNickname(nickname: unknown): ValidationResult<string | n
   if (nickname !== undefined && nickname !== null && typeof nickname !== 'string') {
     return { ok: false, response: json({ error: 'nickname must be a string.' }, 400) };
   }
-  const trimmed = nickname ? String(nickname).trim() || null : null;
+  const trimmed = nickname ? nickname.trim() || null : null;
   if (trimmed && trimmed.length > MAX_NICKNAME_LENGTH) {
     return {
       ok: false,

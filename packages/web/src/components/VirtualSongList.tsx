@@ -152,6 +152,7 @@ export const VirtualSongList = memo(function VirtualSongList({
     if (openSongId) {
       // Expand immediately — allocate space before the transition starts.
       setEffectiveOpenId(openSongId);
+      return undefined;
     } else {
       // Collapse: wait for the CSS transition to finish before releasing space.
       const timeout = setTimeout(() => setEffectiveOpenId(null), 300);

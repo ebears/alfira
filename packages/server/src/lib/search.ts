@@ -25,6 +25,7 @@ export function parseSongSortField(raw: string): SongSortField | null {
 // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Drizzle column refs are not assignable to SQL<unknown> but are valid sql`` interpolations
 type SqlInterpolatable = any;
 
+// eslint-disable-next-line typescript/consistent-return
 export function buildSongOrderBy(
   sortField: SongSortField,
   sortOrder: 'ASC' | 'DESC',
