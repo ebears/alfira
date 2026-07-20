@@ -145,12 +145,16 @@ const SongCardInner = ({
 
     return (
       <Card
-        hoverable={!!isAdminView && !selectionMode}
-        className={`rounded-lg flex flex-col${(isAdminView && !selectionMode) || selectionMode ? ' cursor-pointer' : ''}${selectionMode ? ' select-none hover:ring-2 hover:ring-accent/50' : ''}${!selectionMode ? ' group' : ''}`}
+        hoverable={!!isAdminView}
+        className={`rounded-lg flex flex-col relative${(isAdminView && !selectionMode) || selectionMode ? ' cursor-pointer' : ''}${selectionMode ? ` select-none${isSelected ? ' ring-2 ring-accent' : ' hover:ring-2 hover:ring-accent/50'}` : ''}${!selectionMode ? ' group' : ''}`}
         style={gridStyle}
         data-song-edit-container
         onClick={handleGridClick}
       >
+        {isSelected && (
+          <div className='absolute inset-0 bg-accent/20 pointer-events-none rounded-lg z-10' />
+        )}
+
         {/* Clean thumbnail */}
         <div className='relative aspect-square overflow-hidden rounded-lg border border-border m-3 mb-0 bg-elevated'>
           <ArtworkImage
@@ -161,11 +165,10 @@ const SongCardInner = ({
           />
           {/* Selection checkbox overlay */}
           {selectionMode && (
-            <div className='absolute top-2 left-2 z-10' onClick={handleCheckboxOverlayClick}>
+            <div className='absolute top-2 left-2 z-20' onClick={handleCheckboxOverlayClick}>
               <Checkbox checked={isSelected} onChange={handleToggleSelect} size='md' />
             </div>
           )}
-          {isSelected && <div className='absolute inset-0 bg-accent/20 pointer-events-none' />}
         </div>
 
         {/* Info */}
@@ -254,11 +257,15 @@ const SongCardInner = ({
 
   return (
     <Card
-      hoverable={!!isAdminView && !selectionMode}
-      className={`rounded-lg flex flex-col${selectionMode ? ' select-none hover:ring-2 hover:ring-accent/50' : ''}${isSelected ? ' ring-2 ring-accent' : ''}`}
+      hoverable={!!isAdminView}
+      className={`rounded-lg flex flex-col relative${selectionMode ? ' select-none hover:ring-2 hover:ring-accent/50' : ''}${isSelected ? ' ring-2 ring-accent' : ''}`}
       data-song-id={song.id}
       data-song-edit-container
     >
+      {isSelected && (
+        <div className='absolute inset-0 bg-accent/20 pointer-events-none rounded-lg z-10' />
+      )}
+
       <div
         role='button'
         tabIndex={canEdit || selectionMode ? 0 : -1}
@@ -271,7 +278,7 @@ const SongCardInner = ({
       >
         {/* Selection checkbox */}
         {selectionMode && (
-          <span onClick={handleCheckboxOverlayClick}>
+          <span className='relative z-20' onClick={handleCheckboxOverlayClick}>
             <Checkbox checked={isSelected} onChange={handleToggleSelect} size='md' />
           </span>
         )}

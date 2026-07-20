@@ -33,10 +33,12 @@ interface VirtualSongGridProps {
   onToggleSelect?: (id: string) => void;
 }
 
-/** Composite item passed to masonic so isPlaying changes trigger re-renders. */
+/** Composite item passed to masonic so state changes trigger re-renders. */
 interface GridSongItem {
   song: Song;
   isPlaying: boolean;
+  selectionMode: boolean;
+  isSelected: boolean;
 }
 
 // ---------------------------------------------------------------------------
@@ -131,14 +133,20 @@ export const VirtualSongGrid = memo(function VirtualSongGrid({
     [items.length, hasMore, isFetching, onFetchMore]
   );
 
-  // ── Grid items (song + playing state) ──────────────────────────────
-  // Bundling isPlaying into the item data lets masonic detect playingId
-  // changes as data changes and update cards in-place (same itemKey = no
-  // unmount/remount flash). The GridCard render component stays memoized
-  // with empty deps so its identity is stable across all re-renders.
+  // ── Grid items (song + dynamic state) ───────────────────────────────
+  // Bundling isPlaying / selectionMode / isSelected into the item data
+  // lets masonic detect changes and update cards in-place (same itemKey =
+  // no unmount/remount flash). The GridCard render component stays
+  // memoized with empty deps so its identity is stable across re-renders.
   const gridItems: GridSongItem[] = useMemo(
-    () => items.map((song) => ({ song, isPlaying: playingId === song.id })),
-    [items, playingId]
+    () =>
+      items.map((song) => ({
+        song,
+        isPlaying: playingId === song.id,
+        selectionMode,
+        isSelected: isSelected?.(song.id) ?? false,
+      })),
+    [items, playingId, selectionMode, isSelected]
   );
 
   // ── Grid card renderer (stable component identity via refs) ─────────
@@ -148,17 +156,15 @@ export const VirtualSongGrid = memo(function VirtualSongGrid({
   // producing a visible flash. We store dynamic props in a ref so the
   // component type identity never changes.
   //
-  // NB: playingId is NOT in the ref because it lives in gridItems (above);
-  // masonic re-renders individual cards when isPlaying flips without
-  // changing the render function identity.
+  // NB: playingId / selectionMode / isSelected live in gridItems (above);
+  // masonic re-renders individual cards when these flip without changing
+  // the render function identity. Callbacks and stable props go in the ref.
   const cardPropsRef = useRef({
     isAdminView,
     playlists,
     onDelete,
     onPlay,
     onAddToQueue,
-    selectionMode,
-    isSelected,
     onToggleSelect,
   });
   cardPropsRef.current = {
@@ -167,8 +173,6 @@ export const VirtualSongGrid = memo(function VirtualSongGrid({
     onDelete,
     onPlay,
     onAddToQueue,
-    selectionMode,
-    isSelected,
     onToggleSelect,
   };
 
@@ -176,7 +180,7 @@ export const VirtualSongGrid = memo(function VirtualSongGrid({
     const Component = ({
       index: _index,
       width,
-      data: { song, isPlaying },
+      data: { song, isPlaying, selectionMode: sel, isSelected: selSelected },
     }: {
       index: number;
       width: number;
@@ -194,8 +198,8 @@ export const VirtualSongGrid = memo(function VirtualSongGrid({
             onPlay={() => p.onPlay(song.id)}
             isPlaying={isPlaying}
             onAddToQueue={() => p.onAddToQueue(song.id)}
-            selectionMode={p.selectionMode}
-            isSelected={p.isSelected?.(song.id) ?? false}
+            selectionMode={sel}
+            isSelected={selSelected}
             onToggleSelect={p.onToggleSelect ? () => p.onToggleSelect?.(song.id) : undefined}
           />
         </div>
