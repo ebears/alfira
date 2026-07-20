@@ -64,7 +64,7 @@ const LIGHT_RESTING =
 const LIGHT_HOVERING =
   '0 4px 0 0 color-mix(in srgb, var(--color-surface) 60%, black), 0 4px 6px 0 rgba(0, 0, 0, 0.14), 0 0 1px 1px rgba(0, 0, 0, 0.1)';
 const LIGHT_PRESSING =
-  '0 1px 0 0 color-mix(in srgb, var(--color-surface) 80%, black), inset 0 2px 3px 0 rgba(0, 0, 0, 0.1), inset 0 1px 1px 0 rgba(0, 0, 0, 0.06)';
+  '0 1px 0 0 color-mix(in srgb, var(--color-surface) 80%, black), inset 0 2px 3px 0 rgba(0, 0, 0, 0.1), inset 0 -2px 3px 0 rgba(0, 0, 0, 0.08)';
 
 // ── Mode detection ─────────────────────────────────────────────────────
 
