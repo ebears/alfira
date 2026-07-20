@@ -181,7 +181,7 @@ export function useProgressBar(
       if (speed !== 1.0 && nlPos !== null && nlTime !== null && nlTime > 0) {
         return nlPos + (Date.now() - nlTime) * speed;
       }
-      return Date.now() - effectiveStart;
+      return (Date.now() - effectiveStart) * speed;
     };
 
     // rAF loop — directly sets style.width on registered progress bars and
