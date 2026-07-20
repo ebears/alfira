@@ -131,6 +131,7 @@ export function ClayPressable({
   depth = 'medium',
   disabled = false,
   className = '',
+  style: outerStyle,
   children,
   ...rest
 }: ClayPressableProps) {
@@ -206,6 +207,11 @@ export function ClayPressable({
     [disabled, preset.hoverY]
   );
 
+  const mergedStyle = useMemo(
+    () => Object.assign({}, outerStyle, clayStyle(clayState, mode)),
+    [outerStyle, clayState, mode]
+  );
+
   // ── Render ────────────────────────────────────────────────────────────
 
   const Component = Element === 'button' ? m.button : m.div;
@@ -215,7 +221,7 @@ export function ClayPressable({
     <Component
       ref={scope}
       className={className}
-      style={clayStyle(clayState, mode)}
+      style={mergedStyle}
       whileHover={whileHover}
       transition={claySpring}
       onHoverStart={handleHoverStart}
