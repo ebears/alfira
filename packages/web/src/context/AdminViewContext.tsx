@@ -51,6 +51,8 @@ export function AdminViewProvider({ children }: { children: React.ReactNode }) {
 
 export function useAdminView(): AdminViewContextValue {
   const ctx = useContext(AdminViewContext);
-  if (!ctx) throw new Error('useAdminView must be used inside AdminViewProvider');
+  if (!ctx) {
+    throw new Error('useAdminView must be used inside AdminViewProvider');
+  }
   return ctx;
 }

@@ -1,5 +1,5 @@
 import type { Playlist, Song } from '@alfira/server/shared';
-import type { FetchSongsOptions } from '@alfira/server/shared/api';
+import type { BulkEditData, FetchSongsOptions } from '@alfira/server/shared/api';
 import { MusicNotesIcon, QuestionIcon } from '@phosphor-icons/react';
 import { AnimatePresence } from 'motion/react';
 import * as m from 'motion/react-m';
@@ -118,13 +118,23 @@ export default function SongsPage() {
   // ── Build stable fetch options for the infinite scroll hook ─────────
   const songsOpts = useMemo<FetchSongsOptions>(() => {
     const opts: FetchSongsOptions = {};
-    if (search) opts.search = search;
-    if (sort !== 'createdAt') opts.sort = sort;
-    if (order !== 'desc') opts.order = order;
+    if (search) {
+      opts.search = search;
+    }
+    if (sort !== 'createdAt') {
+      opts.sort = sort;
+    }
+    if (order !== 'desc') {
+      opts.order = order;
+    }
     const tagsParam = filterTags.join(',');
     const sourceParam = filterSources.join(',');
-    if (tagsParam) opts.tags = tagsParam;
-    if (sourceParam) opts.source = sourceParam;
+    if (tagsParam) {
+      opts.tags = tagsParam;
+    }
+    if (sourceParam) {
+      opts.source = sourceParam;
+    }
     return opts;
   }, [search, sort, order, filterTags, filterSources]);
 
@@ -156,23 +166,35 @@ export default function SongsPage() {
           const aArt = a.artist ?? '';
           const bArt = b.artist ?? '';
           // nulls last, regardless of direction
-          if (!aArt && !bArt) return 0;
-          if (!aArt) return dir;
-          if (!bArt) return -dir;
+          if (!aArt && !bArt) {
+            return 0;
+          }
+          if (!aArt) {
+            return dir;
+          }
+          if (!bArt) {
+            return -dir;
+          }
           return dir * aArt.localeCompare(bArt, undefined, { sensitivity: 'base' });
         }
         case 'album': {
           const aAlb = a.album ?? '';
           const bAlb = b.album ?? '';
-          if (!aAlb && !bAlb) return 0;
-          if (!aAlb) return dir;
-          if (!bAlb) return -dir;
+          if (!aAlb && !bAlb) {
+            return 0;
+          }
+          if (!aAlb) {
+            return dir;
+          }
+          if (!bAlb) {
+            return -dir;
+          }
           return dir * aAlb.localeCompare(bAlb, undefined, { sensitivity: 'base' });
         }
         case 'duration':
           return dir * ((a.duration ?? 0) - (b.duration ?? 0));
-        default:
-          // createdAt — newest first for desc, oldest first for asc
+        case 'createdAt':
+          // newest first for desc, oldest first for asc
           return dir * (new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
       }
     };
@@ -243,7 +265,9 @@ export default function SongsPage() {
   }, []);
 
   const executeBulkDelete = useCallback(async () => {
-    if (bulk.count === 0) return;
+    if (bulk.count === 0) {
+      return;
+    }
     setBulkDeleteConfirm(false);
     setBulkDeleting(true);
     try {
@@ -266,8 +290,10 @@ export default function SongsPage() {
   }, [bulk, removeItem, notify]);
 
   const handleBulkEdit = useCallback(
-    async (data: import('@alfira/server/shared/api').BulkEditData) => {
-      if (bulk.count === 0) return;
+    async (data: BulkEditData) => {
+      if (bulk.count === 0) {
+        return;
+      }
       setBulkEditingApplying(true);
       try {
         const allIds = [...bulk.selectedIds];
@@ -361,14 +387,18 @@ export default function SongsPage() {
         filterSources={filterSources}
         onAddTag={(tag) => {
           const normalized = tag.toLowerCase();
-          if (filterTags.includes(normalized)) return;
+          if (filterTags.includes(normalized)) {
+            return;
+          }
           updateParam('tags', [...filterTags, normalized].join(','));
         }}
         onRemoveTag={(tag) =>
           updateParam('tags', filterTags.filter((t) => t !== tag).join(',') || null)
         }
         onAddSource={(s) => {
-          if (filterSources.includes(s)) return;
+          if (filterSources.includes(s)) {
+            return;
+          }
           updateParam('source', [...filterSources, s].join(','));
         }}
         onRemoveSource={(s) =>
@@ -377,7 +407,9 @@ export default function SongsPage() {
         showBulkToggle={canBulk}
         selectionMode={selectionMode}
         onToggleSelectionMode={() => {
-          if (selectionMode) bulk.clearAll();
+          if (selectionMode) {
+            bulk.clearAll();
+          }
           setSelectionMode((v) => !v);
         }}
         viewMode={viewMode}
@@ -542,7 +574,9 @@ function DeleteConfirmDialog({
   onConfirm: () => void;
   onCancel: () => void;
 }) {
-  if (!song) return null;
+  if (!song) {
+    return null;
+  }
   return (
     <ConfirmModal
       title='Delete Song'

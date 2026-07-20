@@ -56,7 +56,9 @@ const TagTicker = memo(({ tags, isHovered: externalHovered }: TagTickerProps) =>
 
   // Smooth return on de-hover: pause animation at current position, then transition back to 0
   useLayoutEffect(() => {
-    if (!shouldScroll) return;
+    if (!shouldScroll) {
+      return;
+    }
 
     const prev = prevHoveredRef.current;
     prevHoveredRef.current = effectiveHovered;
@@ -64,7 +66,9 @@ const TagTicker = memo(({ tags, isHovered: externalHovered }: TagTickerProps) =>
     if (prev && !effectiveHovered) {
       // De-hovered: capture paused position and transition back to start
       const el = innerRef.current;
-      if (!el) return;
+      if (!el) {
+        return;
+      }
 
       const computed = getComputedStyle(el);
       const matrix = new DOMMatrixReadOnly(computed.transform);
@@ -102,7 +106,9 @@ const TagTicker = memo(({ tags, isHovered: externalHovered }: TagTickerProps) =>
     }
   }, [effectiveHovered, shouldScroll]);
 
-  if (dedupedTags.length === 0) return null;
+  if (dedupedTags.length === 0) {
+    return null;
+  }
 
   const animationStyle: React.CSSProperties = shouldScroll
     ? {
@@ -126,10 +132,14 @@ const TagTicker = memo(({ tags, isHovered: externalHovered }: TagTickerProps) =>
         }),
       }}
       onMouseEnter={() => {
-        if (externalHovered === undefined) setIsHovered(true);
+        if (externalHovered === undefined) {
+          setIsHovered(true);
+        }
       }}
       onMouseLeave={() => {
-        if (externalHovered === undefined) setIsHovered(false);
+        if (externalHovered === undefined) {
+          setIsHovered(false);
+        }
       }}
     >
       <div className='flex gap-1' ref={innerRef} style={animationStyle}>

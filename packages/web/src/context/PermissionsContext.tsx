@@ -66,6 +66,8 @@ export function PermissionsProvider({ children }: { children: React.ReactNode })
 
 export function usePermissions(): PermissionsContextValue {
   const ctx = useContext(PermissionsContext);
-  if (!ctx) throw new Error('usePermissions must be used inside PermissionsProvider');
+  if (!ctx) {
+    throw new Error('usePermissions must be used inside PermissionsProvider');
+  }
   return ctx;
 }

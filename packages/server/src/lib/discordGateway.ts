@@ -319,7 +319,9 @@ export class DiscordGateway {
   }
 
   private sendIdentify(): void {
-    if (!this.ws || this.ws.readyState !== WebSocket.OPEN) return;
+    if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
+      return;
+    }
 
     this.ws.send(
       JSON.stringify({
@@ -359,7 +361,9 @@ export class DiscordGateway {
   }
 
   private sendHeartbeat(): void {
-    if (!this.ws || this.ws.readyState !== WebSocket.OPEN) return;
+    if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
+      return;
+    }
 
     // If the last heartbeat wasn't acked, connection is zombie — force reconnect.
     if (!this.lastHeartbeatAck) {

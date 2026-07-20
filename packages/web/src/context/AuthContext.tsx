@@ -27,7 +27,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const isAuthChecking = useRef(false);
 
   const refetch = useCallback(async () => {
-    if (isAuthChecking.current) return;
+    if (isAuthChecking.current) {
+      return;
+    }
     isAuthChecking.current = true;
 
     try {
@@ -80,6 +82,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
 export function useAuth(): AuthContextValue {
   const ctx = useContext(AuthContext);
-  if (!ctx) throw new Error('useAuth must be used inside AuthProvider');
+  if (!ctx) {
+    throw new Error('useAuth must be used inside AuthProvider');
+  }
   return ctx;
 }

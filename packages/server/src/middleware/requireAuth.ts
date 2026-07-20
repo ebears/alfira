@@ -7,7 +7,9 @@ import type { User } from '../shared';
  */
 export function verifySessionToken(token: string): User | null {
   const { JWT_SECRET } = process.env;
-  if (!JWT_SECRET) return null;
+  if (!JWT_SECRET) {
+    return null;
+  }
 
   return verify<User>(token, JWT_SECRET);
 }

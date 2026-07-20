@@ -43,10 +43,16 @@ function formatRequest(row: typeof requestTable.$inferSelect): SongRequest {
 }
 
 async function userCanAutoApprove(ctx: RouteContext): Promise<boolean> {
-  if (ctx.isAdmin) return true;
-  if (!ctx.user) return false;
+  if (ctx.isAdmin) {
+    return true;
+  }
+  if (!ctx.user) {
+    return false;
+  }
   const userRoles = ctx.user.roles ?? [];
-  if (userRoles.length === 0) return false;
+  if (userRoles.length === 0) {
+    return false;
+  }
 
   const rows = await db
     .select({ roleId: tables.rolePermission.roleId })
@@ -65,7 +71,9 @@ async function userCanAutoApprove(ctx: RouteContext): Promise<boolean> {
 // ---------------------------------------------------------------------------
 async function handlePreviewRequest(ctx: RouteContext, request: Request): Promise<Response> {
   const guards = checkGuards(ctx);
-  if (guards instanceof Response) return guards;
+  if (guards instanceof Response) {
+    return guards;
+  }
 
   let body: { url?: unknown };
   try {
@@ -75,7 +83,9 @@ async function handlePreviewRequest(ctx: RouteContext, request: Request): Promis
   }
 
   const urlResult = validateSourceUrl(body.url);
-  if (!urlResult.ok) return urlResult.response;
+  if (!urlResult.ok) {
+    return urlResult.response;
+  }
   let url = urlResult.value;
 
   // Strip any ?list=... query param for single-track preview
@@ -91,7 +101,9 @@ async function handlePreviewRequest(ctx: RouteContext, request: Request): Promis
 
   if (isPlaylist) {
     const playlistResult = await fetchPlaylistMetadata(url, 100);
-    if (!playlistResult.ok) return playlistResult.response;
+    if (!playlistResult.ok) {
+      return playlistResult.response;
+    }
     const pm = playlistResult.value;
 
     const playlistThumb = pm.videos[0]?.thumbnailUrl ?? '';
@@ -114,7 +126,9 @@ async function handlePreviewRequest(ctx: RouteContext, request: Request): Promis
   }
 
   const metadataResult = await fetchSourceMetadata(url);
-  if (!metadataResult.ok) return metadataResult.response;
+  if (!metadataResult.ok) {
+    return metadataResult.response;
+  }
   const metadata = metadataResult.value;
 
   const [existing] = await db
@@ -150,7 +164,9 @@ async function handlePreviewRequest(ctx: RouteContext, request: Request): Promis
 // ---------------------------------------------------------------------------
 async function handleCreateRequest(ctx: RouteContext, request: Request): Promise<Response> {
   const guards = checkGuards(ctx);
-  if (guards instanceof Response) return guards;
+  if (guards instanceof Response) {
+    return guards;
+  }
   const { user } = guards;
 
   let body: {
@@ -172,23 +188,33 @@ async function handleCreateRequest(ctx: RouteContext, request: Request): Promise
   const notifyDm = body.notifyDm === true;
 
   const nicknameResult = validateNickname(body.nickname);
-  if (!nicknameResult.ok) return nicknameResult.response;
+  if (!nicknameResult.ok) {
+    return nicknameResult.response;
+  }
 
   const artist = validateOptionalString(body.artist);
   const album = validateOptionalString(body.album);
 
   const artworkResult = validateArtworkUrl(body.artwork);
-  if (!artworkResult.ok) return artworkResult.response;
+  if (!artworkResult.ok) {
+    return artworkResult.response;
+  }
 
   const tagsResult = validateTags(body.tags);
-  if (!tagsResult.ok) return tagsResult.response;
+  if (!tagsResult.ok) {
+    return tagsResult.response;
+  }
 
   const volumeBoostResult = validateVolumeBoost(body.volumeBoost);
-  if (!volumeBoostResult.ok) return volumeBoostResult.response;
+  if (!volumeBoostResult.ok) {
+    return volumeBoostResult.response;
+  }
   const volumeBoost = volumeBoostResult.value !== undefined ? volumeBoostResult.value : null;
 
   const urlResult = validateSourceUrl(body.sourceUrl);
-  if (!urlResult.ok) return urlResult.response;
+  if (!urlResult.ok) {
+    return urlResult.response;
+  }
   const originalUrl = urlResult.value;
 
   // Strip any ?list=... query param so YouTube video URLs with a playlist
@@ -213,7 +239,9 @@ async function handleCreateRequest(ctx: RouteContext, request: Request): Promise
   // --- Playlist request ---
   if (isPlaylist) {
     const playlistResult = await fetchPlaylistMetadata(url, 100);
-    if (!playlistResult.ok) return playlistResult.response;
+    if (!playlistResult.ok) {
+      return playlistResult.response;
+    }
     const pm = playlistResult.value;
 
     if (autoApprove) {
@@ -377,7 +405,9 @@ async function handleCreateRequest(ctx: RouteContext, request: Request): Promise
 
   // --- Track request ---
   const metadataResult = await fetchSourceMetadata(url);
-  if (!metadataResult.ok) return metadataResult.response;
+  if (!metadataResult.ok) {
+    return metadataResult.response;
+  }
   const metadata = metadataResult.value;
 
   // Check duplicates: Song table
@@ -519,7 +549,9 @@ async function handleCreateRequest(ctx: RouteContext, request: Request): Promise
 // ---------------------------------------------------------------------------
 async function handleGetRequests(ctx: RouteContext, request: Request): Promise<Response> {
   const guards = checkGuards(ctx);
-  if (guards instanceof Response) return guards;
+  if (guards instanceof Response) {
+    return guards;
+  }
   const { user } = guards;
 
   const url = new URL(request.url);
@@ -589,7 +621,9 @@ async function handlePatchRequest(
 ): Promise<Response> {
   const { id } = params;
   const guards = checkGuards(ctx, { admin: true });
-  if (guards instanceof Response) return guards;
+  if (guards instanceof Response) {
+    return guards;
+  }
   const { user } = guards;
 
   let body: { status?: unknown };
@@ -812,7 +846,9 @@ async function handleDeleteRequest(
 ): Promise<Response> {
   const { id } = params;
   const guards = checkGuards(ctx);
-  if (guards instanceof Response) return guards;
+  if (guards instanceof Response) {
+    return guards;
+  }
   const { user } = guards;
 
   const [existing] = await db.select().from(requestTable).where(eq(requestTable.id, id)).limit(1);

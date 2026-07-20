@@ -5,7 +5,9 @@ const DISCORD_API = 'https://discord.com/api/v10';
 
 export function botHeaders(): Record<string, string> {
   const token = process.env.DISCORD_BOT_TOKEN;
-  if (!token) throw new Error('DISCORD_BOT_TOKEN not set');
+  if (!token) {
+    throw new Error('DISCORD_BOT_TOKEN not set');
+  }
   return { Authorization: `Bot ${token}` };
 }
 
@@ -47,12 +49,12 @@ export async function fetchGuildRoles(guildId: string): Promise<SetupRole[]> {
       return [];
     }
 
-    const roles = (await res.json()) as Array<{
+    const roles = (await res.json()) as {
       id: string;
       name: string;
       color: number;
       managed: boolean;
-    }>;
+    }[];
 
     const result: SetupRole[] = roles
       .filter((r) => r.id !== guildId && !r.managed)

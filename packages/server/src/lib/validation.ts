@@ -38,7 +38,9 @@ function validateUrlInput(sourceUrl: unknown): ValidationResult<string> {
 /** Validates a source URL for single video endpoints. */
 export function validateSourceUrl(sourceUrl: unknown): ValidationResult<string> {
   const result = validateUrlInput(sourceUrl);
-  if (!result.ok) return result;
+  if (!result.ok) {
+    return result;
+  }
 
   if (!isValidSourceUrl(result.value)) {
     const names = getEnabledSourceDisplayNames();
@@ -55,7 +57,9 @@ export function validateSourceUrl(sourceUrl: unknown): ValidationResult<string> 
 /** Validates a playlist URL. */
 export function validatePlaylistUrl(playlistUrl: unknown): ValidationResult<string> {
   const result = validateUrlInput(playlistUrl);
-  if (!result.ok) return result;
+  if (!result.ok) {
+    return result;
+  }
 
   if (!isPlaylistUrl(result.value)) {
     const names = getEnabledSourceDisplayNames();
@@ -178,21 +182,31 @@ export function validateNickname(nickname: unknown): ValidationResult<string | n
 
 /** Validates an optional string field. Trims and returns null if empty. */
 export function validateOptionalString(value: unknown): string | null {
-  if (value === undefined || value === null) return null;
-  if (typeof value !== 'string') return null;
+  if (value === undefined || value === null) {
+    return null;
+  }
+  if (typeof value !== 'string') {
+    return null;
+  }
   const trimmed = value.trim();
   return trimmed.length === 0 ? null : trimmed;
 }
 
 /** Validates an artwork URL. Trims and checks it's a valid URL if non-empty. */
 export function validateArtworkUrl(value: unknown): ValidationResult<string | null> {
-  if (value === undefined || value === null) return { ok: true, value: null };
-  if (typeof value !== 'string')
+  if (value === undefined || value === null) {
+    return { ok: true, value: null };
+  }
+  if (typeof value !== 'string') {
     return { ok: false, response: json({ error: 'artwork must be a string.' }, 400) };
+  }
   const trimmed = value.trim();
-  if (trimmed.length === 0) return { ok: true, value: null };
-  if (trimmed.length > MAX_URL_LENGTH)
+  if (trimmed.length === 0) {
+    return { ok: true, value: null };
+  }
+  if (trimmed.length > MAX_URL_LENGTH) {
     return { ok: false, response: json({ error: 'artwork URL is too long.' }, 400) };
+  }
   try {
     new URL(trimmed);
   } catch {
@@ -203,9 +217,12 @@ export function validateArtworkUrl(value: unknown): ValidationResult<string | nu
 
 /** Validates tags: ensure string[], trim each, deduplicate */
 export function validateTags(value: unknown): ValidationResult<string[]> {
-  if (value === undefined || value === null) return { ok: true, value: [] };
-  if (!Array.isArray(value))
+  if (value === undefined || value === null) {
+    return { ok: true, value: [] };
+  }
+  if (!Array.isArray(value)) {
     return { ok: false, response: json({ error: 'tags must be an array.' }, 400) };
+  }
   const trimmed = value
     .filter((t): t is string => typeof t === 'string' && t.trim().length > 0)
     .map((t) => t.replace(/\s+/g, '-').trim());
@@ -222,8 +239,12 @@ export function validateTags(value: unknown): ValidationResult<string[]> {
 export function validateVolumeBoost(
   value: unknown
 ): { ok: true; value: number | null | undefined } | { ok: false; response: Response } {
-  if (value === undefined) return { ok: true, value: undefined };
-  if (value === null) return { ok: true, value: null };
+  if (value === undefined) {
+    return { ok: true, value: undefined };
+  }
+  if (value === null) {
+    return { ok: true, value: null };
+  }
   if (typeof value !== 'number' || !Number.isInteger(value)) {
     return {
       ok: false,

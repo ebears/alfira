@@ -21,7 +21,9 @@ export function useMutationHandler(action: () => Promise<void>, errorMessage: st
   const { notify } = useNotification();
 
   const handler = useCallback(async () => {
-    if (busyRef.current) return;
+    if (busyRef.current) {
+      return;
+    }
     busyRef.current = true;
     setBusy(true);
     try {

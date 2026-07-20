@@ -10,7 +10,9 @@ export const VolumeBoostBadge = memo(function VolumeBoostBadge({
   volumeBoost,
   className = '',
 }: VolumeBoostBadgeProps) {
-  if (volumeBoost == null || volumeBoost === 0) return null;
+  if (volumeBoost == null || volumeBoost === 0) {
+    return null;
+  }
 
   const isBoost = volumeBoost > 0;
   return (

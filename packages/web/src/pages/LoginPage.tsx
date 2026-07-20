@@ -10,10 +10,14 @@ export default function LoginPage() {
 
   // If already authenticated, go straight to songs.
   useEffect(() => {
-    if (!loading && user) void navigate('/songs', { replace: true });
+    if (!loading && user) {
+      void navigate('/songs', { replace: true });
+    }
   }, [user, loading, navigate]);
 
-  if (loading) return null;
+  if (loading) {
+    return null;
+  }
 
   return (
     <div className='min-h-screen bg-elevated flex items-center justify-center relative overflow-hidden'>

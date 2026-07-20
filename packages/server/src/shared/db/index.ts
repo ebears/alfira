@@ -50,7 +50,9 @@ export async function findPlaylistWithSongs(playlistId: string) {
     .leftJoin(schema.song, eq(schema.song.id, schema.playlistSong.songId))
     .where(eq(schema.playlist.id, playlistId));
 
-  if (result.length === 0) return null;
+  if (result.length === 0) {
+    return null;
+  }
 
   const songs = result
     .filter((r) => r.PlaylistSong !== null && r.Song !== null)

@@ -228,13 +228,19 @@ const Scrubber = memo(function Scrubber({
   // Bypasses React + rAF entirely — immediate, jank-free visual feedback.
   const seekElements = useCallback((trackPct: number) => {
     const pctStr = `${trackPct * 100}%`;
-    if (fillRef.current) fillRef.current.style.width = pctStr;
-    if (thumbRef.current) thumbRef.current.style.left = pctStr;
+    if (fillRef.current) {
+      fillRef.current.style.width = pctStr;
+    }
+    if (thumbRef.current) {
+      thumbRef.current.style.left = pctStr;
+    }
   }, []);
 
   const handlePointerMove = useCallback(
     (e: PointerEvent) => {
-      if (!isDraggingRef.current || !trackRef.current) return;
+      if (!isDraggingRef.current || !trackRef.current) {
+        return;
+      }
       const rect = trackRef.current.getBoundingClientRect();
       const trackPct = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
       const seekSec = Math.round(trackPct * duration);
@@ -246,7 +252,9 @@ const Scrubber = memo(function Scrubber({
   );
 
   const handlePointerUp = useCallback(() => {
-    if (!isDraggingRef.current) return;
+    if (!isDraggingRef.current) {
+      return;
+    }
     isDraggingRef.current = false;
     document.removeEventListener('pointermove', handlePointerMove);
     document.removeEventListener('pointerup', handlePointerUp);
@@ -257,7 +265,9 @@ const Scrubber = memo(function Scrubber({
 
   const handlePointerDown = useCallback(
     (e: React.PointerEvent) => {
-      if (!isSeekable) return;
+      if (!isSeekable) {
+        return;
+      }
       e.currentTarget.setPointerCapture(e.pointerId);
       isDraggingRef.current = true;
       if (trackRef.current) {
@@ -306,7 +316,9 @@ const Scrubber = memo(function Scrubber({
       <div
         ref={(ref) => {
           thumbRef.current = ref;
-          if (ref) registerThumb(ref);
+          if (ref) {
+            registerThumb(ref);
+          }
         }}
         className='scrubber-thumb absolute top-1/2 -translate-y-1/2 w-3.5 h-3.5 rounded-full bg-surface border-2 border-accent opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity'
       />
@@ -499,8 +511,11 @@ export function NowPlayingBar() {
   );
   const { busy: shuffleBusy, handler: handleShuffleToggle } = useMutationHandler(
     useCallback(async () => {
-      if (isShuffled) await unshuffle();
-      else await shuffle();
+      if (isShuffled) {
+        await unshuffle();
+      } else {
+        await shuffle();
+      }
     }, [isShuffled, shuffle, unshuffle]),
     'Could not toggle shuffle.'
   );

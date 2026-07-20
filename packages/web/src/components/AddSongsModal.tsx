@@ -60,15 +60,21 @@ export default function AddSongsModal({
 
   // Debounce search input
   useEffect(() => {
-    if (timerRef.current) clearTimeout(timerRef.current);
+    if (timerRef.current) {
+      clearTimeout(timerRef.current);
+    }
     timerRef.current = setTimeout(() => setDebouncedSearch(search), 200);
     return () => {
-      if (timerRef.current) clearTimeout(timerRef.current);
+      if (timerRef.current) {
+        clearTimeout(timerRef.current);
+      }
     };
   }, [search]);
 
   const loadMore = useCallback(() => {
-    if (!hasMoreRef.current || loadingMoreRef.current) return;
+    if (!hasMoreRef.current || loadingMoreRef.current) {
+      return;
+    }
     loadingMoreRef.current = true;
     setLoadingMore(true);
     const nextPage = pageRef.current + 1;
@@ -89,7 +95,9 @@ export default function AddSongsModal({
   // Check near-bottom on scroll
   useEffect(() => {
     const el = scrollRef.current;
-    if (!el) return;
+    if (!el) {
+      return;
+    }
     const check = () => {
       if (el.scrollHeight - el.scrollTop - el.clientHeight < 300) {
         loadMore();
@@ -162,7 +170,9 @@ export default function AddSongsModal({
             >
               {virtualizer.getVirtualItems().map((virtualRow) => {
                 const song = songs[virtualRow.index];
-                if (song == null) return null;
+                if (song == null) {
+                  return null;
+                }
                 const isAdded = added.has(song.id);
                 const isAdding = adding.has(song.id);
                 return (

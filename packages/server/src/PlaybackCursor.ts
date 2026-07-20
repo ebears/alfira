@@ -132,7 +132,9 @@ export class PlaybackCursor<T> {
    * ensuring they play after all existing items.
    */
   append(...items: T[]): void {
-    if (items.length === 0) return;
+    if (items.length === 0) {
+      return;
+    }
 
     const startIndex = this.buffer.length;
     this.buffer.push(...items);
@@ -177,7 +179,9 @@ export class PlaybackCursor<T> {
 
     for (let i = 0; i < this.buffer.length; i++) {
       const item = this.buffer[i];
-      if (item === undefined) continue;
+      if (item === undefined) {
+        continue;
+      }
       if (predicate(item)) {
         removed.push(item);
       } else {
@@ -186,12 +190,16 @@ export class PlaybackCursor<T> {
       }
     }
 
-    if (removed.length === 0) return [];
+    if (removed.length === 0) {
+      return [];
+    }
 
     // Adjust readIndex: count removed items before it
     let removedBefore = 0;
     for (let i = 0; i < this.readIndex; i++) {
-      if (!oldToNewIndex.has(i)) removedBefore++;
+      if (!oldToNewIndex.has(i)) {
+        removedBefore++;
+      }
     }
     this.readIndex = Math.max(0, this.readIndex - removedBefore);
 

@@ -131,10 +131,16 @@ function buildCookieHeader(
 ): string {
   const parts = [`${name}=${value}`];
   parts.push(`Path=/`);
-  if (options.httpOnly !== false) parts.push('HttpOnly');
+  if (options.httpOnly !== false) {
+    parts.push('HttpOnly');
+  }
   parts.push(`SameSite=${options.sameSite ?? 'lax'}`);
-  if (options.secure ?? isProduction) parts.push('Secure');
-  if (options.maxAge !== undefined) parts.push(`Max-Age=${Math.floor(options.maxAge / 1000)}`);
+  if (options.secure ?? isProduction) {
+    parts.push('Secure');
+  }
+  if (options.maxAge !== undefined) {
+    parts.push(`Max-Age=${Math.floor(options.maxAge / 1000)}`);
+  }
   return parts.join('; ');
 }
 
@@ -156,7 +162,9 @@ function authRateLimit(ip: string): boolean {
     authLimiterStore.set(key, { count: 1, resetAt: now + 15 * 60 * 1000 });
     return true;
   }
-  if (entry.count >= 20) return false;
+  if (entry.count >= 20) {
+    return false;
+  }
   entry.count++;
   return true;
 }
@@ -168,7 +176,9 @@ function authRateLimit(ip: string): boolean {
 /** Fetches guild member roles. Returns 'not-in-guild' on 404, null on other errors. */
 async function fetchGuildMemberRoles(discordId: string): Promise<string[] | null | 'not-in-guild'> {
   const guildId = getGuildId();
-  if (!guildId) return null; // guild not configured yet
+  if (!guildId) {
+    return null;
+  } // guild not configured yet
 
   try {
     const memberRes = await fetch(
@@ -203,7 +213,9 @@ async function fetchDiscordUserProfile(
     const res = await fetch(`https://discord.com/api/users/${discordId}`, {
       headers: { Authorization: `Bot ${DISCORD_BOT_TOKEN_}` },
     });
-    if (!res.ok) return null;
+    if (!res.ok) {
+      return null;
+    }
     const data = (await res.json()) as { username: string; avatar: string | null };
     return {
       username: data.username,
@@ -231,7 +243,9 @@ async function fetchUserAdminStatus(
     const { username, avatar } = userData;
 
     const roles = await fetchGuildMemberRoles(discordId);
-    if (roles === null || roles === 'not-in-guild') return null;
+    if (roles === null || roles === 'not-in-guild') {
+      return null;
+    }
 
     return {
       isAdmin: isAdminUser(roles),
@@ -318,8 +332,12 @@ async function generateAndStoreTokens(
       : null,
     isAdmin,
   };
-  if (opts.isSetupAdmin) payload.isSetupAdmin = true;
-  if (opts.roles) payload.roles = opts.roles;
+  if (opts.isSetupAdmin) {
+    payload.isSetupAdmin = true;
+  }
+  if (opts.roles) {
+    payload.roles = opts.roles;
+  }
   const accessToken = generateAccessToken(payload);
   const refreshToken = generateRefreshToken(discordUser.id);
 
@@ -626,8 +644,12 @@ async function handleRefresh(
     avatar,
     isAdmin,
   };
-  if (isSetupAdmin) payload.isSetupAdmin = true;
-  if (roles) payload.roles = roles;
+  if (isSetupAdmin) {
+    payload.isSetupAdmin = true;
+  }
+  if (roles) {
+    payload.roles = roles;
+  }
   const newAccessToken = generateAccessToken(payload);
   const newRefreshToken = generateRefreshToken(decoded.discordId);
 

@@ -170,7 +170,9 @@ export default function QueuePanel({
   const handleMoveUp = useCallback(
     (targetQueue: QueuedSong[], songId: string, target: 'queue' | 'priority') => {
       const idx = targetQueue.findIndex((s) => s.id === songId);
-      if (idx <= 0) return;
+      if (idx <= 0) {
+        return;
+      }
       const newOrder = [...targetQueue];
       const a = newOrder[idx];
       const b = newOrder[idx - 1];
@@ -189,7 +191,9 @@ export default function QueuePanel({
   const handleMoveDown = useCallback(
     (targetQueue: QueuedSong[], songId: string, target: 'queue' | 'priority') => {
       const idx = targetQueue.findIndex((s) => s.id === songId);
-      if (idx < 0 || idx >= targetQueue.length - 1) return;
+      if (idx < 0 || idx >= targetQueue.length - 1) {
+        return;
+      }
       const newOrder = [...targetQueue];
       const a = newOrder[idx];
       const b = newOrder[idx + 1];
@@ -208,10 +212,14 @@ export default function QueuePanel({
   const handleMoveToTop = useCallback(
     (targetQueue: QueuedSong[], songId: string, target: 'queue' | 'priority') => {
       const idx = targetQueue.findIndex((s) => s.id === songId);
-      if (idx <= 0) return;
+      if (idx <= 0) {
+        return;
+      }
       const newOrder = [...targetQueue];
       const [item] = newOrder.splice(idx, 1);
-      if (item) newOrder.unshift(item);
+      if (item) {
+        newOrder.unshift(item);
+      }
       void reorderQueue(
         newOrder.map((s) => s.id),
         target
@@ -223,10 +231,14 @@ export default function QueuePanel({
   const handleMoveToBottom = useCallback(
     (targetQueue: QueuedSong[], songId: string, target: 'queue' | 'priority') => {
       const idx = targetQueue.findIndex((s) => s.id === songId);
-      if (idx < 0 || idx >= targetQueue.length - 1) return;
+      if (idx < 0 || idx >= targetQueue.length - 1) {
+        return;
+      }
       const newOrder = [...targetQueue];
       const [item] = newOrder.splice(idx, 1);
-      if (item) newOrder.push(item);
+      if (item) {
+        newOrder.push(item);
+      }
       void reorderQueue(
         newOrder.map((s) => s.id),
         target
@@ -357,7 +369,9 @@ export default function QueuePanel({
           >
             {virtualizer.getVirtualItems().map((virtualRow) => {
               const item = virtualItems[virtualRow.index];
-              if (item == null) return null;
+              if (item == null) {
+                return null;
+              }
 
               if (item.type === 'header') {
                 return (
@@ -520,7 +534,9 @@ const QueueSongItem = memo(function QueueSongItem({
   const isLast = index >= targetQueue.length - 1;
 
   const menuItems: MenuItem[] = useMemo(() => {
-    if (!canManage) return [];
+    if (!canManage) {
+      return [];
+    }
     const items: MenuItem[] = [];
 
     // Remove — always available

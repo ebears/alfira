@@ -72,7 +72,9 @@ export function SongEditProvider({ children }: { children: ReactNode }) {
 
   // Close panel when clicking outside any song edit container
   useEffect(() => {
-    if (openSongId == null) return;
+    if (openSongId == null) {
+      return;
+    }
 
     const handleMouseDown = (e: MouseEvent) => {
       const target = e.target as Element;

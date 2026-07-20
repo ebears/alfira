@@ -38,7 +38,9 @@ export function useScrollObserver(
   // below reads the real element dimensions and refines before paint.
   const [height, setHeight] = useState(0);
   const [width, setWidth] = useState(() => {
-    if (typeof window === 'undefined') return 960;
+    if (typeof window === 'undefined') {
+      return 960;
+    }
     return document.querySelector('main')?.clientWidth ?? 960;
   });
 
@@ -53,7 +55,9 @@ export function useScrollObserver(
   // scroll events.
   useEffect(() => {
     const el = elementRef.current;
-    if (!el) return;
+    if (!el) {
+      return;
+    }
 
     const onScroll = () => {
       // Store the latest scrollTop in the ref so the rAF callback always
@@ -123,13 +127,17 @@ export function useScrollObserver(
 
   useLayoutEffect(() => {
     const el = elementRef.current;
-    if (!el) return;
+    if (!el) {
+      return;
+    }
 
     setHeight(el.clientHeight);
     setWidth(el.clientWidth);
 
     const ro = new ResizeObserver(([entry]) => {
-      if (!entry) return;
+      if (!entry) {
+        return;
+      }
       setHeight(entry.contentRect.height);
 
       const now = performance.now();

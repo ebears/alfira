@@ -193,6 +193,8 @@ const SOURCE_ICONS: Record<string, React.FC<IconProps>> = {
 
 export function SourceIcon({ sourceKey, ...props }: IconProps & { sourceKey: string }) {
   const Icon = SOURCE_ICONS[sourceKey];
-  if (!Icon) return null;
+  if (!Icon) {
+    return null;
+  }
   return <Icon {...props} />;
 }

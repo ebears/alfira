@@ -14,9 +14,9 @@ interface BulkEditModalProps {
   isApplying?: boolean;
 }
 
-type EditableField = Extract<keyof BulkEditData, string>;
+type TextEditableField = 'nickname' | 'artist' | 'album' | 'artwork';
 
-const EDITABLE_FIELDS: { key: EditableField; label: string; placeholder: string }[] = [
+const EDITABLE_FIELDS: { key: TextEditableField; label: string; placeholder: string }[] = [
   { key: 'nickname', label: 'Nickname', placeholder: 'Custom display name' },
   { key: 'artist', label: 'Artist', placeholder: 'Artist name' },
   { key: 'album', label: 'Album', placeholder: 'Album name' },
@@ -44,7 +44,9 @@ export default function BulkEditModal({ count, onApply, onClose, isApplying }: B
 
   // Close tag dropdown when clicking outside
   useEffect(() => {
-    if (!showDropdown) return;
+    if (!showDropdown) {
+      return;
+    }
     const handler = (e: MouseEvent) => {
       const target = e.target as Node;
       if (
@@ -87,7 +89,9 @@ export default function BulkEditModal({ count, onApply, onClose, isApplying }: B
 
   const addTag = useCallback(() => {
     const trimmed = tagInput.trim().toLowerCase();
-    if (!trimmed || tags.includes(trimmed)) return;
+    if (!trimmed || tags.includes(trimmed)) {
+      return;
+    }
     setTags((prev) => [...prev, trimmed]);
     setTagInput('');
     setHighlightedIdx(0);
@@ -186,7 +190,9 @@ export default function BulkEditModal({ count, onApply, onClose, isApplying }: B
       }
     }
 
-    if (!hasChanges) return;
+    if (!hasChanges) {
+      return;
+    }
 
     // Include clearFields for the backend
     if (clearFields.size > 0) {
@@ -411,7 +417,9 @@ export default function BulkEditModal({ count, onApply, onClose, isApplying }: B
                   value={volumeBoost}
                   onChange={(e) => {
                     const v = e.target.value;
-                    if (v === '' || /^-?\d*$/.test(v)) setVolumeBoost(v);
+                    if (v === '' || /^-?\d*$/.test(v)) {
+                      setVolumeBoost(v);
+                    }
                   }}
                   onBlur={() => {
                     if (volumeBoost.trim() === '' || volumeBoost.trim() === '-') {

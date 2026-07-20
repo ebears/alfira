@@ -17,7 +17,9 @@ export function ArtworkImage({
 }: ArtworkImageProps) {
   const [loaded, setLoaded] = useState(false);
 
-  if (!src) return null;
+  if (!src) {
+    return null;
+  }
 
   return (
     <div className={`relative ${className}`}>

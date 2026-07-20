@@ -135,7 +135,9 @@ function notifyListeners() {
 }
 
 function ensureTicking() {
-  if (tickInterval !== null) return;
+  if (tickInterval !== null) {
+    return;
+  }
   tickInterval = setInterval(notifyListeners, 1000);
 }
 

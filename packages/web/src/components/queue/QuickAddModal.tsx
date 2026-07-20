@@ -22,7 +22,9 @@ export default function QuickAddModal({
   const [importFullPlaylist, setImportFullPlaylist] = useState(false);
 
   const handleSubmit = async () => {
-    if (!sourceUrl.trim()) return;
+    if (!sourceUrl.trim()) {
+      return;
+    }
     setSubmitting(true);
     setError('');
     setSuccessMsg('');

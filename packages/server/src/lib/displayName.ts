@@ -3,11 +3,15 @@ import { fetchGuildMember } from './discordRest';
 
 export async function getUserDisplayName(discordId: string): Promise<string> {
   const guildId = getGuildId();
-  if (!guildId) return discordId;
+  if (!guildId) {
+    return discordId;
+  }
 
   try {
     const member = await fetchGuildMember(guildId, discordId);
-    if (!member) return discordId;
+    if (!member) {
+      return discordId;
+    }
     // Prefer server nickname, fall back to global username, then ID.
     return member.nick || member.user.username || discordId;
   } catch {

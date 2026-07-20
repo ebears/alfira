@@ -59,7 +59,9 @@ interface EqSettingsRow {
 }
 
 export function eqBandsFromRow(row: EqSettingsRow | null | undefined): number[] {
-  if (!row) return Array(15).fill(50);
+  if (!row) {
+    return Array(15).fill(50);
+  }
   return BAND_KEYS.map((key) => row[key]);
 }
 
@@ -75,7 +77,7 @@ export function eqBandValues(bands: number[]): Record<EqBandKey, number> {
  * Convert band values (0-100) to NodeLink equalizer filter format.
  * Maps: 0 → -0.5, 50 → 0.0 (neutral/flat), 100 → 0.5
  */
-export function buildEqualizerFilter(bands: number[]): Array<{ band: number; gain: number }> {
+export function buildEqualizerFilter(bands: number[]): { band: number; gain: number }[] {
   return bands.map((value, index) => ({
     band: index,
     gain: (value - 50) / 100,

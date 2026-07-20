@@ -23,7 +23,9 @@ function handleEqualizerGet(
   _params: Record<string, string>
 ): Response {
   const guards = checkGuards(ctx, { admin: true, permission: 'audio.manage' });
-  if (guards instanceof Response) return guards;
+  if (guards instanceof Response) {
+    return guards;
+  }
 
   const row = db
     .select({
@@ -46,7 +48,9 @@ async function handleEqualizerPatch(
   _params: Record<string, string>
 ): Promise<Response> {
   const guards = checkGuards(ctx, { admin: true, permission: 'audio.manage' });
-  if (guards instanceof Response) return guards;
+  if (guards instanceof Response) {
+    return guards;
+  }
 
   let body: EqualizerPayload;
   try {

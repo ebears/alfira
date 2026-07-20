@@ -34,7 +34,9 @@ export function getCompressorSettings(): CompressorSettings | null {
     .from(tables.guildSettings)
     .where(eq(tables.guildSettings.id, 1))
     .get();
-  if (!row) return null;
+  if (!row) {
+    return null;
+  }
   return {
     enabled: row.enabled,
     threshold: row.threshold,

@@ -23,10 +23,14 @@ export default function MobileNav() {
 
   // Close drawer on escape key
   useEffect(() => {
-    if (!isOpen) return;
+    if (!isOpen) {
+      return;
+    }
 
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') setIsOpen(false);
+      if (e.key === 'Escape') {
+        setIsOpen(false);
+      }
     };
 
     document.addEventListener('keydown', handleKeyDown);
@@ -47,7 +51,9 @@ export default function MobileNav() {
 
   // Close drawer when clicking outside
   useEffect(() => {
-    if (!isOpen) return;
+    if (!isOpen) {
+      return;
+    }
 
     const handleClickOutside = (e: MouseEvent) => {
       if (drawerRef.current && !drawerRef.current.contains(e.target as Node)) {
@@ -117,7 +123,9 @@ export default function MobileNav() {
             className='bg-black/60 backdrop-blur-sm absolute inset-0'
             onClick={() => setIsOpen(false)}
             onKeyDown={(e) => {
-              if (e.key === 'Escape' || e.key === 'Enter') setIsOpen(false);
+              if (e.key === 'Escape' || e.key === 'Enter') {
+                setIsOpen(false);
+              }
             }}
           />
         </SpringUp>

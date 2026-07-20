@@ -92,7 +92,9 @@ async function handleGetGuilds(
   _params: Record<string, string>
 ): Promise<Response> {
   const guards = checkGuards(ctx, { setupMode: true });
-  if (guards instanceof Response) return guards;
+  if (guards instanceof Response) {
+    return guards;
+  }
 
   try {
     const res = await fetch(`${DISCORD_API}/users/@me/guilds`, {
@@ -104,11 +106,11 @@ async function handleGetGuilds(
       return json({ error: 'Could not fetch guild list from Discord.' }, 502);
     }
 
-    const guilds = (await res.json()) as Array<{
+    const guilds = (await res.json()) as {
       id: string;
       name: string;
       icon: string | null;
-    }>;
+    }[];
 
     const result: SetupGuild[] = guilds.map((g) => ({
       id: g.id,
@@ -134,7 +136,9 @@ async function handleGetRoles(
 ): Promise<Response> {
   const url = new URL(request.url);
   const guards = checkGuards(ctx, { setupMode: true });
-  if (guards instanceof Response) return guards;
+  if (guards instanceof Response) {
+    return guards;
+  }
 
   const guildId = url.searchParams.get('guildId');
   if (!guildId) {
@@ -156,7 +160,9 @@ async function handleGetChannels(
 ): Promise<Response> {
   const url = new URL(request.url);
   const guards = checkGuards(ctx, { setupMode: true });
-  if (guards instanceof Response) return guards;
+  if (guards instanceof Response) {
+    return guards;
+  }
 
   const guildId = url.searchParams.get('guildId');
   if (!guildId) {
@@ -179,11 +185,11 @@ async function handleGetChannels(
       return json({ error: 'Could not fetch channels from Discord.' }, 502);
     }
 
-    const channels = (await res.json()) as Array<{
+    const channels = (await res.json()) as {
       id: string;
       name: string;
       type: number;
-    }>;
+    }[];
 
     // Type 0 = GUILD_TEXT. Filter to text channels only.
     const result: SetupChannel[] = channels
@@ -211,7 +217,9 @@ async function handlePostComplete(
   _params: Record<string, string>
 ): Promise<Response> {
   const guards = checkGuards(ctx, { setupMode: true });
-  if (guards instanceof Response) return guards;
+  if (guards instanceof Response) {
+    return guards;
+  }
 
   let body: {
     guildId?: unknown;

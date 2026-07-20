@@ -32,7 +32,9 @@ export function getPlayer(guildId: string): GuildPlayer | undefined {
  */
 export function createPlayer(guildId: string, voiceId: string): GuildPlayer {
   const existing = players.get(guildId);
-  if (existing) return existing;
+  if (existing) {
+    return existing;
+  }
 
   const player = new GuildPlayer(guildId, voiceId, () => {
     players.delete(guildId);

@@ -107,7 +107,9 @@ export default function SetupWizard() {
 
   // Auto-refresh guild list when on the guild step and no guilds are found.
   useEffect(() => {
-    if (step !== 'guild' || guilds.length > 0) return;
+    if (step !== 'guild' || guilds.length > 0) {
+      return;
+    }
 
     let cancelled = false;
     async function poll() {
@@ -123,12 +125,16 @@ export default function SetupWizard() {
       } catch {
         // Silently retry on next interval.
       } finally {
-        if (!cancelled) setRefreshingGuilds(false);
+        if (!cancelled) {
+          setRefreshingGuilds(false);
+        }
       }
     }
 
     void poll();
-    const interval = setInterval(poll, 3000);
+    const interval = setInterval(() => {
+      void poll();
+    }, 3000);
     return () => {
       cancelled = true;
       clearInterval(interval);
@@ -163,7 +169,9 @@ export default function SetupWizard() {
   }
 
   async function loadRoles() {
-    if (!selectedGuildId) return;
+    if (!selectedGuildId) {
+      return;
+    }
     setError(null);
     try {
       const { roles: list } = await fetchSetupRoles(selectedGuildId);
@@ -175,7 +183,9 @@ export default function SetupWizard() {
   }
 
   async function loadChannels() {
-    if (!selectedGuildId) return;
+    if (!selectedGuildId) {
+      return;
+    }
     setError(null);
     try {
       const { channels: list } = await fetchSetupChannels(selectedGuildId);
@@ -187,8 +197,12 @@ export default function SetupWizard() {
   }
 
   async function handleSubmit() {
-    if (!selectedGuildId || selectedRoleIds.size === 0) return;
-    if (selectedSourceKeys.size === 0) return;
+    if (!selectedGuildId || selectedRoleIds.size === 0) {
+      return;
+    }
+    if (selectedSourceKeys.size === 0) {
+      return;
+    }
     setSaving(true);
     setError(null);
     try {
@@ -214,8 +228,11 @@ export default function SetupWizard() {
   function toggleRole(id: string) {
     setSelectedRoleIds((prev) => {
       const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
       return next;
     });
   }
@@ -224,9 +241,14 @@ export default function SetupWizard() {
     setSelectedSourceKeys((prev) => {
       const next = new Set(prev);
       // Prevent deselecting the last source.
-      if (next.size === 1 && next.has(key)) return prev;
-      if (next.has(key)) next.delete(key);
-      else next.add(key);
+      if (next.size === 1 && next.has(key)) {
+        return prev;
+      }
+      if (next.has(key)) {
+        next.delete(key);
+      } else {
+        next.add(key);
+      }
       return next;
     });
   }

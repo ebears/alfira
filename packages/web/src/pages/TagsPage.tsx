@@ -63,7 +63,9 @@ export default function TagsPage() {
 
   const saveName = useCallback(
     async (nextName: string) => {
-      if (!selected || savingName) return;
+      if (!selected || savingName) {
+        return;
+      }
       setSavingName(true);
       try {
         const { tag } = await updateTag(selected.nameLower, { canonicalName: nextName });
@@ -83,9 +85,13 @@ export default function TagsPage() {
 
   const pickColor = useCallback(
     async (color: string) => {
-      if (!selected) return;
+      if (!selected) {
+        return;
+      }
       const effectiveColor = getTagColorClasses(selected.canonicalName, selected.color).name;
-      if (effectiveColor === color) return; // already the effective color
+      if (effectiveColor === color) {
+        return;
+      } // already the effective color
       // Optimistic update
       setAllTags((prev) =>
         prev.map((t) => (t.nameLower === selected.nameLower ? { ...t, color } : t))
@@ -99,7 +105,9 @@ export default function TagsPage() {
 
   const removeSong = useCallback(
     async (song: Song) => {
-      if (!selected) return;
+      if (!selected) {
+        return;
+      }
       const newTags = (song.tags ?? []).filter(
         (t) => t.toLowerCase() !== selected.nameLower.toLowerCase()
       );
@@ -112,7 +120,9 @@ export default function TagsPage() {
   );
 
   const handleDelete = useCallback(async () => {
-    if (!selected) return;
+    if (!selected) {
+      return;
+    }
     try {
       await deleteTag(selected.nameLower);
       setAllTags((prev) => prev.filter((t) => t.nameLower !== selected.nameLower));

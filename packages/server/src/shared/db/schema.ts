@@ -152,14 +152,14 @@ export const songRequest = sqliteTable('SongRequest', {
     name: string;
     videoCount: number;
     thumbnailUrl?: string | null;
-    videos?: Array<{
+    videos?: {
       id: string;
       title: string;
       duration: number;
       thumbnailUrl?: string | null;
       artist?: string | null;
       artworkUrl?: string | null;
-    }>;
+    }[];
   }>(),
   status: text('status').notNull().default('pending'), // 'pending' | 'approved' | 'denied'
   reviewedBy: text('reviewedBy'),

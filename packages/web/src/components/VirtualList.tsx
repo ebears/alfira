@@ -84,7 +84,9 @@ function VirtualListInner<T>({
   const virtualizer = useVirtualizer({
     count: totalCount,
     getItemKey: (i: number) => {
-      if (i >= itemsRef.current.length) return '__loader__';
+      if (i >= itemsRef.current.length) {
+        return '__loader__';
+      }
       const item = itemsRef.current[i];
       return item != null ? getItemKeyRef.current(item, i) : `__missing__${i}`;
     },
@@ -120,7 +122,9 @@ function VirtualListInner<T>({
   const showContent = !isLoading && hasLoaded && items.length > 0;
 
   useLayoutEffect(() => {
-    if (!containerRef.current) return;
+    if (!containerRef.current) {
+      return;
+    }
     containerRef.current.style.opacity = showContent || showEmpty || showSkeleton ? '1' : '0';
   }, [showContent, showEmpty, showSkeleton]);
 
@@ -199,7 +203,9 @@ function VirtualListInner<T>({
                 );
               }
 
-              if (!item) return null;
+              if (!item) {
+                return null;
+              }
 
               // Spacer to create visual gap between items — rendered inside
               // the fixed-height row so it doesn't affect measurement.

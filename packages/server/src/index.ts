@@ -31,7 +31,9 @@ function parseCookies(header: string): Record<string, string> {
   const result: Record<string, string> = {};
   for (const part of header.split(';')) {
     const idx = part.indexOf('=');
-    if (idx === -1) continue;
+    if (idx === -1) {
+      continue;
+    }
     const key = part.slice(0, idx).trim();
     const raw = part.slice(idx + 1).trim();
     try {
@@ -74,7 +76,9 @@ export type { RouteContext } from './lib/context';
 function setSecurityHeaders(response: Response): Response {
   const newHeaders = new Headers(response.headers);
   for (const [key, value] of Object.entries(SECURITY_HEADERS)) {
-    if (key === 'Set-Cookie') continue; // Don't overwrite Set-Cookie headers set by routes
+    if (key === 'Set-Cookie') {
+      continue;
+    } // Don't overwrite Set-Cookie headers set by routes
     newHeaders.set(key, value);
   }
   return new Response(response.body, { status: response.status, headers: newHeaders });
@@ -95,7 +99,9 @@ const STATIC_EXTENSIONS: Record<string, string> = {
 
 function serveStatic(filePath: string, pathname: string): Response | undefined {
   const file = Bun.file(filePath);
-  if (file.size === 0) return undefined;
+  if (file.size === 0) {
+    return undefined;
+  }
   const ext = pathname.includes('.') ? `.${pathname.split('.').pop()}` : '.html';
   const contentType = STATIC_EXTENSIONS[ext] ?? 'text/plain';
   return new Response(file, {
@@ -118,7 +124,9 @@ function createContext(request: Request): RouteContext {
   const user = getSessionUser(request.headers.get('cookie') || '');
   const cookies: Record<string, string> = {};
   for (const [key, value] of Object.entries(parsedCookies)) {
-    if (value !== undefined) cookies[key] = value;
+    if (value !== undefined) {
+      cookies[key] = value;
+    }
   }
   return { user, isAdmin: user?.isAdmin ?? false, cookies };
 }
@@ -225,7 +233,9 @@ function startServer(): void {
           return new Response('Unauthorized', { status: 401 });
         }
         const success = server.upgrade(request, { data: { user } });
-        if (success) return undefined;
+        if (success) {
+          return undefined;
+        }
         return new Response('WebSocket upgrade failed', { status: 500 });
       }
 
@@ -243,7 +253,9 @@ function startServer(): void {
       if (isAsset || url.pathname === '/') {
         const filePath = `/app/packages/web/dist${url.pathname === '/' ? '/index.html' : url.pathname}`;
         const response = serveStatic(filePath, url.pathname);
-        if (response) return response;
+        if (response) {
+          return response;
+        }
       }
 
       return (
@@ -301,14 +313,18 @@ function runMigrations(): void {
     const existing = $client
       .query('SELECT hash FROM "__drizzle_migrations" WHERE hash = ?')
       .get(hash) as { hash: string } | undefined;
-    if (existing) continue;
+    if (existing) {
+      continue;
+    }
 
     // Apply migration
     const rawSql = readFileSync(filePath, 'utf-8');
     const statements = rawSql.split(/-->\s*statement-breakpoint/);
     for (const stmt of statements) {
       const trimmed = stmt.trim();
-      if (!trimmed) continue;
+      if (!trimmed) {
+        continue;
+      }
       try {
         $client.run(trimmed);
       } catch (err) {
@@ -357,7 +373,9 @@ function startNodeLink(): Promise<void> {
       for await (const chunk of nodelinkProcess.stdout as ReadableStream<Uint8Array>) {
         for (const line of decoder.decode(chunk).split('\n')) {
           const trimmed = line.trimEnd();
-          if (trimmed) logger.debug({ component: 'NodeLink' }, trimmed);
+          if (trimmed) {
+            logger.debug({ component: 'NodeLink' }, trimmed);
+          }
         }
       }
     })();
@@ -368,7 +386,9 @@ function startNodeLink(): Promise<void> {
       for await (const chunk of nodelinkProcess.stderr as ReadableStream<Uint8Array>) {
         for (const line of decoder.decode(chunk).split('\n')) {
           const trimmed = line.trimEnd();
-          if (!trimmed || trimmed.includes('fatal:')) continue;
+          if (!trimmed || trimmed.includes('fatal:')) {
+            continue;
+          }
           logger.warn({ component: 'NodeLink' }, trimmed);
         }
       }
@@ -387,7 +407,9 @@ function startNodeLink(): Promise<void> {
       } catch {
         /* retry */
       }
-      setTimeout(checkReady, 500);
+      setTimeout(() => {
+        void checkReady();
+      }, 500);
     };
     void checkReady();
   });
@@ -471,7 +493,9 @@ let shuttingDown = false;
 let nodelinkProcess: ReturnType<typeof Bun.spawn> | undefined;
 
 function shutdown(signal: string): void {
-  if (shuttingDown) return;
+  if (shuttingDown) {
+    return;
+  }
   shuttingDown = true;
 
   logger.info({ signal }, 'Starting graceful shutdown');

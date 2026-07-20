@@ -40,7 +40,9 @@ function handleGetGeneral(
   _params: Record<string, string>
 ): Response {
   const guards = checkGuards(ctx, { admin: true });
-  if (guards instanceof Response) return guards;
+  if (guards instanceof Response) {
+    return guards;
+  }
 
   const row = db
     .select(SETTINGS_COLUMNS)
@@ -88,7 +90,9 @@ async function handlePatchGeneral(
   _params: Record<string, string>
 ): Promise<Response> {
   const guards = checkGuards(ctx, { admin: true });
-  if (guards instanceof Response) return guards;
+  if (guards instanceof Response) {
+    return guards;
+  }
 
   let body: GeneralSettingsPatch;
   try {

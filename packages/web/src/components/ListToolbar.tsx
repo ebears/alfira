@@ -98,7 +98,9 @@ export default function ListToolbar({
   const handleSearchInputChange = useCallback(
     (next: string) => {
       setSearchInput(next);
-      if (debounceRef.current) clearTimeout(debounceRef.current);
+      if (debounceRef.current) {
+        clearTimeout(debounceRef.current);
+      }
       debounceRef.current = setTimeout(() => {
         onSearchChange(next);
       }, 250);
@@ -112,7 +114,9 @@ export default function ListToolbar({
 
   // Close dropdown on outside click
   useEffect(() => {
-    if (!sortOpen) return;
+    if (!sortOpen) {
+      return;
+    }
     const handler = (e: MouseEvent) => {
       if (sortRef.current && !sortRef.current.contains(e.target as Node)) {
         setSortOpen(false);

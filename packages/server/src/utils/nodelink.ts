@@ -35,7 +35,9 @@ const NODELINK_AUTH = 'nodelink-internal';
 
 function nodeLinkHeaders(): Record<string, string> {
   const h: Record<string, string> = { 'Content-Type': 'application/json' };
-  if (NODELINK_AUTH) h.Authorization = NODELINK_AUTH;
+  if (NODELINK_AUTH) {
+    h.Authorization = NODELINK_AUTH;
+  }
   return h;
 }
 
@@ -178,7 +180,9 @@ let _enabledSourcesLoaded = false;
 const ALL_SOURCE_KEYS = Object.keys(SOURCE_DEFINITIONS);
 
 function getEnabledSourcesSync(): string[] {
-  if (_cachedEnabledSources) return _cachedEnabledSources;
+  if (_cachedEnabledSources) {
+    return _cachedEnabledSources;
+  }
   return ALL_SOURCE_KEYS;
 }
 
@@ -189,7 +193,9 @@ export function getEnabledSourceDisplayNames(): string[] {
 }
 
 export function initEnabledSources(): void {
-  if (_enabledSourcesLoaded) return;
+  if (_enabledSourcesLoaded) {
+    return;
+  }
   try {
     const row = db
       .select({ enabledSources: tables.guildSettings.enabledSources })
@@ -218,7 +224,9 @@ function parseEnabledSourcesEnv(): string[] {
       .map((s) => s.trim().toLowerCase())
       .filter(Boolean);
     const valid = keys.filter((k) => SOURCE_DEFINITIONS[k]);
-    if (valid.length > 0) return valid;
+    if (valid.length > 0) {
+      return valid;
+    }
   }
   return ALL_SOURCE_KEYS;
 }
@@ -234,11 +242,15 @@ export function refreshEnabledSources(sources: string): void {
 export function isValidSourceUrl(url: string): boolean {
   try {
     const parsed = new URL(url);
-    if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') return false;
+    if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
+      return false;
+    }
     const enabled = getEnabledSourcesSync();
     return enabled.some((key) => {
       const def = SOURCE_DEFINITIONS[key];
-      if (!def) return false;
+      if (!def) {
+        return false;
+      }
       return def.hosts.some(
         (host) => parsed.hostname === host || parsed.hostname.endsWith(`.${host}`)
       );
@@ -249,7 +261,9 @@ export function isValidSourceUrl(url: string): boolean {
 }
 
 export function isPlaylistUrl(url: string): boolean {
-  if (!isValidSourceUrl(url)) return false;
+  if (!isValidSourceUrl(url)) {
+    return false;
+  }
   try {
     const parsed = new URL(url);
     const enabled = getEnabledSourcesSync();
@@ -268,7 +282,9 @@ function resolveThumbnail(info: TrackInfo['info']): string {
   const sourceName = info?.sourceName;
 
   // Prefer artworkUrl from NodeLink when available (SoundCloud, Bandcamp, etc.)
-  if (artworkUrl) return artworkUrl;
+  if (artworkUrl) {
+    return artworkUrl;
+  }
 
   // Fall back to YouTube thumbnail for YouTube identifiers
   if (sourceName === 'youtube' && identifier) {
@@ -285,7 +301,9 @@ async function loadTrack(url: string): Promise<LoadTrackResponse> {
   loadUrl.searchParams.set('identifier', url);
 
   const headers: Record<string, string> = { 'Content-Type': 'application/json' };
-  if (NODELINK_AUTH) headers.Authorization = NODELINK_AUTH;
+  if (NODELINK_AUTH) {
+    headers.Authorization = NODELINK_AUTH;
+  }
   const response = await fetch(loadUrl, { method: 'GET', headers });
 
   if (!response.ok) {
@@ -307,7 +325,9 @@ export async function getMetadata(url: string): Promise<SongMetadata> {
   // first track so single-song URLs with playlist parameters still work.
   if (!data?.encoded && !data?.info && data?.tracks?.length) {
     const first = data.tracks[0];
-    if (!first?.info) throw new Error('NodeLink returned no track data');
+    if (!first?.info) {
+      throw new Error('NodeLink returned no track data');
+    }
     const info = first.info;
     const sourceId = info.identifier ?? '';
     const title = info.title ?? 'Unknown';
@@ -357,7 +377,9 @@ export async function getStreamFormat(
   // extract the first track from the embedded tracks array.
   if (!data?.encoded && data?.tracks?.length) {
     const first = data.tracks[0];
-    if (!first?.encoded) throw new Error('NodeLink returned no track');
+    if (!first?.encoded) {
+      throw new Error('NodeLink returned no track');
+    }
     return { track: first.encoded, isWebmOpus: true };
   }
 

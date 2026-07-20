@@ -30,7 +30,9 @@ function LayoutContent() {
   const [collapsed, setCollapsed] = useState(() => {
     if (typeof window !== 'undefined') {
       const stored = localStorage.getItem('alfira-sidebar-collapsed');
-      if (stored !== null) return stored === 'true';
+      if (stored !== null) {
+        return stored === 'true';
+      }
     }
     return false;
   });
