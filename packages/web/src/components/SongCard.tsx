@@ -1,6 +1,6 @@
 import { type Playlist, type Song } from '@alfira/server/shared';
 import { DiscIcon, MusicNoteIcon, UserIcon } from '@phosphor-icons/react';
-import React, { useMemo, useState } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 
 import { usePermissions } from '../context/PermissionsContext';
 import { useSongEdit } from '../context/SongEditContext';
@@ -67,13 +67,16 @@ const SongCardInner = ({
   const canEdit = isAdminView || hasPermission('songs.edit');
   const canDelete = isAdminView || hasPermission('songs.delete');
 
+  // Stable wrapper for onDelete callback — song.id is stable per render cycle
+  const handleDelete = useCallback(() => onDelete?.(song.id), [onDelete, song.id]);
+
   const { menuOpen, setMenuOpen, triggerRef, menuItems } = useSongActions({
     song,
     canEdit,
     canDelete,
     playlists: playlists ?? [],
     onAddToQueue,
-    ...(onDelete ? { onDelete: () => onDelete(song.id) } : {}),
+    ...(onDelete ? { onDelete: handleDelete } : {}),
     onRemove,
     removeLabel,
   });
@@ -83,18 +86,62 @@ const SongCardInner = ({
     [delay]
   );
 
+  // Stable callbacks for ContextMenu
+  const handleMenuToggle = useCallback(() => setMenuOpen((v) => !v), [setMenuOpen]);
+  const handleMenuClose = useCallback(() => setMenuOpen(false), [setMenuOpen]);
+  const handleMenuMouseDown = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+  }, []);
+
+  // Stable callbacks for inline edit panels
+  const handleEditClose = useCallback(() => setOpenSongId(null), [setOpenSongId]);
+
+  // Stable callbacks for list variant
+  const handleMouseEnter = useCallback(() => setIsRowHovered(true), []);
+  const handleMouseLeave = useCallback(() => setIsRowHovered(false), []);
+  const pointerCursorStyle = useMemo(() => ({ cursor: 'pointer' }), []);
+
+  const handleListKeyDown = useCallback(
+    (e: React.KeyboardEvent) => {
+      if ((e.key === 'Enter' || e.key === ' ') && !selectionMode) {
+        e.preventDefault();
+        if (canEdit) {
+          setOpenSongId(isOpen ? null : song.id);
+        }
+      }
+    },
+    [canEdit, isOpen, selectionMode, setOpenSongId, song.id]
+  );
+
+  const handleCheckboxOverlayClick = useCallback((e: React.MouseEvent) => {
+    e.stopPropagation();
+  }, []);
+
+  const handleToggleSelect = useCallback(() => onToggleSelect?.(), [onToggleSelect]);
+
   // ── Grid variant ──────────────────────────────────────────────────────
+
+  // Grid/list click handlers — defined unconditionally before variant branches
+  // to satisfy rules-of-hooks. Each is only used in its respective branch.
+  const handleGridClick = useCallback(() => {
+    if (selectionMode) {
+      onToggleSelect?.();
+    } else if (canEdit) {
+      setOpenSongId(isOpen ? null : song.id);
+    }
+  }, [canEdit, isOpen, onToggleSelect, selectionMode, setOpenSongId, song.id]);
+
+  const handleListClick = useCallback(() => {
+    if (selectionMode) {
+      onToggleSelect?.();
+    } else if (canEdit) {
+      setOpenSongId(isOpen ? null : song.id);
+    }
+  }, [canEdit, isOpen, onToggleSelect, selectionMode, setOpenSongId, song.id]);
 
   if (variant === 'grid') {
     const tags = song.tags ?? [];
-
-    const handleGridClick = () => {
-      if (selectionMode) {
-        onToggleSelect?.();
-      } else if (canEdit) {
-        setOpenSongId(isOpen ? null : song.id);
-      }
-    };
 
     return (
       <Card
@@ -114,8 +161,8 @@ const SongCardInner = ({
           />
           {/* Selection checkbox overlay */}
           {selectionMode && (
-            <div className='absolute top-2 left-2 z-10' onClick={(e) => e.stopPropagation()}>
-              <Checkbox checked={isSelected} onChange={() => onToggleSelect?.()} size='md' />
+            <div className='absolute top-2 left-2 z-10' onClick={handleCheckboxOverlayClick}>
+              <Checkbox checked={isSelected} onChange={handleToggleSelect} size='md' />
             </div>
           )}
           {isSelected && <div className='absolute inset-0 bg-accent/20 pointer-events-none' />}
@@ -174,12 +221,9 @@ const SongCardInner = ({
               >
                 <ContextMenuTrigger
                   ref={triggerRef}
-                  onToggle={() => setMenuOpen((v) => !v)}
+                  onToggle={handleMenuToggle}
                   isOpen={menuOpen}
-                  onMouseDown={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                  }}
+                  onMouseDown={handleMenuMouseDown}
                 />
               </div>
               <PlayButton onClick={onPlay} isPlaying={!!isPlaying} />
@@ -190,7 +234,7 @@ const SongCardInner = ({
             <ContextMenu
               items={menuItems}
               isOpen={menuOpen}
-              onClose={() => setMenuOpen(false)}
+              onClose={handleMenuClose}
               triggerRef={triggerRef}
             />
           )}
@@ -198,7 +242,7 @@ const SongCardInner = ({
 
         {/* Inline edit panel */}
         <div className={`expand-panel ${isOpen ? 'expanded' : ''}`}>
-          <SongEditPanel song={song} isOpen={isOpen} onClose={() => setOpenSongId(null)} />
+          <SongEditPanel song={song} isOpen={isOpen} onClose={handleEditClose} />
         </div>
       </Card>
     );
@@ -207,14 +251,6 @@ const SongCardInner = ({
   // ── List variant ──────────────────────────────────────────────────────
 
   const tags = song.tags ?? [];
-
-  const handleListClick = () => {
-    if (selectionMode) {
-      onToggleSelect?.();
-    } else if (canEdit) {
-      setOpenSongId(isOpen ? null : song.id);
-    }
-  };
 
   return (
     <Card
@@ -228,22 +264,15 @@ const SongCardInner = ({
         tabIndex={canEdit || selectionMode ? 0 : -1}
         className='flex items-center gap-3 md:gap-4 px-4 py-4 w-full text-left bg-transparent border-0'
         onClick={handleListClick}
-        onKeyDown={(e) => {
-          if ((e.key === 'Enter' || e.key === ' ') && !selectionMode) {
-            e.preventDefault();
-            if (canEdit) {
-              setOpenSongId(isOpen ? null : song.id);
-            }
-          }
-        }}
-        style={canEdit || selectionMode ? { cursor: 'pointer' } : undefined}
-        onMouseEnter={() => setIsRowHovered(true)}
-        onMouseLeave={() => setIsRowHovered(false)}
+        onKeyDown={handleListKeyDown}
+        style={canEdit || selectionMode ? pointerCursorStyle : undefined}
+        onMouseEnter={handleMouseEnter}
+        onMouseLeave={handleMouseLeave}
       >
         {/* Selection checkbox */}
         {selectionMode && (
-          <span onClick={(e) => e.stopPropagation()}>
-            <Checkbox checked={isSelected} onChange={() => onToggleSelect?.()} size='md' />
+          <span onClick={handleCheckboxOverlayClick}>
+            <Checkbox checked={isSelected} onChange={handleToggleSelect} size='md' />
           </span>
         )}
 
@@ -294,12 +323,9 @@ const SongCardInner = ({
         >
           <ContextMenuTrigger
             ref={triggerRef}
-            onToggle={() => setMenuOpen((v) => !v)}
+            onToggle={handleMenuToggle}
             isOpen={menuOpen}
-            onMouseDown={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-            }}
+            onMouseDown={handleMenuMouseDown}
             className='w-12 h-12'
           />
         </div>
@@ -312,7 +338,7 @@ const SongCardInner = ({
           <ContextMenu
             items={menuItems}
             isOpen={menuOpen}
-            onClose={() => setMenuOpen(false)}
+            onClose={handleMenuClose}
             triggerRef={triggerRef}
           />
         )}
@@ -320,7 +346,7 @@ const SongCardInner = ({
 
       {/* Inline edit panel */}
       <div className={`expand-panel ${isOpen ? 'expanded' : ''}`}>
-        <SongEditPanel song={song} isOpen={isOpen} onClose={() => setOpenSongId(null)} />
+        <SongEditPanel song={song} isOpen={isOpen} onClose={handleEditClose} />
       </div>
     </Card>
   );

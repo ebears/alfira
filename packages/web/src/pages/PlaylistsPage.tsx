@@ -1,7 +1,7 @@
 import { type Playlist, type TagItem } from '@alfira/server/shared';
 import { fetchTags } from '@alfira/server/shared/api';
 import { PlaylistIcon } from '@phosphor-icons/react';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 import { getPlaylistsPage } from '../api/api';
@@ -81,8 +81,13 @@ export default function PlaylistsPage() {
     [navigate]
   );
 
+  const pageStyle = useMemo(() => ({ paddingBottom: 0 }), []);
+
+  const handleShowCreate = useCallback(() => setShowCreate(true), []);
+  const handleHideCreate = useCallback(() => setShowCreate(false), []);
+
   return (
-    <div className='p-4 md:p-8 flex flex-col min-h-0 h-full' style={{ paddingBottom: 0 }}>
+    <div className='p-4 md:p-8 flex flex-col min-h-0 h-full' style={pageStyle}>
       <PageHeader
         icon={PlaylistIcon}
         title='Playlists'
@@ -90,7 +95,7 @@ export default function PlaylistsPage() {
       >
         <Button
           variant='primary'
-          onClick={() => setShowCreate(true)}
+          onClick={handleShowCreate}
           className={showCreate ? 'pressed' : ''}
         >
           + New Playlist
@@ -112,7 +117,7 @@ export default function PlaylistsPage() {
         emptyMessage='Create one to get started'
       />
 
-      {showCreate && <CreatePlaylistModal onClose={() => setShowCreate(false)} />}
+      {showCreate && <CreatePlaylistModal onClose={handleHideCreate} />}
       {notification && <NotificationToast notification={notification} />}
     </div>
   );
@@ -145,6 +150,23 @@ function CreatePlaylistModal({ onClose }: { onClose: () => void }) {
     }
   }, [state, onClose]);
 
+  const handleNameChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    setName(e.target.value);
+  }, []);
+
+  const handleNameKeyDown = useCallback(
+    (e: React.KeyboardEvent<HTMLInputElement>) => {
+      if (e.key === 'Escape') {
+        onClose();
+      }
+    },
+    [onClose]
+  );
+
+  const handleTagChange = useCallback((e: React.ChangeEvent<HTMLSelectElement>) => {
+    setSelectedTag(e.target.value);
+  }, []);
+
   return (
     <Backdrop onClose={onClose}>
       <SpringUp className='p-5 md:p-6 w-full max-w-sm mx-4 glass-modal'>
@@ -158,14 +180,8 @@ function CreatePlaylistModal({ onClose }: { onClose: () => void }) {
             className='input mb-3'
             placeholder='My Playlist'
             value={name}
-            onChange={(e) => {
-              setName(e.target.value);
-            }}
-            onKeyDown={(e) => {
-              if (e.key === 'Escape') {
-                onClose();
-              }
-            }}
+            onChange={handleNameChange}
+            onKeyDown={handleNameKeyDown}
             required
           />
           <div className='mb-3'>
@@ -174,7 +190,7 @@ function CreatePlaylistModal({ onClose }: { onClose: () => void }) {
               name='tagNameLower'
               className='input w-full'
               value={selectedTag}
-              onChange={(e) => setSelectedTag(e.target.value)}
+              onChange={handleTagChange}
             >
               <option value=''>None (manual playlist)</option>
               {tags.map((tag) => (

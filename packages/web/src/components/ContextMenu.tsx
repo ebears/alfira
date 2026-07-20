@@ -2,9 +2,11 @@ import { DotsThreeOutlineVerticalIcon } from '@phosphor-icons/react';
 import {
   type ReactNode,
   type RefObject,
+  memo,
   useCallback,
   useEffect,
   useLayoutEffect,
+  useMemo,
   useRef,
   useState,
 } from 'react';
@@ -83,6 +85,14 @@ export function ContextMenuTrigger({
   variant?: 'inherit' | 'surface';
   onMouseDown?: (e: React.MouseEvent) => void;
 }) {
+  const handleClick = useCallback(
+    (e: React.MouseEvent) => {
+      e.stopPropagation();
+      onToggle();
+    },
+    [onToggle]
+  );
+
   return (
     <Button
       ref={ref}
@@ -94,10 +104,7 @@ export function ContextMenuTrigger({
       surface={surface ?? 'elevated'}
       style={style}
       onMouseDown={onMouseDown}
-      onClick={(e) => {
-        e.stopPropagation();
-        onToggle();
-      }}
+      onClick={handleClick}
       className={`${className ?? ''} ${isOpen ? 'pressed text-accent' : ''}`}
     >
       <DotsThreeOutlineVerticalIcon size={18} weight='duotone' />
@@ -256,6 +263,39 @@ export function ContextMenu({
   ]);
 
   // Keyboard navigation
+  const handleBackFromSubmenu = useCallback(() => {
+    setActiveSubmenu(null);
+    setFocusedIndex(submenuParentIndex);
+  }, [submenuParentIndex]);
+
+  const handleSubmenuSelect = useCallback(
+    (id: string) => {
+      activeSubmenu?.onSelect(id);
+      onClose();
+    },
+    [activeSubmenu, onClose]
+  );
+
+  const handleBackFromEdit = useCallback(() => {
+    activeEditSubmenu?.onCancel();
+    setActiveEditItemId(null);
+    setFocusedIndex(submenuParentIndex);
+  }, [activeEditSubmenu, submenuParentIndex]);
+
+  const handleEditSave = useCallback(() => {
+    activeEditSubmenu?.onSave();
+    onClose();
+  }, [activeEditSubmenu, onClose]);
+
+  const menuStyle = useMemo(
+    () => ({ position: 'fixed' as const, top: position.top, left: position.left }),
+    [position]
+  );
+
+  const handleStopPropagation = useCallback((e: React.MouseEvent) => {
+    e.stopPropagation();
+  }, []);
+
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent) => {
       const items = currentItemsRef.current;
@@ -299,36 +339,23 @@ export function ContextMenu({
       role='menu'
       tabIndex={-1}
       aria-label='Song actions'
-      style={{ position: 'fixed', top: position.top, left: position.left }}
+      style={menuStyle}
       className='z-9999 min-w-48'
       onKeyDown={activeEditItemId ? undefined : handleKeyDown}
-      onClick={(e) => e.stopPropagation()}
+      onClick={handleStopPropagation}
     >
       <div className='glass-popover outline-2 outline-accent/20'>
         {activeSubmenu ? (
           <SubmenuPanel
             config={activeSubmenu}
-            onBack={() => {
-              setActiveSubmenu(null);
-              setFocusedIndex(submenuParentIndex);
-            }}
-            onSelect={(id) => {
-              activeSubmenu.onSelect(id);
-              onClose();
-            }}
+            onBack={handleBackFromSubmenu}
+            onSelect={handleSubmenuSelect}
           />
         ) : activeEditSubmenu ? (
           <EditSubmenuPanel
             config={activeEditSubmenu}
-            onBack={() => {
-              activeEditSubmenu.onCancel();
-              setActiveEditItemId(null);
-              setFocusedIndex(submenuParentIndex);
-            }}
-            onSave={() => {
-              activeEditSubmenu.onSave();
-              onClose();
-            }}
+            onBack={handleBackFromEdit}
+            onSave={handleEditSave}
           />
         ) : (
           items.map((item, index) => {
@@ -345,22 +372,14 @@ export function ContextMenu({
             return (
               <div key={item.id}>
                 {index > 0 && <div className='border-b border-muted/50' />}
-                <MenuItemButton
+                <MenuItemRow
                   item={item}
-                  onClick={() => {
-                    if (item.submenu) {
-                      setActiveSubmenu(item.submenu);
-                      setSubmenuParentIndex(focusedIndex);
-                      setFocusedIndex(0);
-                    } else if (item.editSubmenu) {
-                      setActiveEditItemId(item.id);
-                      setSubmenuParentIndex(focusedIndex);
-                      setFocusedIndex(0);
-                    } else {
-                      item.onClick?.();
-                      onClose();
-                    }
-                  }}
+                  focusedIndex={focusedIndex}
+                  onClose={onClose}
+                  setActiveSubmenu={setActiveSubmenu}
+                  setActiveEditItemId={setActiveEditItemId}
+                  setSubmenuParentIndex={setSubmenuParentIndex}
+                  setFocusedIndex={setFocusedIndex}
                 />
               </div>
             );
@@ -373,6 +392,49 @@ export function ContextMenu({
 }
 
 // --- Sub-components ---
+
+const MenuItemRow = memo(function MenuItemRow({
+  item,
+  focusedIndex,
+  onClose,
+  setActiveSubmenu,
+  setActiveEditItemId,
+  setSubmenuParentIndex,
+  setFocusedIndex,
+}: {
+  item: MenuItem;
+  focusedIndex: number;
+  onClose: () => void;
+  setActiveSubmenu: (s: SubmenuConfig | null) => void;
+  setActiveEditItemId: (id: string | null) => void;
+  setSubmenuParentIndex: (i: number) => void;
+  setFocusedIndex: (i: number) => void;
+}) {
+  const handleClick = useCallback(() => {
+    if (item.submenu) {
+      setActiveSubmenu(item.submenu);
+      setSubmenuParentIndex(focusedIndex);
+      setFocusedIndex(0);
+    } else if (item.editSubmenu) {
+      setActiveEditItemId(item.id);
+      setSubmenuParentIndex(focusedIndex);
+      setFocusedIndex(0);
+    } else {
+      item.onClick?.();
+      onClose();
+    }
+  }, [
+    focusedIndex,
+    item,
+    onClose,
+    setActiveEditItemId,
+    setActiveSubmenu,
+    setFocusedIndex,
+    setSubmenuParentIndex,
+  ]);
+
+  return <MenuItemButton item={item} onClick={handleClick} />;
+});
 
 function InfoRow({ item }: { item: MenuItem }) {
   return (
