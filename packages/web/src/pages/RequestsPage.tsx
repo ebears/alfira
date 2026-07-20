@@ -1,6 +1,6 @@
 import { type SongRequest } from '@alfira/server/shared';
 import { TrayIcon } from '@phosphor-icons/react';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { approveRequest, cancelRequest, denyRequest, fetchRequests } from '../api/api';
 import AddSongModal from '../components/AddSongModal';
@@ -55,35 +55,44 @@ export default function RequestsPage() {
     deps: [tab, mineOnly],
   });
 
-  const handleApprove = async (id: string) => {
-    setActionError(null);
-    try {
-      await approveRequest(id);
-      removeItem(id);
-    } catch (err: unknown) {
-      setActionError(err instanceof Error ? err.message : 'Failed to approve.');
-    }
-  };
+  const handleApprove = useCallback(
+    async (id: string) => {
+      setActionError(null);
+      try {
+        await approveRequest(id);
+        removeItem(id);
+      } catch (err: unknown) {
+        setActionError(err instanceof Error ? err.message : 'Failed to approve.');
+      }
+    },
+    [removeItem]
+  );
 
-  const handleDeny = async (id: string) => {
-    setActionError(null);
-    try {
-      await denyRequest(id);
-      removeItem(id);
-    } catch (err: unknown) {
-      setActionError(err instanceof Error ? err.message : 'Failed to deny.');
-    }
-  };
+  const handleDeny = useCallback(
+    async (id: string) => {
+      setActionError(null);
+      try {
+        await denyRequest(id);
+        removeItem(id);
+      } catch (err: unknown) {
+        setActionError(err instanceof Error ? err.message : 'Failed to deny.');
+      }
+    },
+    [removeItem]
+  );
 
-  const handleCancel = async (id: string) => {
-    setActionError(null);
-    try {
-      await cancelRequest(id);
-      removeItem(id);
-    } catch (err: unknown) {
-      setActionError(err instanceof Error ? err.message : 'Failed to cancel.');
-    }
-  };
+  const handleCancel = useCallback(
+    async (id: string) => {
+      setActionError(null);
+      try {
+        await cancelRequest(id);
+        removeItem(id);
+      } catch (err: unknown) {
+        setActionError(err instanceof Error ? err.message : 'Failed to cancel.');
+      }
+    },
+    [removeItem]
+  );
 
   const isOwnFn = useCallback(
     (requestedBy: string) => requestedBy === user?.discordId,
@@ -109,8 +118,30 @@ export default function RequestsPage() {
 
   const countLabel = hasLoaded ? `${total} request${total !== 1 ? 's' : ''}` : '—';
 
+  const pageStyle = useMemo(() => ({ paddingBottom: 0 }), []);
+
+  const handleShowAddModal = useCallback(() => setShowAddModal(true), []);
+  const handleHideAddModal = useCallback(() => setShowAddModal(false), []);
+
+  const handleSelectPendingTab = useCallback(() => {
+    setTab('pending');
+  }, []);
+
+  const handleSelectHistoryTab = useCallback(() => {
+    setTab('closed');
+    setMineOnly(false);
+  }, []);
+
+  const handleAddedAndClose = useCallback(() => {
+    setShowAddModal(false);
+  }, []);
+
+  const handleRequestCreated = useCallback(() => {
+    reset();
+  }, [reset]);
+
   return (
-    <div className='p-4 md:p-8 flex flex-col min-h-0 h-full' style={{ paddingBottom: 0 }}>
+    <div className='p-4 md:p-8 flex flex-col min-h-0 h-full' style={pageStyle}>
       <PageHeader
         icon={TrayIcon}
         title='Requests'
@@ -118,7 +149,7 @@ export default function RequestsPage() {
       >
         <Button
           variant='primary'
-          onClick={() => setShowAddModal(true)}
+          onClick={handleShowAddModal}
           className={showAddModal ? 'pressed' : ''}
         >
           + Request Song
@@ -130,9 +161,7 @@ export default function RequestsPage() {
         <div className='flex gap-1 bg-elevated rounded-lg p-1'>
           <button
             type='button'
-            onClick={() => {
-              setTab('pending');
-            }}
+            onClick={handleSelectPendingTab}
             className={`px-3 py-1.5 rounded-md text-sm font-body transition-colors cursor-pointer ${
               tab === 'pending' ? 'bg-accent text-elevated' : 'text-muted hover:text-fg'
             }`}
@@ -141,10 +170,7 @@ export default function RequestsPage() {
           </button>
           <button
             type='button'
-            onClick={() => {
-              setTab('closed');
-              setMineOnly(false);
-            }}
+            onClick={handleSelectHistoryTab}
             className={`px-3 py-1.5 rounded-md text-sm font-body transition-colors cursor-pointer ${
               tab === 'closed' ? 'bg-accent text-elevated' : 'text-muted hover:text-fg'
             }`}
@@ -187,13 +213,9 @@ export default function RequestsPage() {
       {/* Modals */}
       {showAddModal && (
         <AddSongModal
-          onClose={() => setShowAddModal(false)}
-          onAdded={() => {
-            setShowAddModal(false);
-          }}
-          onRequestCreated={() => {
-            reset();
-          }}
+          onClose={handleHideAddModal}
+          onAdded={handleAddedAndClose}
+          onRequestCreated={handleRequestCreated}
         />
       )}
     </div>

@@ -1,6 +1,6 @@
 import { CaretLeftIcon, CraneTowerIcon, GuitarIcon, LinkBreakIcon } from '@phosphor-icons/react';
 import * as m from 'motion/react-m';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 
 import { ADMIN_NAV_ITEMS, NAV_ITEMS } from '../constants';
@@ -14,6 +14,8 @@ import { NowPlayingBar } from './NowPlayingBar';
 import QueuePanel from './QueuePanel';
 import SettingsMenu from './SettingsMenu';
 import UserMenu from './UserMenu';
+
+const elevatedSurfaceStyle = { '--btn-surface': 'var(--color-elevated)' } as React.CSSProperties;
 
 export default function Layout() {
   return (
@@ -42,10 +44,26 @@ function LayoutContent() {
     localStorage.setItem('alfira-sidebar-collapsed', String(collapsed));
   }, [collapsed]);
 
-  const handleLogout = async () => {
+  const handleLogout = useCallback(async () => {
     await logout();
     void navigate('/login');
-  };
+  }, [logout, navigate]);
+
+  const handleToggleCollapse = useCallback(() => setCollapsed((c) => !c), []);
+
+  const navLinkClassName = useCallback(
+    ({ isActive }: { isActive: boolean }) =>
+      `flex items-center rounded-xl font-body text-md transition-all duration-150 cursor-pointer ${
+        collapsed ? 'justify-center px-0 py-3' : 'px-3 py-3'
+      } ${isActive ? 'btn-inherit pressed' : 'btn-inherit'}`,
+    [collapsed]
+  );
+
+  const sidebarAnimate = useMemo(() => ({ width: collapsed ? 64 : 224 }), [collapsed]);
+  const sidebarTransition = useMemo(
+    () => ({ type: 'spring' as const, stiffness: 500, damping: 25 }),
+    []
+  );
 
   return (
     <div className='flex flex-col h-full bg-surface overflow-hidden'>
@@ -63,9 +81,9 @@ function LayoutContent() {
         {/* ------------------------------------------------------------------ */}
         <m.aside
           className='hidden md:flex shrink-0 flex-col bg-elevated overflow-hidden h-full'
-          animate={{ width: collapsed ? 64 : 224 }}
+          animate={sidebarAnimate}
           initial={false}
-          transition={{ type: 'spring', stiffness: 500, damping: 25 }}
+          transition={sidebarTransition}
         >
           {/* Wordmark */}
           <div
@@ -136,12 +154,8 @@ function LayoutContent() {
                 key={to}
                 to={to}
                 title={collapsed ? label : undefined}
-                className={({ isActive }) =>
-                  `flex items-center rounded-xl font-body text-md transition-all duration-150 cursor-pointer ${
-                    collapsed ? 'justify-center px-0 py-3' : 'px-3 py-3'
-                  } ${isActive ? 'btn-inherit pressed' : 'btn-inherit'}`
-                }
-                style={{ '--btn-surface': 'var(--color-elevated)' } as React.CSSProperties}
+                className={navLinkClassName}
+                style={elevatedSurfaceStyle}
               >
                 {!collapsed && <span className='mr-auto'>{label}</span>}
                 <Icon size={22} weight='duotone' />
@@ -164,12 +178,8 @@ function LayoutContent() {
                     key={to}
                     to={to}
                     title={collapsed ? label : undefined}
-                    className={({ isActive }) =>
-                      `flex items-center rounded-xl font-body text-md transition-all duration-150 cursor-pointer ${
-                        collapsed ? 'justify-center px-0 py-3' : 'px-3 py-3'
-                      } ${isActive ? 'btn-inherit pressed' : 'btn-inherit'}`
-                    }
-                    style={{ '--btn-surface': 'var(--color-elevated)' } as React.CSSProperties}
+                    className={navLinkClassName}
+                    style={elevatedSurfaceStyle}
                   >
                     {!collapsed && <span className='mr-auto'>{label}</span>}
                     <Icon size={22} weight='duotone' />
@@ -209,12 +219,12 @@ function LayoutContent() {
           <div className={collapsed ? 'flex justify-center px-2 pb-4' : 'px-3 pb-4'}>
             <button
               type='button'
-              onClick={() => setCollapsed((c) => !c)}
+              onClick={handleToggleCollapse}
               title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
               className={`flex items-center rounded-xl font-body transition-all duration-150 cursor-pointer w-full ${
                 collapsed ? 'justify-center px-0 py-2' : 'px-3 py-2'
               } btn-inherit`}
-              style={{ '--btn-surface': 'var(--color-elevated)' } as React.CSSProperties}
+              style={elevatedSurfaceStyle}
             >
               {!collapsed && <span className='mr-auto'>Collapse</span>}
               <CaretLeftIcon size={18} weight='duotone' className={collapsed ? 'rotate-180' : ''} />
@@ -257,6 +267,12 @@ function LayoutContent() {
 function QueueLayout() {
   const { queueOpen } = useQueuePanel();
 
+  const queuePanelAnimate = useMemo(() => ({ width: queueOpen ? 384 : 0 }), [queueOpen]);
+  const queuePanelTransition = useMemo(
+    () => ({ type: 'spring' as const, stiffness: 500, damping: 45 }),
+    []
+  );
+
   return (
     <>
       <div className='flex-1 flex flex-col min-w-0 pt-14 md:pt-0 overflow-hidden'>
@@ -268,9 +284,9 @@ function QueueLayout() {
       {/* Desktop: right-side panel that pushes content */}
       <m.aside
         className='shrink-0 flex-col bg-elevated overflow-hidden clay-floating md:flex hidden h-full'
-        animate={{ width: queueOpen ? 384 : 0 }}
+        animate={queuePanelAnimate}
         initial={false}
-        transition={{ type: 'spring', stiffness: 500, damping: 45 }}
+        transition={queuePanelTransition}
       >
         {queueOpen && <QueuePanel />}
       </m.aside>
