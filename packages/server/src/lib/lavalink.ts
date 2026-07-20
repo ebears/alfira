@@ -90,6 +90,10 @@ interface LavalinkEvents {
 interface GuildState {
   connected: boolean;
   playing: boolean;
+  /** Latest position reported by NodeLink (ms), accounting for timescale. */
+  position: number;
+  /** Unix-ms timestamp when NodeLink recorded `position`. */
+  positionTime: number;
 }
 
 // ---------------------------------------------------------------------------
@@ -208,6 +212,34 @@ class LavalinkSocket extends EventEmitter<LavalinkEvents> {
     return this.guilds.get(guildId)?.playing ?? false;
   }
 
+  /**
+   * Returns the latest NodeLink-reported position + timestamp for a guild,
+   * or null if no playerUpdate has been received yet (position is 0).
+   *
+   * The position accounts for timescale speed changes — it's the ground-truth
+   * audio position, unlike wall-clock-based trackStartedAt.
+   */
+  getPlayerPosition(guildId: string): { position: number; time: number } | null {
+    const state = this.guilds.get(guildId);
+    if (!state || state.position === 0) {
+      return null;
+    }
+    return { position: state.position, time: state.positionTime };
+  }
+
+  /**
+   * Reset the stored position so getPlayerPosition returns null until the
+   * next playerUpdate arrives.  Call after a seek — the pre-seek position
+   * is stale and would otherwise override the freshly-set trackStartedAt.
+   */
+  resetPlayerPosition(guildId: string): void {
+    const state = this.guilds.get(guildId);
+    if (state) {
+      state.position = 0;
+      state.positionTime = 0;
+    }
+  }
+
   /** Force-reset playing state — used when destroying a player. */
   markPlaying(guildId: string, playing: boolean): void {
     this.ensureGuild(guildId).playing = playing;
@@ -253,7 +285,7 @@ class LavalinkSocket extends EventEmitter<LavalinkEvents> {
   private ensureGuild(guildId: string): GuildState {
     let state = this.guilds.get(guildId);
     if (!state) {
-      state = { connected: false, playing: false };
+      state = { connected: false, playing: false, position: 0, positionTime: 0 };
       this.guilds.set(guildId, state);
     }
     return state;
@@ -272,6 +304,8 @@ class LavalinkSocket extends EventEmitter<LavalinkEvents> {
       case 'playerUpdate': {
         const state = this.ensureGuild(msg.guildId);
         state.connected = msg.state.connected;
+        state.position = msg.state.position;
+        state.positionTime = msg.state.time;
         break;
       }
 

@@ -53,6 +53,10 @@ function handleGetQueue(
       priorityQueue: [],
       queue: [],
       trackStartedAt: null,
+      nextTrack: null,
+      timescaleSpeed: 1.0,
+      nodeLinkPosition: null,
+      nodeLinkTime: null,
     });
   }
 
