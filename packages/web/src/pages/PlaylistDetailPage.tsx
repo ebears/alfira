@@ -262,12 +262,10 @@ export default function PlaylistDetailPage() {
   });
 
   // Derive PlaylistDetail for JSX — metadata from the hook, songs from items
-  const playlistDetail = playlistMeta
-    ? {
-        ...playlistMeta,
-        songs,
-      }
-    : null;
+  const playlistDetail = useMemo(
+    () => (playlistMeta ? { ...playlistMeta, songs } : null),
+    [playlistMeta, songs]
+  );
 
   // Stable ref for callbacks — avoids playlistDetail changing every render
   const playlistDetailRef = useRef(playlistDetail);
@@ -277,6 +275,69 @@ export default function PlaylistDetailPage() {
   const canEdit = isAdminView || isOwner || hasPermission('songs.edit');
   const canBulk = canEdit;
   const isSmart = !!playlistDetail?.tagNameLower;
+
+  const songItems: Song[] = useMemo(() => songs.map((ps) => ps.song), [songs]);
+
+  const pageStyle = useMemo(() => ({ paddingBottom: 0 }), []);
+  const handleGoBack = useCallback(() => navigate('/playlists'), [navigate]);
+  const handleToggleMenu = useCallback(() => setMenuOpen((v) => !v), []);
+  const handleCloseMenu = useCallback(() => setMenuOpen(false), []);
+  const handleSortChange = useCallback((field: string, newOrder: string) => {
+    setSort(field);
+    setOrder(newOrder);
+  }, []);
+  const handleAddTag = useCallback((tag: string) => {
+    const t = tag.toLowerCase();
+    setFilterTags((prev) => (prev.includes(t) ? prev : [...prev, t]));
+  }, []);
+  const handleRemoveTag = useCallback(
+    (tag: string) => setFilterTags((prev) => prev.filter((t) => t !== tag)),
+    []
+  );
+  const handleAddSource = useCallback(
+    (s: string) => setFilterSources((prev) => (prev.includes(s) ? prev : [...prev, s])),
+    []
+  );
+  const handleRemoveSource = useCallback(
+    (s: string) => setFilterSources((prev) => prev.filter((x) => x !== s)),
+    []
+  );
+  const handleToggleSelectionMode = useCallback(() => {
+    if (selectionMode) {
+      bulk.clearAll();
+    }
+    setSelectionMode((v) => !v);
+  }, [selectionMode, bulk]);
+  const handleViewModeChange = useCallback((mode: 'list' | 'grid') => {
+    localStorage.setItem('alfira-playlist-view', mode);
+    setViewMode(mode);
+  }, []);
+  const handleSongDelete = useCallback(
+    (id: string) => {
+      const ps = songs.find((p) => p.songId === id);
+      if (ps) {
+        setRemoveId(ps.songId);
+      }
+    },
+    [songs]
+  );
+  const handleCloseAddSongs = useCallback(() => setShowAddSongs(false), []);
+  const handleAddSongsAdded = useCallback(() => {
+    refetch();
+    setShowAddSongs(false);
+  }, [refetch]);
+  const handleCancelBulkRemove = useCallback(() => setBulkRemoveConfirm(false), []);
+  const handleCancelRemove = useCallback(() => setRemoveId(null), []);
+  const handleCancelDeletePlaylist = useCallback(() => setDeleteConfirm(false), []);
+  const handleCancelMakeSmart = useCallback(() => setTagSmartConfirm(null), []);
+  const handleBulkTag = useCallback(() => setBulkEditingOpen(true), []);
+  const handleSelectAll = useCallback(
+    () => bulk.selectAll(songs.map((ps) => ps.songId)),
+    [bulk, songs]
+  );
+  const handleEmptyAdd = useCallback(() => setShowAddSongs(true), []);
+
+  const handleCloseBulkEdit = useCallback(() => setBulkEditingOpen(false), []);
 
   // ── Socket: playlist updated (rename, visibility, song count changes) ──
   useEffect(() => {
@@ -331,22 +392,31 @@ export default function PlaylistDetailPage() {
     }
   };
 
-  const handleRemoveSong = async (songId: string) => {
-    if (!playlistDetail) {
-      return;
+  const handleRemoveSong = useCallback(
+    async (songId: string) => {
+      if (!playlistDetail) {
+        return;
+      }
+      const junction = songsRef.current.find((ps) => ps.songId === songId);
+      if (!junction) {
+        setRemoveId(null);
+        return;
+      }
+      try {
+        await removeSongFromPlaylist(playlistDetail.id, songId);
+        removeItem(junction.id);
+      } finally {
+        setRemoveId(null);
+      }
+    },
+    [playlistDetail, removeItem]
+  );
+
+  const handleConfirmRemove = useCallback(() => {
+    if (removeId) {
+      void handleRemoveSong(removeId);
     }
-    const junction = songsRef.current.find((ps) => ps.songId === songId);
-    if (!junction) {
-      setRemoveId(null);
-      return;
-    }
-    try {
-      await removeSongFromPlaylist(playlistDetail.id, songId);
-      removeItem(junction.id);
-    } finally {
-      setRemoveId(null);
-    }
-  };
+  }, [removeId, handleRemoveSong]);
 
   // ── Bulk actions ─────────────────────────────────────────────────────
   const handleBulkRemove = useCallback(() => {
@@ -408,13 +478,18 @@ export default function PlaylistDetailPage() {
     [bulk, notify]
   );
 
-  const handleDeletePlaylist = async () => {
+  const handleDeletePlaylist = useCallback(async () => {
     if (!playlistDetail) {
       return;
     }
     await deletePlaylist(playlistDetail.id);
     void navigate('/playlists');
-  };
+  }, [playlistDetail, navigate]);
+
+  const handleConfirmDeletePlaylist = useCallback(() => {
+    setDeleteConfirm(false);
+    void handleDeletePlaylist();
+  }, [handleDeletePlaylist]);
 
   const handleToggleVisibility = async () => {
     if (!playlistDetail) {
@@ -511,6 +586,12 @@ export default function PlaylistDetailPage() {
     },
     [refetch, notify]
   );
+
+  const handleConfirmMakeSmart = useCallback(() => {
+    if (tagSmartConfirm) {
+      void handleMakeSmart(tagSmartConfirm);
+    }
+  }, [tagSmartConfirm, handleMakeSmart]);
 
   const handleAddPlaylistToQueue = useCallback(async () => {
     const pd = playlistDetailRef.current;
@@ -625,16 +706,13 @@ export default function PlaylistDetailPage() {
     return null;
   }
 
-  // Extract plain songs from PlaylistDetailSong[]
-  const songItems: Song[] = songs.map((ps) => ps.song);
-
   return (
-    <div className='p-4 md:p-8 flex flex-col min-h-0 h-full' style={{ paddingBottom: 0 }}>
+    <div className='p-4 md:p-8 flex flex-col min-h-0 h-full' style={pageStyle}>
       {/* Back */}
       <Button
         variant='inherit'
         surface='surface'
-        onClick={() => navigate('/playlists')}
+        onClick={handleGoBack}
         className='flex items-center gap-1.5 font-mono text-xs mb-4 md:mb-6 min-h-11 md:min-h-0'
       >
         <CaretLeftIcon size={16} weight='duotone' className='md:w-3.5 md:h-3.5' />
@@ -714,7 +792,7 @@ export default function PlaylistDetailPage() {
           </Button>
           <ContextMenuTrigger
             ref={menuTriggerRef}
-            onToggle={() => setMenuOpen((v) => !v)}
+            onToggle={handleToggleMenu}
             isOpen={menuOpen}
             surface='surface'
             size='default'
@@ -724,7 +802,7 @@ export default function PlaylistDetailPage() {
             <ContextMenu
               items={menuItems}
               isOpen={menuOpen}
-              onClose={() => setMenuOpen(false)}
+              onClose={handleCloseMenu}
               triggerRef={menuTriggerRef}
             />
           )}
@@ -738,34 +816,20 @@ export default function PlaylistDetailPage() {
         sortOptions={[...SORT_OPTIONS]}
         sort={sort}
         order={order as 'asc' | 'desc'}
-        onSortChange={(field, newOrder) => {
-          setSort(field);
-          setOrder(newOrder);
-        }}
+        onSortChange={handleSortChange}
         defaultSort='position'
         textSortFields={['title', 'artist', 'album']}
         filterTags={filterTags}
         filterSources={filterSources}
-        onAddTag={(tag) => {
-          const normalized = tag.toLowerCase();
-          setFilterTags((prev) => (prev.includes(normalized) ? prev : [...prev, normalized]));
-        }}
-        onRemoveTag={(tag) => setFilterTags((prev) => prev.filter((t) => t !== tag))}
-        onAddSource={(s) => setFilterSources((prev) => (prev.includes(s) ? prev : [...prev, s]))}
-        onRemoveSource={(s) => setFilterSources((prev) => prev.filter((x) => x !== s))}
+        onAddTag={handleAddTag}
+        onRemoveTag={handleRemoveTag}
+        onAddSource={handleAddSource}
+        onRemoveSource={handleRemoveSource}
         showBulkToggle={canBulk}
         selectionMode={selectionMode}
-        onToggleSelectionMode={() => {
-          if (selectionMode) {
-            bulk.clearAll();
-          }
-          setSelectionMode((v) => !v);
-        }}
+        onToggleSelectionMode={handleToggleSelectionMode}
         viewMode={viewMode}
-        onViewModeChange={(mode) => {
-          localStorage.setItem('alfira-playlist-view', mode);
-          setViewMode(mode);
-        }}
+        onViewModeChange={handleViewModeChange}
       />
 
       {/* Song list */}
@@ -779,7 +843,7 @@ export default function PlaylistDetailPage() {
           <EmptyState
             title='Empty Playlist'
             isAdmin={canEdit}
-            onAdd={() => setShowAddSongs(true)}
+            onAdd={handleEmptyAdd}
             addLabel='add some songs'
           />
         )
@@ -807,16 +871,7 @@ export default function PlaylistDetailPage() {
                 playingId={playingSongId}
                 onRetry={retry}
                 onFetchMore={fetchNextPage}
-                onDelete={
-                  selectionMode
-                    ? undefined
-                    : (id) => {
-                        const ps = songs.find((p) => p.songId === id);
-                        if (ps) {
-                          setRemoveId(ps.songId);
-                        }
-                      }
-                }
+                onDelete={selectionMode ? undefined : handleSongDelete}
                 onPlay={handlePlayFromSong}
                 onAddToQueue={handleAddToQueue}
                 selectionMode={selectionMode}
@@ -848,16 +903,7 @@ export default function PlaylistDetailPage() {
                 playingId={playingSongId}
                 onRetry={retry}
                 onFetchMore={fetchNextPage}
-                onDelete={
-                  selectionMode
-                    ? undefined
-                    : (id) => {
-                        const ps = songs.find((p) => p.songId === id);
-                        if (ps) {
-                          setRemoveId(ps.songId);
-                        }
-                      }
-                }
+                onDelete={selectionMode ? undefined : handleSongDelete}
                 onPlay={handlePlayFromSong}
                 onAddToQueue={handleAddToQueue}
                 selectionMode={selectionMode}
@@ -875,11 +921,8 @@ export default function PlaylistDetailPage() {
       {showAddSongs && (
         <AddSongsModal
           playlist={playlistDetail}
-          onClose={() => setShowAddSongs(false)}
-          onAdded={() => {
-            refetch();
-            setShowAddSongs(false);
-          }}
+          onClose={handleCloseAddSongs}
+          onAdded={handleAddSongsAdded}
         />
       )}
       {/* Notification Toast */}
@@ -900,7 +943,7 @@ export default function PlaylistDetailPage() {
           }
           confirmLabel='Remove'
           onConfirm={executeBulkRemove}
-          onCancel={() => setBulkRemoveConfirm(false)}
+          onCancel={handleCancelBulkRemove}
         />
       )}
       {removeId && (
@@ -916,8 +959,8 @@ export default function PlaylistDetailPage() {
             </>
           }
           confirmLabel='Remove'
-          onConfirm={() => handleRemoveSong(removeId)}
-          onCancel={() => setRemoveId(null)}
+          onConfirm={handleConfirmRemove}
+          onCancel={handleCancelRemove}
         />
       )}
       {deleteConfirm && (
@@ -925,11 +968,8 @@ export default function PlaylistDetailPage() {
           title='Delete Playlist'
           message='This playlist will be permanently deleted. This cannot be undone.'
           confirmLabel='Delete'
-          onConfirm={() => {
-            setDeleteConfirm(false);
-            void handleDeletePlaylist();
-          }}
-          onCancel={() => setDeleteConfirm(false)}
+          onConfirm={handleConfirmDeletePlaylist}
+          onCancel={handleCancelDeletePlaylist}
         />
       )}
       {tagSmartConfirm && (
@@ -946,8 +986,8 @@ export default function PlaylistDetailPage() {
             </>
           }
           confirmLabel='Convert'
-          onConfirm={() => handleMakeSmart(tagSmartConfirm)}
-          onCancel={() => setTagSmartConfirm(null)}
+          onConfirm={handleConfirmMakeSmart}
+          onCancel={handleCancelMakeSmart}
         />
       )}
 
@@ -961,8 +1001,8 @@ export default function PlaylistDetailPage() {
           canTag={canEdit}
           deleteLabel='Remove selected'
           onDelete={handleBulkRemove}
-          onTag={() => setBulkEditingOpen(true)}
-          onSelectAll={() => bulk.selectAll(songItems.map((s) => s.id))}
+          onTag={handleBulkTag}
+          onSelectAll={handleSelectAll}
           onDeselectAll={bulk.clearAll}
           isDeleting={bulkRemoving}
         />
@@ -973,7 +1013,7 @@ export default function PlaylistDetailPage() {
         <BulkEditModal
           count={bulk.count}
           onApply={handleBulkEdit}
-          onClose={() => setBulkEditingOpen(false)}
+          onClose={handleCloseBulkEdit}
           isApplying={bulkEditingApplying}
         />
       )}

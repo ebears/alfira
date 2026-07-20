@@ -1,5 +1,5 @@
 import { type RequestPreview, type Song } from '@alfira/server/shared';
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { createRequest, previewRequest } from '../api/api';
 import { useTagColors } from '../context/TagsContext';
@@ -61,7 +61,7 @@ export default function AddSongModal({
     }
   }, [successMsg, onClose]);
 
-  const handleFetch = async () => {
+  const handleFetch = useCallback(async () => {
     if (!url.trim()) {
       return;
     }
@@ -91,9 +91,9 @@ export default function AddSongModal({
     } finally {
       setLoading(false);
     }
-  };
+  }, [url]);
 
-  const handleImportPlaylist = async () => {
+  const handleImportPlaylist = useCallback(async () => {
     if (!url.trim()) {
       return;
     }
@@ -120,9 +120,9 @@ export default function AddSongModal({
     } finally {
       setLoading(false);
     }
-  };
+  }, [url, onRequestCreated]);
 
-  const handleSubmit = async () => {
+  const handleSubmit = useCallback(async () => {
     if (!url.trim()) {
       return;
     }
@@ -160,48 +160,130 @@ export default function AddSongModal({
     } finally {
       setLoading(false);
     }
-  };
+  }, [
+    url,
+    notifyDm,
+    nickname,
+    artist,
+    album,
+    artwork,
+    tags,
+    volumeBoost,
+    onRequestCreated,
+    onAdded,
+  ]);
 
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && step === 'url') {
-      void handleFetch();
-    }
-    if (e.key === 'Escape') {
-      if (step === 'metadata') {
-        setStep('url');
-      } else {
-        onClose();
+  const handleKeyDown = useCallback(
+    (e: React.KeyboardEvent) => {
+      if (e.key === 'Enter' && step === 'url') {
+        void handleFetch();
       }
-    }
-  };
+      if (e.key === 'Escape') {
+        if (step === 'metadata') {
+          setStep('url');
+        } else {
+          onClose();
+        }
+      }
+    },
+    [step, handleFetch, onClose]
+  );
 
-  const addTag = () => {
+  const addTag = useCallback(() => {
     const trimmed = tagInput.trim();
     if (!trimmed || tags.includes(trimmed)) {
       return;
     }
     setTags((prev) => [...prev, trimmed]);
     setTagInput('');
-  };
+  }, [tagInput, tags]);
 
-  const removeTag = (tag: string) => {
+  const removeTag = useCallback((tag: string) => {
     setTags((prev) => prev.filter((t) => t !== tag));
-  };
+  }, []);
 
-  const handleTagKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter') {
-      e.preventDefault();
-      addTag();
-    }
-    if (e.key === 'Backspace' && tagInput === '' && tags.length > 0) {
-      removeTag(tags[tags.length - 1]);
-    }
-  };
+  const handleTagKeyDown = useCallback(
+    (e: React.KeyboardEvent) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        addTag();
+      }
+      if (e.key === 'Backspace' && tagInput === '' && tags.length > 0) {
+        removeTag(tags[tags.length - 1]);
+      }
+    },
+    [addTag, removeTag, tagInput, tags]
+  );
 
-  const handleBackToUrl = () => {
+  const handleBackToUrl = useCallback(() => {
     setStep('url');
     setError('');
-  };
+  }, []);
+
+  const handleUrlChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    setUrl(e.target.value);
+    setError('');
+    setSuccessMsg('');
+  }, []);
+
+  const handleFocusTagInput = useCallback(() => {
+    document.getElementById('add-tag-input')?.focus();
+  }, []);
+
+  const handleTagPillRemove = useCallback(
+    (e: React.MouseEvent<HTMLButtonElement>) => {
+      e.stopPropagation();
+      const tag = e.currentTarget.closest('[data-tag]')?.getAttribute('data-tag');
+      if (tag) {
+        removeTag(tag);
+      }
+    },
+    [removeTag]
+  );
+
+  const handleTagInputChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => setTagInput(e.target.value),
+    []
+  );
+
+  const handleVolumeTextChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const v = e.target.value;
+    if (v === '' || /^-?\d*$/.test(v)) {
+      setVolumeBoost(v);
+    }
+  }, []);
+
+  const handleVolumeBlur = useCallback(() => {
+    if (volumeBoost.trim() === '' || volumeBoost === '-') {
+      setVolumeBoost('0');
+    } else {
+      const n = parseInt(volumeBoost, 10);
+      if (!Number.isNaN(n)) {
+        setVolumeBoost(String(Math.min(200, Math.max(-100, n))));
+      }
+    }
+  }, [volumeBoost]);
+
+  const handleVolumeRangeChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => setVolumeBoost(e.target.value),
+    []
+  );
+
+  const volumeSliderValue = useMemo(
+    () =>
+      volumeBoost.trim() === '' || volumeBoost === '-'
+        ? 0
+        : Math.min(200, Math.max(-100, parseInt(volumeBoost, 10) || 0)),
+    [volumeBoost]
+  );
+
+  const volumeRangeStyle = useMemo(
+    () =>
+      ({
+        '--volume-pct': `${((Math.min(200, Math.max(-100, parseInt(volumeBoost, 10) || 0)) + 100) / 300) * 100}%`,
+      }) as React.CSSProperties,
+    [volumeBoost]
+  );
 
   const canSubmit = step === 'metadata' && !loading && !preview?.alreadyExists;
 
@@ -223,11 +305,7 @@ export default function AddSongModal({
               className='input mb-3'
               placeholder='https://...'
               value={url}
-              onChange={(e) => {
-                setUrl(e.target.value);
-                setError('');
-                setSuccessMsg('');
-              }}
+              onChange={handleUrlChange}
               onKeyDown={handleKeyDown}
               disabled={loading}
             />
@@ -346,7 +424,7 @@ export default function AddSongModal({
               {/* eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-static-element-interactions -- container click focuses inner input; keyboard handled by input */}
               <div
                 className='input text-sm flex flex-wrap gap-1.5 items-center min-h-9.5 cursor-text'
-                onClick={() => document.getElementById('add-tag-input')?.focus()}
+                onClick={handleFocusTagInput}
               >
                 {tags.map((tag) => {
                   const c = getTagColorClasses(tag, tagColorMap[tag.toLowerCase()]);
@@ -359,10 +437,8 @@ export default function AddSongModal({
                       <button
                         type='button'
                         className='ml-0.5 opacity-70 hover:opacity-100'
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          removeTag(tag);
-                        }}
+                        data-tag={tag}
+                        onClick={handleTagPillRemove}
                       >
                         &times;
                       </button>
@@ -374,7 +450,7 @@ export default function AddSongModal({
                   className='flex-1 min-w-20 bg-transparent outline-none text-sm text-fg placeholder:text-faint'
                   placeholder={tags.length === 0 ? 'Custom grouping (enter to confirm)' : ''}
                   value={tagInput}
-                  onChange={(e) => setTagInput(e.target.value)}
+                  onChange={handleTagInputChange}
                   onKeyDown={handleTagKeyDown}
                 />
               </div>
@@ -391,44 +467,18 @@ export default function AddSongModal({
                   className='input text-sm w-16 text-center'
                   type='text'
                   value={volumeBoost}
-                  onChange={(e) => {
-                    const v = e.target.value;
-                    if (v === '' || /^-?\d*$/.test(v)) {
-                      setVolumeBoost(v);
-                    }
-                  }}
-                  onBlur={() => {
-                    if (volumeBoost.trim() === '' || volumeBoost === '-') {
-                      setVolumeBoost('0');
-                    } else {
-                      const n = parseInt(volumeBoost, 10);
-                      if (!Number.isNaN(n)) {
-                        setVolumeBoost(String(Math.min(200, Math.max(-100, n))));
-                      }
-                    }
-                  }}
+                  onChange={handleVolumeTextChange}
+                  onBlur={handleVolumeBlur}
                 />
                 <span className='text-xs text-muted font-mono w-8 text-left'>%</span>
                 <input
                   type='range'
                   min={-100}
                   max={200}
-                  value={
-                    volumeBoost.trim() === '' || volumeBoost === '-'
-                      ? 0
-                      : Math.min(200, Math.max(-100, parseInt(volumeBoost, 10) || 0))
-                  }
-                  onChange={(e) => setVolumeBoost(e.target.value)}
+                  value={volumeSliderValue}
+                  onChange={handleVolumeRangeChange}
                   className='volume-range-input'
-                  style={
-                    {
-                      '--volume-pct': `${
-                        ((Math.min(200, Math.max(-100, parseInt(volumeBoost, 10) || 0)) + 100) /
-                          300) *
-                        100
-                      }%`,
-                    } as React.CSSProperties
-                  }
+                  style={volumeRangeStyle}
                 />
               </div>
             </div>
@@ -483,6 +533,10 @@ function Field({
   onChange: (v: string) => void;
   placeholder?: string;
 }) {
+  const handleChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => onChange(e.target.value),
+    [onChange]
+  );
   return (
     <div>
       <label htmlFor={id} className='block font-mono text-[10px] text-muted uppercase mb-1'>
@@ -492,7 +546,7 @@ function Field({
         id={id}
         className='input text-sm'
         value={value}
-        onChange={(e) => onChange(e.target.value)}
+        onChange={handleChange}
         placeholder={placeholder}
       />
     </div>
