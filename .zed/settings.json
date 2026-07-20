@@ -11,7 +11,7 @@
     "oxfmt": {
       "initialization_options": {
         "settings": {
-          "configPath": "./oxfmt.config.ts"
+          "fmt.configPath": "./oxfmt.config.ts"
         }
       }
     }
@@ -44,8 +44,8 @@
     },
     "TypeScript": {
       "language_servers": [
-        "typescript-ls",
         "oxlint",
+        "!typescript-ls",
         "!typescript-language-server",
         "!vtsls",
         "..."
@@ -69,8 +69,8 @@
     },
     "TSX": {
       "language_servers": [
-        "typescript-ls",
         "oxlint",
+        "!typescript-ls",
         "!typescript-language-server",
         "!vtsls",
         "..."
