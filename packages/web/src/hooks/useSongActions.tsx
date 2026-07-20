@@ -80,7 +80,7 @@ export function useSongActions({
         ? [
             {
               id: 'remove',
-              label: removeLabel || 'Remove',
+              label: removeLabel ?? 'Remove',
               icon: <BombIcon size={14} weight='duotone' />,
               danger: true,
               onClick: onRemove,
@@ -128,7 +128,7 @@ export function useSongActions({
                     label: '',
                     icon: <UserIcon size={14} weight='duotone' />,
                     info: {
-                      label: song.addedByDisplayName || song.addedBy || '',
+                      label: (song.addedByDisplayName ?? song.addedBy) || '',
                       icon: <UserIcon size={14} weight='duotone' />,
                     },
                     separatorBefore: true,

@@ -53,7 +53,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button
     () =>
       variant === 'inherit'
         ? ({ ...style, '--btn-surface': surfaceVars[surface] } as React.CSSProperties)
-        : style || {},
+        : (style ?? {}),
     [variant, style, surface]
   );
 

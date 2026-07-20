@@ -58,7 +58,7 @@ const TagTicker = memo(({ tags, isHovered: externalHovered }: TagTickerProps) =>
   // Smooth return on de-hover: pause animation at current position, then transition back to 0
   useLayoutEffect(() => {
     if (!shouldScroll) {
-      return;
+      return undefined;
     }
 
     const prev = prevHoveredRef.current;
@@ -68,7 +68,7 @@ const TagTicker = memo(({ tags, isHovered: externalHovered }: TagTickerProps) =>
       // De-hovered: capture paused position and transition back to start
       const el = innerRef.current;
       if (!el) {
-        return;
+        return undefined;
       }
 
       const computed = getComputedStyle(el);
@@ -105,6 +105,8 @@ const TagTicker = memo(({ tags, isHovered: externalHovered }: TagTickerProps) =>
         el.style.animation = `ticker-scroll ${durationRef.current}s linear infinite`;
       }
     }
+
+    return undefined;
   }, [effectiveHovered, shouldScroll]);
 
   const animationStyle: React.CSSProperties = useMemo(

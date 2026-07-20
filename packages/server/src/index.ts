@@ -120,8 +120,8 @@ function getSessionUser(cookieHeader: string): ReturnType<typeof verifySessionTo
 }
 
 function createContext(request: Request): RouteContext {
-  const parsedCookies = parseCookies(request.headers.get('cookie') || '');
-  const user = getSessionUser(request.headers.get('cookie') || '');
+  const parsedCookies = parseCookies(request.headers.get('cookie') ?? '');
+  const user = getSessionUser(request.headers.get('cookie') ?? '');
   const cookies: Record<string, string> = {};
   for (const [key, value] of Object.entries(parsedCookies)) {
     if (value !== undefined) {
@@ -228,7 +228,7 @@ function startServer(): void {
       // WebSocket upgrade — auth is handled here before upgrade.
       // `server` is passed as the second argument to fetch (Bun 1.2+).
       if (url.pathname === '/ws') {
-        const user = getSessionUser(request.headers.get('cookie') || '');
+        const user = getSessionUser(request.headers.get('cookie') ?? '');
         if (!user) {
           return new Response('Unauthorized', { status: 401 });
         }

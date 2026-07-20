@@ -1,6 +1,6 @@
 import type React from 'react';
 
-import { ArrowCounterClockwise, FloppyDisk } from '@phosphor-icons/react';
+import { ArrowCounterClockwiseIcon, FloppyDiskIcon } from '@phosphor-icons/react';
 import { memo, useCallback, useEffect, useMemo, useState } from 'react';
 
 import { useAdminView } from '../../context/AdminViewContext';
@@ -187,7 +187,7 @@ export default function CompressorSection() {
           disabled={!hasChanges || saving}
           title={saving ? 'Saving…' : 'Save Changes'}
         >
-          <FloppyDisk size={16} weight='duotone' />
+          <FloppyDiskIcon size={16} weight='duotone' />
         </Button>
         <Button
           variant='inherit'
@@ -196,7 +196,7 @@ export default function CompressorSection() {
           onClick={handleReset}
           title='Reset to Defaults'
         >
-          <ArrowCounterClockwise size={16} weight='duotone' />
+          <ArrowCounterClockwiseIcon size={16} weight='duotone' />
         </Button>
       </div>
     </div>

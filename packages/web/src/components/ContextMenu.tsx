@@ -151,7 +151,7 @@ export function ContextMenu({
   // Position calculation — useLayoutEffect runs before paint, preventing a (0,0) flash.
   useLayoutEffect(() => {
     if (!isOpen || !triggerRef.current) {
-      return;
+      return undefined;
     }
 
     const lastUpdateRef = { current: 0 };
@@ -210,7 +210,7 @@ export function ContextMenu({
   // Close on outside click
   useEffect(() => {
     if (!isOpen) {
-      return;
+      return undefined;
     }
 
     const handler = (e: MouseEvent | TouchEvent) => {
@@ -232,7 +232,7 @@ export function ContextMenu({
   // Close on Escape (or go back from submenu)
   useEffect(() => {
     if (!isOpen) {
-      return;
+      return undefined;
     }
 
     const handler = (e: KeyboardEvent) => {

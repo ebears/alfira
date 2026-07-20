@@ -147,7 +147,7 @@ export default function SetupWizard() {
   // Auto-refresh guild list when on the guild step and no guilds are found.
   useEffect(() => {
     if (step !== 'guild' || guilds.length > 0) {
-      return;
+      return undefined;
     }
 
     let cancelled = false;

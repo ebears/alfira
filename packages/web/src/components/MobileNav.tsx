@@ -31,7 +31,7 @@ export default function MobileNav() {
   // Close drawer on escape key
   useEffect(() => {
     if (!isOpen) {
-      return;
+      return undefined;
     }
 
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -59,7 +59,7 @@ export default function MobileNav() {
   // Close drawer when clicking outside
   useEffect(() => {
     if (!isOpen) {
-      return;
+      return undefined;
     }
 
     const handleClickOutside = (e: MouseEvent) => {

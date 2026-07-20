@@ -1,6 +1,6 @@
 import type React from 'react';
 
-import { Check } from '@phosphor-icons/react';
+import { CheckIcon } from '@phosphor-icons/react';
 import { useCallback } from 'react';
 
 interface CheckboxProps {
@@ -64,7 +64,7 @@ export default function Checkbox({
           ${checked ? variantChecked[variant] : 'border-border bg-surface'}
         `}
       >
-        <Check
+        <CheckIcon
           size={s.icon}
           weight='bold'
           className={`transition-all duration-150 ease-out ${

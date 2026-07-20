@@ -122,7 +122,7 @@ export default function ListToolbar({
   // Close dropdown on outside click
   useEffect(() => {
     if (!sortOpen) {
-      return;
+      return undefined;
     }
     const handler = (e: MouseEvent) => {
       if (sortRef.current && !sortRef.current.contains(e.target as Node)) {

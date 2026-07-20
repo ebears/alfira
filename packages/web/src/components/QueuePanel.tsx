@@ -646,7 +646,7 @@ const QueueSongItem = memo(function QueueSongItem({
         <div className='overflow-hidden w-10 h-10 rounded border border-border shrink-0 bg-elevated'>
           <ArtworkImage
             src={song.artwork ?? song.thumbnailUrl}
-            alt={song.nickname || song.title}
+            alt={song.nickname ?? song.title}
             className='w-full h-full'
             imageClassName='scale-[1.33]'
           />
@@ -656,7 +656,7 @@ const QueueSongItem = memo(function QueueSongItem({
         <div className='flex-1 min-w-0 flex flex-col justify-center gap-0.5'>
           <p className='text-xs font-semibold text-fg leading-tight flex items-center gap-1.5 min-w-0'>
             <MusicNoteIcon size={13} weight='fill' className='shrink-0 text-muted' />
-            <span className='truncate'>{song.nickname || song.title}</span>
+            <span className='truncate'>{song.nickname ?? song.title}</span>
           </p>
           <div className='flex items-center gap-2 text-[11px] text-muted min-w-0'>
             {song.artist && (
@@ -776,11 +776,11 @@ const PanelHeader = memo(function PanelHeader({
                 disabled: !mqc.currentSong || mqc.loopBusy,
                 title: `Loop: ${mqc.loopMode}`,
               })}
-              className={`${
+              className={
                 isLoopActive
                   ? 'pressed text-accent hover:text-accent-muted'
                   : 'text-muted hover:text-fg'
-              }`}
+              }
             >
               {mqc.loopBusy ? (
                 <CircleNotchIcon size={18} weight='bold' className='animate-spin' />
@@ -797,11 +797,11 @@ const PanelHeader = memo(function PanelHeader({
                 disabled: !mqc.currentSong || mqc.shuffleBusy,
                 title: mqc.isShuffled ? 'Unshuffle queue' : 'Shuffle queue',
               })}
-              className={`${
+              className={
                 mqc.isShuffled
                   ? 'pressed text-accent hover:text-accent-muted'
                   : 'text-muted hover:text-fg'
-              }`}
+              }
             >
               {mqc.shuffleBusy ? (
                 <CircleNotchIcon size={18} weight='bold' className='animate-spin' />
@@ -821,7 +821,7 @@ const PanelHeader = memo(function PanelHeader({
             aria-expanded={menuOpen}
             title='More actions'
             surface='elevated'
-            className={`${menuOpen ? 'pressed text-accent' : ''}`}
+            className={menuOpen ? 'pressed text-accent' : ''}
             onClick={onToggleMenu}
           >
             <DotsThreeOutlineVerticalIcon size={18} weight='duotone' />
@@ -850,7 +850,7 @@ const NowPlayingCard = memo(function NowPlayingCard({
         <div className='relative shrink-0 overflow-hidden rounded-xl bg-elevated'>
           <ArtworkImage
             src={song.artwork ?? song.thumbnailUrl}
-            alt={song.nickname || song.title}
+            alt={song.nickname ?? song.title}
             className='w-20 h-20 rounded-xl border border-border'
             imageClassName='scale-[1.33]'
           />
@@ -865,7 +865,7 @@ const NowPlayingCard = memo(function NowPlayingCard({
             className='text-xs font-semibold text-fg hover:text-accent leading-tight flex items-center gap-1.5 min-w-0'
           >
             <MusicNoteIcon size={13} weight='fill' className='shrink-0 text-muted' />
-            <span className='truncate'>{song.nickname || song.title}</span>
+            <span className='truncate'>{song.nickname ?? song.title}</span>
           </a>
           <div className='flex items-center gap-2 text-[11px] text-muted min-w-0'>
             {song.artist && (
