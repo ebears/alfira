@@ -61,11 +61,12 @@ export async function syncAllFilters(): Promise<void> {
     }).compressor;
   }
 
-  // Equalizer
-  if (row.eqEnabled) {
+  // Equalizer — always sent; NodeLink doesn't support toggling it off.
+  // When the UI toggle is off, send flat bands (all 50 → gain 0.0).
+  {
     const bands = Array.from({ length: 15 }, (_, i) => {
       const key = `eqBand${i}` as keyof typeof row;
-      return row[key] as number;
+      return row.eqEnabled ? (row[key] as number) : 50;
     });
     filters.equalizer = buildEqualizerFilter(bands);
   }

@@ -515,6 +515,10 @@ export class GuildPlayer {
 
     await updateNodeLinkPlayer(this.guildId, sessionId, { position: clampedMs });
 
+    // Invalidate the stored NodeLink position so the broadcast uses the
+    // freshly-set trackStartedAt instead of the stale pre-seek position.
+    lavalink.resetPlayerPosition(this.guildId);
+
     this.trackStartedAt = Date.now() - clampedMs;
     if (this.paused && this.pausedAt !== null) {
       this.pausedAt = Date.now() - clampedMs;
@@ -630,6 +634,31 @@ export class GuildPlayer {
   }
 
   getQueueState(): QueueState {
+    // Only expose timescale fields when the filter is actually active on
+    // NodeLink — avoids the client activating its speed-aware path when
+    // the filter is off but a non-1.0 speed is still stored in the DB.
+    let timescaleSpeed: number | undefined;
+    let nodeLinkPosition: number | null = null;
+    let nodeLinkTime: number | null = null;
+    try {
+      const row = db
+        .select({
+          enabled: tables.guildSettings.timescaleEnabled,
+          speed: tables.guildSettings.timescaleSpeed,
+        })
+        .from(tables.guildSettings)
+        .where(eq(tables.guildSettings.id, 1))
+        .get();
+      if (row?.enabled) {
+        timescaleSpeed = row.speed;
+        const nodePos = lavalink.getPlayerPosition(this.guildId);
+        nodeLinkPosition = nodePos?.position ?? null;
+        nodeLinkTime = nodePos?.time ?? null;
+      }
+    } catch {
+      // DB not available — leave timescale fields absent.
+    }
+
     return {
       isPlaying: this.isPlaying(),
       isPaused: this.paused,
@@ -641,6 +670,9 @@ export class GuildPlayer {
       queue: this.queue.toRemaining(),
       trackStartedAt: this.trackStartedAt,
       nextTrack: this.peekNextTrack(),
+      timescaleSpeed,
+      nodeLinkPosition,
+      nodeLinkTime,
     };
   }
 
@@ -815,6 +847,10 @@ export class GuildPlayer {
       const t2 = Date.now();
 
       this.consecutiveFailures = 0;
+      // Invalidate the previous track's NodeLink position before setting
+      // the new trackStartedAt, otherwise the stale position bleeds into
+      // the broadcast and the progress bar starts at the wrong offset.
+      lavalink.resetPlayerPosition(this.guildId);
       this.trackStartedAt = Date.now();
       this.pausedAt = null;
 
@@ -908,6 +944,9 @@ export class GuildPlayer {
     const tCold3 = Date.now();
 
     this.consecutiveFailures = 0;
+    // Same as the gapless path — discard the previous track's NodeLink
+    // position so the broadcast uses the fresh trackStartedAt.
+    lavalink.resetPlayerPosition(this.guildId);
     this.trackStartedAt = Date.now();
     this.pausedAt = null;
 

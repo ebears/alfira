@@ -36,6 +36,8 @@ const EMPTY_STATE: QueueState = {
   trackStartedAt: null,
   nextTrack: null,
   compressorSettings: null,
+  nodeLinkPosition: null,
+  nodeLinkTime: null,
 };
 
 interface PlayerContextValue {

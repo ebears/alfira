@@ -1,11 +1,14 @@
 import { eq } from 'drizzle-orm';
 
+import { getGuildId } from '../lib/config';
 import { type RouteContext } from '../lib/context';
 import { json } from '../lib/json';
 import { checkGuards } from '../lib/routeGuards';
 import { routeTable } from '../lib/routeTable';
+import { emitPlayerUpdate } from '../lib/socket';
 import { syncAllFilters } from '../lib/syncAllFilters';
 import { db, tables } from '../shared/db';
+import { getPlayer } from '../startDiscord';
 
 interface TimescalePayload {
   enabled: boolean;
@@ -86,6 +89,13 @@ async function handleTimescalePatch(
     .run();
 
   await syncAllFilters();
+
+  // Broadcast updated timescaleSpeed so the client's progress bar
+  // immediately reflects the new playback rate.
+  const player = getPlayer(getGuildId());
+  if (player) {
+    emitPlayerUpdate(player.getQueueState());
+  }
 
   return json({ enabled, speed, pitch, rate });
 }

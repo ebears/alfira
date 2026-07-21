@@ -163,6 +163,11 @@ export interface QueueState {
   trackStartedAt: number | null; // Unix ms timestamp, null when not playing
   nextTrack: QueuedSong | null; // The next track being preloaded for gapless playback
   compressorSettings?: CompressorSettings | null;
+  timescaleSpeed?: number; // Current timescale speed (1.0 = normal), used by client for progress bar
+  /** Ground-truth audio position from NodeLink (ms), accounting for timescale. */
+  nodeLinkPosition: number | null;
+  /** Unix-ms timestamp when NodeLink recorded nodeLinkPosition. */
+  nodeLinkTime: number | null;
 }
 
 // ---------------------------------------------------------------------------

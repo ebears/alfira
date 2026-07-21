@@ -30,6 +30,10 @@ export function useProgressBar(
   const effectiveStartRef = useRef(0);
   // Track previous song ID to detect song change and reset accumulated time.
   const prevSongIdRef = useRef<string | null>(null);
+  // Tracks whether we've seeded the effective start for the current song.
+  // Prevents re-seeding (and the resulting time-text jump) when the effect
+  // re-runs due to timescale fields arriving mid-song.
+  const hasSeededRef = useRef(false);
 
   const registerProgress = useCallback((ref: HTMLDivElement | null) => {
     if (ref) {
@@ -52,6 +56,9 @@ export function useProgressBar(
   const isPlaying = !!state.currentSong && state.isPlaying && !state.isPaused;
   const isPaused = state.isPaused;
   const trackStartedAt = state.trackStartedAt;
+  const speed = state.timescaleSpeed ?? 1.0;
+  const nodeLinkPosition = state.nodeLinkPosition ?? null;
+  const nodeLinkTime = state.nodeLinkTime ?? null;
 
   useEffect(() => {
     // When overrideElapsed is provided (after a seek), sync the React
@@ -80,6 +87,7 @@ export function useProgressBar(
     if (hasSong && currentSongId !== prevSongId) {
       accumulatedMsRef.current = 0;
       prevSongIdRef.current = currentSongId;
+      hasSeededRef.current = false;
     } else if (!hasSong) {
       prevSongIdRef.current = null;
     } else if (overrideElapsed !== undefined) {
@@ -91,6 +99,7 @@ export function useProgressBar(
       if (elapsedFromTrackStarted < overrideElapsed / 2) {
         accumulatedMsRef.current = 0;
         effectiveStartRef.current = 0;
+        hasSeededRef.current = false;
         setOverrideElapsed(undefined);
       }
     }
@@ -150,25 +159,49 @@ export function useProgressBar(
       // Resume: continue from where we left off
       effectiveStart = Date.now() - accumulatedMsRef.current;
     } else if (trackStartedAt) {
-      // New song — seed from server timestamp
-      const seed = Math.max(
-        0,
-        Math.min(Math.floor((Date.now() - trackStartedAt) / 1000), duration)
-      );
-      setElapsed(seed);
-      effectiveStart = Date.now() - seed * 1000;
+      // Seed from server timestamp on first run for this song.
+      // Skip on re-runs (e.g. when timescale fields arrive) to avoid
+      // the time text jumping to a floored whole-second value.
+      if (hasSeededRef.current) {
+        effectiveStart = effectiveStartRef.current;
+      } else {
+        const seed = Math.max(
+          0,
+          Math.min(Math.floor((Date.now() - trackStartedAt) / 1000), duration)
+        );
+        setElapsed(seed);
+        effectiveStart = Date.now() - seed * 1000;
+        hasSeededRef.current = true;
+      }
     } else {
       // Fallback: start from 0
       setElapsed(0);
       effectiveStart = Date.now();
+      hasSeededRef.current = true;
     }
 
     effectiveStartRef.current = effectiveStart;
 
+    // Capture the NodeLink anchor at setup time so the rAF / interval
+    // closures don't read a value that changes mid-flight.
+    const nlPos = nodeLinkPosition;
+    const nlTime = nodeLinkTime;
+
+    // Compute elapsed ms.  Only use the NodeLink ground-truth anchor when
+    // speed ≠ 1.0 — at normal speed the wall-clock fallback is perfectly
+    // accurate and avoids introducing a second source of truth that can
+    // disagree with trackStartedAt.
+    const computeElapsedMs = (): number => {
+      if (speed !== 1.0 && nlPos !== null && nlTime !== null && nlTime > 0) {
+        return nlPos + (Date.now() - nlTime) * speed;
+      }
+      return (Date.now() - effectiveStart) * speed;
+    };
+
     // rAF loop — directly sets style.width on registered progress bars and
     // style.left on registered thumbs so both glide at display-native rate.
     const tick = () => {
-      const elapsedMs = Date.now() - effectiveStart;
+      const elapsedMs = computeElapsedMs();
       const pct = Math.min((elapsedMs / (duration * 1000)) * 100, 100);
       if (pct >= 100) {
         return;
@@ -186,7 +219,7 @@ export function useProgressBar(
 
     // 1-sec interval — updates elapsed React state for time text only
     intervalIdRef.current = setInterval(() => {
-      const sec = Math.floor((Date.now() - effectiveStart) / 1000);
+      const sec = Math.floor(computeElapsedMs() / 1000);
       setElapsed(Math.min(Math.max(sec, 0), duration));
     }, 1000);
 
@@ -206,6 +239,9 @@ export function useProgressBar(
     isPlaying,
     isPaused,
     trackStartedAt,
+    speed,
+    nodeLinkPosition,
+    nodeLinkTime,
     overrideElapsed,
     setOverrideElapsed,
   ]);
