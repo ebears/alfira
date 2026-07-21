@@ -116,7 +116,7 @@
 
 ## Philosophy
 
-Alfira is built to be **simple to own and operate**. One container, one config file, one database file. No external services, no cloud dependencies — just Docker and a reverse proxy. It runs on a home NAS as comfortably as on a VPS.
+Alfira is built to be **simple to own and operate**. One container, one config file, one database file. No external services, no cloud dependencies — just Docker. It runs on a home NAS as comfortably as on a VPS. If you want to share the web UI with others outside your LAN, add a reverse proxy with TLS.
 
 The **web UI is the primary interface** — the Discord bot handles playback, but the web app is where you browse your library, manage playlists, tweak your equalizer, and review song requests. This keeps the feature set rich without fighting Discord's UX limitations.
 

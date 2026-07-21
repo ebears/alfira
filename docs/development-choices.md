@@ -136,10 +136,6 @@ This is the one area of the project explicitly designated as **out of scope**. S
 
 The original version of Alfira used `yt-dlp` + `ffmpeg` directly, which still offloaded the hard problem to an external tool (yt-dlp is community-maintained and updates frequently). NodeLink is a much smoother experience — REST API for player control, WebSocket for events, proper Opus encoding, and a feature set far beyond what a custom solution could reasonably provide. It's the perfect piece of the puzzle, and "it's their problem" is a feature, not a bug.
 
-### Why a child process, not a separate container?
-
-Alfira used to run as three or four Docker containers. Consolidating to one — backend, frontend, NodeLink, and SQLite all in the same container — was a deliberate simplification that eliminated inter-container networking, health check orchestration, and multi-service configuration. One `docker compose up` gets everything running.
-
 ---
 
 ## Discord Integration: Custom Gateway (Not discord.js)
@@ -188,13 +184,13 @@ Player state changes are broadcast to the web UI via a WebSocket pipeline. The d
 
 ### React
 
-React was, honestly, just what the project started with. There was no deep framework evaluation — it was the most familiar option at the time. After building with it, though, a few things have become genuinely appreciated:
+React was chosen for its pragmatic blend of developer experience and ecosystem maturity. A few things that turned out to be genuine advantages:
 
 - **TSX is remarkably powerful.** The combination of TypeScript and JSX — writing components as functions that return typed markup — creates a development flow where logic and presentation are co-located without ceremony. Component reuse feels natural and productive.
 - **99% of code lives in `.tsx` and `.ts` files.** Between React components and Tailwind utility classes, there's very little touching of `.html` or `.css` files. The entire UI surface is expressed in TypeScript.
-- **The ecosystem, while overwhelming, delivers.** When a specialized need arises — virtualized lists, drag-and-drop, masonry grids — there's a well-maintained library for it. Importing a library for these hard problems is pragmatic; writing them from scratch would be a distraction from the actual product.
+- **The ecosystem, while large, delivers.** When a specialized need arises — virtualized lists, drag-and-drop, masonry grids — there's a well-maintained library for it. Importing a library for these hard problems is pragmatic; writing them from scratch would be a distraction from the actual product.
 
-If starting over today, [Vue](https://vuejs.org/) (also backed by VoidZero, whose tooling ecosystem is highly regarded) or [SolidJS](https://www.solidjs.com/) (TSX without a virtual DOM) would get a serious look. React isn't the only game in town, and the virtual DOM overhead is real. But React has been more than capable, and there's no compelling reason to rewrite.
+[SolidJS](https://www.solidjs.com/) (TSX without a virtual DOM, signals-based reactivity) is the only alternative that would get a serious look if starting over. Its reactivity model is genuinely compelling, and the syntax is close enough to React that the mental model transfers. But Solid's ecosystem is an order of magnitude smaller — the libraries this project depends on (`@tanstack/react-virtual`, `@atlaskit/pragmatic-drag-and-drop`, `motion`) don't have Solid equivalents at the same maturity level. React's ecosystem advantage is real, not just inertia, and it has been more than capable for everything Alfira needs.
 
 ### Pragmatic library imports
 
@@ -221,8 +217,6 @@ If starting over today, it's not clear Tailwind would be the choice again. But i
 The web build uses `bun build` directly rather than Vite (which would be the conventional choice for a React project). Vite is an excellent tool but `bun build` handles TypeScript, JSX, and tree-shaking out of the box without additional configuration. Tailwind CSS 4 is compiled separately via `@tailwindcss/cli` before the JS bundle. Two build steps, no framework.
 
 ### Why not Next.js?
-
-Next.js wasn't seriously evaluated — the project started as a React SPA because that's what made sense with the tools at hand, and it's never given a reason to look elsewhere.
 
 Next.js's headline value is **server-side rendering**: sending complete HTML to the browser before JavaScript loads, so users see content immediately rather than a loading spinner. Combined with Server Components, it lets you fetch data at render time on the server rather than in a client-side `useEffect`. These are real, meaningful benefits — for content that can be pre-rendered.
 
