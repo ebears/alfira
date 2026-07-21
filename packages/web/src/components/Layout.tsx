@@ -1,4 +1,5 @@
 import { CaretLeftIcon, CraneTowerIcon, GuitarIcon, LinkBreakIcon } from '@phosphor-icons/react';
+import { useAnimationControls } from 'motion/react';
 import * as m from 'motion/react-m';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
@@ -30,6 +31,27 @@ function LayoutContent() {
   const { isAdminView, toggleAdminView } = useAdminView();
   const connectionStatus = useConnectionStatus();
   const navigate = useNavigate();
+
+  // Admin button hint animation — occasional spin to remind admins it's clickable
+  const hintControls = useAnimationControls();
+
+  useEffect(() => {
+    if (!user?.isAdmin) {
+      return undefined;
+    }
+
+    const interval = setInterval(() => {
+      if (localStorage.getItem('alfira-admin-button-animation') !== 'false') {
+        void hintControls.start({
+          rotate: [0, 360],
+          transition: { type: 'spring', stiffness: 220, damping: 10 },
+        });
+      }
+    }, 20_000);
+
+    return () => clearInterval(interval);
+  }, [user?.isAdmin, hintControls]);
+
   const [collapsed, setCollapsed] = useState(() => {
     if (typeof window !== 'undefined') {
       const stored = localStorage.getItem('alfira-sidebar-collapsed');
@@ -64,7 +86,6 @@ function LayoutContent() {
     () => ({ type: 'spring' as const, stiffness: 500, damping: 25 }),
     []
   );
-
   return (
     <div className='flex flex-col h-full bg-surface overflow-hidden'>
       {/* ------------------------------------------------------------------ */}
@@ -93,9 +114,10 @@ function LayoutContent() {
           >
             {!collapsed && (
               <div className='flex items-center gap-2 min-w-0'>
-                <button
+                <m.button
                   type='button'
                   onClick={toggleAdminView}
+                  animate={hintControls}
                   title={
                     user?.isAdmin
                       ? isAdminView
@@ -103,22 +125,27 @@ function LayoutContent() {
                         : 'Switch to Admin view'
                       : undefined
                   }
-                  className={`flex items-center justify-center w-10 h-10 shrink-0 rounded border border-accent/30 bg-accent/10 self-end transition-opacity ${user?.isAdmin ? 'cursor-pointer hover:opacity-80' : 'cursor-default'}`}
+                  className={`flex items-center justify-center w-10 h-10 shrink-0 rounded border border-accent/30 bg-accent/10 self-end transition-opacity ${
+                    user?.isAdmin ? 'cursor-pointer hover:opacity-80' : 'cursor-default'
+                  }`}
                 >
                   {isAdminView ? (
                     <CraneTowerIcon size={24} weight='duotone' className='text-accent' />
                   ) : (
                     <GuitarIcon size={24} weight='duotone' className='text-accent' />
                   )}
-                </button>
+                </m.button>
                 <span className='font-display text-5xl text-accent tracking-wider'>Alfira</span>
               </div>
             )}
             {collapsed && (
-              <button
+              <m.button
                 type='button'
                 onClick={toggleAdminView}
-                className={`w-10 h-10 flex items-center justify-center shrink-0 rounded border border-accent/30 bg-accent/10 transition-opacity ${user?.isAdmin ? 'cursor-pointer hover:opacity-80' : 'cursor-default'}`}
+                animate={hintControls}
+                className={`w-10 h-10 flex items-center justify-center shrink-0 rounded border border-accent/30 bg-accent/10 transition-opacity ${
+                  user?.isAdmin ? 'cursor-pointer hover:opacity-80' : 'cursor-default'
+                }`}
                 title={
                   user?.isAdmin
                     ? isAdminView
@@ -132,7 +159,7 @@ function LayoutContent() {
                 ) : (
                   <GuitarIcon size={24} weight='duotone' className='text-accent' />
                 )}
-              </button>
+              </m.button>
             )}
           </div>
 

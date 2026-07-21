@@ -1,7 +1,9 @@
 import { DesktopIcon, MoonIcon, SunIcon } from '@phosphor-icons/react';
-import { memo, useCallback, useMemo } from 'react';
+import { memo, useCallback, useMemo, useState } from 'react';
 
+import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
+import SettingsToggle from './SettingsToggle';
 
 // ---------------------------------------------------------------------------
 // Child components — extracted so useCallback closures are stable per item
@@ -102,7 +104,20 @@ const ThemeColorButton = memo(function ThemeColorButton({
 // ---------------------------------------------------------------------------
 
 export default function UserSection() {
+  const { user } = useAuth();
   const { colorTheme, mode, setColorTheme, setMode, colorThemes } = useTheme();
+
+  const [hintAnimationOn, setHintAnimationOn] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('alfira-admin-button-animation') !== 'false';
+    }
+    return true;
+  });
+
+  const handleHintAnimationChange = useCallback((on: boolean) => {
+    setHintAnimationOn(on);
+    localStorage.setItem('alfira-admin-button-animation', String(on));
+  }, []);
 
   return (
     <div className='space-y-6'>
@@ -149,6 +164,19 @@ export default function UserSection() {
           </div>
         </div>
       </div>
+
+      {/* Admin button hint animation — only shown to admins */}
+      {user?.isAdmin && (
+        <>
+          <div className='h-px bg-muted/15' />
+          <SettingsToggle
+            label='Admin button hint animation'
+            description='Occasionally spins and glows the admin/member toggle button in the sidebar to remind you it is clickable.'
+            checked={hintAnimationOn}
+            onChange={handleHintAnimationChange}
+          />
+        </>
+      )}
     </div>
   );
 }
