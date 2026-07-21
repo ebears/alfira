@@ -1,4 +1,5 @@
 import { eq } from 'drizzle-orm';
+import * as v from 'valibot';
 
 import { type RouteContext } from '../lib/context';
 import { json } from '../lib/json';
@@ -7,17 +8,17 @@ import { routeTable } from '../lib/routeTable';
 import { syncAllFilters } from '../lib/syncAllFilters';
 import { db, tables } from '../shared/db';
 
-interface DistortionPayload {
-  enabled: boolean;
-  sinOffset: number;
-  sinScale: number;
-  cosOffset: number;
-  cosScale: number;
-  tanOffset: number;
-  tanScale: number;
-  offset: number;
-  scale: number;
-}
+const DistortionSchema = v.object({
+  enabled: v.boolean(),
+  sinOffset: v.pipe(v.number(), v.minValue(-1), v.maxValue(1)),
+  sinScale: v.pipe(v.number(), v.minValue(0), v.maxValue(5)),
+  cosOffset: v.pipe(v.number(), v.minValue(-1), v.maxValue(1)),
+  cosScale: v.pipe(v.number(), v.minValue(0), v.maxValue(5)),
+  tanOffset: v.pipe(v.number(), v.minValue(-1), v.maxValue(1)),
+  tanScale: v.pipe(v.number(), v.minValue(0), v.maxValue(5)),
+  offset: v.pipe(v.number(), v.minValue(-1), v.maxValue(1)),
+  scale: v.pipe(v.number(), v.minValue(0), v.maxValue(5)),
+});
 
 function handleDistortionGet(
   ctx: RouteContext,
@@ -54,43 +55,20 @@ async function handleDistortionPatch(
     return guards;
   }
 
-  let body: DistortionPayload;
+  let raw: unknown;
   try {
-    body = (await request.json()) as DistortionPayload;
+    raw = await request.json();
   } catch {
     return json({ error: 'Invalid JSON' }, 400);
   }
 
-  const { enabled, sinOffset, sinScale, cosOffset, cosScale, tanOffset, tanScale, offset, scale } =
-    body;
+  const parsed = v.safeParse(DistortionSchema, raw);
+  if (!parsed.success) {
+    return json({ error: 'Invalid request body.', details: v.flatten(parsed.issues) }, 400);
+  }
 
-  if (typeof enabled !== 'boolean') {
-    return json({ error: 'enabled must be boolean' }, 400);
-  }
-  if (typeof sinOffset !== 'number' || sinOffset < -1 || sinOffset > 1) {
-    return json({ error: 'sinOffset must be number -1.0 to 1.0' }, 400);
-  }
-  if (typeof sinScale !== 'number' || sinScale < 0 || sinScale > 5) {
-    return json({ error: 'sinScale must be number 0.0 to 5.0' }, 400);
-  }
-  if (typeof cosOffset !== 'number' || cosOffset < -1 || cosOffset > 1) {
-    return json({ error: 'cosOffset must be number -1.0 to 1.0' }, 400);
-  }
-  if (typeof cosScale !== 'number' || cosScale < 0 || cosScale > 5) {
-    return json({ error: 'cosScale must be number 0.0 to 5.0' }, 400);
-  }
-  if (typeof tanOffset !== 'number' || tanOffset < -1 || tanOffset > 1) {
-    return json({ error: 'tanOffset must be number -1.0 to 1.0' }, 400);
-  }
-  if (typeof tanScale !== 'number' || tanScale < 0 || tanScale > 5) {
-    return json({ error: 'tanScale must be number 0.0 to 5.0' }, 400);
-  }
-  if (typeof offset !== 'number' || offset < -1 || offset > 1) {
-    return json({ error: 'offset must be number -1.0 to 1.0' }, 400);
-  }
-  if (typeof scale !== 'number' || scale < 0 || scale > 5) {
-    return json({ error: 'scale must be number 0.0 to 5.0' }, 400);
-  }
+  const { enabled, sinOffset, sinScale, cosOffset, cosScale, tanOffset, tanScale, offset, scale } =
+    parsed.output;
 
   db.insert(tables.guildSettings)
     .values({

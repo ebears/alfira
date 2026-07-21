@@ -34,6 +34,18 @@ export default defineConfig({
     '@typescript-eslint/no-unnecessary-type-constraint': 'error',
 
     // -----------------------------------------------------------------------
+    // oxc — Oxc-specific correctness rules that catch subtle bugs
+    // -----------------------------------------------------------------------
+    // Math.min(Math.max(x, min), max) — wrong clamping direction
+    'oxc/bad-min-max-func': 'error',
+    // a < b < c evaluates as (a < b) < c — a boolean-number comparison
+    'oxc/bad-comparison-sequence': 'error',
+    // 3.14159 instead of Math.PI, 2.718 instead of Math.E, etc.
+    'oxc/approx-constant': 'error',
+    // new Error('msg') as a statement without throw — silently does nothing
+    'oxc/missing-throw': 'error',
+
+    // -----------------------------------------------------------------------
     // correctness
     // -----------------------------------------------------------------------
     'no-const-assign': 'error',
@@ -176,6 +188,8 @@ export default defineConfig({
     // style
     // -----------------------------------------------------------------------
     curly: 'error',
+    // a ? b : c ? d : e — unreadable; use if/else or extract
+    'unicorn/no-nested-ternary': 'warn',
     'no-useless-concat': 'warn',
     'object-shorthand': 'warn',
     '@typescript-eslint/array-type': 'warn',
@@ -349,6 +363,8 @@ export default defineConfig({
     'unicorn/prefer-array-flat-map': 'warn',
     // Date.now() over new Date().getTime()
     'unicorn/prefer-date-now': 'warn',
+    // str.slice() over str.substr() / str.substring() — consistent, modern
+    'unicorn/prefer-string-slice': 'warn',
     // arr.at(-1) over arr[arr.length - 1]
     'unicorn/prefer-negative-index': 'warn',
     // throw new TypeError(...) for type errors

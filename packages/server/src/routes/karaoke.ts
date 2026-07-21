@@ -1,4 +1,5 @@
 import { eq } from 'drizzle-orm';
+import * as v from 'valibot';
 
 import { type RouteContext } from '../lib/context';
 import { json } from '../lib/json';
@@ -7,13 +8,13 @@ import { routeTable } from '../lib/routeTable';
 import { syncAllFilters } from '../lib/syncAllFilters';
 import { db, tables } from '../shared/db';
 
-interface KaraokePayload {
-  enabled: boolean;
-  level: number;
-  monoLevel: number;
-  filterBand: number;
-  filterWidth: number;
-}
+const KaraokeSchema = v.object({
+  enabled: v.boolean(),
+  level: v.pipe(v.number(), v.minValue(0), v.maxValue(1)),
+  monoLevel: v.pipe(v.number(), v.minValue(0), v.maxValue(1)),
+  filterBand: v.pipe(v.number(), v.minValue(50), v.maxValue(10000)),
+  filterWidth: v.pipe(v.number(), v.minValue(10), v.maxValue(10000)),
+});
 
 function handleKaraokeGet(
   ctx: RouteContext,
@@ -46,30 +47,19 @@ async function handleKaraokePatch(
     return guards;
   }
 
-  let body: KaraokePayload;
+  let raw: unknown;
   try {
-    body = (await request.json()) as KaraokePayload;
+    raw = await request.json();
   } catch {
     return json({ error: 'Invalid JSON' }, 400);
   }
 
-  const { enabled, level, monoLevel, filterBand, filterWidth } = body;
+  const parsed = v.safeParse(KaraokeSchema, raw);
+  if (!parsed.success) {
+    return json({ error: 'Invalid request body.', details: v.flatten(parsed.issues) }, 400);
+  }
 
-  if (typeof enabled !== 'boolean') {
-    return json({ error: 'enabled must be boolean' }, 400);
-  }
-  if (typeof level !== 'number' || level < 0 || level > 1) {
-    return json({ error: 'level must be number 0.0 to 1.0' }, 400);
-  }
-  if (typeof monoLevel !== 'number' || monoLevel < 0 || monoLevel > 1) {
-    return json({ error: 'monoLevel must be number 0.0 to 1.0' }, 400);
-  }
-  if (typeof filterBand !== 'number' || filterBand < 50 || filterBand > 10000) {
-    return json({ error: 'filterBand must be number 50 to 10000' }, 400);
-  }
-  if (typeof filterWidth !== 'number' || filterWidth < 10 || filterWidth > 10000) {
-    return json({ error: 'filterWidth must be number 10 to 10000' }, 400);
-  }
+  const { enabled, level, monoLevel, filterBand, filterWidth } = parsed.output;
 
   db.insert(tables.guildSettings)
     .values({

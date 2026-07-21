@@ -1,4 +1,5 @@
 import { and, count, desc, eq, inArray, sql } from 'drizzle-orm';
+import * as v from 'valibot';
 
 import { type RouteContext } from '../lib/context';
 import { getUserDisplayName, resolveDisplayNames } from '../lib/displayName';
@@ -43,6 +44,27 @@ function formatPlaylistSongWithSong(
     },
   };
 }
+
+// ---------------------------------------------------------------------------
+// Request body schemas
+// ---------------------------------------------------------------------------
+const PlaylistCreateSchema = v.object({
+  name: v.optional(v.string()),
+  tagNameLower: v.optional(v.string()),
+});
+
+const PlaylistVisibilitySchema = v.object({
+  isPrivate: v.optional(v.boolean()),
+  adminView: v.optional(v.boolean()),
+});
+
+const PlaylistAddSongSchema = v.object({
+  songId: v.string(),
+});
+
+const PlaylistRemoveSongsSchema = v.object({
+  songIds: v.pipe(v.array(v.string()), v.minLength(1), v.maxLength(5000)),
+});
 
 // ---------------------------------------------------------------------------
 // GET /api/playlists — paginated list of playlists
@@ -132,12 +154,19 @@ async function handlePostPlaylist(ctx: RouteContext, request: Request): Promise<
   }
   const { user } = guards;
 
-  let body: { name?: unknown; tagNameLower?: unknown };
+  let raw: unknown;
   try {
-    body = (await request.json()) as typeof body;
+    raw = await request.json();
   } catch {
     return json({ error: 'Invalid JSON body.' }, 400);
   }
+
+  const parsed = v.safeParse(PlaylistCreateSchema, raw);
+  if (!parsed.success) {
+    return json({ error: 'Invalid request body.', details: v.flatten(parsed.issues) }, 400);
+  }
+
+  const body = parsed.output;
 
   const nameResult = validatePlaylistName(body.name);
   if (!nameResult.ok) {
@@ -398,18 +427,25 @@ async function handlePatchVisibility(
   }
   const { user } = guards;
 
-  let body: { isPrivate?: unknown; adminView?: unknown };
+  let raw: unknown;
   try {
-    body = (await request.json()) as typeof body;
+    raw = await request.json();
   } catch {
     return json({ error: 'Invalid JSON body.' }, 400);
   }
 
-  if (typeof body.isPrivate !== 'boolean') {
+  const parsed = v.safeParse(PlaylistVisibilitySchema, raw);
+  if (!parsed.success) {
+    return json({ error: 'Invalid request body.', details: v.flatten(parsed.issues) }, 400);
+  }
+
+  const { isPrivate, adminView: rawAdminView } = parsed.output;
+
+  if (isPrivate === undefined) {
     return json({ error: 'isPrivate (boolean) is required.' }, 400);
   }
 
-  const adminView = body.adminView === true;
+  const adminView = rawAdminView === true;
   const existing = await requirePlaylist(id, user, adminView);
   if (existing instanceof Response) {
     return existing;
@@ -417,7 +453,7 @@ async function handlePatchVisibility(
 
   const [updatedPlaylist] = await db
     .update(playlistTable)
-    .set({ isPrivate: body.isPrivate })
+    .set({ isPrivate })
     .where(eq(playlistTable.id, id))
     .returning();
 
@@ -446,12 +482,19 @@ async function handlePatchPlaylist(
   }
   const { user } = guards;
 
-  let body: { name?: unknown; tagNameLower?: unknown };
+  let raw: unknown;
   try {
-    body = (await request.json()) as typeof body;
+    raw = await request.json();
   } catch {
     return json({ error: 'Invalid JSON body.' }, 400);
   }
+
+  const parsed = v.safeParse(PlaylistCreateSchema, raw);
+  if (!parsed.success) {
+    return json({ error: 'Invalid request body.', details: v.flatten(parsed.issues) }, 400);
+  }
+
+  const body = parsed.output;
 
   const existing = await requirePlaylist(id, user);
   if (existing instanceof Response) {
@@ -541,16 +584,19 @@ async function handleAddSong(
   }
   const { user } = guards;
 
-  let body: { songId?: unknown };
+  let raw: unknown;
   try {
-    body = (await request.json()) as typeof body;
+    raw = await request.json();
   } catch {
     return json({ error: 'Invalid JSON body.' }, 400);
   }
 
-  if (!body.songId) {
+  const parsed = v.safeParse(PlaylistAddSongSchema, raw);
+  if (!parsed.success) {
     return json({ error: 'songId is required.' }, 400);
   }
+
+  const { songId } = parsed.output;
 
   const playlist = await requirePlaylist(id, user);
   if (playlist instanceof Response) {
@@ -567,11 +613,7 @@ async function handleAddSong(
     );
   }
 
-  const [song] = await db
-    .select()
-    .from(tables.song)
-    .where(eq(tables.song.id, body.songId as string))
-    .limit(1);
+  const [song] = await db.select().from(tables.song).where(eq(tables.song.id, songId)).limit(1);
   if (!song) {
     return json({ error: 'Song not found.' }, 404);
   }
@@ -702,18 +744,19 @@ async function handleBulkRemoveSongs(
     return playlist;
   }
 
-  let body: { songIds?: unknown };
+  let raw: unknown;
   try {
-    body = (await request.json()) as typeof body;
+    raw = await request.json();
   } catch {
     return json({ error: 'Invalid JSON body.' }, 400);
   }
 
-  if (!Array.isArray(body.songIds) || body.songIds.length === 0) {
+  const parsed = v.safeParse(PlaylistRemoveSongsSchema, raw);
+  if (!parsed.success) {
     return json({ error: 'songIds must be a non-empty array.' }, 400);
   }
 
-  const songIds = (body.songIds as string[]).slice(0, 5000);
+  const { songIds } = parsed.output;
 
   // Delete and re-index in a transaction
   await db.transaction(async (tx) => {

@@ -1,4 +1,5 @@
 import { eq, inArray, sql } from 'drizzle-orm';
+import * as v from 'valibot';
 
 import { getGuildId } from '../lib/config';
 import { type RouteContext } from '../lib/context';
@@ -29,6 +30,10 @@ import { getPlayer } from '../startDiscord';
 
 const { song: songTable } = tables;
 
+const BulkDeleteSchema = v.object({
+  ids: v.pipe(v.array(v.string()), v.minLength(1), v.maxLength(5000)),
+});
+
 // ---------------------------------------------------------------------------
 // POST /api/songs/bulk-delete — delete multiple songs at once.
 // ---------------------------------------------------------------------------
@@ -38,18 +43,19 @@ async function handleBulkDelete(ctx: RouteContext, request: Request): Promise<Re
     return guards;
   }
 
-  let body: { ids?: unknown };
+  let raw: unknown;
   try {
-    body = (await request.json()) as typeof body;
+    raw = await request.json();
   } catch {
     return json({ error: 'Invalid JSON body.' }, 400);
   }
 
-  if (!Array.isArray(body.ids) || body.ids.length === 0) {
-    return json({ error: 'ids must be a non-empty array of song IDs.' }, 400);
+  const parsed = v.safeParse(BulkDeleteSchema, raw);
+  if (!parsed.success) {
+    return json({ error: 'Invalid request body.', details: v.flatten(parsed.issues) }, 400);
   }
 
-  const ids = body.ids.slice(0, 5000) as string[];
+  const { ids } = parsed.output;
 
   // Delete songs from DB
   await db.delete(songTable).where(inArray(songTable.id, ids));
@@ -62,6 +68,12 @@ async function handleBulkDelete(ctx: RouteContext, request: Request): Promise<Re
   return json({ deleted: ids.length });
 }
 
+const BulkTagSchema = v.object({
+  ids: v.pipe(v.array(v.string()), v.minLength(1), v.maxLength(5000)),
+  tags: v.optional(v.array(v.string())),
+  mode: v.optional(v.pipe(v.string(), v.picklist(['add', 'set']))),
+});
+
 // ---------------------------------------------------------------------------
 // POST /api/songs/bulk-tag — add or set tags on multiple songs at once.
 // ---------------------------------------------------------------------------
@@ -71,25 +83,27 @@ async function handleBulkTag(ctx: RouteContext, request: Request): Promise<Respo
     return guards;
   }
 
-  let body: { ids?: unknown; tags?: unknown; mode?: unknown };
+  let raw: unknown;
   try {
-    body = (await request.json()) as typeof body;
+    raw = await request.json();
   } catch {
     return json({ error: 'Invalid JSON body.' }, 400);
   }
 
-  if (!Array.isArray(body.ids) || body.ids.length === 0) {
-    return json({ error: 'ids must be a non-empty array of song IDs.' }, 400);
+  const parsed = v.safeParse(BulkTagSchema, raw);
+  if (!parsed.success) {
+    return json({ error: 'Invalid request body.', details: v.flatten(parsed.issues) }, 400);
   }
 
-  const tagsResult = validateTags(body.tags);
+  const { ids } = parsed.output;
+
+  const tagsResult = validateTags(parsed.output.tags);
   if (!tagsResult.ok) {
     return tagsResult.response;
   }
 
-  const ids = (body.ids as string[]).slice(0, 5000);
   const newTags = await canonicalizeTags(tagsResult.value);
-  const mode = body.mode === 'set' ? 'set' : 'add'; // "add" is default (merge with existing)
+  const mode = parsed.output.mode ?? 'add';
 
   // Fetch existing songs
   const existingSongs = await db.select().from(songTable).where(inArray(songTable.id, ids));
@@ -135,35 +149,36 @@ async function handleBulkEdit(ctx: RouteContext, request: Request): Promise<Resp
     return guards;
   }
 
-  let body: {
-    ids?: unknown;
-    nickname?: unknown;
-    artist?: unknown;
-    album?: unknown;
-    artwork?: unknown;
-    tags?: unknown;
-    volumeBoost?: unknown;
-    clearFields?: unknown;
-  };
+  let raw: unknown;
   try {
-    body = (await request.json()) as typeof body;
+    raw = await request.json();
   } catch {
     return json({ error: 'Invalid JSON body.' }, 400);
   }
 
-  if (!Array.isArray(body.ids) || body.ids.length === 0) {
-    return json({ error: 'ids must be a non-empty array of song IDs.' }, 400);
+  const BulkEditBaseSchema = v.object({
+    ids: v.pipe(v.array(v.string()), v.minLength(1), v.maxLength(5000)),
+    nickname: v.optional(v.string()),
+    artist: v.optional(v.string()),
+    album: v.optional(v.string()),
+    artwork: v.optional(v.string()),
+    tags: v.optional(v.array(v.string())),
+    volumeBoost: v.optional(v.number()),
+    clearFields: v.optional(v.array(v.string())),
+  });
+
+  const parsed = v.safeParse(BulkEditBaseSchema, raw);
+  if (!parsed.success) {
+    return json({ error: 'Invalid request body.', details: v.flatten(parsed.issues) }, 400);
   }
 
-  const ids = (body.ids as string[]).slice(0, 5000);
-  const clearFields: string[] = Array.isArray(body.clearFields)
-    ? (body.clearFields as string[])
-    : [];
+  const { ids, clearFields = [] } = parsed.output;
+  const body = parsed.output;
 
   const data: Record<string, unknown> = {};
 
   // Nickname
-  if ('nickname' in body && body.nickname !== undefined) {
+  if (body.nickname !== undefined) {
     const result = validateNickname(body.nickname);
     if (!result.ok) {
       return result.response;
@@ -174,21 +189,21 @@ async function handleBulkEdit(ctx: RouteContext, request: Request): Promise<Resp
   }
 
   // Artist
-  if ('artist' in body && body.artist !== undefined) {
+  if (body.artist !== undefined) {
     data.artist = validateOptionalString(body.artist);
   } else if (clearFields.includes('artist')) {
     data.artist = null;
   }
 
   // Album
-  if ('album' in body && body.album !== undefined) {
+  if (body.album !== undefined) {
     data.album = validateOptionalString(body.album);
   } else if (clearFields.includes('album')) {
     data.album = null;
   }
 
   // Artwork
-  if ('artwork' in body && body.artwork !== undefined) {
+  if (body.artwork !== undefined) {
     const artworkResult = validateArtworkUrl(body.artwork);
     if (!artworkResult.ok) {
       return artworkResult.response;
@@ -199,23 +214,27 @@ async function handleBulkEdit(ctx: RouteContext, request: Request): Promise<Resp
   }
 
   // Tags
-  if ('tags' in body && body.tags !== undefined) {
+  let processedTags: string[] | undefined;
+  if (body.tags !== undefined) {
     const tagsResult = validateTags(body.tags);
     if (!tagsResult.ok) {
       return tagsResult.response;
     }
-    data.tags = await canonicalizeTags(tagsResult.value);
+    processedTags = await canonicalizeTags(tagsResult.value);
+    data.tags = processedTags;
   } else if (clearFields.includes('tags')) {
     data.tags = [];
   }
 
   // Volume boost
-  if ('volumeBoost' in body && body.volumeBoost !== undefined) {
+  let processedVolumeBoost: number | null | undefined;
+  if (body.volumeBoost !== undefined) {
     const volumeResult = validateVolumeBoost(body.volumeBoost);
     if (!volumeResult.ok) {
       return volumeResult.response;
     }
-    data.volumeBoost = volumeResult.value;
+    processedVolumeBoost = volumeResult.value;
+    data.volumeBoost = processedVolumeBoost;
   } else if (clearFields.includes('volumeBoost')) {
     data.volumeBoost = null;
   }
@@ -234,18 +253,18 @@ async function handleBulkEdit(ctx: RouteContext, request: Request): Promise<Resp
   }
 
   // If tags changed, re-sync any smart playlists tracking affected tags
-  if ('tags' in data) {
-    await reSyncPlaylistsForTags(((data.tags as string[]) ?? []).map((t) => t.toLowerCase()));
+  if (processedTags) {
+    await reSyncPlaylistsForTags(processedTags.map((t) => t.toLowerCase()));
   }
 
   // Update the player cache for any of the edited songs that are currently
   // in the queue / now playing.
   const bulkPlayer = getPlayer(getGuildId());
   if (bulkPlayer) {
-    if ('volumeBoost' in data) {
+    if (processedVolumeBoost != null) {
       const currentSong = bulkPlayer.getCurrentSong();
       if (currentSong && ids.includes(currentSong.id)) {
-        bulkPlayer.updateVolumeBoost(data.volumeBoost as number);
+        bulkPlayer.updateVolumeBoost(processedVolumeBoost);
       }
     }
     const bulkFields: Record<string, unknown> = {};
@@ -391,12 +410,14 @@ async function handlePatchSong(
     return guards;
   }
 
-  let body: Record<string, unknown>;
+  let raw: unknown;
   try {
-    body = (await request.json()) as typeof body;
+    raw = await request.json();
   } catch {
     return json({ error: 'Invalid JSON body.' }, 400);
   }
+
+  const body = raw as Record<string, unknown>;
 
   const [existing] = await db.select().from(songTable).where(eq(songTable.id, id)).limit(1);
   if (!existing) {
@@ -436,22 +457,26 @@ async function handlePatchSong(
   // Tags
   // Track old tags for smart playlist re-sync
   const oldTagsLower = new Set((existing.tags ?? []).map((t: string) => t.toLowerCase()));
+  let processedTags: string[] | undefined;
 
   if ('tags' in body) {
     const tagsResult = validateTags(body.tags);
     if (!tagsResult.ok) {
       return tagsResult.response;
     }
-    data.tags = await canonicalizeTags(tagsResult.value);
+    processedTags = await canonicalizeTags(tagsResult.value);
+    data.tags = processedTags;
   }
 
   // Volume boost
+  let processedVolumeBoost: number | null | undefined;
   if ('volumeBoost' in body) {
     const volumeResult = validateVolumeBoost(body.volumeBoost);
     if (!volumeResult.ok) {
       return volumeResult.response;
     }
-    data.volumeBoost = volumeResult.value;
+    processedVolumeBoost = volumeResult.value;
+    data.volumeBoost = processedVolumeBoost;
   }
 
   const [updatedSong] = await db
@@ -467,10 +492,8 @@ async function handlePatchSong(
   emitSongUpdated(formatSong(updatedSong));
 
   // If tags changed, re-sync any smart playlists tracking affected tags
-  if ('tags' in data) {
-    const newTagsLower = new Set(
-      ((data.tags as string[]) ?? []).map((t: string) => t.toLowerCase())
-    );
+  if (processedTags) {
+    const newTagsLower = new Set(processedTags.map((t) => t.toLowerCase()));
     const affectedTags = [...new Set([...oldTagsLower, ...newTagsLower])];
     await reSyncPlaylistsForTags(affectedTags);
   }
@@ -480,10 +503,10 @@ async function handlePatchSong(
   const player = getPlayer(getGuildId());
   if (player) {
     // Volume boost also needs live audio update
-    if (data.volumeBoost !== undefined) {
+    if (processedVolumeBoost != null) {
       const currentSong = player.getCurrentSong();
       if (currentSong?.id === id) {
-        player.updateVolumeBoost(data.volumeBoost as number);
+        player.updateVolumeBoost(processedVolumeBoost);
       }
     }
 

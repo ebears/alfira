@@ -1,5 +1,6 @@
 import { and, eq, lt } from 'drizzle-orm';
 import crypto from 'node:crypto';
+import * as v from 'valibot';
 
 import { getGuildId, refreshGuildId } from '../lib/config';
 import { type RouteContext } from '../lib/context';
@@ -171,6 +172,21 @@ function authRateLimit(ip: string): boolean {
 }
 
 // ---------------------------------------------------------------------------
+// Discord API response schemas
+// ---------------------------------------------------------------------------
+const DiscordMemberSchema = v.object({ roles: v.optional(v.array(v.string())) });
+const DiscordUserSchema = v.object({
+  username: v.string(),
+  avatar: v.nullable(v.string()),
+});
+const DiscordTokenSchema = v.object({ access_token: v.optional(v.string()) });
+const DiscordIdentitySchema = v.object({
+  id: v.string(),
+  username: v.string(),
+  avatar: v.nullable(v.string()),
+});
+
+// ---------------------------------------------------------------------------
 // Helper functions
 // ---------------------------------------------------------------------------
 
@@ -192,8 +208,9 @@ async function fetchGuildMemberRoles(discordId: string): Promise<string[] | null
     if (!memberRes.ok) {
       throw new Error(`Discord API error: ${memberRes.status}`);
     }
-    const data = (await memberRes.json()) as { roles?: string[] };
-    return data.roles ?? [];
+    const raw: unknown = await memberRes.json();
+    const parsed = v.parse(DiscordMemberSchema, raw);
+    return parsed.roles ?? [];
   } catch (err: unknown) {
     logger.error(
       { err: err instanceof Error ? err.message : String(err) },
@@ -217,11 +234,12 @@ async function fetchDiscordUserProfile(
     if (!res.ok) {
       return null;
     }
-    const data = (await res.json()) as { username: string; avatar: string | null };
+    const raw: unknown = await res.json();
+    const parsed = v.parse(DiscordUserSchema, raw);
     return {
-      username: data.username,
-      avatar: data.avatar
-        ? `https://cdn.discordapp.com/avatars/${discordId}/${data.avatar}.png`
+      username: parsed.username,
+      avatar: parsed.avatar
+        ? `https://cdn.discordapp.com/avatars/${discordId}/${parsed.avatar}.png`
         : null,
     };
   } catch {
@@ -240,7 +258,8 @@ async function fetchUserAdminStatus(
     if (!userRes.ok) {
       throw new Error(`Discord API error: ${userRes.status}`);
     }
-    const userData = (await userRes.json()) as { username: string; avatar: string | null };
+    const raw: unknown = await userRes.json();
+    const userData = v.parse(DiscordUserSchema, raw);
     const { username, avatar } = userData;
 
     const roles = await fetchGuildMemberRoles(discordId);
@@ -283,7 +302,8 @@ async function exchangeAuthorizationCode(code: string): Promise<string | null> {
     if (!tokenRes.ok) {
       return null;
     }
-    const data = (await tokenRes.json()) as { access_token?: string };
+    const raw: unknown = await tokenRes.json();
+    const data = v.parse(DiscordTokenSchema, raw);
     return data.access_token ?? null;
   } catch {
     return null;
@@ -304,7 +324,8 @@ async function fetchDiscordIdentity(
     if (!userRes.ok) {
       return null;
     }
-    return (await userRes.json()) as { id: string; username: string; avatar: string | null };
+    const raw: unknown = await userRes.json();
+    return v.parse(DiscordIdentitySchema, raw);
   } catch {
     return null;
   }
@@ -598,7 +619,7 @@ async function handleRefresh(
       isSetupAdmin = true;
     } catch (err) {
       logger.warn(
-        { discordId: decoded.discordId, err: (err as Error).message },
+        { discordId: decoded.discordId, err: err instanceof Error ? err.message : String(err) },
         'Auth refresh failed: Discord unreachable (setup mode)'
       );
       return json({ error: 'Discord is temporarily unreachable. Please try again.' }, 503);
@@ -620,7 +641,7 @@ async function handleRefresh(
       roles = userInfo.roles;
     } catch (err) {
       logger.warn(
-        { discordId: decoded.discordId, err: (err as Error).message },
+        { discordId: decoded.discordId, err: err instanceof Error ? err.message : String(err) },
         'Auth refresh failed: Discord unreachable'
       );
       return json({ error: 'Discord is temporarily unreachable. Please try again.' }, 503);
