@@ -60,6 +60,7 @@ export {
   type RequestCreateData,
   removeSongFromPlaylist,
   renamePlaylist,
+  reorderPlaylistSongs,
   startPlayback,
   togglePlaylistVisibility,
   updateGeneralSettings,

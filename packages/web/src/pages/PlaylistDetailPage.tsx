@@ -26,6 +26,7 @@ import {
   getPlaylistPage,
   removeSongFromPlaylist,
   renamePlaylist,
+  reorderPlaylistSongs,
   startPlayback,
   togglePlaylistVisibility,
 } from '../api/api';
@@ -38,6 +39,7 @@ import { ContextMenu, ContextMenuTrigger } from '../components/ContextMenu';
 import EmptyState from '../components/EmptyState';
 import ListToolbar from '../components/ListToolbar';
 import NotificationToast from '../components/NotificationToast';
+import { SortableVirtualSongList } from '../components/SortableVirtualSongList';
 import { Button } from '../components/ui/Button';
 import { cooldownButtonProps } from '../components/ui/cooldownButtonProps';
 import { Skeleton } from '../components/ui/Skeleton';
@@ -355,6 +357,18 @@ export default function PlaylistDetailPage() {
   const handleCloseBulkEdit = useCallback(() => {
     setBulkEditingOpen(false);
   }, []);
+
+  // ── Reorder callback for drag-and-drop ─────────────────────────────
+  const handleReorder = useCallback(
+    async (orderedIds: string[]) => {
+      if (!playlistDetailRef.current) {
+        return;
+      }
+      await reorderPlaylistSongs(playlistDetailRef.current.id, orderedIds);
+      refetch();
+    },
+    [refetch]
+  );
 
   // ── Socket: playlist updated (rename, visibility, song count changes) ──
   useEffect(() => {
@@ -886,27 +900,52 @@ export default function PlaylistDetailPage() {
               exit='exit'
               transition={viewTransition}
             >
-              <VirtualSongList
-                items={songItems}
-                isAdminView={isAdminView}
-                playlists={[]}
-                isLoading={isLoading}
-                isFetching={isFetching}
-                isError={isError}
-                hasMore={hasMore}
-                hasLoaded={!isLoading}
-                playingId={playingSongId}
-                onRetry={retry}
-                onFetchMore={fetchNextPage}
-                onDelete={selectionMode ? undefined : handleSongDelete}
-                onPlay={handlePlayFromSong}
-                onAddToQueue={handleAddToQueue}
-                selectionMode={selectionMode}
-                isSelected={bulk.isSelected}
-                onToggleSelect={bulk.toggle}
-                emptyTitle='No Songs'
-                emptyMessage='Add songs to this playlist'
-              />
+              {sort === 'position' && !isSmart && (isAdminView || isOwner) ? (
+                <SortableVirtualSongList
+                  items={songItems}
+                  isAdminView={isAdminView}
+                  playlists={[]}
+                  isLoading={isLoading}
+                  isFetching={isFetching}
+                  isError={isError}
+                  hasMore={hasMore}
+                  hasLoaded={!isLoading}
+                  playingId={playingSongId}
+                  onRetry={retry}
+                  onFetchMore={fetchNextPage}
+                  onDelete={selectionMode ? undefined : handleSongDelete}
+                  onPlay={handlePlayFromSong}
+                  onAddToQueue={handleAddToQueue}
+                  onReorder={handleReorder}
+                  selectionMode={selectionMode}
+                  isSelected={bulk.isSelected}
+                  onToggleSelect={bulk.toggle}
+                  emptyTitle='No Songs'
+                  emptyMessage='Add songs to this playlist'
+                />
+              ) : (
+                <VirtualSongList
+                  items={songItems}
+                  isAdminView={isAdminView}
+                  playlists={[]}
+                  isLoading={isLoading}
+                  isFetching={isFetching}
+                  isError={isError}
+                  hasMore={hasMore}
+                  hasLoaded={!isLoading}
+                  playingId={playingSongId}
+                  onRetry={retry}
+                  onFetchMore={fetchNextPage}
+                  onDelete={selectionMode ? undefined : handleSongDelete}
+                  onPlay={handlePlayFromSong}
+                  onAddToQueue={handleAddToQueue}
+                  selectionMode={selectionMode}
+                  isSelected={bulk.isSelected}
+                  onToggleSelect={bulk.toggle}
+                  emptyTitle='No Songs'
+                  emptyMessage='Add songs to this playlist'
+                />
+              )}
             </m.div>
           ) : (
             <m.div
