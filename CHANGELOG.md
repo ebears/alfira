@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-07-20
+
 ### Added
 
 - **Expanded audio filters** — All NodeLink filter types are now exposed on the Audio page: karaoke, timescale (speed/pitch/rate), tremolo, vibrato, rotation, distortion, channel mix, low pass, and rate. Previously only the 15-band equalizer and compressor were available (#717).
@@ -232,7 +234,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - UI actions now properly gated by granular permissions rather than a simple admin check.
 - Inherited pointer cursor on modal cards.
 
-[Unreleased]: https://github.com/ebears/alfira/compare/v0.2.2...dev
+[Unreleased]: https://github.com/ebears/alfira/compare/v0.3.0...dev
+[0.3.0]: https://github.com/ebears/alfira/compare/v0.2.2...v0.3.0
 [0.2.2]: https://github.com/ebears/alfira/compare/v0.2.1...v0.2.2
 [0.2.1]: https://github.com/ebears/alfira/compare/v0.2.0...v0.2.1
 [0.2.0]: https://github.com/ebears/alfira/compare/v0.1.1...v0.2.0
