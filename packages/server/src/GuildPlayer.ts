@@ -56,6 +56,10 @@ export class GuildPlayer {
   // Auto-leave idle timer.
   private idleLeaveTimer: ReturnType<typeof setTimeout> | null = null;
 
+  // Periodic sync broadcast during playback — pushes fresh NodeLink position
+  // data to clients so they can correct client-side clock drift.
+  private syncInterval: ReturnType<typeof setInterval> | null = null;
+
   private getIdleTimeoutMinutes(): number {
     // Read from DB first (set via setup wizard or admin settings).
     try {
@@ -322,6 +326,7 @@ export class GuildPlayer {
   stop(): void {
     this.stopping = true;
     this.cancelIdleLeave();
+    this.clearSyncInterval();
     this.currentSong = null;
     this.queue.clear();
     this.priorityQueue = [];
@@ -489,10 +494,12 @@ export class GuildPlayer {
       }
       await updateNodeLinkPlayer(this.guildId, sessionId, { paused: false });
       this.paused = false;
+      this.startSyncInterval();
     } else {
       this.pausedAt = Date.now();
       await updateNodeLinkPlayer(this.guildId, sessionId, { paused: true });
       this.paused = true;
+      this.clearSyncInterval();
       this.scheduleIdleLeave();
     }
 
@@ -634,13 +641,17 @@ export class GuildPlayer {
   }
 
   getQueueState(): QueueState {
-    // Only expose timescale fields when the filter is actually active on
-    // NodeLink — avoids the client activating its speed-aware path when
-    // the filter is off but a non-1.0 speed is still stored in the DB.
+    // Always include NodeLink ground-truth position so clients can correct
+    // clock drift. Timescale speed is still gated behind the filter being
+    // active — a non-1.0 speed stored in the DB is meaningless otherwise.
     let timescaleSpeed: number | undefined;
     let nodeLinkPosition: number | null = null;
     let nodeLinkTime: number | null = null;
     try {
+      const nodePos = lavalink.getPlayerPosition(this.guildId);
+      nodeLinkPosition = nodePos?.position ?? null;
+      nodeLinkTime = nodePos?.time ?? null;
+
       const row = db
         .select({
           enabled: tables.guildSettings.timescaleEnabled,
@@ -651,9 +662,6 @@ export class GuildPlayer {
         .get();
       if (row?.enabled) {
         timescaleSpeed = row.speed;
-        const nodePos = lavalink.getPlayerPosition(this.guildId);
-        nodeLinkPosition = nodePos?.position ?? null;
-        nodeLinkTime = nodePos?.time ?? null;
       }
     } catch {
       // DB not available — leave timescale fields absent.
@@ -681,6 +689,22 @@ export class GuildPlayer {
       await this.playNext();
     } else {
       this.broadcast();
+    }
+  }
+
+  private static readonly SYNC_INTERVAL_MS = 5_000;
+
+  private startSyncInterval(): void {
+    this.clearSyncInterval();
+    this.syncInterval = setInterval(() => {
+      this.broadcast();
+    }, GuildPlayer.SYNC_INTERVAL_MS);
+  }
+
+  private clearSyncInterval(): void {
+    if (this.syncInterval !== null) {
+      clearInterval(this.syncInterval);
+      this.syncInterval = null;
     }
   }
 
@@ -861,6 +885,7 @@ export class GuildPlayer {
       }
 
       this.broadcast();
+      this.startSyncInterval();
       const t3 = Date.now();
 
       logger.info(
@@ -957,6 +982,7 @@ export class GuildPlayer {
     }
 
     this.broadcast();
+    this.startSyncInterval();
 
     logger.info(
       {
@@ -1039,6 +1065,7 @@ export class GuildPlayer {
       return;
     }
 
+    this.clearSyncInterval();
     this.trackStartedAt = null;
     this.pausedAt = null;
 
