@@ -31,7 +31,7 @@ export default function MobileNav() {
   // Close drawer on escape key
   useEffect(() => {
     if (!isOpen) {
-      return undefined;
+      return;
     }
 
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -41,7 +41,9 @@ export default function MobileNav() {
     };
 
     document.addEventListener('keydown', handleKeyDown);
-    return () => document.removeEventListener('keydown', handleKeyDown);
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+    };
   }, [isOpen]);
 
   // Prevent body scroll when drawer is open
@@ -59,7 +61,7 @@ export default function MobileNav() {
   // Close drawer when clicking outside
   useEffect(() => {
     if (!isOpen) {
-      return undefined;
+      return;
     }
 
     const handleClickOutside = (e: MouseEvent) => {
@@ -69,7 +71,9 @@ export default function MobileNav() {
     };
 
     document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
   }, [isOpen]);
 
   const handleLogout = useCallback(async () => {
@@ -77,8 +81,12 @@ export default function MobileNav() {
     void navigate('/login');
   }, [logout, navigate]);
 
-  const handleOpen = useCallback(() => setIsOpen(true), []);
-  const handleClose = useCallback(() => setIsOpen(false), []);
+  const handleOpen = useCallback(() => {
+    setIsOpen(true);
+  }, []);
+  const handleClose = useCallback(() => {
+    setIsOpen(false);
+  }, []);
 
   const backdropKeyHandler = useCallback((e: React.KeyboardEvent) => {
     if (e.key === 'Escape' || e.key === 'Enter') {
@@ -94,7 +102,7 @@ export default function MobileNav() {
   return (
     <>
       {/* Mobile header bar */}
-      <header className='md:hidden fixed top-0 left-0 right-0 z-40 h-14 flex items-center justify-between px-4 bg-elevated border-b border-border safe-area-top'>
+      <header className='bg-elevated border-border safe-area-top fixed top-0 right-0 left-0 z-40 flex h-14 items-center justify-between border-b px-4 md:hidden'>
         {/* Left: Menu button */}
         <Button
           variant='inherit'
@@ -108,26 +116,26 @@ export default function MobileNav() {
 
         {/* Center: Wordmark */}
         <div className='flex items-center gap-2'>
-          <span className='font-display text-3xl text-accent tracking-wider'>Alfira</span>
+          <span className='font-display text-accent text-3xl tracking-wider'>Alfira</span>
           {isAdminView && (
-            <span className='text-[9px] font-mono bg-accent/10 text-accent border border-accent/20 px-1.5 py-0.5 rounded uppercase tracking-widest'>
+            <span className='bg-accent/10 text-accent border-accent/20 rounded border px-1.5 py-0.5 font-mono text-[9px] tracking-widest uppercase'>
               admin
             </span>
           )}
         </div>
 
         {/* Right: User avatar */}
-        <div className='w-11 h-11 flex items-center justify-center'>
+        <div className='flex h-11 w-11 items-center justify-center'>
           {user?.avatar ? (
             <img
               src={user.avatar}
               alt={user.username}
-              className='w-8 h-8 rounded-full border border-border'
+              className='border-border h-8 w-8 rounded-full border'
               decoding='async'
             />
           ) : (
-            <div className='w-8 h-8 rounded-full bg-elevated border border-border flex items-center justify-center'>
-              <span className='font-mono text-xs text-muted'>
+            <div className='bg-elevated border-border flex h-8 w-8 items-center justify-center rounded-full border'>
+              <span className='text-muted font-mono text-xs'>
                 {user?.username?.[0]?.toUpperCase()}
               </span>
             </div>
@@ -137,11 +145,11 @@ export default function MobileNav() {
 
       {/* Backdrop overlay */}
       {isOpen && (
-        <SpringUp className='md:hidden fixed inset-0 z-50'>
+        <SpringUp className='fixed inset-0 z-50 md:hidden'>
           <button
             type='button'
             aria-label='Close navigation menu'
-            className='bg-black/60 backdrop-blur-sm absolute inset-0'
+            className='absolute inset-0 bg-black/60 backdrop-blur-sm'
             onClick={handleClose}
             onKeyDown={backdropKeyHandler}
           />
@@ -151,21 +159,21 @@ export default function MobileNav() {
       {/* Slide-out drawer */}
       <div
         ref={drawerRef}
-        className={`md:hidden fixed top-0 left-0 bottom-0 z-50 w-72 max-w-[85vw] bg-elevated border-r border-border flex flex-col transform transition-transform duration-300 ease-out safe-area-top ${
+        className={`bg-elevated border-border safe-area-top fixed top-0 bottom-0 left-0 z-50 flex w-72 max-w-[85vw] transform flex-col border-r transition-transform duration-300 ease-out md:hidden ${
           isOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
       >
         {/* Drawer header */}
-        <div className='flex items-center justify-between p-4 border-b border-border'>
+        <div className='border-border flex items-center justify-between border-b p-4'>
           <div className='flex items-center gap-2'>
-            <span className='flex items-center justify-center w-10 h-10 shrink-0 rounded border border-accent/30 bg-accent/10 self-end'>
+            <span className='border-accent/30 bg-accent/10 flex h-10 w-10 shrink-0 items-center justify-center self-end rounded border'>
               {isAdminView ? (
                 <CraneTowerIcon size={24} weight='duotone' className='text-accent' />
               ) : (
                 <GuitarIcon size={24} weight='duotone' className='text-accent' />
               )}
             </span>
-            <span className='font-display text-3xl text-accent tracking-wider'>Alfira</span>
+            <span className='font-display text-accent text-3xl tracking-wider'>Alfira</span>
           </div>
           <Button
             variant='inherit'
@@ -179,7 +187,7 @@ export default function MobileNav() {
         </div>
 
         {/* Navigation links */}
-        <nav className='px-3 pt-3 pb-2 space-y-2'>
+        <nav className='space-y-2 px-3 pt-3 pb-2'>
           {NAV_ITEMS.map(({ to, label, icon: Icon }) => (
             <NavLink
               key={to}
@@ -195,7 +203,7 @@ export default function MobileNav() {
           {isAdminView && ADMIN_NAV_ITEMS.length > 0 && (
             <>
               <div className='px-2 py-1'>
-                <div className='h-px bg-fg/15' />
+                <div className='bg-fg/15 h-px' />
               </div>
               {ADMIN_NAV_ITEMS.map(({ to, label, icon: Icon }) => (
                 <NavLink
@@ -220,32 +228,32 @@ export default function MobileNav() {
 
           {/* Separator above user section */}
           <div className='px-5'>
-            <div className='h-px bg-fg/20' />
+            <div className='bg-fg/20 h-px' />
           </div>
 
           {/* User section */}
           <div className='p-3'>
-            <div className='flex items-center gap-3 px-2 py-2 mb-3'>
+            <div className='mb-3 flex items-center gap-3 px-2 py-2'>
               {user?.avatar ? (
                 <img
                   src={user.avatar}
                   alt={user.username}
-                  className='w-7 h-7 rounded-full'
+                  className='h-7 w-7 rounded-full'
                   decoding='async'
                 />
               ) : (
-                <div className='w-7 h-7 rounded-full bg-elevated flex items-center justify-center'>
-                  <span className='font-mono text-sm text-muted'>
+                <div className='bg-elevated flex h-7 w-7 items-center justify-center rounded-full'>
+                  <span className='text-muted font-mono text-sm'>
                     {user?.username?.[0]?.toUpperCase()}
                   </span>
                 </div>
               )}
-              <span className='text-fg font-body truncate flex-1'>{user?.username}</span>
+              <span className='text-fg font-body flex-1 truncate'>{user?.username}</span>
             </div>
             <Button
               variant='danger'
               onClick={handleLogout}
-              className='flex items-center rounded-xl transition-all duration-150 cursor-pointer px-3 py-2 w-full text-foreground'
+              className='text-foreground flex w-full cursor-pointer items-center rounded-xl px-3 py-2 transition-all duration-150'
             >
               <span className='mr-auto text-sm'>log out</span>
               <SignOutIcon size={18} weight='duotone' />

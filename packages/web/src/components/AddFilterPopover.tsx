@@ -39,14 +39,16 @@ const FilterTagButton = memo(function FilterTagButton({
 }: FilterTagButtonProps) {
   const explicitColor = tag.color ?? null;
   const colors = getTagColorClasses(tag.canonicalName, explicitColor);
-  const handleClick = useCallback(() => onClick(tag), [onClick, tag]);
+  const handleClick = useCallback(() => {
+    onClick(tag);
+  }, [onClick, tag]);
 
   return (
     <button
       type='button'
-      className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-medium whitespace-nowrap cursor-pointer transition-opacity hover:opacity-80 active:opacity-70 ${
+      className={`inline-flex cursor-pointer items-center gap-1 rounded px-2 py-0.5 text-[11px] font-medium whitespace-nowrap transition-opacity hover:opacity-80 active:opacity-70 ${
         isActive
-          ? `${colors.bg} ${colors.text} ring-1 ring-inset ring-current/30`
+          ? `${colors.bg} ${colors.text} ring-1 ring-current/30 ring-inset`
           : `${colors.bg} ${colors.text} opacity-60 hover:opacity-90`
       }`}
       onClick={handleClick}
@@ -68,20 +70,22 @@ const FilterSourceRow = memo(function FilterSourceRow({
   isActive,
   onToggle,
 }: FilterSourceRowProps) {
-  const handleChange = useCallback(() => onToggle(source.key), [onToggle, source.key]);
+  const handleChange = useCallback(() => {
+    onToggle(source.key);
+  }, [onToggle, source.key]);
 
   return (
     <label
-      className={`flex items-center gap-3 px-3 py-2 rounded-lg cursor-pointer transition-colors select-none ${
+      className={`flex cursor-pointer items-center gap-3 rounded-lg px-3 py-2 transition-colors select-none ${
         isActive ? 'bg-accent/5 text-accent' : 'hover:bg-elevated active:bg-elevated/80 text-muted'
       }`}
     >
       <input type='checkbox' checked={isActive} onChange={handleChange} className='sr-only' />
-      <span className='flex items-center gap-2 flex-1'>
+      <span className='flex flex-1 items-center gap-2'>
         <SourceIcon sourceKey={source.key} />
         <span className='font-body text-sm'>{source.label}</span>
       </span>
-      {isActive && <span className='text-[11px] font-mono text-accent'>active</span>}
+      {isActive && <span className='text-accent font-mono text-[11px]'>active</span>}
     </label>
   );
 });
@@ -163,12 +167,12 @@ export default function AddFilterPopover({
 
   return (
     <Backdrop onClose={onClose}>
-      <SpringUp className='w-full max-w-sm glass-modal flex flex-col max-h-[70vh]'>
-        <div className='p-4 border-b border-border flex items-center justify-between'>
-          <h3 className='font-body font-semibold text-sm text-fg'>Filters</h3>
+      <SpringUp className='glass-modal flex max-h-[70vh] w-full max-w-sm flex-col'>
+        <div className='border-border flex items-center justify-between border-b p-4'>
+          <h3 className='font-body text-fg text-sm font-semibold'>Filters</h3>
           <button
             type='button'
-            className='p-1 rounded hover:bg-elevated transition-colors cursor-pointer'
+            className='hover:bg-elevated cursor-pointer rounded p-1 transition-colors'
             onClick={onClose}
             aria-label='Close'
           >
@@ -178,17 +182,17 @@ export default function AddFilterPopover({
 
         <div className='flex-1 overflow-y-auto'>
           {/* ── Tags section ─────────────────────────────────── */}
-          <div className='p-4 border-b border-border'>
-            <p className='font-mono text-[11px] text-muted uppercase tracking-wider mb-2.5'>Tags</p>
+          <div className='border-border border-b p-4'>
+            <p className='text-muted mb-2.5 font-mono text-[11px] tracking-wider uppercase'>Tags</p>
 
             <div className='relative mb-2.5'>
               <MagnifyingGlassIcon
-                className='absolute left-2.5 top-1/2 -translate-y-1/2 text-faint w-3.5 h-3.5'
+                className='text-faint absolute top-1/2 left-2.5 h-3.5 w-3.5 -translate-y-1/2'
                 weight='duotone'
               />
               <input
                 ref={inputRef}
-                className='input pl-8 py-1.5 text-xs'
+                className='input py-1.5 pl-8 text-xs'
                 placeholder='Search tags...'
                 value={tagSearch}
                 onChange={handleSearchChange}
@@ -196,11 +200,11 @@ export default function AddFilterPopover({
             </div>
 
             {filteredTags.length === 0 ? (
-              <p className='font-mono text-xs text-muted py-2 text-center'>
+              <p className='text-muted py-2 text-center font-mono text-xs'>
                 {tagSearch ? 'no matching tags' : 'no tags available'}
               </p>
             ) : (
-              <div className='flex flex-wrap gap-1.5 max-h-40 overflow-y-auto'>
+              <div className='flex max-h-40 flex-wrap gap-1.5 overflow-y-auto'>
                 {filteredTags.map((tag) => {
                   const isActive = activeTags.includes(tag.nameLower);
                   return (
@@ -218,7 +222,7 @@ export default function AddFilterPopover({
 
           {/* ── Sources section ──────────────────────────────── */}
           <div className='p-4'>
-            <p className='font-mono text-[11px] text-muted uppercase tracking-wider mb-2.5'>
+            <p className='text-muted mb-2.5 font-mono text-[11px] tracking-wider uppercase'>
               Source
             </p>
 

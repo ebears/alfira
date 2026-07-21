@@ -45,7 +45,7 @@ export default function AudioPage() {
   const canManage = isAdminView || hasPermission('audio.manage');
 
   return (
-    <div className='p-4 md:p-8 h-full overflow-y-auto'>
+    <div className='h-full overflow-y-auto p-4 md:p-8'>
       <PageHeader
         icon={SlidersHorizontalIcon}
         title='Audio'
@@ -54,17 +54,17 @@ export default function AudioPage() {
 
       {!canManage ? (
         <div className='flex flex-col items-center justify-center py-20 text-center'>
-          <p className='text-sm text-muted mb-1'>No access to audio settings</p>
-          <p className='text-xs text-muted'>
+          <p className='text-muted mb-1 text-sm'>No access to audio settings</p>
+          <p className='text-muted text-xs'>
             You need the <span className='text-fg font-medium'>audio.manage</span> permission or an
             admin role to manage audio settings.
           </p>
         </div>
       ) : (
-        <div className='grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6'>
+        <div className='grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3'>
           {FILTER_CARDS.map(({ icon: Icon, label, component: Section, wide }) => (
             <section key={label} className={wide ? 'xl:col-span-2' : ''}>
-              <h2 className='font-mono text-xs text-muted uppercase tracking-wider mb-3 flex items-center gap-2'>
+              <h2 className='text-muted mb-3 flex items-center gap-2 font-mono text-xs tracking-wider uppercase'>
                 <Icon size={14} weight='duotone' />
                 {label}
               </h2>

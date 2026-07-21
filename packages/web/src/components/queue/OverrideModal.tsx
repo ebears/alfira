@@ -30,10 +30,10 @@ export default function OverrideModal({
     try {
       await overridePlay(sourceUrl.trim());
       onOverride();
-    } catch (err: unknown) {
-      if (!isRateLimitError(err)) {
+    } catch (error: unknown) {
+      if (!isRateLimitError(error)) {
         setError(
-          apiErrorMessage(err, 'Could not override playback. Is the bot in a voice channel?')
+          apiErrorMessage(error, 'Could not override playback. Is the bot in a voice channel?')
         );
       }
       setSubmitting(false);
@@ -56,16 +56,16 @@ export default function OverrideModal({
 
   return (
     <Backdrop onClose={onClose}>
-      <SpringUp className='p-5 md:p-6 w-full max-w-sm mx-4 glass-modal'>
-        <h2 className='font-display text-2xl md:text-3xl text-fg tracking-wider mb-1'>Override</h2>
-        <p className='font-mono text-xs text-danger mb-4 md:mb-6'>
-          <WarningIcon size={14} weight='duotone' className='inline mr-1' /> This will stop current
+      <SpringUp className='glass-modal mx-4 w-full max-w-sm p-5 md:p-6'>
+        <h2 className='font-display text-fg mb-1 text-2xl tracking-wider md:text-3xl'>Override</h2>
+        <p className='text-danger mb-4 font-mono text-xs md:mb-6'>
+          <WarningIcon size={14} weight='duotone' className='mr-1 inline' /> This will stop current
           playback, clear all queues, and play the requested song immediately.
         </p>
 
-        <div className='space-y-4 mb-6'>
+        <div className='mb-6 space-y-4'>
           <div>
-            <p className='font-mono text-xs text-muted mb-2 uppercase tracking-widest'>
+            <p className='text-muted mb-2 font-mono text-xs tracking-widest uppercase'>
               Source URL
             </p>
             <input
@@ -80,16 +80,16 @@ export default function OverrideModal({
           </div>
         </div>
 
-        {error && <p className='font-mono text-xs text-danger mb-4'>{error}</p>}
+        {error && <p className='text-danger mb-4 font-mono text-xs'>{error}</p>}
 
         {submitting && (
-          <p className='font-mono text-xs text-muted mb-4 flex items-center gap-2'>
+          <p className='text-muted mb-4 flex items-center gap-2 font-mono text-xs'>
             <Spinner />
             Overriding...
           </p>
         )}
 
-        <div className='flex gap-2 justify-end'>
+        <div className='flex justify-end gap-2'>
           <Button
             variant='inherit'
             type='button'

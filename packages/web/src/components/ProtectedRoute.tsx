@@ -11,10 +11,10 @@ export default function ProtectedRoute({ children }: { children: React.ReactNode
 
   if (loading) {
     return (
-      <div className='h-full flex items-center justify-center bg-elevated'>
+      <div className='bg-elevated flex h-full items-center justify-center'>
         <div className='flex flex-col items-center gap-3'>
           <Spinner size='lg' />
-          <span className='font-mono text-xs text-muted'>connecting</span>
+          <span className='text-muted font-mono text-xs'>connecting</span>
         </div>
       </div>
     );

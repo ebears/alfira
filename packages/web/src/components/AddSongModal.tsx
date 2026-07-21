@@ -56,10 +56,14 @@ export default function AddSongModal({
   // Auto-close after successful submission
   useEffect(() => {
     if (successMsg) {
-      const id = setTimeout(() => onClose(), 1500);
-      return () => clearTimeout(id);
+      const id = setTimeout(() => {
+        onClose();
+      }, 1500);
+      return () => {
+        clearTimeout(id);
+      };
     }
-    return undefined;
+    return;
   }, [successMsg, onClose]);
 
   const handleFetch = useCallback(async () => {
@@ -87,8 +91,8 @@ export default function AddSongModal({
       }
 
       setStep('metadata');
-    } catch (err: unknown) {
-      setError(apiErrorMessage(err, 'Could not fetch track info. Try again.'));
+    } catch (error: unknown) {
+      setError(apiErrorMessage(error, 'Could not fetch track info. Try again.'));
     } finally {
       setLoading(false);
     }
@@ -116,8 +120,8 @@ export default function AddSongModal({
       } else {
         setSuccessMsg('Playlist request submitted! An admin will review it.');
       }
-    } catch (err: unknown) {
-      setError(apiErrorMessage(err, 'Could not import playlist. Try again.'));
+    } catch (error: unknown) {
+      setError(apiErrorMessage(error, 'Could not import playlist. Try again.'));
     } finally {
       setLoading(false);
     }
@@ -132,7 +136,8 @@ export default function AddSongModal({
     setSuccessMsg('');
 
     try {
-      const parsedBoost = volumeBoost.trim() === '' ? null : parseInt(volumeBoost.trim(), 10);
+      const parsedBoost =
+        volumeBoost.trim() === '' ? null : Number.parseInt(volumeBoost.trim(), 10);
 
       const result = await createRequest({
         sourceUrl: url.trim(),
@@ -156,8 +161,8 @@ export default function AddSongModal({
       } else {
         setSuccessMsg('Request submitted! An admin will review it.');
       }
-    } catch (err: unknown) {
-      setError(apiErrorMessage(err, 'Something went wrong. Try again.'));
+    } catch (error: unknown) {
+      setError(apiErrorMessage(error, 'Something went wrong. Try again.'));
     } finally {
       setLoading(false);
     }
@@ -234,7 +239,7 @@ export default function AddSongModal({
   const handleTagPillRemove = useCallback(
     (e: React.MouseEvent<HTMLButtonElement>) => {
       e.stopPropagation();
-      const tag = e.currentTarget.closest('[data-tag]')?.getAttribute('data-tag');
+      const tag = e.currentTarget.closest<HTMLElement>('[data-tag]')?.dataset.tag;
       if (tag) {
         removeTag(tag);
       }
@@ -242,10 +247,9 @@ export default function AddSongModal({
     [removeTag]
   );
 
-  const handleTagInputChange = useCallback(
-    (e: React.ChangeEvent<HTMLInputElement>) => setTagInput(e.target.value),
-    []
-  );
+  const handleTagInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    setTagInput(e.target.value);
+  }, []);
 
   const handleVolumeTextChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const v = e.target.value;
@@ -258,30 +262,29 @@ export default function AddSongModal({
     if (volumeBoost.trim() === '' || volumeBoost === '-') {
       setVolumeBoost('0');
     } else {
-      const n = parseInt(volumeBoost, 10);
+      const n = Number.parseInt(volumeBoost, 10);
       if (!Number.isNaN(n)) {
         setVolumeBoost(String(Math.min(200, Math.max(-100, n))));
       }
     }
   }, [volumeBoost]);
 
-  const handleVolumeRangeChange = useCallback(
-    (e: React.ChangeEvent<HTMLInputElement>) => setVolumeBoost(e.target.value),
-    []
-  );
+  const handleVolumeRangeChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    setVolumeBoost(e.target.value);
+  }, []);
 
   const volumeSliderValue = useMemo(
     () =>
       volumeBoost.trim() === '' || volumeBoost === '-'
         ? 0
-        : Math.min(200, Math.max(-100, parseInt(volumeBoost, 10) || 0)),
+        : Math.min(200, Math.max(-100, Number.parseInt(volumeBoost, 10) || 0)),
     [volumeBoost]
   );
 
   const volumeRangeStyle = useMemo(
     () =>
       ({
-        '--volume-pct': `${((Math.min(200, Math.max(-100, parseInt(volumeBoost, 10) || 0)) + 100) / 300) * 100}%`,
+        '--volume-pct': `${((Math.min(200, Math.max(-100, Number.parseInt(volumeBoost, 10) || 0)) + 100) / 300) * 100}%`,
       }) as React.CSSProperties,
     [volumeBoost]
   );
@@ -290,11 +293,11 @@ export default function AddSongModal({
 
   return (
     <Backdrop onClose={onClose}>
-      <SpringUp className='p-5 md:p-6 w-full max-w-md mx-4 glass-modal'>
-        <h2 className='font-display text-2xl md:text-3xl text-fg tracking-wider mb-1'>
+      <SpringUp className='glass-modal mx-4 w-full max-w-md p-5 md:p-6'>
+        <h2 className='font-display text-fg mb-1 text-2xl tracking-wider md:text-3xl'>
           Request Song
         </h2>
-        <p className='font-mono text-xs text-muted mb-4 md:mb-6'>
+        <p className='text-muted mb-4 font-mono text-xs md:mb-6'>
           {step === 'url' ? 'paste a url' : (preview?.title ?? 'review details')}
         </p>
 
@@ -312,21 +315,21 @@ export default function AddSongModal({
             />
 
             {isPlaylist && (
-              <p className='font-mono text-[10px] text-muted mb-3'>
+              <p className='text-muted mb-3 font-mono text-[10px]'>
                 Playlist detected — Fetch to add a single track, or import the full playlist.
               </p>
             )}
 
-            {error && <p className='font-mono text-xs text-danger mb-3'>{error}</p>}
+            {error && <p className='text-danger mb-3 font-mono text-xs'>{error}</p>}
 
             {loading && (
-              <p className='font-mono text-xs text-muted mb-3 flex items-center gap-2'>
+              <p className='text-muted mb-3 flex items-center gap-2 font-mono text-xs'>
                 <Spinner />
                 loading...
               </p>
             )}
 
-            <div className='flex gap-2 justify-end'>
+            <div className='flex justify-end gap-2'>
               <Button variant='inherit' onClick={onClose} disabled={loading} surface='surface'>
                 Cancel
               </Button>
@@ -351,29 +354,29 @@ export default function AddSongModal({
         {step === 'metadata' && preview && (
           <div className='flex flex-col gap-3'>
             {/* Thumbnail + title + duration + source */}
-            <div className='flex items-center gap-3 -mb-1'>
+            <div className='-mb-1 flex items-center gap-3'>
               {(preview.artworkUrl ?? preview.thumbnailUrl) && (
-                <div className='w-12 h-12 rounded border border-border shrink-0 overflow-hidden bg-elevated'>
+                <div className='border-border bg-elevated h-12 w-12 shrink-0 overflow-hidden rounded border'>
                   <ArtworkImage
                     src={preview.artworkUrl ?? preview.thumbnailUrl}
                     alt='Album art'
-                    className='w-full h-full'
+                    className='h-full w-full'
                   />
                 </div>
               )}
-              <div className='flex flex-col gap-0.5 min-w-0'>
-                <span className='font-body text-sm text-fg truncate'>{preview.title}</span>
+              <div className='flex min-w-0 flex-col gap-0.5'>
+                <span className='font-body text-fg truncate text-sm'>{preview.title}</span>
                 <div className='flex items-center gap-2'>
-                  <span className='font-mono text-xs text-fg'>
+                  <span className='text-fg font-mono text-xs'>
                     {formatSeconds(preview.duration)}
                   </span>
                   {preview.sourceName && (
-                    <span className='font-mono text-[10px] text-faint uppercase'>
+                    <span className='text-faint font-mono text-[10px] uppercase'>
                       {preview.sourceName}
                     </span>
                   )}
                   {preview.isPlaylist && (
-                    <span className='font-mono text-[10px] text-accent uppercase'>
+                    <span className='text-accent font-mono text-[10px] uppercase'>
                       Playlist ({preview.playlistMeta?.videoCount ?? '?'} tracks)
                     </span>
                   )}
@@ -418,13 +421,13 @@ export default function AddSongModal({
             <div>
               <label
                 htmlFor='add-tag-input'
-                className='block font-mono text-[10px] text-muted uppercase mb-1'
+                className='text-muted mb-1 block font-mono text-[10px] uppercase'
               >
                 Tags
               </label>
               {/* eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-static-element-interactions -- container click focuses inner input; keyboard handled by input */}
               <div
-                className='input text-sm flex flex-wrap gap-1.5 items-center min-h-9.5 cursor-text'
+                className='input flex min-h-9.5 cursor-text flex-wrap items-center gap-1.5 text-sm'
                 onClick={handleFocusTagInput}
               >
                 {tags.map((tag) => {
@@ -432,7 +435,7 @@ export default function AddSongModal({
                   return (
                     <span
                       key={tag}
-                      className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-mono ${c.bg} ${c.text} border ${c.border}`}
+                      className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 font-mono text-xs ${c.bg} ${c.text} border ${c.border}`}
                     >
                       {tag}
                       <button
@@ -448,7 +451,7 @@ export default function AddSongModal({
                 })}
                 <input
                   id='add-tag-input'
-                  className='flex-1 min-w-20 bg-transparent outline-none text-sm text-fg placeholder:text-faint'
+                  className='text-fg placeholder:text-faint min-w-20 flex-1 bg-transparent text-sm outline-none'
                   placeholder={tags.length === 0 ? 'Custom grouping (enter to confirm)' : ''}
                   value={tagInput}
                   onChange={handleTagInputChange}
@@ -459,19 +462,19 @@ export default function AddSongModal({
 
             {/* Volume Boost */}
             <div>
-              <span className='block font-mono text-[10px] text-muted uppercase mb-1'>
+              <span className='text-muted mb-1 block font-mono text-[10px] uppercase'>
                 Volume Boost
               </span>
               <div className='flex items-center gap-3'>
                 <input
                   id='add-volume-boost'
-                  className='input text-sm w-16 text-center'
+                  className='input w-16 text-center text-sm'
                   type='text'
                   value={volumeBoost}
                   onChange={handleVolumeTextChange}
                   onBlur={handleVolumeBlur}
                 />
-                <span className='text-xs text-muted font-mono w-8 text-left'>%</span>
+                <span className='text-muted w-8 text-left font-mono text-xs'>%</span>
                 <input
                   type='range'
                   min={-100}
@@ -485,21 +488,21 @@ export default function AddSongModal({
             </div>
 
             {/* Notify DM */}
-            <label className='flex items-center gap-2 cursor-pointer'>
+            <label className='flex cursor-pointer items-center gap-2'>
               <Checkbox checked={notifyDm} onChange={setNotifyDm} />
-              <span className='font-mono text-xs text-fg'>DM me when this request is reviewed</span>
+              <span className='text-fg font-mono text-xs'>DM me when this request is reviewed</span>
             </label>
 
-            {error && <p className='font-mono text-xs text-danger'>{error}</p>}
+            {error && <p className='text-danger font-mono text-xs'>{error}</p>}
 
             {loading && (
-              <p className='font-mono text-xs text-muted flex items-center gap-2'>
+              <p className='text-muted flex items-center gap-2 font-mono text-xs'>
                 <Spinner />
                 submitting request...
               </p>
             )}
 
-            <div className='flex gap-2 justify-end mt-1'>
+            <div className='mt-1 flex justify-end gap-2'>
               <Button
                 variant='inherit'
                 onClick={handleBackToUrl}
@@ -515,7 +518,7 @@ export default function AddSongModal({
           </div>
         )}
 
-        {successMsg && <p className='font-mono text-xs text-success mt-3'>{successMsg}</p>}
+        {successMsg && <p className='text-success mt-3 font-mono text-xs'>{successMsg}</p>}
       </SpringUp>
     </Backdrop>
   );
@@ -535,12 +538,14 @@ function Field({
   placeholder?: string;
 }) {
   const handleChange = useCallback(
-    (e: React.ChangeEvent<HTMLInputElement>) => onChange(e.target.value),
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      onChange(e.target.value);
+    },
     [onChange]
   );
   return (
     <div>
-      <label htmlFor={id} className='block font-mono text-[10px] text-muted uppercase mb-1'>
+      <label htmlFor={id} className='text-muted mb-1 block font-mono text-[10px] uppercase'>
         {label}
       </label>
       <input

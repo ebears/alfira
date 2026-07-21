@@ -281,8 +281,12 @@ export default function PlaylistDetailPage() {
 
   const pageStyle = useMemo(() => ({ paddingBottom: 0 }), []);
   const handleGoBack = useCallback(() => navigate('/playlists'), [navigate]);
-  const handleToggleMenu = useCallback(() => setMenuOpen((v) => !v), []);
-  const handleCloseMenu = useCallback(() => setMenuOpen(false), []);
+  const handleToggleMenu = useCallback(() => {
+    setMenuOpen((v) => !v);
+  }, []);
+  const handleCloseMenu = useCallback(() => {
+    setMenuOpen(false);
+  }, []);
   const handleSortChange = useCallback((field: string, newOrder: string) => {
     setSort(field);
     setOrder(newOrder);
@@ -291,18 +295,15 @@ export default function PlaylistDetailPage() {
     const t = tag.toLowerCase();
     setFilterTags((prev) => (prev.includes(t) ? prev : [...prev, t]));
   }, []);
-  const handleRemoveTag = useCallback(
-    (tag: string) => setFilterTags((prev) => prev.filter((t) => t !== tag)),
-    []
-  );
-  const handleAddSource = useCallback(
-    (s: string) => setFilterSources((prev) => (prev.includes(s) ? prev : [...prev, s])),
-    []
-  );
-  const handleRemoveSource = useCallback(
-    (s: string) => setFilterSources((prev) => prev.filter((x) => x !== s)),
-    []
-  );
+  const handleRemoveTag = useCallback((tag: string) => {
+    setFilterTags((prev) => prev.filter((t) => t !== tag));
+  }, []);
+  const handleAddSource = useCallback((s: string) => {
+    setFilterSources((prev) => (prev.includes(s) ? prev : [...prev, s]));
+  }, []);
+  const handleRemoveSource = useCallback((s: string) => {
+    setFilterSources((prev) => prev.filter((x) => x !== s));
+  }, []);
   const handleToggleSelectionMode = useCallback(() => {
     if (selectionMode) {
       bulk.clearAll();
@@ -322,23 +323,38 @@ export default function PlaylistDetailPage() {
     },
     [songs]
   );
-  const handleCloseAddSongs = useCallback(() => setShowAddSongs(false), []);
+  const handleCloseAddSongs = useCallback(() => {
+    setShowAddSongs(false);
+  }, []);
   const handleAddSongsAdded = useCallback(() => {
     refetch();
     setShowAddSongs(false);
   }, [refetch]);
-  const handleCancelBulkRemove = useCallback(() => setBulkRemoveConfirm(false), []);
-  const handleCancelRemove = useCallback(() => setRemoveId(null), []);
-  const handleCancelDeletePlaylist = useCallback(() => setDeleteConfirm(false), []);
-  const handleCancelMakeSmart = useCallback(() => setTagSmartConfirm(null), []);
-  const handleBulkTag = useCallback(() => setBulkEditingOpen(true), []);
-  const handleSelectAll = useCallback(
-    () => bulk.selectAll(songs.map((ps) => ps.songId)),
-    [bulk, songs]
-  );
-  const handleEmptyAdd = useCallback(() => setShowAddSongs(true), []);
+  const handleCancelBulkRemove = useCallback(() => {
+    setBulkRemoveConfirm(false);
+  }, []);
+  const handleCancelRemove = useCallback(() => {
+    setRemoveId(null);
+  }, []);
+  const handleCancelDeletePlaylist = useCallback(() => {
+    setDeleteConfirm(false);
+  }, []);
+  const handleCancelMakeSmart = useCallback(() => {
+    setTagSmartConfirm(null);
+  }, []);
+  const handleBulkTag = useCallback(() => {
+    setBulkEditingOpen(true);
+  }, []);
+  const handleSelectAll = useCallback(() => {
+    bulk.selectAll(songs.map((ps) => ps.songId));
+  }, [bulk, songs]);
+  const handleEmptyAdd = useCallback(() => {
+    setShowAddSongs(true);
+  }, []);
 
-  const handleCloseBulkEdit = useCallback(() => setBulkEditingOpen(false), []);
+  const handleCloseBulkEdit = useCallback(() => {
+    setBulkEditingOpen(false);
+  }, []);
 
   // ── Socket: playlist updated (rename, visibility, song count changes) ──
   useEffect(() => {
@@ -445,8 +461,8 @@ export default function PlaylistDetailPage() {
         removeItem(junctionId);
       }
       notify(`Removed ${allIds.length} song${allIds.length !== 1 ? 's' : ''}`, 'success');
-    } catch (err: unknown) {
-      notify(apiErrorMessage(err, 'Failed to remove songs.'), 'error', 5000);
+    } catch (error: unknown) {
+      notify(apiErrorMessage(error, 'Failed to remove songs.'), 'error', 5000);
     } finally {
       setBulkRemoving(false);
       bulk.clearAll();
@@ -468,8 +484,8 @@ export default function PlaylistDetailPage() {
         }
         notify(`Updated ${allIds.length} song${allIds.length !== 1 ? 's' : ''}`, 'success');
         setBulkEditingOpen(false);
-      } catch (err: unknown) {
-        notify(apiErrorMessage(err, 'Failed to update songs.'), 'error', 5000);
+      } catch (error: unknown) {
+        notify(apiErrorMessage(error, 'Failed to update songs.'), 'error', 5000);
       } finally {
         setBulkEditingApplying(false);
         bulk.clearAll();
@@ -504,8 +520,8 @@ export default function PlaylistDetailPage() {
       );
       refetch();
       notify(updated.isPrivate ? 'Playlist set to private' : 'Playlist set to public', 'success');
-    } catch (err: unknown) {
-      notify(apiErrorMessage(err, 'Could not toggle visibility.'), 'error', 5000);
+    } catch (error: unknown) {
+      notify(apiErrorMessage(error, 'Could not toggle visibility.'), 'error', 5000);
     }
   };
 
@@ -527,11 +543,11 @@ export default function PlaylistDetailPage() {
           loop: queueState.loopMode,
           startFromSongId: songId,
         });
-      } catch (err: unknown) {
+      } catch (error: unknown) {
         if (throwErrors) {
-          throw err;
+          throw error;
         }
-        notifyUnlessRateLimit(err, 'Could not start playback.', notify);
+        notifyUnlessRateLimit(error, 'Could not start playback.', notify);
       } finally {
         setPlayingSongId(null);
       }
@@ -548,8 +564,8 @@ export default function PlaylistDetailPage() {
       await updatePlaylistTag(pd.id, null);
       refetch();
       notify('Playlist converted to regular playlist', 'success');
-    } catch (err: unknown) {
-      notify(apiErrorMessage(err, 'Could not convert playlist.'), 'error', 5000);
+    } catch (error: unknown) {
+      notify(apiErrorMessage(error, 'Could not convert playlist.'), 'error', 5000);
     }
   }, [refetch, notify]);
 
@@ -563,8 +579,8 @@ export default function PlaylistDetailPage() {
         await updatePlaylistTag(pd.id, tagNameLower);
         refetch();
         notify('Playlist tag updated', 'success');
-      } catch (err: unknown) {
-        notify(apiErrorMessage(err, 'Could not update playlist tag.'), 'error', 5000);
+      } catch (error: unknown) {
+        notify(apiErrorMessage(error, 'Could not update playlist tag.'), 'error', 5000);
       }
     },
     [refetch, notify]
@@ -581,8 +597,8 @@ export default function PlaylistDetailPage() {
         await updatePlaylistTag(pd.id, tagNameLower);
         refetch();
         notify('Playlist now tracking tag', 'success');
-      } catch (err: unknown) {
-        notify(apiErrorMessage(err, 'Could not update playlist tag.'), 'error', 5000);
+      } catch (error: unknown) {
+        notify(apiErrorMessage(error, 'Could not update playlist tag.'), 'error', 5000);
       }
     },
     [refetch, notify]
@@ -606,8 +622,8 @@ export default function PlaylistDetailPage() {
         loop: queueState.loopMode,
       });
       notify(`Added "${pd.name}" to queue`, 'success');
-    } catch (err: unknown) {
-      notify(apiErrorMessage(err, 'Could not add to queue.'), 'error', 5000);
+    } catch (error: unknown) {
+      notify(apiErrorMessage(error, 'Could not add to queue.'), 'error', 5000);
     }
   }, [queueState.loopMode, notify]);
 
@@ -633,9 +649,13 @@ export default function PlaylistDetailPage() {
             editSubmenu: {
               title: 'Rename',
               value: renameValue,
-              onChange: (val: string) => setRenameValue(val),
+              onChange: (val: string) => {
+                setRenameValue(val);
+              },
               onSave: handleRenameSave,
-              onCancel: () => setRenameValue(''),
+              onCancel: () => {
+                setRenameValue('');
+              },
               saving: renameSaving,
               placeholder: 'Playlist name',
             },
@@ -675,7 +695,9 @@ export default function PlaylistDetailPage() {
                   id: 'add-songs',
                   label: 'Add Songs',
                   icon: <PlayCircleIcon size={14} weight='duotone' />,
-                  onClick: () => setShowAddSongs(true),
+                  onClick: () => {
+                    setShowAddSongs(true);
+                  },
                 } as MenuItem,
                 {
                   id: 'make-smart',
@@ -684,7 +706,9 @@ export default function PlaylistDetailPage() {
                   submenu: {
                     title: 'Track Tag',
                     items: tagSubmenuItems,
-                    onSelect: (tagId: string) => setTagSmartConfirm(tagId),
+                    onSelect: (tagId: string) => {
+                      setTagSmartConfirm(tagId);
+                    },
                     emptyMessage: 'No tags available',
                   },
                 } as MenuItem,
@@ -694,7 +718,9 @@ export default function PlaylistDetailPage() {
             label: 'Delete',
             icon: <BombIcon size={14} weight='duotone' />,
             danger: true,
-            onClick: () => setDeleteConfirm(true),
+            onClick: () => {
+              setDeleteConfirm(true);
+            },
           } as MenuItem,
         ]
       : []),
@@ -708,28 +734,28 @@ export default function PlaylistDetailPage() {
   }
 
   return (
-    <div className='p-4 md:p-8 flex flex-col min-h-0 h-full' style={pageStyle}>
+    <div className='flex h-full min-h-0 flex-col p-4 md:p-8' style={pageStyle}>
       {/* Back */}
       <Button
         variant='inherit'
         surface='surface'
         onClick={handleGoBack}
-        className='flex items-center gap-1.5 font-mono text-xs mb-4 md:mb-6 min-h-11 md:min-h-0'
+        className='mb-4 flex min-h-11 items-center gap-1.5 font-mono text-xs md:mb-6 md:min-h-0'
       >
-        <CaretLeftIcon size={16} weight='duotone' className='md:w-3.5 md:h-3.5' />
+        <CaretLeftIcon size={16} weight='duotone' className='md:h-3.5 md:w-3.5' />
         playlists
       </Button>
 
       {/* Header */}
-      <div className='flex flex-col sm:flex-row sm:items-start justify-between mb-6 md:mb-8 gap-4'>
-        <div className='flex-1 min-w-0'>
-          <div className='flex items-center gap-2 flex-wrap'>
-            <h1 className='font-display text-3xl md:text-4xl text-fg tracking-wider'>
+      <div className='mb-6 flex flex-col justify-between gap-4 sm:flex-row sm:items-start md:mb-8'>
+        <div className='min-w-0 flex-1'>
+          <div className='flex flex-wrap items-center gap-2'>
+            <h1 className='font-display text-fg text-3xl tracking-wider md:text-4xl'>
               {playlistDetail.name}
             </h1>
             {playlistDetail.isPrivate && (
               <span className='text-muted text-sm' title='Private playlist'>
-                <GhostIcon size={14} weight='duotone' className='inline mr-1' />
+                <GhostIcon size={14} weight='duotone' className='mr-1 inline' />
                 private
               </span>
             )}
@@ -740,7 +766,7 @@ export default function PlaylistDetailPage() {
                 const colors = getTagColorClasses(displayName, tag?.color);
                 return (
                   <span
-                    className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-xs font-medium ${colors.bg} ${colors.text}`}
+                    className={`inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-xs font-medium ${colors.bg} ${colors.text}`}
                     title={`Auto-tracking all songs tagged "${displayName}"`}
                   >
                     <TagIcon size={12} weight='duotone' />
@@ -749,7 +775,7 @@ export default function PlaylistDetailPage() {
                 );
               })()}
           </div>
-          <p className='font-mono text-xs text-muted mt-2'>
+          <p className='text-muted mt-2 font-mono text-xs'>
             {songItems.length} {songItems.length === 1 ? 'track' : 'tracks'}
             {playlistDetail.tagNameLower ? (
               <span className='text-accent'> • auto-tracked</span>
@@ -764,7 +790,7 @@ export default function PlaylistDetailPage() {
           </p>
         </div>
 
-        <div className='flex gap-2 shrink-0 items-center'>
+        <div className='flex shrink-0 items-center gap-2'>
           <Button
             variant='secondary'
             className='rounded-full!'
@@ -780,7 +806,7 @@ export default function PlaylistDetailPage() {
           </Button>
           <Button
             variant='primary'
-            className='text-xs flex items-center gap-1.5'
+            className='flex items-center gap-1.5 text-xs'
             {...cooldownButtonProps(cooldown, {
               onClick: () => {
                 void handlePlayFromSong(songs[0]?.songId, 'sequential');
@@ -853,7 +879,7 @@ export default function PlaylistDetailPage() {
           {viewMode === 'list' ? (
             <m.div
               key='list'
-              className='flex-1 min-h-0 flex flex-col'
+              className='flex min-h-0 flex-1 flex-col'
               variants={pageVariants}
               initial='initial'
               animate='animate'
@@ -885,7 +911,7 @@ export default function PlaylistDetailPage() {
           ) : (
             <m.div
               key='grid'
-              className='flex-1 min-h-0 flex flex-col'
+              className='flex min-h-0 flex-1 flex-col'
               variants={pageVariants}
               initial='initial'
               animate='animate'
@@ -1028,13 +1054,13 @@ export default function PlaylistDetailPage() {
 function DetailSkeleton() {
   return (
     <div className='p-8'>
-      <Skeleton className='h-3 w-20 mb-6 rounded' />
-      <Skeleton className='h-12 w-64 mb-2 rounded' />
-      <Skeleton className='h-3 w-24 mb-8 rounded' />
+      <Skeleton className='mb-6 h-3 w-20 rounded' />
+      <Skeleton className='mb-2 h-12 w-64 rounded' />
+      <Skeleton className='mb-8 h-3 w-24 rounded' />
       {Array.from({ length: 5 }).map((_, i) => (
         <div key={`skeleton-${i}`} className='flex items-center gap-4 py-3'>
-          <Skeleton className='w-6 h-3 rounded' />
-          <Skeleton className='w-10 h-7 rounded' />
+          <Skeleton className='h-3 w-6 rounded' />
+          <Skeleton className='h-7 w-10 rounded' />
           <Skeleton className='h-3 flex-1 rounded' />
           <Skeleton className='h-3 w-12 rounded' />
         </div>

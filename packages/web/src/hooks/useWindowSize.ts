@@ -7,9 +7,13 @@ export function useWindowSize() {
   ]);
 
   useEffect(() => {
-    const handle = () => setSize([window.innerWidth, window.innerHeight]);
+    const handle = () => {
+      setSize([window.innerWidth, window.innerHeight]);
+    };
     window.addEventListener('resize', handle, { passive: true });
-    return () => window.removeEventListener('resize', handle);
+    return () => {
+      window.removeEventListener('resize', handle);
+    };
   }, []);
 
   return size;

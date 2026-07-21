@@ -38,7 +38,9 @@ function extractRateLimit(url: string, headers: Headers): void {
 
 async function fetchWithTimeout(url: string, init?: RequestInit): Promise<Response> {
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), TIMEOUT_MS);
+  const timeout = setTimeout(() => {
+    controller.abort();
+  }, TIMEOUT_MS);
   try {
     return await fetch(url, { ...init, signal: controller.signal });
   } finally {
@@ -63,19 +65,19 @@ let failedQueue: {
 let isSilentRefreshing = false;
 
 function processQueue(error: Error | null): void {
-  failedQueue.forEach((prom) => {
+  for (const prom of failedQueue) {
     if (error) {
       prom.reject(error);
     } else {
       prom.resolve();
     }
-  });
+  }
   failedQueue = [];
 }
 
 function redirectToLogin(reason: string): void {
   if (window.location.pathname !== '/login') {
-    console.warn(`[auth] redirectToLogin: ${reason}`, new Error().stack);
+    console.warn(`[auth] redirectToLogin: ${reason}`, new Error('redirect to login').stack);
     window.location.href = '/login';
   }
 }
@@ -106,8 +108,12 @@ export async function trySilentRefresh(): Promise<boolean> {
     console.warn('[auth] trySilentRefresh: already refreshing, queuing');
     return new Promise<boolean>((resolve, _reject) => {
       failedQueue.push({
-        resolve: () => resolve(true),
-        reject: () => resolve(false),
+        resolve: () => {
+          resolve(true);
+        },
+        reject: () => {
+          resolve(false);
+        },
       });
     });
   }

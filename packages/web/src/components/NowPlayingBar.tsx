@@ -35,7 +35,7 @@ import { VolumeBoostBadge } from './ui/VolumeBoostBadge';
  * Module-level constants — stable references for memoized components
  * --------------------------------------------------------------------------- */
 
-const NOOP = () => undefined;
+const NOOP = () => {};
 
 const MOBILE_PROGRESS_BOX_STYLE = { boxShadow: 'var(--clay-shadow-flat)' } as const;
 const ZERO_WIDTH_STYLE = { width: '0%' } as const;
@@ -80,7 +80,7 @@ const PlaybackControls = memo(function PlaybackControls({
   const realDisabled = !currentSong || pauseBusy || skipBusy;
 
   return (
-    <div className='flex items-center gap-1 md:gap-1.5 shrink-0'>
+    <div className='flex shrink-0 items-center gap-1 md:gap-1.5'>
       <BarButton
         {...cooldownButtonProps(cooldown, {
           onClick: onPauseResume,
@@ -92,9 +92,9 @@ const PlaybackControls = memo(function PlaybackControls({
         pulse={isPlaying && !isPaused}
       >
         {isPaused || isStopped ? (
-          <PlayIcon size={24} weight='duotone' className='md:w-5 md:h-5' />
+          <PlayIcon size={24} weight='duotone' className='md:h-5 md:w-5' />
         ) : (
-          <PauseIcon size={24} weight='duotone' className='md:w-5 md:h-5' />
+          <PauseIcon size={24} weight='duotone' className='md:h-5 md:w-5' />
         )}
       </BarButton>
       <BarButton
@@ -107,7 +107,7 @@ const PlaybackControls = memo(function PlaybackControls({
         hoverColor='hover:text-fg'
         className='hidden md:flex'
       >
-        <SkipForwardIcon size={24} weight='duotone' className='md:w-5 md:h-5' />
+        <SkipForwardIcon size={24} weight='duotone' className='md:h-5 md:w-5' />
       </BarButton>
 
       <Button
@@ -119,9 +119,9 @@ const PlaybackControls = memo(function PlaybackControls({
           disabled: !isConnectedToVoice,
           title: 'Stop playback',
         })}
-        className='text-black dark:text-white hover:text-danger md:w-12 md:h-12'
+        className='hover:text-danger text-black md:h-12 md:w-12 dark:text-white'
       >
-        <DoorOpenIcon size={24} weight='duotone' className='md:w-5 md:h-5' />
+        <DoorOpenIcon size={24} weight='duotone' className='md:h-5 md:w-5' />
       </Button>
     </div>
   );
@@ -151,16 +151,16 @@ const LoopShuffleControls = memo(function LoopShuffleControls({
   const isLoopActive = loopMode !== 'off';
   const loopIcon = isLoopActive ? (
     loopMode === 'song' ? (
-      <RepeatOnceIcon size={22} weight='fill' className='md:w-5 md:h-5' />
+      <RepeatOnceIcon size={22} weight='fill' className='md:h-5 md:w-5' />
     ) : (
-      <RepeatIcon size={22} weight='fill' className='md:w-5 md:h-5' />
+      <RepeatIcon size={22} weight='fill' className='md:h-5 md:w-5' />
     )
   ) : (
-    <RepeatIcon size={22} weight='duotone' className='md:w-5 md:h-5' />
+    <RepeatIcon size={22} weight='duotone' className='md:h-5 md:w-5' />
   );
 
   return (
-    <div className='hidden md:flex items-center gap-1 md:gap-1.5 shrink-0'>
+    <div className='hidden shrink-0 items-center gap-1 md:flex md:gap-1.5'>
       <Button
         variant='inherit'
         surface='base'
@@ -170,14 +170,14 @@ const LoopShuffleControls = memo(function LoopShuffleControls({
           disabled: !currentSong || loopBusy,
           title: `Loop: ${loopMode}`,
         })}
-        className={`shrink-0 md:w-12 md:h-12 ${
+        className={`shrink-0 md:h-12 md:w-12 ${
           isLoopActive
             ? 'pressed text-accent hover:text-accent-muted'
-            : 'text-black dark:text-white hover:text-fg'
+            : 'hover:text-fg text-black dark:text-white'
         }`}
       >
         {loopBusy ? (
-          <CircleNotchIcon size={22} weight='bold' className='animate-spin md:w-5 md:h-5' />
+          <CircleNotchIcon size={22} weight='bold' className='animate-spin md:h-5 md:w-5' />
         ) : (
           loopIcon
         )}
@@ -191,19 +191,19 @@ const LoopShuffleControls = memo(function LoopShuffleControls({
           disabled: !currentSong || shuffleBusy,
           title: isShuffled ? 'Unshuffle queue' : 'Shuffle queue',
         })}
-        className={`shrink-0 md:w-12 md:h-12 ${
+        className={`shrink-0 md:h-12 md:w-12 ${
           isShuffled
             ? 'pressed text-accent hover:text-accent-muted'
-            : 'text-black dark:text-white hover:text-fg'
+            : 'hover:text-fg text-black dark:text-white'
         }`}
       >
         {shuffleBusy ? (
-          <CircleNotchIcon size={22} weight='bold' className='animate-spin md:w-5 md:h-5' />
+          <CircleNotchIcon size={22} weight='bold' className='animate-spin md:h-5 md:w-5' />
         ) : (
           <ShuffleIcon
             size={24}
             weight={isShuffled ? 'fill' : 'duotone'}
-            className='md:w-5 md:h-5'
+            className='md:h-5 md:w-5'
           />
         )}
       </Button>
@@ -320,8 +320,8 @@ const Scrubber = memo(function Scrubber({
 
   if (!isSeekable) {
     return (
-      <div className='w-full h-2 clay-inset rounded-full relative overflow-hidden cursor-not-allowed opacity-50'>
-        <div ref={fillRefCallback} className='absolute inset-y-0 left-0 bg-accent rounded-full' />
+      <div className='clay-inset relative h-2 w-full cursor-not-allowed overflow-hidden rounded-full opacity-50'>
+        <div ref={fillRefCallback} className='bg-accent absolute inset-y-0 left-0 rounded-full' />
       </div>
     );
   }
@@ -329,15 +329,15 @@ const Scrubber = memo(function Scrubber({
   return (
     <div
       ref={trackRef}
-      className='w-full h-2 clay-inset rounded-full relative cursor-pointer group'
+      className='clay-inset group relative h-2 w-full cursor-pointer rounded-full'
       onPointerDown={handlePointerDown}
     >
-      <div ref={fillRefCallback} className='absolute inset-y-0 left-0 bg-accent rounded-full' />
+      <div ref={fillRefCallback} className='bg-accent absolute inset-y-0 left-0 rounded-full' />
       {/* Fill & thumb — positioned entirely by useProgressBar (rAF + effect).
            No React style props. */}
       <div
         ref={thumbRefCallback}
-        className='scrubber-thumb absolute top-1/2 -translate-y-1/2 w-3.5 h-3.5 rounded-full bg-surface border-2 border-accent opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity'
+        className='scrubber-thumb bg-surface border-accent pointer-events-none absolute top-1/2 h-3.5 w-3.5 -translate-y-1/2 rounded-full border-2 opacity-0 transition-opacity group-hover:opacity-100'
       />
       {/* Invisible hit area for hovering */}
       <div className='absolute inset-0' />
@@ -367,12 +367,12 @@ const ProgressBar = memo(function ProgressBar({
   if (variant === 'mobile') {
     return (
       <div
-        className='md:hidden h-1 w-full clay-inset relative overflow-hidden'
+        className='clay-inset relative h-1 w-full overflow-hidden md:hidden'
         style={MOBILE_PROGRESS_BOX_STYLE}
       >
         <div
           ref={currentSong != null ? registerProgress : null}
-          className='absolute inset-y-0 left-0 bg-accent'
+          className='bg-accent absolute inset-y-0 left-0'
           style={ZERO_WIDTH_STYLE}
         />
       </div>
@@ -380,7 +380,7 @@ const ProgressBar = memo(function ProgressBar({
   }
 
   return (
-    <div className='hidden md:flex items-center flex-1 min-h-0'>
+    <div className='hidden min-h-0 flex-1 items-center md:flex'>
       <Scrubber
         isSeekable={currentSong?.isSeekable ?? false}
         duration={currentSong?.duration ?? 0}
@@ -404,7 +404,7 @@ const AlbumArt = memo(function AlbumArt({ currentSong }: AlbumArtProps) {
     <AnimatePresence mode='wait'>
       <m.div
         key={songKey}
-        className='w-12 h-12 md:w-14 md:h-14 rounded border border-border shrink-0 overflow-hidden relative bg-elevated'
+        className='border-border bg-elevated relative h-12 w-12 shrink-0 overflow-hidden rounded border md:h-14 md:w-14'
         initial={ALBUM_ART_INITIAL}
         animate={ALBUM_ART_ANIMATE}
         exit={ALBUM_ART_EXIT}
@@ -414,11 +414,11 @@ const AlbumArt = memo(function AlbumArt({ currentSong }: AlbumArtProps) {
           <ArtworkImage
             src={currentSong.artwork ?? currentSong.thumbnailUrl}
             alt={currentSong.title}
-            className='w-full h-full'
+            className='h-full w-full'
             imageClassName='scale-[1.33]'
           />
         ) : (
-          <div className='w-full h-full flex items-center justify-center'>
+          <div className='flex h-full w-full items-center justify-center'>
             <GuitarIcon size={18} weight='duotone' className='text-faint' />
           </div>
         )}
@@ -438,8 +438,8 @@ const MetadataSection = memo(function MetadataSection({
 }: MetadataSectionProps) {
   if (!currentSong) {
     return (
-      <div className='flex items-center h-6'>
-        <p className='font-body text-sm text-muted'>Nothing playing</p>
+      <div className='flex h-6 items-center'>
+        <p className='font-body text-muted text-sm'>Nothing playing</p>
       </div>
     );
   }
@@ -452,26 +452,26 @@ const MetadataSection = memo(function MetadataSection({
     <AnimatePresence mode='wait'>
       <m.div
         key={songKey}
-        className='flex flex-col min-w-0 gap-0.5'
+        className='flex min-w-0 flex-col gap-0.5'
         variants={metadataVariants}
         initial='initial'
         animate='animate'
         exit='exit'
         transition={metadataTransition}
       >
-        <div className='flex items-center gap-2 min-w-0'>
-          <p className='font-body text-sm font-medium text-fg truncate'>{displayName}</p>
+        <div className='flex min-w-0 items-center gap-2'>
+          <p className='font-body text-fg truncate text-sm font-medium'>{displayName}</p>
           {currentSong.artist && (
-            <p className='font-body text-xs text-muted shrink-0'>· {currentSong.artist}</p>
+            <p className='font-body text-muted shrink-0 text-xs'>· {currentSong.artist}</p>
           )}
           <TagTicker tags={currentSong.tags ?? []} />
         </div>
         <div className='flex items-center gap-2'>
-          <p className='font-mono text-xs text-muted'>
+          <p className='text-muted font-mono text-xs'>
             {formatDuration(elapsed)} / {formatDuration(currentSong.duration)}
           </p>
           {sourceKey && (
-            <span className='flex items-center shrink-0 [&_svg]:w-3 [&_svg]:h-3'>
+            <span className='flex shrink-0 items-center [&_svg]:h-3 [&_svg]:w-3'>
               <SourceIcon sourceKey={sourceKey} />
             </span>
           )}
@@ -541,8 +541,8 @@ export function NowPlayingBar() {
     void (async () => {
       try {
         await leave();
-      } catch (e) {
-        console.error(e);
+      } catch (error) {
+        console.error(error);
       }
     })();
   }, [leave]);
@@ -560,9 +560,13 @@ export function NowPlayingBar() {
     setOverrideElapsed(undefined);
   }, [setOverrideElapsed]);
 
-  const handleQueueToggle = useCallback(() => setQueueOpen(!queueOpen), [queueOpen, setQueueOpen]);
+  const handleQueueToggle = useCallback(() => {
+    setQueueOpen(!queueOpen);
+  }, [queueOpen, setQueueOpen]);
 
-  const handleQueueClose = useCallback(() => setQueueOpen(false), [setQueueOpen]);
+  const handleQueueClose = useCallback(() => {
+    setQueueOpen(false);
+  }, [setQueueOpen]);
 
   const mobileQuickControls = useMemo(
     () => ({
@@ -592,7 +596,7 @@ export function NowPlayingBar() {
   );
 
   return (
-    <div className='shrink-0 w-full bg-base'>
+    <div className='bg-base w-full shrink-0'>
       {/* Mobile: progress bar on top */}
       <ProgressBar
         currentSong={currentSong}
@@ -603,7 +607,7 @@ export function NowPlayingBar() {
         variant='mobile'
       />
 
-      <div className='h-22 md:h-20 flex flex-row items-center px-3 md:px-8 gap-1'>
+      <div className='flex h-22 flex-row items-center gap-1 px-3 md:h-20 md:px-8'>
         {/* Playback controls: Play/Pause (desktop: also Skip, Leave) */}
         <PlaybackControls
           currentSong={currentSong}
@@ -620,11 +624,11 @@ export function NowPlayingBar() {
         />
 
         {/* Desktop: spacer → art → metadata+progress → spacer → loop/shuffle+queue */}
-        <div className='hidden md:flex flex-1' />
-        <div className='hidden md:block shrink-0'>
+        <div className='hidden flex-1 md:flex' />
+        <div className='hidden shrink-0 md:block'>
           <AlbumArt currentSong={currentSong} />
         </div>
-        <div className='hidden md:flex flex-col flex-8 min-w-0 px-3 h-14 justify-between'>
+        <div className='hidden h-14 min-w-0 flex-8 flex-col justify-between px-3 md:flex'>
           <MetadataSection currentSong={currentSong} elapsed={elapsed} />
           <ProgressBar
             currentSong={currentSong}
@@ -636,8 +640,8 @@ export function NowPlayingBar() {
             variant='desktop'
           />
         </div>
-        <div className='hidden md:flex flex-1' />
-        <div className='hidden md:flex items-center gap-1.5 shrink-0'>
+        <div className='hidden flex-1 md:flex' />
+        <div className='hidden shrink-0 items-center gap-1.5 md:flex'>
           <LoopShuffleControls
             currentSong={currentSong}
             loopMode={loopMode}
@@ -654,34 +658,34 @@ export function NowPlayingBar() {
             size='icon'
             onClick={handleQueueToggle}
             title='Queue'
-            className={`shrink-0 md:w-12 md:h-12 ${
+            className={`shrink-0 md:h-12 md:w-12 ${
               queueOpen
                 ? 'pressed text-accent hover:text-accent-muted'
-                : 'text-black dark:text-white hover:text-fg'
+                : 'hover:text-fg text-black dark:text-white'
             }`}
           >
-            <QueueIcon size={24} weight='duotone' className='md:w-5 md:h-5' />
+            <QueueIcon size={24} weight='duotone' className='md:h-5 md:w-5' />
           </Button>
         </div>
 
         {/* Mobile: metadata + art + queue */}
-        <div className='md:hidden flex items-center ms-auto shrink-0'>
+        <div className='ms-auto flex shrink-0 items-center md:hidden'>
           <AnimatePresence mode='wait'>
             {currentSong ? (
               <m.div
                 key={currentSong.id}
-                className='max-w-32 min-w-0 mr-2'
+                className='mr-2 max-w-32 min-w-0'
                 variants={metadataVariants}
                 initial='initial'
                 animate='animate'
                 exit='exit'
                 transition={metadataTransition}
               >
-                <p className='font-body text-sm font-semibold text-fg truncate text-right'>
+                <p className='font-body text-fg truncate text-right text-sm font-semibold'>
                   {currentSong.nickname ?? currentSong.title}
                 </p>
                 {currentSong.artist && (
-                  <p className='font-body text-xs text-muted truncate text-right'>
+                  <p className='font-body text-muted truncate text-right text-xs'>
                     {currentSong.artist}
                   </p>
                 )}
@@ -689,46 +693,46 @@ export function NowPlayingBar() {
             ) : (
               <m.div
                 key='empty'
-                className='min-w-0 mr-2'
+                className='mr-2 min-w-0'
                 variants={metadataVariants}
                 initial='initial'
                 animate='animate'
                 exit='exit'
                 transition={metadataTransition}
               >
-                <p className='font-body text-sm text-muted text-right'>Nothing playing</p>
+                <p className='font-body text-muted text-right text-sm'>Nothing playing</p>
               </m.div>
             )}
           </AnimatePresence>
           <AlbumArt currentSong={currentSong} />
-          <div className='w-px h-8 bg-border shrink-0 mx-1' />
+          <div className='bg-border mx-1 h-8 w-px shrink-0' />
           <Button
             variant='inherit'
             surface='base'
             size='icon'
             onClick={handleQueueToggle}
             title='Queue'
-            className={`shrink-0 md:w-12 md:h-12 ${
+            className={`shrink-0 md:h-12 md:w-12 ${
               queueOpen
                 ? 'pressed text-accent hover:text-accent-muted'
-                : 'text-black dark:text-white hover:text-fg'
+                : 'hover:text-fg text-black dark:text-white'
             }`}
           >
-            <QueueIcon size={24} weight='duotone' className='md:w-5 md:h-5' />
+            <QueueIcon size={24} weight='duotone' className='md:h-5 md:w-5' />
           </Button>
         </div>
       </div>
 
       {/* Mobile: bottom sheet */}
       {queueOpen && (
-        <div className='md:hidden fixed inset-0 z-50'>
+        <div className='fixed inset-0 z-50 md:hidden'>
           <div
-            className='absolute inset-0 bg-black/60 backdrop-blur-sm cursor-pointer'
+            className='absolute inset-0 cursor-pointer bg-black/60 backdrop-blur-sm'
             onClick={handleQueueClose}
             role='presentation'
           />
           <m.div
-            className='absolute bottom-0 left-0 right-0 max-h-[85vh] bg-surface rounded-t-2xl flex flex-col clay-floating'
+            className='bg-surface clay-floating absolute right-0 bottom-0 left-0 flex max-h-[85vh] flex-col rounded-t-2xl'
             initial='initial'
             animate='animate'
             exit='exit'

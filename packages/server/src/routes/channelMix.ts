@@ -30,10 +30,10 @@ function handleChannelMixGet(
 
   return json({
     enabled: row?.channelMixEnabled ?? false,
-    leftToLeft: row?.channelMixLeftToLeft ?? 1.0,
-    leftToRight: row?.channelMixLeftToRight ?? 0.0,
-    rightToLeft: row?.channelMixRightToLeft ?? 0.0,
-    rightToRight: row?.channelMixRightToRight ?? 1.0,
+    leftToLeft: row?.channelMixLeftToLeft ?? 1,
+    leftToRight: row?.channelMixLeftToRight ?? 0,
+    rightToLeft: row?.channelMixRightToLeft ?? 0,
+    rightToRight: row?.channelMixRightToRight ?? 1,
   });
 }
 

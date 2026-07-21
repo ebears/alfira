@@ -38,10 +38,10 @@ export function BarButton({
         busy
           ? 'text-black/50 dark:text-white/50'
           : `${pulse ? 'pressed text-accent' : 'text-black dark:text-white'} ${hoverColor} cursor-pointer`
-      } disabled:cursor-not-allowed disabled:opacity-50 md:w-12 md:h-12 ${className}`}
+      } disabled:cursor-not-allowed disabled:opacity-50 md:h-12 md:w-12 ${className}`}
     >
       {busy ? (
-        <CircleNotchIcon size={22} weight='bold' className='animate-spin md:w-5 md:h-5' />
+        <CircleNotchIcon size={22} weight='bold' className='animate-spin md:h-5 md:w-5' />
       ) : (
         children
       )}

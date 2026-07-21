@@ -72,8 +72,8 @@ export default function PlaylistsPage() {
 
   const handleRowClick = useCallback(
     (e: React.MouseEvent) => {
-      const row = e.currentTarget.closest('[data-playlist-id]');
-      const playlistId = row?.getAttribute('data-playlist-id');
+      const row = e.currentTarget.closest<HTMLElement>('[data-playlist-id]');
+      const playlistId = row?.dataset.playlistId;
       if (playlistId) {
         void navigate(`/playlists/${playlistId}`);
       }
@@ -83,11 +83,15 @@ export default function PlaylistsPage() {
 
   const pageStyle = useMemo(() => ({ paddingBottom: 0 }), []);
 
-  const handleShowCreate = useCallback(() => setShowCreate(true), []);
-  const handleHideCreate = useCallback(() => setShowCreate(false), []);
+  const handleShowCreate = useCallback(() => {
+    setShowCreate(true);
+  }, []);
+  const handleHideCreate = useCallback(() => {
+    setShowCreate(false);
+  }, []);
 
   return (
-    <div className='p-4 md:p-8 flex flex-col min-h-0 h-full' style={pageStyle}>
+    <div className='flex h-full min-h-0 flex-col p-4 md:p-8' style={pageStyle}>
       <PageHeader
         icon={PlaylistIcon}
         title='Playlists'
@@ -169,12 +173,12 @@ function CreatePlaylistModal({ onClose }: { onClose: () => void }) {
 
   return (
     <Backdrop onClose={onClose}>
-      <SpringUp className='p-5 md:p-6 w-full max-w-sm mx-4 glass-modal'>
+      <SpringUp className='glass-modal mx-4 w-full max-w-sm p-5 md:p-6'>
         <form action={formAction}>
-          <h2 className='font-display text-2xl md:text-3xl text-fg tracking-wider mb-1'>
+          <h2 className='font-display text-fg mb-1 text-2xl tracking-wider md:text-3xl'>
             New Playlist
           </h2>
-          <p className='font-mono text-xs text-muted mb-4 md:mb-6'>choose a name</p>
+          <p className='text-muted mb-4 font-mono text-xs md:mb-6'>choose a name</p>
           <input
             name='name'
             className='input mb-3'
@@ -185,7 +189,7 @@ function CreatePlaylistModal({ onClose }: { onClose: () => void }) {
             required
           />
           <div className='mb-3'>
-            <p className='font-mono text-xs text-muted mb-1.5'>track a tag (optional)</p>
+            <p className='text-muted mb-1.5 font-mono text-xs'>track a tag (optional)</p>
             <select
               name='tagNameLower'
               className='input w-full'
@@ -200,8 +204,8 @@ function CreatePlaylistModal({ onClose }: { onClose: () => void }) {
               ))}
             </select>
           </div>
-          {state?.error && <p className='font-mono text-xs text-danger mb-3'>{state.error}</p>}
-          <div className='flex gap-2 justify-end'>
+          {state?.error && <p className='text-danger mb-3 font-mono text-xs'>{state.error}</p>}
+          <div className='flex justify-end gap-2'>
             <Button variant='inherit' type='button' onClick={onClose} surface='surface'>
               Cancel
             </Button>

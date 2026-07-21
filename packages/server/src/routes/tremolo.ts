@@ -10,7 +10,7 @@ import { db, tables } from '../shared/db';
 
 const TremoloSchema = v.object({
   enabled: v.boolean(),
-  frequency: v.pipe(v.number(), v.minValue(0.1), v.maxValue(14.0)),
+  frequency: v.pipe(v.number(), v.minValue(0.1), v.maxValue(14)),
   depth: v.pipe(v.number(), v.minValue(0), v.maxValue(1)),
 });
 
@@ -28,7 +28,7 @@ function handleTremoloGet(
 
   return json({
     enabled: row?.tremoloEnabled ?? false,
-    frequency: row?.tremoloFrequency ?? 2.0,
+    frequency: row?.tremoloFrequency ?? 2,
     depth: row?.tremoloDepth ?? 0.5,
   });
 }

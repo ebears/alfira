@@ -30,10 +30,10 @@ function handleKaraokeGet(
 
   return json({
     enabled: row?.karaokeEnabled ?? false,
-    level: row?.karaokeLevel ?? 1.0,
-    monoLevel: row?.karaokeMonoLevel ?? 1.0,
-    filterBand: row?.karaokeFilterBand ?? 220.0,
-    filterWidth: row?.karaokeFilterWidth ?? 100.0,
+    level: row?.karaokeLevel ?? 1,
+    monoLevel: row?.karaokeMonoLevel ?? 1,
+    filterBand: row?.karaokeFilterBand ?? 220,
+    filterWidth: row?.karaokeFilterWidth ?? 100,
   });
 }
 

@@ -48,10 +48,10 @@ function SkeletonList() {
       {Array.from({ length: 8 }).map((_, i) => (
         <div
           key={`skeleton-${i}`}
-          className='flex items-center gap-3 md:gap-4 px-4 py-4 rounded-lg bg-elevated clay-resting'
+          className='bg-elevated clay-resting flex items-center gap-3 rounded-lg px-4 py-4 md:gap-4'
         >
-          <Skeleton className='w-16 h-16 rounded border border-border shrink-0' />
-          <div className='flex-1 min-w-0 flex flex-col gap-2'>
+          <Skeleton className='border-border h-16 w-16 shrink-0 rounded border' />
+          <div className='flex min-w-0 flex-1 flex-col gap-2'>
             <Skeleton className='h-3.5 w-2/5' />
             <Skeleton className='h-3 w-3/5' />
           </div>
@@ -92,8 +92,12 @@ const SongListItem = memo(function SongListItem({
   onAddToQueue,
   onToggleSelect,
 }: SongListItemProps) {
-  const handlePlay = useCallback(() => onPlay(song.id), [onPlay, song.id]);
-  const handleAddToQueue = useCallback(() => onAddToQueue(song.id), [onAddToQueue, song.id]);
+  const handlePlay = useCallback(() => {
+    onPlay(song.id);
+  }, [onPlay, song.id]);
+  const handleAddToQueue = useCallback(() => {
+    onAddToQueue(song.id);
+  }, [onAddToQueue, song.id]);
   const handleToggleSelect = useCallback(
     () => onToggleSelect?.(song.id),
     [onToggleSelect, song.id]
@@ -153,11 +157,15 @@ export const VirtualSongList = memo(function VirtualSongList({
     if (openSongId) {
       // Expand immediately — allocate space before the transition starts.
       setEffectiveOpenId(openSongId);
-      return undefined;
+      return;
     } else {
       // Collapse: wait for the CSS transition to finish before releasing space.
-      const timeout = setTimeout(() => setEffectiveOpenId(null), 300);
-      return () => clearTimeout(timeout);
+      const timeout = setTimeout(() => {
+        setEffectiveOpenId(null);
+      }, 300);
+      return () => {
+        clearTimeout(timeout);
+      };
     }
   }, [openSongId]);
 

@@ -157,7 +157,9 @@ async function handleHealth(): Promise<Response> {
   // NodeLink
   try {
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 500);
+    const timeout = setTimeout(() => {
+      controller.abort();
+    }, 500);
     const res = await fetch('http://127.0.0.1:2333/v4/info', {
       headers: { Authorization: 'nodelink-internal' },
       signal: controller.signal,
@@ -258,7 +260,7 @@ function startServer(): void {
         }
         const success = server.upgrade(request, { data: { user } });
         if (success) {
-          return undefined;
+          return;
         }
         return new Response('WebSocket upgrade failed', { status: 500 });
       }
@@ -356,22 +358,19 @@ function runMigrations(): void {
       }
       try {
         $client.run(trimmed);
-      } catch (err) {
+      } catch (error) {
         // Skip errors that indicate the schema change was already applied
         // in a previous partial run (RENAME, ADD COLUMN, CREATE TABLE retries).
         const isKnownError =
-          err instanceof Error &&
-          (err.message.includes('already exists') ||
-            err.message.includes('no such column') ||
-            err.message.includes('duplicate column name'));
+          error instanceof Error &&
+          (error.message.includes('already exists') ||
+            error.message.includes('no such column') ||
+            error.message.includes('duplicate column name'));
         if (isKnownError) {
-          logger.info(
-            { file, stmt: trimmed.substring(0, 50) },
-            'Skipping already-applied statement'
-          );
+          logger.info({ file, stmt: trimmed.slice(0, 50) }, 'Skipping already-applied statement');
           continue;
         }
-        throw err;
+        throw error;
       }
     }
 
@@ -512,8 +511,8 @@ async function main(): Promise<void> {
 void (async () => {
   try {
     await main();
-  } catch (err) {
-    logger.fatal(err, 'Fatal startup error');
+  } catch (error) {
+    logger.fatal(error, 'Fatal startup error');
     process.exit(1);
   }
 })();
@@ -553,5 +552,9 @@ function shutdown(signal: string): void {
   process.exit(0);
 }
 
-process.on('SIGTERM', () => shutdown('SIGTERM'));
-process.on('SIGINT', () => shutdown('SIGINT'));
+process.on('SIGTERM', () => {
+  shutdown('SIGTERM');
+});
+process.on('SIGINT', () => {
+  shutdown('SIGINT');
+});

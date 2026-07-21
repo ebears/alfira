@@ -168,9 +168,9 @@ async function doFetchGuildMember(
     const member = (await res.json()) as DiscordGuildMember;
     memberCache.set(cacheKey, { data: member, expiresAt: Date.now() + MEMBER_CACHE_TTL_MS });
     return member;
-  } catch (err) {
+  } catch (error) {
     logger.error(
-      { err: err instanceof Error ? err.message : String(err) },
+      { err: error instanceof Error ? error.message : String(error) },
       'fetchGuildMember error'
     );
     return null;

@@ -91,7 +91,9 @@ function useColorMode(): 'dark' | 'light' {
     if (current === 'light' || current === 'dark') {
       setMode(current);
     }
-    return () => observer.disconnect();
+    return () => {
+      observer.disconnect();
+    };
   }, []);
 
   return mode;

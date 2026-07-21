@@ -30,6 +30,7 @@ export default function AddSongsModal({
   const [added, setAdded] = useState<Set<string>>(new Set(playlist.songs.map((ps) => ps.songId)));
   const [search, setSearch] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
+  // eslint-disable-next-line unicorn/no-useless-undefined
   const timerRef = useRef<ReturnType<typeof setTimeout>>(undefined);
   const scrollRef = useRef<HTMLDivElement>(null);
 
@@ -65,7 +66,9 @@ export default function AddSongsModal({
     if (timerRef.current) {
       clearTimeout(timerRef.current);
     }
-    timerRef.current = setTimeout(() => setDebouncedSearch(search), 200);
+    timerRef.current = setTimeout(() => {
+      setDebouncedSearch(search);
+    }, 200);
     return () => {
       if (timerRef.current) {
         clearTimeout(timerRef.current);
@@ -98,7 +101,7 @@ export default function AddSongsModal({
   useEffect(() => {
     const el = scrollRef.current;
     if (!el) {
-      return undefined;
+      return;
     }
     const check = () => {
       if (el.scrollHeight - el.scrollTop - el.clientHeight < 300) {
@@ -106,7 +109,9 @@ export default function AddSongsModal({
       }
     };
     el.addEventListener('scroll', check, { passive: true });
-    return () => el.removeEventListener('scroll', check);
+    return () => {
+      el.removeEventListener('scroll', check);
+    };
   }, [loadMore]);
 
   const virtualizer = useVirtualizer({
@@ -152,10 +157,10 @@ export default function AddSongsModal({
 
   return (
     <Backdrop onClose={onClose}>
-      <SpringUp className='w-full max-w-lg glass-modal flex flex-col max-h-[80vh]'>
-        <div className='p-4 md:p-5 border-b border-border'>
-          <h2 className='font-display text-2xl md:text-3xl text-fg tracking-wider'>Add Songs</h2>
-          <p className='font-mono text-xs text-muted mt-0.5'>to "{playlist.name}"</p>
+      <SpringUp className='glass-modal flex max-h-[80vh] w-full max-w-lg flex-col'>
+        <div className='border-border border-b p-4 md:p-5'>
+          <h2 className='font-display text-fg text-2xl tracking-wider md:text-3xl'>Add Songs</h2>
+          <p className='text-muted mt-0.5 font-mono text-xs'>to "{playlist.name}"</p>
           <input
             className='input mt-3 md:mt-4'
             placeholder='Search...'
@@ -165,16 +170,16 @@ export default function AddSongsModal({
         </div>
         <div ref={scrollRef} className='flex-1 overflow-y-auto'>
           {loading ? (
-            <div className='p-4 md:p-6 space-y-2'>
+            <div className='space-y-2 p-4 md:p-6'>
               {[1, 2, 3, 4, 5].map((n) => (
                 <div key={`skeleton-${n}`} className='flex items-center gap-3'>
-                  <Skeleton className='w-12 h-8 md:w-10 md:h-7 rounded' />
+                  <Skeleton className='h-8 w-12 rounded md:h-7 md:w-10' />
                   <Skeleton className='h-3 flex-1' />
                 </div>
               ))}
             </div>
           ) : songs.length === 0 ? (
-            <p className='p-4 md:p-6 font-mono text-xs text-muted text-center'>no songs found</p>
+            <p className='text-muted p-4 text-center font-mono text-xs md:p-6'>no songs found</p>
           ) : (
             <div style={virtualContainerStyle}>
               {virtualizer.getVirtualItems().map((virtualRow) => {
@@ -205,11 +210,11 @@ export default function AddSongsModal({
             </div>
           )}
           {loadingMore && (
-            <p className='p-3 font-mono text-xs text-muted text-center'>loading...</p>
+            <p className='text-muted p-3 text-center font-mono text-xs'>loading...</p>
           )}
         </div>
 
-        <div className='p-4 border-t border-border flex justify-end'>
+        <div className='border-border flex justify-end border-t p-4'>
           <Button variant='primary' onClick={hasAddedNew ? onAdded : onClose}>
             {hasAddedNew ? 'Done' : 'Close'}
           </Button>
@@ -235,19 +240,19 @@ const SongRow = memo(function SongRow({
   }, [onAdd, song]);
 
   return (
-    <div className='flex items-center gap-2 md:gap-3 px-4 md:px-5 py-3 hover:bg-elevated active:bg-elevated/80 transition-colors duration-100'>
-      <div className='overflow-hidden w-10 h-10 md:w-8 md:h-8 rounded border border-border shrink-0 bg-elevated'>
+    <div className='hover:bg-elevated active:bg-elevated/80 flex items-center gap-2 px-4 py-3 transition-colors duration-100 md:gap-3 md:px-5'>
+      <div className='border-border bg-elevated h-10 w-10 shrink-0 overflow-hidden rounded border md:h-8 md:w-8'>
         <ArtworkImage
           src={song.artwork ?? song.thumbnailUrl}
           alt={song.nickname ?? song.title}
-          className='w-full h-full'
+          className='h-full w-full'
           imageClassName='scale-[1.33]'
         />
       </div>
-      <span className='flex-1 font-body text-sm text-fg truncate'>
+      <span className='font-body text-fg flex-1 truncate text-sm'>
         {song.nickname ?? song.title}
       </span>
-      <span className='font-mono text-xs text-muted hidden sm:block'>
+      <span className='text-muted hidden font-mono text-xs sm:block'>
         {formatDuration(song.duration)}
       </span>
       <Button
@@ -255,7 +260,7 @@ const SongRow = memo(function SongRow({
         surface='surface'
         disabled={isAdded || isAdding}
         onClick={handleClick}
-        className={`font-mono text-xs px-3 py-2 md:py-1 min-h-11 md:min-h-0 ${
+        className={`min-h-11 px-3 py-2 font-mono text-xs md:min-h-0 md:py-1 ${
           isAdded ? 'border-accent/30 text-accent bg-accent/5 cursor-default' : ''
         }`}
       >

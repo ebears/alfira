@@ -154,9 +154,9 @@ export class DiscordGateway {
     let ws: WebSocket;
     try {
       ws = new WebSocket(GATEWAY_URL);
-    } catch (err) {
+    } catch (error) {
       logger.error(
-        { err: err instanceof Error ? err.message : String(err) },
+        { err: error instanceof Error ? error.message : String(error) },
         'WebSocket constructor failed'
       );
       this.scheduleReconnect();

@@ -16,7 +16,9 @@ interface SubmenuItemProps {
 }
 
 const SubmenuItem = memo(function SubmenuItem({ item, onSelect }: SubmenuItemProps) {
-  const handleClick = useCallback(() => onSelect(item.id), [onSelect, item.id]);
+  const handleClick = useCallback(() => {
+    onSelect(item.id);
+  }, [onSelect, item.id]);
 
   return (
     <button
@@ -25,7 +27,7 @@ const SubmenuItem = memo(function SubmenuItem({ item, onSelect }: SubmenuItemPro
       tabIndex={-1}
       disabled={item.disabled}
       onClick={handleClick}
-      className='w-full text-left px-3 py-1.5 text-xs font-mono text-fg hover:bg-border/50 transition-colors duration-100 disabled:opacity-50 flex items-center gap-2'
+      className='text-fg hover:bg-border/50 flex w-full items-center gap-2 px-3 py-1.5 text-left font-mono text-xs transition-colors duration-100 disabled:opacity-50'
     >
       {item.icon && <span className='shrink-0'>{item.icon}</span>}
       <span className='truncate'>{item.label}</span>
@@ -36,26 +38,26 @@ const SubmenuItem = memo(function SubmenuItem({ item, onSelect }: SubmenuItemPro
 export function SubmenuPanel({ config, onBack, onSelect }: SubmenuPanelProps) {
   return (
     <SpringUp>
-      <div className='flex items-center gap-2 px-3 py-2 border-b border-border'>
+      <div className='border-border flex items-center gap-2 border-b px-3 py-2'>
         <button
           type='button'
           aria-label='Back to main menu'
           onClick={onBack}
-          className='text-muted hover:text-fg p-1 rounded transition-colors'
+          className='text-muted hover:text-fg rounded p-1 transition-colors'
         >
           <CaretLeftIcon size={14} weight='duotone' />
         </button>
-        <span className='font-mono text-xs text-muted truncate'>{config.title}</span>
+        <span className='text-muted truncate font-mono text-xs'>{config.title}</span>
       </div>
       <div className='max-h-48 overflow-y-auto'>
         {config.items.length === 0 ? (
-          <p className='px-3 py-2 text-xs font-mono text-muted'>
+          <p className='text-muted px-3 py-2 font-mono text-xs'>
             {config.emptyMessage ?? 'no items'}
           </p>
         ) : (
           config.items.map((item, idx) => (
             <div key={item.id}>
-              {idx > 0 && <div className='border-b border-border' />}
+              {idx > 0 && <div className='border-border border-b' />}
               <SubmenuItem item={item} onSelect={onSelect} />
             </div>
           ))

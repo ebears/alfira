@@ -55,7 +55,7 @@ function handleGetQueue(
       queue: [],
       trackStartedAt: null,
       nextTrack: null,
-      timescaleSpeed: 1.0,
+      timescaleSpeed: 1,
       nodeLinkPosition: null,
       nodeLinkTime: null,
     });
@@ -110,7 +110,7 @@ async function handlePlay(ctx: RouteContext, request: Request): Promise<Response
       return json({ error: 'Playlist not found.' }, 404);
     }
 
-    const accessResult = canAccessPlaylist(playlist, user, undefined);
+    const accessResult = canAccessPlaylist(playlist, user);
     if (!accessResult.ok) {
       return json({ error: accessResult.error }, 403);
     }
@@ -720,8 +720,8 @@ async function handleReorderQueue(ctx: RouteContext, request: Request): Promise<
     } else {
       playerResult.player.reorderQueue(songIds);
     }
-  } catch (err) {
-    return json({ error: err instanceof Error ? err.message : 'Invalid reorder.' }, 422);
+  } catch (error) {
+    return json({ error: error instanceof Error ? error.message : 'Invalid reorder.' }, 422);
   }
 
   return json({ message: 'Queue reordered.' });

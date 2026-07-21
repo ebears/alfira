@@ -24,26 +24,28 @@ const ThemeModeButton = memo(function ThemeModeButton({
   isSelected,
   onSelect,
 }: ThemeModeButtonProps) {
-  const handleClick = useCallback(() => onSelect(mode), [onSelect, mode]);
+  const handleClick = useCallback(() => {
+    onSelect(mode);
+  }, [onSelect, mode]);
 
   return (
     <button
       type='button'
       onClick={handleClick}
-      className={`flex flex-col items-center p-1 rounded-lg transition-all cursor-pointer group ${
+      className={`group flex cursor-pointer flex-col items-center rounded-lg p-1 transition-all ${
         isSelected ? 'opacity-100' : 'opacity-50'
       }`}
     >
       <span
-        className={`w-10 h-10 sm:w-12 sm:h-12 rounded-full flex items-center justify-center text-muted transition-all ${
+        className={`text-muted flex h-10 w-10 items-center justify-center rounded-full transition-all sm:h-12 sm:w-12 ${
           isSelected
-            ? 'bg-accent/15 text-accent ring-2 ring-offset-2 ring-offset-background ring-foreground'
-            : 'bg-muted/10 group-hover:ring-1 group-hover:ring-muted/30'
+            ? 'bg-accent/15 text-accent ring-offset-background ring-foreground ring-2 ring-offset-2'
+            : 'bg-muted/10 group-hover:ring-muted/30 group-hover:ring-1'
         }`}
       >
         <Icon size={20} weight='duotone' />
       </span>
-      <span className='text-[11px] text-muted leading-none mt-1'>{label}</span>
+      <span className='text-muted mt-1 text-[11px] leading-none'>{label}</span>
     </button>
   );
 });
@@ -63,7 +65,9 @@ const ThemeColorButton = memo(function ThemeColorButton({
   isSelected,
   onSelect,
 }: ThemeColorButtonProps) {
-  const handleClick = useCallback(() => onSelect(name), [onSelect, name]);
+  const handleClick = useCallback(() => {
+    onSelect(name);
+  }, [onSelect, name]);
 
   const dotStyle = useMemo(() => ({ backgroundColor: accentColor }), [accentColor]);
 
@@ -71,21 +75,21 @@ const ThemeColorButton = memo(function ThemeColorButton({
     <button
       type='button'
       onClick={handleClick}
-      className={`flex flex-col items-center p-1 rounded-lg transition-all cursor-pointer group ${
+      className={`group flex cursor-pointer flex-col items-center rounded-lg p-1 transition-all ${
         isSelected ? 'opacity-100' : 'opacity-80'
       }`}
     >
       <span
-        className={`w-10 h-10 sm:w-12 sm:h-12 rounded-full flex items-center justify-center transition-all border border-border/40 ${
+        className={`border-border/40 flex h-10 w-10 items-center justify-center rounded-full border transition-all sm:h-12 sm:w-12 ${
           isSelected
-            ? 'ring-2 ring-offset-2 ring-offset-background ring-foreground'
-            : 'group-hover:ring-2 group-hover:ring-muted/30'
+            ? 'ring-offset-background ring-foreground ring-2 ring-offset-2'
+            : 'group-hover:ring-muted/30 group-hover:ring-2'
         }`}
         style={dotStyle}
       >
         {isSelected ? (
           <svg
-            className='w-5 h-5 text-white'
+            className='h-5 w-5 text-white'
             fill='currentColor'
             viewBox='0 0 12 12'
             aria-hidden='true'
@@ -94,7 +98,7 @@ const ThemeColorButton = memo(function ThemeColorButton({
           </svg>
         ) : null}
       </span>
-      <span className='text-[11px] text-muted leading-none mt-1'>{displayName}</span>
+      <span className='text-muted mt-1 text-[11px] leading-none'>{displayName}</span>
     </button>
   );
 });
@@ -122,11 +126,11 @@ export default function UserSection() {
   return (
     <div className='space-y-6'>
       {/* Theme & Color — side by side on md+ */}
-      <div className='flex flex-col md:flex-row gap-6'>
+      <div className='flex flex-col gap-6 md:flex-row'>
         {/* Mode selectors */}
-        <div className='space-y-3 shrink-0'>
-          <h3 className='font-mono text-[11px] text-muted uppercase tracking-wider'>Theme</h3>
-          <div className='flex md:flex-col gap-2'>
+        <div className='shrink-0 space-y-3'>
+          <h3 className='text-muted font-mono text-[11px] tracking-wider uppercase'>Theme</h3>
+          <div className='flex gap-2 md:flex-col'>
             {[
               { key: 'auto' as const, icon: DesktopIcon, label: 'Auto' },
               { key: 'light' as const, icon: SunIcon, label: 'Light' },
@@ -145,12 +149,12 @@ export default function UserSection() {
         </div>
 
         {/* Vertical divider — only on md+ */}
-        <div className='hidden md:block w-px bg-muted/15 self-stretch shrink-0' />
+        <div className='bg-muted/15 hidden w-px shrink-0 self-stretch md:block' />
 
         {/* Color Theme Selector */}
-        <div className='space-y-3 flex-1 min-w-0'>
-          <h3 className='font-mono text-[11px] text-muted uppercase tracking-wider pl-1'>Color</h3>
-          <div className='grid grid-cols-4 sm:grid-cols-5 md:grid-cols-4 lg:grid-cols-5 gap-3 justify-items-start'>
+        <div className='min-w-0 flex-1 space-y-3'>
+          <h3 className='text-muted pl-1 font-mono text-[11px] tracking-wider uppercase'>Color</h3>
+          <div className='grid grid-cols-4 justify-items-start gap-3 sm:grid-cols-5 md:grid-cols-4 lg:grid-cols-5'>
             {colorThemes.map((t) => (
               <ThemeColorButton
                 key={t.name}
@@ -168,7 +172,7 @@ export default function UserSection() {
       {/* Admin button hint animation — only shown to admins */}
       {user?.isAdmin && (
         <>
-          <div className='h-px bg-muted/15' />
+          <div className='bg-muted/15 h-px' />
           <SettingsToggle
             label='Admin button hint animation'
             description='Occasionally spins and glows the admin/member toggle button in the sidebar to remind you it is clickable.'

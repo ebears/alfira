@@ -189,7 +189,7 @@ export async function applyNodeLinkFilter(
 
   try {
     await updateNodeLinkPlayer(guildId, sessionId, { filters });
-  } catch (err) {
-    logger.error({ err }, `Failed to update NodeLink ${label} filter`);
+  } catch (error) {
+    logger.error({ error }, `Failed to update NodeLink ${label} filter`);
   }
 }

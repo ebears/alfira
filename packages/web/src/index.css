@@ -564,9 +564,7 @@
 
 @layer components {
   .btn-primary {
-    @apply font-body text-sm px-4 py-2.5 md:py-2
-           transition-all duration-150 cursor-pointer disabled:opacity-40
-           disabled:cursor-not-allowed min-h-11 md:min-h-0;
+    @apply font-body min-h-11 cursor-pointer px-4 py-2.5 text-sm transition-all duration-150 disabled:cursor-not-allowed disabled:opacity-40 md:min-h-0 md:py-2;
     border-radius: var(--clay-radius-lg);
     color: var(--color-fg);
     background: color-mix(in srgb, var(--color-accent) 95%, white);
@@ -625,9 +623,7 @@
   }
 
   .btn-primary-secondary {
-    @apply font-body text-sm px-4 py-2.5 md:py-2
-           transition-all duration-150 cursor-pointer disabled:opacity-40
-           disabled:cursor-not-allowed min-h-11 md:min-h-0;
+    @apply font-body min-h-11 cursor-pointer px-4 py-2.5 text-sm transition-all duration-150 disabled:cursor-not-allowed disabled:opacity-40 md:min-h-0 md:py-2;
     border-radius: var(--clay-radius-lg);
     color: var(--color-fg);
     background: color-mix(in srgb, var(--color-accent-secondary) 95%, white);
@@ -685,9 +681,7 @@
   }
 
   .btn-primary-surface {
-    @apply font-body text-sm px-4 py-2.5 md:py-2
-           transition-all duration-150 cursor-pointer disabled:opacity-40
-           disabled:cursor-not-allowed min-h-11 md:min-h-0;
+    @apply font-body min-h-11 cursor-pointer px-4 py-2.5 text-sm transition-all duration-150 disabled:cursor-not-allowed disabled:opacity-40 md:min-h-0 md:py-2;
     border-radius: var(--clay-radius-lg);
     color: var(--color-fg);
     background: linear-gradient(
@@ -726,9 +720,7 @@
   }
 
   .btn-inherit {
-    @apply font-body text-sm px-4 py-2.5 md:py-2
-           transition-all duration-150 cursor-pointer disabled:opacity-40
-           disabled:cursor-not-allowed min-h-11 md:min-h-0;
+    @apply font-body min-h-11 cursor-pointer px-4 py-2.5 text-sm transition-all duration-150 disabled:cursor-not-allowed disabled:opacity-40 md:min-h-0 md:py-2;
     border-radius: var(--clay-radius-lg);
     color: var(--color-fg);
   }
@@ -795,9 +787,7 @@
   }
 
   .btn-danger {
-    @apply font-body text-sm px-4 py-2.5 md:py-2
-           transition-all duration-150 cursor-pointer disabled:opacity-40
-           disabled:cursor-not-allowed min-h-11 md:min-h-0;
+    @apply font-body min-h-11 cursor-pointer px-4 py-2.5 text-sm transition-all duration-150 disabled:cursor-not-allowed disabled:opacity-40 md:min-h-0 md:py-2;
     border-radius: var(--clay-radius-lg);
     color: #fff;
     background: color-mix(in srgb, var(--color-danger) 95%, white);
@@ -856,7 +846,7 @@
   }
 
   .btn-discord {
-    @apply font-body text-sm px-4 py-2.5 md:py-2 transition-all duration-150 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed min-h-11 md:min-h-0;
+    @apply font-body min-h-11 cursor-pointer px-4 py-2.5 text-sm transition-all duration-150 disabled:cursor-not-allowed disabled:opacity-40 md:min-h-0 md:py-2;
     border-radius: var(--clay-radius-lg);
     color: #fff;
     background: color-mix(in srgb, var(--color-discord) 95%, white);
@@ -914,7 +904,7 @@
     box-shadow: inset 0 2px 3px 0 rgba(0, 0, 0, 0.15);
   }
   .input {
-    @apply text-fg font-mono text-sm px-3 py-3 md:py-2 outline-none focus:border-accent/60 transition-all duration-200 placeholder:text-faint w-full;
+    @apply text-fg focus:border-accent/60 placeholder:text-faint w-full px-3 py-3 font-mono text-sm transition-all duration-200 outline-none md:py-2;
     border-radius: var(--clay-radius-md);
     background: linear-gradient(
       180deg,
@@ -947,9 +937,7 @@
   }
 
   .btn-icon-primary {
-    @apply w-11 h-11 md:w-10 md:h-10 flex items-center justify-center
-           transition-all duration-150 cursor-pointer disabled:opacity-40
-           disabled:cursor-not-allowed;
+    @apply flex h-11 w-11 cursor-pointer items-center justify-center transition-all duration-150 disabled:cursor-not-allowed disabled:opacity-40 md:h-10 md:w-10;
     border-radius: var(--clay-radius-md);
     color: var(--color-fg);
     background: color-mix(in srgb, var(--color-accent) 92%, white);
@@ -1003,9 +991,7 @@
   }
 
   .btn-icon-primary-secondary {
-    @apply w-11 h-11 md:w-10 md:h-10 flex items-center justify-center
-           transition-all duration-150 cursor-pointer disabled:opacity-40
-           disabled:cursor-not-allowed;
+    @apply flex h-11 w-11 cursor-pointer items-center justify-center transition-all duration-150 disabled:cursor-not-allowed disabled:opacity-40 md:h-10 md:w-10;
     border-radius: var(--clay-radius-md);
     color: var(--color-fg);
     background: color-mix(in srgb, var(--color-accent-secondary) 92%, white);
@@ -1059,9 +1045,7 @@
   }
 
   .btn-icon-primary-surface {
-    @apply w-11 h-11 md:w-10 md:h-10 flex items-center justify-center
-           transition-all duration-150 cursor-pointer disabled:opacity-40
-           disabled:cursor-not-allowed;
+    @apply flex h-11 w-11 cursor-pointer items-center justify-center transition-all duration-150 disabled:cursor-not-allowed disabled:opacity-40 md:h-10 md:w-10;
     border-radius: var(--clay-radius-md);
     background: linear-gradient(
       180deg,
@@ -1103,9 +1087,7 @@
   }
 
   .btn-icon-inherit {
-    @apply w-11 h-11 md:w-10 md:h-10 flex items-center justify-center
-           transition-all duration-150 cursor-pointer disabled:opacity-40
-           disabled:cursor-not-allowed;
+    @apply flex h-11 w-11 cursor-pointer items-center justify-center transition-all duration-150 disabled:cursor-not-allowed disabled:opacity-40 md:h-10 md:w-10;
     border-radius: var(--clay-radius-md);
     color: var(--color-fg);
   }
@@ -1165,9 +1147,7 @@
   }
 
   .btn-icon-danger {
-    @apply w-11 h-11 md:w-10 md:h-10 flex items-center justify-center
-           transition-all duration-150 cursor-pointer disabled:opacity-40
-           disabled:cursor-not-allowed;
+    @apply flex h-11 w-11 cursor-pointer items-center justify-center transition-all duration-150 disabled:cursor-not-allowed disabled:opacity-40 md:h-10 md:w-10;
     border-radius: var(--clay-radius-md);
     background: linear-gradient(
       180deg,
@@ -1252,7 +1232,7 @@
 
 /* Glass popover — unified styling for dropdowns, context menus, etc. */
 @utility glass-popover {
-  @apply glass-panel rounded-2xl border border-accent/30 clay-floating overflow-hidden;
+  @apply glass-panel border-accent/30 clay-floating overflow-hidden rounded-2xl border;
 }
 
 /* Glass hover tooltip — for .group hover-revealed help text */
@@ -1268,14 +1248,14 @@
 }
 
 @utility glass-modal {
-  @apply glass-panel rounded-2xl border border-accent/30;
+  @apply glass-panel border-accent/30 rounded-2xl border;
   box-shadow:
     0 5px 0 0 color-mix(in srgb, var(--color-surface) 60%, black),
     0 13px 30px -6px rgba(0, 0, 0, 0.4);
 }
 
 @utility glass-tooltip {
-  @apply rounded-xl glass-panel border border-accent/30 clay-floating text-xs text-muted opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity z-10;
+  @apply glass-panel border-accent/30 clay-floating text-muted pointer-events-none z-10 rounded-xl border text-xs opacity-0 transition-opacity group-hover:opacity-100;
 }
 
 @utility clay-sidebar-edge {

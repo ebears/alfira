@@ -156,12 +156,14 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
       }
     };
     mq.addEventListener('change', handler);
-    return () => mq.removeEventListener('change', handler);
+    return () => {
+      mq.removeEventListener('change', handler);
+    };
   }, [mode]);
 
   useEffect(() => {
-    document.documentElement.setAttribute('data-color-theme', colorTheme);
-    document.documentElement.setAttribute('data-mode', resolvedMode);
+    document.documentElement.dataset.colorTheme = colorTheme;
+    document.documentElement.dataset.mode = resolvedMode;
     localStorage.setItem(COLOR_THEME_STORAGE_KEY, colorTheme);
     localStorage.setItem(MODE_STORAGE_KEY, mode);
 
@@ -170,9 +172,9 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
       .getPropertyValue('--color-elevated')
       .trim();
     if (elevated) {
-      document.querySelectorAll('meta[name="theme-color"]').forEach((el) => {
+      for (const el of document.querySelectorAll('meta[name="theme-color"]')) {
         el.setAttribute('content', elevated);
-      });
+      }
     }
   }, [colorTheme, mode, resolvedMode]);
 

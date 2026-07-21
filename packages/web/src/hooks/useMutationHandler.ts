@@ -29,9 +29,9 @@ export function useMutationHandler(action: () => Promise<void>, errorMessage: st
     setBusy(true);
     try {
       await action();
-    } catch (err) {
-      if (!isRateLimitError(err)) {
-        notify(apiErrorMessage(err, errorMessage), 'error', 5000);
+    } catch (error) {
+      if (!isRateLimitError(error)) {
+        notify(apiErrorMessage(error, errorMessage), 'error', 5000);
       }
     } finally {
       busyRef.current = false;

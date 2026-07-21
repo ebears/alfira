@@ -13,9 +13,9 @@ import { getPlayer } from '../startDiscord';
 
 const TimescaleSchema = v.object({
   enabled: v.boolean(),
-  speed: v.pipe(v.number(), v.minValue(0.5), v.maxValue(2.0)),
-  pitch: v.pipe(v.number(), v.minValue(0.5), v.maxValue(2.0)),
-  rate: v.pipe(v.number(), v.minValue(0.5), v.maxValue(2.0)),
+  speed: v.pipe(v.number(), v.minValue(0.5), v.maxValue(2)),
+  pitch: v.pipe(v.number(), v.minValue(0.5), v.maxValue(2)),
+  rate: v.pipe(v.number(), v.minValue(0.5), v.maxValue(2)),
 });
 
 function handleTimescaleGet(
@@ -32,9 +32,9 @@ function handleTimescaleGet(
 
   return json({
     enabled: row?.timescaleEnabled ?? false,
-    speed: row?.timescaleSpeed ?? 1.0,
-    pitch: row?.timescalePitch ?? 1.0,
-    rate: row?.timescaleRate ?? 1.0,
+    speed: row?.timescaleSpeed ?? 1,
+    pitch: row?.timescalePitch ?? 1,
+    rate: row?.timescaleRate ?? 1,
   });
 }
 

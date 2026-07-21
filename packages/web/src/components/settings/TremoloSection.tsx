@@ -7,11 +7,11 @@ import { useAdminView } from '../../context/AdminViewContext';
 import { usePermissions } from '../../context/PermissionsContext';
 import { Button } from '../ui/Button';
 
-const DEFAULTS = { enabled: false, frequency: 2.0, depth: 0.5 };
+const DEFAULTS = { enabled: false, frequency: 2, depth: 0.5 };
 
 const SLIDERS = [
-  { key: 'frequency', label: 'Frequency', min: 0.1, max: 14.0, step: 0.1, unit: 'Hz' },
-  { key: 'depth', label: 'Depth', min: 0.0, max: 1.0, step: 0.05, unit: '' },
+  { key: 'frequency', label: 'Frequency', min: 0.1, max: 14, step: 0.1, unit: 'Hz' },
+  { key: 'depth', label: 'Depth', min: 0, max: 1, step: 0.05, unit: '' },
 ] as const;
 
 type SliderKey = (typeof SLIDERS)[number]['key'];
@@ -28,7 +28,9 @@ const TremoloSlider = memo(function TremoloSlider({
   onChange,
 }: TremoloSliderProps) {
   const handleChange = useCallback(
-    (e: React.ChangeEvent<HTMLInputElement>) => onChange(key, parseFloat(e.target.value)),
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      onChange(key, Number.parseFloat(e.target.value));
+    },
     [onChange, key]
   );
 
@@ -40,8 +42,8 @@ const TremoloSlider = memo(function TremoloSlider({
 
   return (
     <div className='flex items-center gap-3'>
-      <span className='font-mono text-[11px] text-muted w-20 shrink-0'>{label}</span>
-      <span className='font-mono text-[11px] text-fg w-16 shrink-0'>
+      <span className='text-muted w-20 shrink-0 font-mono text-[11px]'>{label}</span>
+      <span className='text-fg w-16 shrink-0 font-mono text-[11px]'>
         {unit ? `${value.toFixed(1)} ${unit}` : value.toFixed(2)}
       </span>
       <input
@@ -51,7 +53,7 @@ const TremoloSlider = memo(function TremoloSlider({
         step={step}
         value={value}
         onChange={handleChange}
-        className='flex-1 range-input range-input-h'
+        className='range-input range-input-h flex-1'
         style={sliderStyle}
       />
     </div>
@@ -125,7 +127,9 @@ export default function TremoloSection() {
     setValues((v) => ({ ...v, [key]: value }));
   }, []);
 
-  const handleToggle = useCallback(() => setValues((v) => ({ ...v, enabled: !v.enabled })), []);
+  const handleToggle = useCallback(() => {
+    setValues((v) => ({ ...v, enabled: !v.enabled }));
+  }, []);
 
   const dimmed = !canManage;
 
@@ -134,21 +138,21 @@ export default function TremoloSection() {
   }
 
   return (
-    <div className={`space-y-3 ${dimmed ? 'opacity-40 pointer-events-none' : ''}`}>
+    <div className={`space-y-3 ${dimmed ? 'pointer-events-none opacity-40' : ''}`}>
       <div className='flex items-center gap-3'>
-        <span className='font-mono text-[11px] text-muted w-20 shrink-0'>Enabled</span>
+        <span className='text-muted w-20 shrink-0 font-mono text-[11px]'>Enabled</span>
         <button
           type='button'
           role='switch'
           aria-checked={values.enabled}
           aria-label='Enable tremolo'
           onClick={handleToggle}
-          className={`relative shrink-0 w-9 h-5 rounded-full transition-colors cursor-pointer focus:outline-none focus:ring-2 focus:ring-accent/50 focus:ring-offset-2 focus:ring-offset-surface ${
+          className={`focus:ring-accent/50 focus:ring-offset-surface relative h-5 w-9 shrink-0 cursor-pointer rounded-full transition-colors focus:ring-2 focus:ring-offset-2 focus:outline-none ${
             values.enabled ? 'bg-accent' : 'bg-border'
           }`}
         >
           <span
-            className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full transition-transform bg-elevated ${
+            className={`bg-elevated absolute top-0.5 left-0.5 h-4 w-4 rounded-full transition-transform ${
               values.enabled ? 'translate-x-4' : 'translate-x-0'
             }`}
           />
@@ -166,7 +170,7 @@ export default function TremoloSection() {
         ))}
       </div>
 
-      <div className='flex gap-2 pt-1 justify-end'>
+      <div className='flex justify-end gap-2 pt-1'>
         <Button
           variant='primary'
           size='icon'

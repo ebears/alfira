@@ -189,7 +189,9 @@ export default function PermissionsPage() {
     });
   }, []);
 
-  const handleCancelRemove = useCallback(() => setRoleToRemove(null), []);
+  const handleCancelRemove = useCallback(() => {
+    setRoleToRemove(null);
+  }, []);
 
   const handleSave = useCallback(async () => {
     if (!data) {
@@ -205,9 +207,11 @@ export default function PermissionsPage() {
       );
       setSavedMapping({ ...mapping });
       setSuccessMsg('Permissions saved.');
-      setTimeout(() => setSuccessMsg(null), 3000);
-    } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Failed to save permissions.');
+      setTimeout(() => {
+        setSuccessMsg(null);
+      }, 3000);
+    } catch (error: unknown) {
+      setError(error instanceof Error ? error.message : 'Failed to save permissions.');
     } finally {
       setSaving(false);
     }
@@ -217,18 +221,22 @@ export default function PermissionsPage() {
   // Loading state — deferred 200ms to avoid flash on fast loads
   const [showLoading, setShowLoading] = useState(false);
   useEffect(() => {
-    const t = setTimeout(() => setShowLoading(true), 200);
-    return () => clearTimeout(t);
+    const t = setTimeout(() => {
+      setShowLoading(true);
+    }, 200);
+    return () => {
+      clearTimeout(t);
+    };
   }, []);
 
   if (!data) {
     return (
-      <div className='p-4 md:p-8 h-full overflow-y-auto'>
+      <div className='h-full overflow-y-auto p-4 md:p-8'>
         <PageHeader icon={ShieldCheckIcon} title='Permissions' />
         {error ? (
           <ErrorBanner message={error} />
         ) : (
-          showLoading && <p className='text-sm text-muted'>Loading…</p>
+          showLoading && <p className='text-muted text-sm'>Loading…</p>
         )}
       </div>
     );
@@ -236,7 +244,7 @@ export default function PermissionsPage() {
 
   // Render ----------------------------------------------------------------
   return (
-    <div className='p-4 md:p-8 h-full overflow-y-auto'>
+    <div className='h-full overflow-y-auto p-4 md:p-8'>
       <PageHeader
         icon={ShieldCheckIcon}
         title='Permissions'
@@ -246,7 +254,7 @@ export default function PermissionsPage() {
       {error && <ErrorBanner message={error} className='mb-4' />}
 
       {successMsg && (
-        <div className='mb-4 p-3 rounded-lg bg-accent/10 border border-accent/20 text-accent text-sm'>
+        <div className='bg-accent/10 border-accent/20 text-accent mb-4 rounded-lg border p-3 text-sm'>
           {successMsg}
         </div>
       )}
@@ -280,7 +288,7 @@ export default function PermissionsPage() {
       )}
 
       {/* Save */}
-      <div className='flex gap-3 pt-5 justify-end'>
+      <div className='flex justify-end gap-3 pt-5'>
         <Button variant='primary' onClick={handleSave} disabled={!hasChanges || saving}>
           {saving ? 'Saving…' : 'Save Changes'}
         </Button>
@@ -338,12 +346,18 @@ const ManagedRoleCard = memo(function ManagedRoleCard({
   togglePermission: (roleId: string, action: string) => void;
   confirmRemoveRole: (id: string) => void;
 }) {
-  const handleToggleExpand = useCallback(() => toggleExpanded(role.id), [toggleExpanded, role.id]);
+  const handleToggleExpand = useCallback(() => {
+    toggleExpanded(role.id);
+  }, [toggleExpanded, role.id]);
   const handleTogglePermission = useCallback(
-    (action: string) => togglePermission(role.id, action),
+    (action: string) => {
+      togglePermission(role.id, action);
+    },
     [togglePermission, role.id]
   );
-  const handleRemove = useCallback(() => confirmRemoveRole(role.id), [confirmRemoveRole, role.id]);
+  const handleRemove = useCallback(() => {
+    confirmRemoveRole(role.id);
+  }, [confirmRemoveRole, role.id]);
 
   return (
     <RoleCard
@@ -390,23 +404,22 @@ function RoleCard({
   );
 
   return (
-    <Card hoverable className='rounded-xl overflow-hidden'>
+    <Card hoverable className='overflow-hidden rounded-xl'>
       {/* Header row — clickable to toggle expand */}
       <button
         type='button'
-        className='flex items-center gap-3 px-5 py-3 cursor-pointer w-full'
+        className='flex w-full cursor-pointer items-center gap-3 px-5 py-3'
         onClick={onToggleExpand}
       >
-        <span className='w-3 h-3 rounded-full shrink-0' style={dotStyle} />
-        <span className='text-sm font-medium text-fg'>{role.name}</span>
+        <span className='h-3 w-3 shrink-0 rounded-full' style={dotStyle} />
+        <span className='text-fg text-sm font-medium'>{role.name}</span>
 
         {/* Category badges */}
-        <div className='flex items-center gap-4 ml-auto'>
+        <div className='ml-auto flex items-center gap-4'>
           {summaries.map((cat) => (
             <span
               key={cat.key}
-              className={`flex items-center gap-1.5 text-xs font-mono
-                ${cat.summary.granted > 0 ? 'text-accent' : 'text-muted'}`}
+              className={`flex items-center gap-1.5 font-mono text-xs ${cat.summary.granted > 0 ? 'text-accent' : 'text-muted'}`}
             >
               <span className='text-sm'>{cat.icon}</span>
               <span>
@@ -431,8 +444,8 @@ function RoleCard({
 
       {/* Expanded content */}
       {isExpanded && (
-        <div className='border-t border-border px-5 py-4'>
-          <div className='grid grid-cols-1 md:grid-cols-3 gap-5'>
+        <div className='border-border border-t px-5 py-4'>
+          <div className='grid grid-cols-1 gap-5 md:grid-cols-3'>
             {summaries.map((cat) => (
               <CategorySection
                 key={cat.key}
@@ -470,8 +483,8 @@ const CategorySection = memo(function CategorySection({
 }) {
   return (
     <div>
-      <h4 className='text-xs font-mono text-muted uppercase tracking-wider mb-2.5'>
-        <span className='text-sm mr-1.5'>{cat.icon}</span>
+      <h4 className='text-muted mb-2.5 font-mono text-xs tracking-wider uppercase'>
+        <span className='mr-1.5 text-sm'>{cat.icon}</span>
         {cat.key}
       </h4>
       <div className='space-y-2'>
@@ -503,10 +516,12 @@ const PermissionCheckbox = memo(function PermissionCheckbox({
   label: string;
   onToggle: (action: string) => void;
 }) {
-  const handleChange = useCallback(() => onToggle(action), [onToggle, action]);
+  const handleChange = useCallback(() => {
+    onToggle(action);
+  }, [onToggle, action]);
 
   return (
-    <label className='flex items-center gap-2.5 text-sm text-fg cursor-pointer group'>
+    <label className='text-fg group flex cursor-pointer items-center gap-2.5 text-sm'>
       <Checkbox checked={checked} onChange={handleChange} />
       <span className='group-hover:text-fg transition-colors'>{label}</span>
     </label>

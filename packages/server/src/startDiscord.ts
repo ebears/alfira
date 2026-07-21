@@ -145,8 +145,8 @@ function handleReady(data: unknown): void {
     try {
       await lavalink.connect(wsUrl, NODELINK_AUTH, ready.user.id);
       logger.info('Lavalink WebSocket connected');
-    } catch (err) {
-      logger.error({ err }, 'Lavalink WebSocket connection failed — audio will be unavailable');
+    } catch (error) {
+      logger.error({ error }, 'Lavalink WebSocket connection failed — audio will be unavailable');
     }
   })();
 }

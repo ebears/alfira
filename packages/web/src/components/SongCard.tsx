@@ -87,19 +87,29 @@ const SongCardInner = ({
   );
 
   // Stable callbacks for ContextMenu
-  const handleMenuToggle = useCallback(() => setMenuOpen((v) => !v), [setMenuOpen]);
-  const handleMenuClose = useCallback(() => setMenuOpen(false), [setMenuOpen]);
+  const handleMenuToggle = useCallback(() => {
+    setMenuOpen((v) => !v);
+  }, [setMenuOpen]);
+  const handleMenuClose = useCallback(() => {
+    setMenuOpen(false);
+  }, [setMenuOpen]);
   const handleMenuMouseDown = useCallback((e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
   }, []);
 
   // Stable callbacks for inline edit panels
-  const handleEditClose = useCallback(() => setOpenSongId(null), [setOpenSongId]);
+  const handleEditClose = useCallback(() => {
+    setOpenSongId(null);
+  }, [setOpenSongId]);
 
   // Stable callbacks for list variant
-  const handleMouseEnter = useCallback(() => setIsRowHovered(true), []);
-  const handleMouseLeave = useCallback(() => setIsRowHovered(false), []);
+  const handleMouseEnter = useCallback(() => {
+    setIsRowHovered(true);
+  }, []);
+  const handleMouseLeave = useCallback(() => {
+    setIsRowHovered(false);
+  }, []);
   const pointerCursorStyle = useMemo(() => ({ cursor: 'pointer' }), []);
 
   const handleListKeyDown = useCallback(
@@ -146,21 +156,21 @@ const SongCardInner = ({
     return (
       <Card
         hoverable={!!isAdminView}
-        className={`rounded-lg flex flex-col relative${(isAdminView && !selectionMode) || selectionMode ? ' cursor-pointer' : ''}${selectionMode ? ` select-none${isSelected ? ' ring-2 ring-accent' : ' hover:ring-2 hover:ring-accent/50'}` : ''}${!selectionMode ? ' group' : ''}`}
+        className={`flex flex-col rounded-lg relative${(isAdminView && !selectionMode) || selectionMode ? ' cursor-pointer' : ''}${selectionMode ? ` select-none${isSelected ? ' ring-accent ring-2' : ' hover:ring-accent/50 hover:ring-2'}` : ''}${!selectionMode ? ' group' : ''}`}
         style={gridStyle}
         data-song-edit-container
         onClick={handleGridClick}
       >
         {isSelected && (
-          <div className='absolute inset-0 bg-accent/20 pointer-events-none rounded-lg z-10' />
+          <div className='bg-accent/20 pointer-events-none absolute inset-0 z-10 rounded-lg' />
         )}
 
         {/* Clean thumbnail */}
-        <div className='relative aspect-square overflow-hidden rounded-lg border border-border m-3 mb-0 bg-elevated'>
+        <div className='border-border bg-elevated relative m-3 mb-0 aspect-square overflow-hidden rounded-lg border'>
           <ArtworkImage
             src={song.artwork ?? song.thumbnailUrl}
             alt=''
-            className='w-full h-full'
+            className='h-full w-full'
             imageClassName='scale-[1.33]'
           />
           {/* Selection checkbox overlay */}
@@ -172,23 +182,23 @@ const SongCardInner = ({
         </div>
 
         {/* Info */}
-        <div className='p-4 flex-1 flex flex-col gap-1.5'>
+        <div className='flex flex-1 flex-col gap-1.5 p-4'>
           {/* Title + Source */}
           <div className='flex items-center justify-between gap-2'>
-            <p className='text-sm font-semibold text-fg leading-tight flex items-center gap-1.5 min-w-0'>
-              <MusicNoteIcon size={13} weight='fill' className='shrink-0 text-muted' />
+            <p className='text-fg flex min-w-0 items-center gap-1.5 text-sm leading-tight font-semibold'>
+              <MusicNoteIcon size={13} weight='fill' className='text-muted shrink-0' />
               <span className='line-clamp-2'>{song.nickname ?? song.title}</span>
             </p>
             {sourceKey && (
-              <span className='flex items-center shrink-0 [&_svg]:w-3.5 [&_svg]:h-3.5'>
+              <span className='flex shrink-0 items-center [&_svg]:h-3.5 [&_svg]:w-3.5'>
                 <SourceIcon sourceKey={sourceKey} />
               </span>
             )}
           </div>
           {/* Artist + Duration */}
-          <div className='flex items-center justify-between gap-2 text-xs text-muted overflow-hidden'>
+          <div className='text-muted flex items-center justify-between gap-2 overflow-hidden text-xs'>
             {song.artist ? (
-              <span className='flex items-center gap-1 min-w-0'>
+              <span className='flex min-w-0 items-center gap-1'>
                 <MicrophoneStageIcon size={12} weight='fill' className='shrink-0' />
                 <span className='truncate'>{song.artist}</span>
               </span>
@@ -199,9 +209,9 @@ const SongCardInner = ({
           </div>
 
           {/* Album + VolumeBoost */}
-          <div className='flex items-center justify-between gap-2 text-xs text-muted overflow-hidden'>
+          <div className='text-muted flex items-center justify-between gap-2 overflow-hidden text-xs'>
             {song.album ? (
-              <span className='flex items-center gap-1 min-w-0'>
+              <span className='flex min-w-0 items-center gap-1'>
                 <DiscIcon size={12} weight='fill' className='shrink-0' />
                 <span className='truncate'>{song.album}</span>
               </span>
@@ -213,8 +223,8 @@ const SongCardInner = ({
 
           {/* Requested by */}
           {song.addedBy ? (
-            <div className='flex items-center justify-between gap-2 text-xs text-muted overflow-hidden'>
-              <span className='flex items-center gap-1 min-w-0'>
+            <div className='text-muted flex items-center justify-between gap-2 overflow-hidden text-xs'>
+              <span className='flex min-w-0 items-center gap-1'>
                 <UserIcon size={12} weight='fill' className='shrink-0' />
                 <span className='truncate'>{song.addedByDisplayName ?? song.addedBy}</span>
               </span>
@@ -225,12 +235,12 @@ const SongCardInner = ({
           {/* Tags + Actions */}
           <div className='flex items-center justify-between gap-2 pt-1'>
             <div className='min-w-0'>{tags.length > 0 && <TagTicker tags={tags} />}</div>
-            <div className='flex items-center gap-1 shrink-0'>
+            <div className='flex shrink-0 items-center gap-1'>
               <div
                 className={
                   menuOpen
                     ? ''
-                    : 'opacity-0 group-hover:opacity-100 [@media(hover:none)]:opacity-100 transition-opacity duration-150'
+                    : 'opacity-0 transition-opacity duration-150 group-hover:opacity-100 [@media(hover:none)]:opacity-100'
                 }
               >
                 <ContextMenuTrigger
@@ -269,18 +279,18 @@ const SongCardInner = ({
   return (
     <Card
       hoverable={!!isAdminView}
-      className={`rounded-lg flex flex-col relative${selectionMode ? ' select-none hover:ring-2 hover:ring-accent/50' : ''}${isSelected ? ' ring-2 ring-accent' : ''}`}
+      className={`flex flex-col rounded-lg relative${selectionMode ? ' hover:ring-accent/50 select-none hover:ring-2' : ''}${isSelected ? ' ring-accent ring-2' : ''}`}
       data-song-id={song.id}
       data-song-edit-container
     >
       {isSelected && (
-        <div className='absolute inset-0 bg-accent/20 pointer-events-none rounded-lg z-10' />
+        <div className='bg-accent/20 pointer-events-none absolute inset-0 z-10 rounded-lg' />
       )}
 
       <div
         role='button'
         tabIndex={canEdit || selectionMode ? 0 : -1}
-        className='flex items-center gap-3 md:gap-4 px-4 py-4 w-full text-left bg-transparent border-0'
+        className='flex w-full items-center gap-3 border-0 bg-transparent px-4 py-4 text-left md:gap-4'
         onClick={handleListClick}
         onKeyDown={handleListKeyDown}
         style={canEdit || selectionMode ? pointerCursorStyle : undefined}
@@ -294,42 +304,42 @@ const SongCardInner = ({
           </span>
         )}
 
-        <div className='overflow-hidden w-16 h-16 rounded border border-border shrink-0 bg-elevated'>
+        <div className='border-border bg-elevated h-16 w-16 shrink-0 overflow-hidden rounded border'>
           <ArtworkImage
             src={song.artwork ?? song.thumbnailUrl}
             alt={song.nickname ?? song.title}
-            className='w-full h-full'
+            className='h-full w-full'
             imageClassName='scale-[1.33]'
           />
         </div>
-        <div className='flex-1 min-w-0 flex flex-col justify-center gap-1.5'>
-          <p className='text-sm font-semibold text-fg leading-tight flex items-center gap-1.5 min-w-0'>
-            <MusicNoteIcon size={13} weight='fill' className='shrink-0 text-muted' />
+        <div className='flex min-w-0 flex-1 flex-col justify-center gap-1.5'>
+          <p className='text-fg flex min-w-0 items-center gap-1.5 text-sm leading-tight font-semibold'>
+            <MusicNoteIcon size={13} weight='fill' className='text-muted shrink-0' />
             <span className='truncate'>{song.nickname ?? song.title}</span>
           </p>
-          <div className='flex items-center gap-2.5 flex-wrap text-xs text-muted min-w-0'>
+          <div className='text-muted flex min-w-0 flex-wrap items-center gap-2.5 text-xs'>
             {song.artist && (
-              <span className='max-w-[16ch] flex items-center gap-1 min-w-0'>
+              <span className='flex max-w-[16ch] min-w-0 items-center gap-1'>
                 <MicrophoneStageIcon size={12} weight='fill' className='shrink-0' />
                 <span className='truncate'>{song.artist}</span>
               </span>
             )}
             {song.album && (
-              <span className='max-w-[20ch] flex items-center gap-1 min-w-0'>
+              <span className='flex max-w-[20ch] min-w-0 items-center gap-1'>
                 <DiscIcon size={12} weight='fill' className='shrink-0' />
                 <span className='truncate'>{song.album}</span>
               </span>
             )}
             {tags.length > 0 && <TagTicker tags={tags} isHovered={isRowHovered} />}
           </div>
-          <div className='flex items-center gap-2.5 flex-wrap text-xs text-muted min-w-0'>
+          <div className='text-muted flex min-w-0 flex-wrap items-center gap-2.5 text-xs'>
             {sourceKey && (
-              <span className='flex items-center shrink-0 [&_svg]:w-3.5 [&_svg]:h-3.5'>
+              <span className='flex shrink-0 items-center [&_svg]:h-3.5 [&_svg]:w-3.5'>
                 <SourceIcon sourceKey={sourceKey} />
               </span>
             )}
             {song.addedBy && (
-              <span className='max-w-[16ch] flex items-center gap-1 min-w-0'>
+              <span className='flex max-w-[16ch] min-w-0 items-center gap-1'>
                 <UserIcon size={12} weight='fill' className='shrink-0' />
                 <span className='truncate'>{song.addedByDisplayName ?? song.addedBy}</span>
               </span>
@@ -342,7 +352,7 @@ const SongCardInner = ({
           className={
             menuOpen
               ? ''
-              : `opacity-0 [@media(hover:none)]:opacity-100 transition-opacity duration-150 ${isRowHovered ? 'opacity-100' : ''}`
+              : `opacity-0 transition-opacity duration-150 [@media(hover:none)]:opacity-100 ${isRowHovered ? 'opacity-100' : ''}`
           }
         >
           <ContextMenuTrigger
@@ -350,13 +360,13 @@ const SongCardInner = ({
             onToggle={handleMenuToggle}
             isOpen={menuOpen}
             onMouseDown={handleMenuMouseDown}
-            className='w-12 h-12'
+            className='h-12 w-12'
           />
         </div>
         <PlayButton
           onClick={onPlay}
           isPlaying={!!isPlaying}
-          className='w-12 h-12 disabled:opacity-50'
+          className='h-12 w-12 disabled:opacity-50'
         />
         {menuOpen && (
           <ContextMenu

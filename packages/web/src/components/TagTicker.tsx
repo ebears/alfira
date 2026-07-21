@@ -119,7 +119,7 @@ const TagTicker = memo(({ tags, isHovered: externalHovered }: TagTickerProps) =>
         return (
           <span
             key={tag}
-            className={`inline-flex items-center px-1.5 py-0 rounded text-[11px] font-medium whitespace-nowrap ${colors.bg} ${colors.text}`}
+            className={`inline-flex items-center rounded px-1.5 py-0 text-[11px] font-medium whitespace-nowrap ${colors.bg} ${colors.text}`}
           >
             {tag}
           </span>
@@ -166,13 +166,13 @@ const TagTicker = memo(({ tags, isHovered: externalHovered }: TagTickerProps) =>
     // eslint-disable-next-line jsx-a11y/no-noninteractive-element-interactions -- hover state controls ticker; marquee has dedicated role
     <div
       role='marquee'
-      className='overflow-hidden py-0 max-w-[60%]'
+      className='max-w-[60%] overflow-hidden py-0'
       ref={outerRef}
       style={maskStyle}
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
     >
-      <div className='flex gap-1 w-max' ref={innerRef}>
+      <div className='flex w-max gap-1' ref={innerRef}>
         {renderTags()}
       </div>
     </div>
