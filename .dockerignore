@@ -7,7 +7,11 @@ dist/
 build/
 .vscode/
 .idea/
+**/*.test.ts
+**/*.test.tsx
 .claude/
 .superpowers/
 .github/
 .worktrees/
+.pi/
+.zed/
