@@ -1,5 +1,5 @@
 import { type Playlist, type Song } from '@alfira/server/shared';
-import { DiscIcon, MusicNoteIcon, UserIcon } from '@phosphor-icons/react';
+import { DiscIcon, MicrophoneStageIcon, MusicNoteIcon, UserIcon } from '@phosphor-icons/react';
 import React, { useCallback, useMemo, useState } from 'react';
 
 import { usePermissions } from '../context/PermissionsContext';
@@ -189,7 +189,7 @@ const SongCardInner = ({
           <div className='flex items-center justify-between gap-2 text-xs text-muted overflow-hidden'>
             {song.artist ? (
               <span className='flex items-center gap-1 min-w-0'>
-                <UserIcon size={12} weight='fill' className='shrink-0' />
+                <MicrophoneStageIcon size={12} weight='fill' className='shrink-0' />
                 <span className='truncate'>{song.artist}</span>
               </span>
             ) : (
@@ -210,6 +210,17 @@ const SongCardInner = ({
             )}
             <VolumeBoostBadge volumeBoost={song.volumeBoost} />
           </div>
+
+          {/* Requested by */}
+          {song.addedBy ? (
+            <div className='flex items-center justify-between gap-2 text-xs text-muted overflow-hidden'>
+              <span className='flex items-center gap-1 min-w-0'>
+                <UserIcon size={12} weight='fill' className='shrink-0' />
+                <span className='truncate'>{song.addedByDisplayName ?? song.addedBy}</span>
+              </span>
+              <span />
+            </div>
+          ) : null}
 
           {/* Tags + Actions */}
           <div className='flex items-center justify-between gap-2 pt-1'>
@@ -299,7 +310,7 @@ const SongCardInner = ({
           <div className='flex items-center gap-2.5 flex-wrap text-xs text-muted min-w-0'>
             {song.artist && (
               <span className='max-w-[16ch] flex items-center gap-1 min-w-0'>
-                <UserIcon size={12} weight='fill' className='shrink-0' />
+                <MicrophoneStageIcon size={12} weight='fill' className='shrink-0' />
                 <span className='truncate'>{song.artist}</span>
               </span>
             )}
@@ -315,6 +326,12 @@ const SongCardInner = ({
             {sourceKey && (
               <span className='flex items-center shrink-0 [&_svg]:w-3.5 [&_svg]:h-3.5'>
                 <SourceIcon sourceKey={sourceKey} />
+              </span>
+            )}
+            {song.addedBy && (
+              <span className='max-w-[16ch] flex items-center gap-1 min-w-0'>
+                <UserIcon size={12} weight='fill' className='shrink-0' />
+                <span className='truncate'>{song.addedByDisplayName ?? song.addedBy}</span>
               </span>
             )}
             <DurationBadge seconds={song.duration} />

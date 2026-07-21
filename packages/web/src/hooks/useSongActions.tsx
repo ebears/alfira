@@ -3,7 +3,6 @@ import {
   ArrowSquareOutIcon,
   BombIcon,
   CassetteTapeIcon,
-  UserIcon,
   VinylRecordIcon,
 } from '@phosphor-icons/react';
 import { useCallback, useMemo, useOptimistic, useRef, useState } from 'react';
@@ -123,16 +122,6 @@ export function useSongActions({
                     danger: true,
                     onClick: onDelete,
                   } as MenuItem,
-                  {
-                    id: 'user-info',
-                    label: '',
-                    icon: <UserIcon size={14} weight='duotone' />,
-                    info: {
-                      label: (song.addedByDisplayName ?? song.addedBy) || '',
-                      icon: <UserIcon size={14} weight='duotone' />,
-                    },
-                    separatorBefore: true,
-                  },
                 ]
               : []),
           ]),
@@ -140,8 +129,6 @@ export function useSongActions({
     [
       onAddToQueue,
       song.sourceUrl,
-      song.addedByDisplayName,
-      song.addedBy,
       onRemove,
       removeLabel,
       onDelete,
