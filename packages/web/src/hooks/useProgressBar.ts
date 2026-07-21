@@ -34,6 +34,10 @@ export function useProgressBar(
   // Prevents re-seeding (and the resulting time-text jump) when the effect
   // re-runs due to timescale fields arriving mid-song.
   const hasSeededRef = useRef(false);
+  // Tracks the last overrideElapsed value we've already applied, so periodic
+  // sync broadcasts (which re-run the effect) don't re-apply a stale override
+  // and flash the time text back to the seek target.
+  const lastOverrideRef = useRef<number | undefined>(undefined);
 
   const registerProgress = useCallback((ref: HTMLDivElement | null) => {
     if (ref) {
@@ -64,7 +68,10 @@ export function useProgressBar(
     // When overrideElapsed is provided (after a seek), sync the React
     // elapsed state immediately so that any React re-render uses the correct
     // position and doesn't fight the rAF-driven thumb placement.
-    if (overrideElapsed !== undefined) {
+    // Guarded by lastOverrideRef so periodic sync re-runs don't re-apply
+    // a stale override and flash the time text back to the seek target.
+    if (overrideElapsed !== undefined && overrideElapsed !== lastOverrideRef.current) {
+      lastOverrideRef.current = overrideElapsed;
       accumulatedMsRef.current = overrideElapsed * 1000;
       effectiveStartRef.current = Date.now() - overrideElapsed * 1000;
       setElapsed(overrideElapsed);
@@ -88,6 +95,7 @@ export function useProgressBar(
       accumulatedMsRef.current = 0;
       prevSongIdRef.current = currentSongId;
       hasSeededRef.current = false;
+      lastOverrideRef.current = undefined;
     } else if (!hasSong) {
       prevSongIdRef.current = null;
     } else if (overrideElapsed !== undefined) {
@@ -187,12 +195,12 @@ export function useProgressBar(
     const nlPos = nodeLinkPosition;
     const nlTime = nodeLinkTime;
 
-    // Compute elapsed ms.  Only use the NodeLink ground-truth anchor when
-    // speed ≠ 1.0 — at normal speed the wall-clock fallback is perfectly
-    // accurate and avoids introducing a second source of truth that can
-    // disagree with trackStartedAt.
+    // Compute elapsed ms.  Use the NodeLink ground-truth position whenever
+    // available — it's more accurate than wall-clock dead-reckoning at any
+    // speed. Fall back to wall-clock when position data isn't available yet
+    // (e.g. just after a seek, before the next periodic sync arrives).
     const computeElapsedMs = (): number => {
-      if (speed !== 1.0 && nlPos !== null && nlTime !== null && nlTime > 0) {
+      if (nlPos !== null && nlTime !== null && nlTime > 0) {
         return nlPos + (Date.now() - nlTime) * speed;
       }
       return (Date.now() - effectiveStart) * speed;
@@ -200,12 +208,12 @@ export function useProgressBar(
 
     // rAF loop — directly sets style.width on registered progress bars and
     // style.left on registered thumbs so both glide at display-native rate.
+    // Capped at 100% so the bar doesn't overflow, but the loop keeps running
+    // so it can recover when a periodic sync with fresh NodeLink position
+    // data arrives and corrects clock drift.
     const tick = () => {
       const elapsedMs = computeElapsedMs();
       const pct = Math.min((elapsedMs / (duration * 1000)) * 100, 100);
-      if (pct >= 100) {
-        return;
-      }
       const pctStr = `${pct}%`;
       for (const ref of progressBars.current) {
         ref.style.width = pctStr;
