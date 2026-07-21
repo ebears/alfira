@@ -81,7 +81,7 @@ export default defineConfig({
     'unicorn/throw-new-error': 'error',
     'unicorn/error-message': 'error',
     // Reassigning parameters is confusing — mutate properties instead
-    'no-param-reassign': 'warn',
+    'no-param-reassign': 'error',
     // Comma operator outside for-loops is almost always a mistake
     'no-sequences': 'error',
     // Assignment in return (e.g. return x = 5) is never intentional
@@ -110,6 +110,20 @@ export default defineConfig({
     'react/jsx-no-script-url': 'error',
     'react/no-danger': 'error',
     'react/jsx-no-target-blank': 'error',
+
+    // -----------------------------------------------------------------------
+    // type safety — catch TypeScript type-level mistakes
+    // -----------------------------------------------------------------------
+    // {} means "any non-nullish value", not "empty object" — use Record<string, never>
+    '@typescript-eslint/no-empty-object-type': 'error',
+    // Function type is unsafe — use (...args: unknown[]) => unknown
+    '@typescript-eslint/no-unsafe-function-type': 'error',
+    // String / Number / Boolean as types (uppercase wrappers) — use primitives
+    '@typescript-eslint/no-wrapper-object-types': 'error',
+    // Duplicate enum members are ambiguous and confusing
+    '@typescript-eslint/no-duplicate-enum-values': 'error',
+    // void in unions or intersections is a type-level mistake
+    '@typescript-eslint/no-invalid-void-type': 'error',
 
     // -----------------------------------------------------------------------
     // suspicious
@@ -172,7 +186,8 @@ export default defineConfig({
     // imports
     // -----------------------------------------------------------------------
     'import/first': 'warn',
-    'import/no-cycle': 'warn',
+    // Circular imports cause subtle ordering bugs — always a problem
+    'import/no-cycle': 'error',
     'unicorn/prefer-node-protocol': 'warn',
     // export let can cause cross-module side-channel bugs
     'import/no-mutable-exports': 'warn',
@@ -193,6 +208,8 @@ export default defineConfig({
     'promise/always-return': 'warn',
     // Enforce resolve/reject naming in new Promise() callbacks
     'promise/param-names': 'warn',
+    // Promise created in a callback but never returned or awaited — dangling promise
+    'promise/no-promise-in-callback': 'error',
 
     // -----------------------------------------------------------------------
     // style
@@ -313,6 +330,8 @@ export default defineConfig({
     '@typescript-eslint/no-meaningless-void-operator': 'warn',
     // Unnecessary namespace qualifier on a type that's already in scope
     '@typescript-eslint/no-unnecessary-qualifier': 'warn',
+    // Type parameters that can be inferred — dead weight
+    '@typescript-eslint/no-unnecessary-type-parameters': 'warn',
     // `Promise.reject(nonError)` — loses stack trace info
     '@typescript-eslint/prefer-promise-reject-errors': 'warn',
     // `arr.filter(fn)[0]` → `arr.find(fn)` — O(n) vs early-exit
@@ -393,6 +412,10 @@ export default defineConfig({
     'unicorn/prefer-modern-dom-apis': 'warn',
     // Number.isNaN() over isNaN(), Number.isFinite() over isFinite(), etc.
     'unicorn/prefer-number-properties': 'warn',
+    // structuredClone(x) over JSON.parse(JSON.stringify(x))
+    'unicorn/prefer-structured-clone': 'warn',
+    // String.raw over escaping backslashes in regex / path strings
+    'unicorn/prefer-string-raw': 'warn',
     // Enforce kebab-case, PascalCase, or camelCase filenames
     'unicorn/filename-case': [
       'warn',
@@ -615,6 +638,22 @@ export default defineConfig({
       ],
       rules: {
         '@typescript-eslint/no-unnecessary-condition': 'off',
+      },
+    },
+
+    // API wrappers + generic utilities: T used only in return type is necessary
+    // for caller-side type inference. no-unnecessary-type-parameters fires on
+    // single-use type params even when they're essential (e.g. get<T>(url): Promise<T>).
+    {
+      files: [
+        'packages/server/src/shared/api.ts',
+        'packages/server/src/shared/shuffle.ts',
+        'packages/server/src/lib/jwt.ts',
+        'packages/web/src/api/client.ts',
+        'packages/web/src/hooks/useSocket.ts',
+      ],
+      rules: {
+        '@typescript-eslint/no-unnecessary-type-parameters': 'off',
       },
     },
 

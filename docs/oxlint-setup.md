@@ -85,6 +85,24 @@ bun run format
 - `oxlint.config.ts` — linter rules, plugins, overrides, globals
 - `oxfmt.config.ts` — formatter options (print width, quotes, semicolons, etc.)
 
+## Design Philosophy
+
+### Explicit rules over categories
+
+Every rule in the config is individually listed rather than using Oxlint's category-based defaults (correctness, suspicious, pedantic, etc.). This trades verbosity for full control:
+
+- **Every rule is a deliberate choice.** The config serves as documentation of what we enforce and why.
+- **No surprises from upstream.** New rules added to categories won't silently start flagging code.
+- **Overrides are surgical.** File-level exceptions have clear justifications in comments.
+
+### Warnings are errors
+
+The `check` script runs with `--deny-warnings`, so `warn` and `error` are equivalent in CI. The distinction is for editor experience: errors are red squiggles (must fix now), warnings are yellow (should fix, but the build won't break locally until you run `check`).
+
+### Type-aware by default
+
+Type-aware rules (`--type-aware --type-check`) run everywhere. This catches a class of bugs that purely syntactic linting misses — type assertions that don't hold, unreachable conditions, unsafe coercions. Some files suppress specific type-aware rules (e.g., `no-unnecessary-condition` on Drizzle query results) where the rule has known false positives for defensive runtime guards.
+
 ## Resources
 
 - [oxlint Documentation](https://oxc.rs/docs/guide/usage/linter.html)

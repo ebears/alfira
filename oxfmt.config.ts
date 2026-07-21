@@ -15,6 +15,7 @@ export default defineConfig({
   quoteProps: 'as-needed',
   insertFinalNewline: true,
   sortTailwindcss: true,
+  sortPackageJson: true,
   sortImports: {
     groups: [
       'type-import',
