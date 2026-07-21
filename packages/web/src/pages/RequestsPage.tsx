@@ -20,11 +20,13 @@ const ITEMS_PER_PAGE = 48;
 export default function RequestsPage() {
   const { user } = useAuth();
   const { isAdminView } = useAdminView();
-  const [tab, setTab] = useState<Tab>('pending');
+  const [tab, setTab] = useState<Tab | null>(null);
   const [mineOnly, setMineOnly] = useState(false);
   const [showAddModal, setShowAddModal] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
-  const autoRedirected = useRef(false);
+  const tabResolved = useRef(false);
+
+  const effectiveTab = tab ?? 'pending';
 
   const {
     items,
@@ -52,7 +54,7 @@ export default function RequestsPage() {
       };
     },
     limit: ITEMS_PER_PAGE,
-    deps: [tab, mineOnly],
+    deps: [effectiveTab, mineOnly],
   });
 
   const handleApprove = useCallback(
@@ -99,22 +101,27 @@ export default function RequestsPage() {
     [user?.discordId]
   );
 
-  // Redirect to history if pending is empty after the initial fetch completes.
-  // A mount guard skips the initial render + Strict Mode double-invoke.
-  const mounted = useRef(false);
+  // Determine the initial tab after the first fetch completes.
+  // Always fetch pending first; if empty, switch to history. The tab bar
+  // stays hidden until resolution is done, preventing a flash of the wrong
+  // tab. The skeleton (now shown immediately on dep-change re-fetches)
+  // covers the transition when we redirect to history.
   useEffect(() => {
-    if (!mounted.current) {
-      mounted.current = true;
+    if (!hasLoaded || tabResolved.current) {
       return;
     }
-    if (autoRedirected.current) {
-      return;
+
+    if (tab === null) {
+      if (total > 0) {
+        setTab('pending');
+      } else {
+        setTab('closed');
+      }
+      tabResolved.current = true;
     }
-    if (tab === 'pending' && total === 0) {
-      autoRedirected.current = true;
-      setTab('closed');
-    }
-  }, [items, tab, total]);
+  }, [hasLoaded, tab, total]);
+
+  const resolved = tabResolved.current;
 
   const countLabel = hasLoaded ? `${total} request${total !== 1 ? 's' : ''}` : '—';
 
@@ -156,38 +163,42 @@ export default function RequestsPage() {
         </Button>
       </PageHeader>
 
-      {/* Tabs + filter */}
-      <div className='flex items-center gap-3 mb-4 md:mb-6'>
-        <div className='flex gap-1 bg-elevated rounded-lg p-1'>
-          <button
-            type='button'
-            onClick={handleSelectPendingTab}
-            className={`px-3 py-1.5 rounded-md text-sm font-body transition-colors cursor-pointer ${
-              tab === 'pending' ? 'bg-accent text-elevated' : 'text-muted hover:text-fg'
-            }`}
-          >
-            Pending
-          </button>
-          <button
-            type='button'
-            onClick={handleSelectHistoryTab}
-            className={`px-3 py-1.5 rounded-md text-sm font-body transition-colors cursor-pointer ${
-              tab === 'closed' ? 'bg-accent text-elevated' : 'text-muted hover:text-fg'
-            }`}
-          >
-            History
-          </button>
-        </div>
+      {/* Tabs + filter — hidden until the initial tab is resolved */}
+      {resolved && (
+        <>
+          <div className='flex items-center gap-3 mb-4 md:mb-6'>
+            <div className='flex gap-1 bg-elevated rounded-lg p-1'>
+              <button
+                type='button'
+                onClick={handleSelectPendingTab}
+                className={`px-3 py-1.5 rounded-md text-sm font-body transition-colors cursor-pointer ${
+                  tab === 'pending' ? 'bg-accent text-elevated' : 'text-muted hover:text-fg'
+                }`}
+              >
+                Pending
+              </button>
+              <button
+                type='button'
+                onClick={handleSelectHistoryTab}
+                className={`px-3 py-1.5 rounded-md text-sm font-body transition-colors cursor-pointer ${
+                  tab === 'closed' ? 'bg-accent text-elevated' : 'text-muted hover:text-fg'
+                }`}
+              >
+                History
+              </button>
+            </div>
 
-        {tab === 'pending' && (
-          <label className='flex items-center gap-2 cursor-pointer ml-auto'>
-            <Checkbox checked={mineOnly} onChange={setMineOnly} />
-            <span className='font-mono text-xs text-muted'>Only show my requests</span>
-          </label>
-        )}
-      </div>
+            {tab === 'pending' && (
+              <label className='flex items-center gap-2 cursor-pointer ml-auto'>
+                <Checkbox checked={mineOnly} onChange={setMineOnly} />
+                <span className='font-mono text-xs text-muted'>Only show my requests</span>
+              </label>
+            )}
+          </div>
 
-      {actionError && <ErrorBanner message={actionError} className='mb-4 font-mono' />}
+          {actionError && <ErrorBanner message={actionError} className='mb-4 font-mono' />}
+        </>
+      )}
 
       {/* Virtualized request list */}
       <VirtualRequestList
@@ -204,9 +215,11 @@ export default function RequestsPage() {
         onApprove={handleApprove}
         onDeny={handleDeny}
         onCancel={handleCancel}
-        emptyTitle={tab === 'pending' ? 'No Pending Requests' : 'No Request History'}
+        emptyTitle={effectiveTab === 'pending' ? 'No Pending Requests' : 'No Request History'}
         emptyMessage={
-          tab === 'pending' ? 'Nothing to review right now' : 'Submit a request to get started'
+          effectiveTab === 'pending'
+            ? 'Nothing to review right now'
+            : 'Submit a request to get started'
         }
       />
 

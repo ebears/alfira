@@ -119,7 +119,7 @@ function VirtualListInner<T>({
 
   // Reveal the container once content is committed (avoids staggered paint).
   const showSkeleton = isLoading;
-  const showEmpty = hasLoaded && items.length === 0;
+  const showEmpty = hasLoaded && items.length === 0 && !isFetching;
   const showContent = !isLoading && hasLoaded && items.length > 0;
 
   // Stable styles for the outer containers.
