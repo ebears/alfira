@@ -187,6 +187,7 @@ export class DiscordGateway {
     ws.onmessage = (event: MessageEvent): void => {
       let msg: { op: number; d: unknown; s: number | null; t: string | null };
       try {
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion
         msg = JSON.parse(event.data as string) as typeof msg;
       } catch {
         return;
@@ -214,10 +215,12 @@ export class DiscordGateway {
         }
 
         case OP_DISPATCH: {
+          // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion
           const dispatch = msg as GatewayDispatch;
 
           // Handle READY for session init.
           if (dispatch.t === 'READY') {
+            // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion
             const ready = dispatch.d as {
               session_id: string;
               user: { id: string; username: string };
@@ -270,6 +273,7 @@ export class DiscordGateway {
 
           // Track voice states from VOICE_STATE_UPDATE for REST-free lookups.
           if (dispatch.t === 'VOICE_STATE_UPDATE') {
+            // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion
             const d = dispatch.d as {
               user_id: string;
               channel_id: string | null;
@@ -303,6 +307,7 @@ export class DiscordGateway {
           break;
 
         case OP_INVALID_SESSION: {
+          // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion
           const invalid = msg as GatewayInvalidSession;
           logger.warn({ resumable: invalid.d }, 'Invalid session');
           this.sessionId = null;
@@ -450,6 +455,7 @@ export class DiscordGateway {
    * source of truth.
    */
   private seedVoiceStatesFromReady(ready: Record<string, unknown>): void {
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion
     const guilds = ready.guilds as
       | {
           id: string;
@@ -477,6 +483,7 @@ export class DiscordGateway {
    * state after a fresh connection.
    */
   private seedVoiceStatesFromGuildCreate(data: unknown): void {
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion
     const guild = data as {
       id: string;
       voice_states?: VoiceStateData[];

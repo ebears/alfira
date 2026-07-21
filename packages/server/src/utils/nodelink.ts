@@ -309,6 +309,7 @@ async function loadTrack(url: string): Promise<LoadTrackResponse> {
   if (!response.ok) {
     throw new Error(`NodeLink REST ${response.status}: ${await response.text()}`);
   }
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion
   const data = (await response.json()) as LoadTrackResponse;
   if (data.loadType === 'error' || data.exception) {
     throw new Error(`NodeLink failed to load: ${data.exception?.message ?? 'unknown error'}`);

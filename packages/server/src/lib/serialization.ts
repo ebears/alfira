@@ -12,6 +12,7 @@ export function formatSong(s: {
   createdAt: Date | string;
   tags?: string[] | null;
 }): SerializedSong {
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion
   return {
     ...s,
     createdAt: s.createdAt instanceof Date ? s.createdAt.toISOString() : s.createdAt,

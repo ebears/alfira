@@ -16,7 +16,12 @@ const LABELS: Record<LogLevel, string> = {
   fatal: 'FATAL',
 };
 
-const currentLevel: number = LEVELS[(process.env.LOG_LEVEL as LogLevel | undefined) ?? 'info'];
+function isLogLevel(value: string | undefined): value is LogLevel {
+  return value !== undefined && value in LEVELS;
+}
+
+const currentLevel: number =
+  LEVELS[isLogLevel(process.env.LOG_LEVEL) ? process.env.LOG_LEVEL : 'info'];
 
 const useJson = process.env.LOG_FORMAT === 'json';
 const noColor = process.env.NO_COLOR !== undefined || process.env.NODE_ENV === 'production';
@@ -51,12 +56,14 @@ function log(level: LogLevel, first: LogArg, second?: string): void {
   }
 
   const msg: string = typeof first === 'string' ? first : (second ?? '');
-  const meta: Record<string, unknown> | undefined =
-    typeof first === 'object' && first !== null && !(first instanceof Error)
-      ? (first as Record<string, unknown>)
-      : first instanceof Error
-        ? { err: first.message, stack: first.stack }
-        : undefined;
+
+  let meta: Record<string, unknown> | undefined;
+  if (first instanceof Error) {
+    meta = { err: first.message, stack: first.stack };
+  } else if (typeof first === 'object' && first !== null) {
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion
+    meta = first as Record<string, unknown>;
+  }
 
   if (useJson) {
     const entry = JSON.stringify({

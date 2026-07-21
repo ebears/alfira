@@ -96,7 +96,12 @@ export function verify<T = Record<string, unknown>>(token: string, secret: strin
   // Decode and parse the payload
   let payload: Record<string, unknown>;
   try {
-    payload = JSON.parse(base64urlDecode(payloadB64)) as Record<string, unknown>;
+    const raw: unknown = JSON.parse(base64urlDecode(payloadB64));
+    if (typeof raw !== 'object' || raw === null || Array.isArray(raw)) {
+      return null;
+    }
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion
+    payload = raw as Record<string, unknown>;
   } catch {
     return null;
   }
@@ -106,5 +111,6 @@ export function verify<T = Record<string, unknown>>(token: string, secret: strin
     return null;
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion
   return payload as T;
 }

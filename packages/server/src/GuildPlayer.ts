@@ -723,11 +723,13 @@ export class GuildPlayer {
 
     if (this.queue.isAtEnd) {
       if (this.loopMode === 'queue' && !this.queue.isEmpty) {
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion
         return this.queue.current() as QueuedSong | null;
       }
       return null;
     }
 
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion
     return this.queue.current() as QueuedSong | null;
   }
 
@@ -847,6 +849,7 @@ export class GuildPlayer {
       if (settings?.enabled) {
         try {
           const compressorFilter = buildCompressorFilter(settings);
+          // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion
           patch.filters = { ...(patch.filters as Record<string, unknown>), ...compressorFilter };
         } catch (err) {
           logger.error({ err, guildId: this.guildId }, 'Failed to build compressor filter');
@@ -858,6 +861,7 @@ export class GuildPlayer {
         try {
           const equalizerFilter = buildEqualizerFilter(eqBands);
           patch.filters = {
+            // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion
             ...(patch.filters as Record<string, unknown>),
             equalizer: equalizerFilter,
           };
@@ -946,6 +950,7 @@ export class GuildPlayer {
     if (settings?.enabled) {
       try {
         const compressorFilter = buildCompressorFilter(settings);
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion
         patch.filters = { ...(patch.filters as Record<string, unknown>), ...compressorFilter };
       } catch (err) {
         logger.error({ err, guildId: this.guildId }, 'Failed to build compressor filter');
@@ -957,6 +962,7 @@ export class GuildPlayer {
       try {
         const equalizerFilter = buildEqualizerFilter(eqBands);
         patch.filters = {
+          // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion
           ...(patch.filters as Record<string, unknown>),
           equalizer: equalizerFilter,
         };

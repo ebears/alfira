@@ -1,4 +1,5 @@
 import { eq, inArray } from 'drizzle-orm';
+import * as v from 'valibot';
 
 import { getGuildId } from '../lib/config';
 import { type RouteContext } from '../lib/context';
@@ -58,6 +59,15 @@ async function handleGetPermissions(
   });
 }
 
+const PermissionsPatchSchema = v.object({
+  action: v.string(),
+  roleIds: v.array(v.string()),
+});
+
+function isPermissionAction(value: string): value is PermissionAction {
+  return value in PERMISSION_LABELS;
+}
+
 // ---------------------------------------------------------------------------
 // PATCH /api/permissions
 // Body: { action: PermissionAction; roleIds: string[] }
@@ -72,26 +82,22 @@ async function handlePatchPermissions(
     return guards;
   }
 
-  let body: { action?: unknown; roleIds?: unknown };
+  let raw: unknown;
   try {
-    body = (await request.json()) as typeof body;
+    raw = await request.json();
   } catch {
     return json({ error: 'Invalid JSON body.' }, 400);
   }
 
-  if (typeof body.action !== 'string') {
-    return json({ error: 'action (string) is required.' }, 400);
+  const parsed = v.safeParse(PermissionsPatchSchema, raw);
+  if (!parsed.success) {
+    return json({ error: 'Invalid request body.', details: v.flatten(parsed.issues) }, 400);
   }
 
-  if (!Array.isArray(body.roleIds) || body.roleIds.some((id) => typeof id !== 'string')) {
-    return json({ error: 'roleIds must be an array of strings.' }, 400);
-  }
-
-  const action = body.action;
-  const roleIds = body.roleIds as string[];
+  const { action, roleIds } = parsed.output;
 
   // Validate the action is a known permission.
-  if (!PERMISSION_LABELS[action as PermissionAction]) {
+  if (!isPermissionAction(action)) {
     return json({ error: `Unknown permission action: ${action}` }, 400);
   }
 

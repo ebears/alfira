@@ -10,6 +10,7 @@ export type SongSortField = (typeof SONG_SORT_FIELDS)[number];
 
 /** Parse a raw sort query param into a SongSortField, or null if unrecognized. */
 export function parseSongSortField(raw: string): SongSortField | null {
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion
   return (SONG_SORT_FIELDS as readonly string[]).includes(raw) ? (raw as SongSortField) : null;
 }
 
@@ -130,11 +131,11 @@ export function buildSongSearchClause(
     return undefined;
   }
 
-  const tagMatchingIds = (
-    $client.query(`SELECT id FROM "Song" WHERE lower(tags) LIKE lower(?)`).all(`%${search}%`) as {
-      id: string;
-    }[]
-  ).map((r) => r.id);
+  const rows = $client
+    .query(`SELECT id FROM "Song" WHERE lower(tags) LIKE lower(?)`)
+    .all(`%${search}%`);
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion
+  const tagMatchingIds = (rows as { id: string }[]).map((r) => r.id);
 
   const base = sql`(lower(title) LIKE lower(${`%${search}%`}) OR lower(nickname) LIKE lower(${`%${search}%`}) OR lower(artist) LIKE lower(${`%${search}%`}) OR lower(album) LIKE lower(${`%${search}%`}))`;
 

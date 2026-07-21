@@ -92,6 +92,7 @@ export async function sendRequestDm(
       return;
     }
 
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion
     const dmChannel = (await dmRes.json()) as { id: string };
     const messages: Record<string, string> = {
       approved: `✅ Your song request for **${title}** has been approved and added to the library!`,

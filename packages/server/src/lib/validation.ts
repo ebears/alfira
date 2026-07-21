@@ -91,7 +91,7 @@ async function wrapBotCall<T>(
   try {
     return { ok: true, value: await fn() };
   } catch (error) {
-    logger.error({ err: error as Error }, 'NodeLink call failed');
+    logger.error({ err: error instanceof Error ? error : String(error) }, 'NodeLink call failed');
 
     // If it's a fetch error with response status, propagate the actual status
     if (error instanceof Error && error.message.startsWith('NodeLink REST')) {
