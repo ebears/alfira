@@ -26,11 +26,11 @@ This guide covers everything you need to set up Alfira for both development and 
 
 ### For Development
 
-| Requirement | Version | Notes                                   |
-| ----------- | ------- | --------------------------------------- |
-| Bun         | 1.3+    | For local development                   |
-| Docker      | 20.10+  | With Docker Compose plugin (optional)   |
-| Git         | Any     | For cloning the repository              |
+| Requirement | Version | Notes                                 |
+| ----------- | ------- | ------------------------------------- |
+| Bun         | 1.3+    | For local development                 |
+| Docker      | 20.10+  | With Docker Compose plugin (optional) |
+| Git         | Any     | For cloning the repository            |
 
 ---
 
@@ -110,22 +110,22 @@ docker compose up -d
 
 #### Optional
 
-| Variable                      | Description                                                                                         | Default                     |
-| ----------------------------- | --------------------------------------------------------------------------------------------------- | --------------------------- |
+| Variable                      | Description                                                                                         | Default                                              |
+| ----------------------------- | --------------------------------------------------------------------------------------------------- | ---------------------------------------------------- |
 | `DATABASE_URL`                | SQLite database path                                                                                | `data/alfira.db` (local), `/data/alfira.db` (Docker) |
-| `GUILD_ID`                    | Pre-seed Discord server ID (for existing deployments)                                               | —                           |
-| `ADMIN_ROLE_IDS`              | Pre-seed admin role IDs (for existing deployments)                                                  | —                           |
-| `VOICE_IDLE_TIMEOUT_MINUTES`  | Override idle timeout (can also be set via wizard/settings)                                         | `5`                         |
-| `LOG_LEVEL`                   | Log verbosity: `debug`, `info`, `warn`, `error`, `fatal`                                            | `info`                      |
-| `LOG_FORMAT`                  | Set to `json` for machine-readable structured logging                                               | —                           |
-| `NO_COLOR`                    | Set to any value to disable colored log output                                                      | —                           |
-| `JWT_EXPIRES_IN`              | JWT refresh token expiration (e.g., `30d`, `7d`, `24h`)                                             | `30d`                       |
-| `ENABLED_SOURCES`             | Comma-separated list of music sources to enable by default                                          | `youtube,soundcloud`        |
-| `SPOTIFY_CLIENT_ID`           | Spotify API client ID (from [Spotify Developer Dashboard](https://developer.spotify.com/dashboard)) | —                           |
-| `SPOTIFY_CLIENT_SECRET`       | Spotify API client secret                                                                           | —                           |
-| `APPLE_MUSIC_MEDIA_API_TOKEN` | Apple Music developer token (set to `token_here` for auto-fetch, or provide a JWT)                  | —                           |
-| `TIDAL_TOKEN`                 | Tidal authentication token                                                                          | —                           |
-| `GOOGLE_DRIVE_COOKIES`        | Cookie header for accessing private Google Drive files                                              | —                           |
+| `GUILD_ID`                    | Pre-seed Discord server ID (for existing deployments)                                               | —                                                    |
+| `ADMIN_ROLE_IDS`              | Pre-seed admin role IDs (for existing deployments)                                                  | —                                                    |
+| `VOICE_IDLE_TIMEOUT_MINUTES`  | Override idle timeout (can also be set via wizard/settings)                                         | `5`                                                  |
+| `LOG_LEVEL`                   | Log verbosity: `debug`, `info`, `warn`, `error`, `fatal`                                            | `info`                                               |
+| `LOG_FORMAT`                  | Set to `json` for machine-readable structured logging                                               | —                                                    |
+| `NO_COLOR`                    | Set to any value to disable colored log output                                                      | —                                                    |
+| `JWT_EXPIRES_IN`              | JWT refresh token expiration (e.g., `30d`, `7d`, `24h`)                                             | `30d`                                                |
+| `ENABLED_SOURCES`             | Comma-separated list of music sources to enable by default                                          | `youtube,soundcloud`                                 |
+| `SPOTIFY_CLIENT_ID`           | Spotify API client ID (from [Spotify Developer Dashboard](https://developer.spotify.com/dashboard)) | —                                                    |
+| `SPOTIFY_CLIENT_SECRET`       | Spotify API client secret                                                                           | —                                                    |
+| `APPLE_MUSIC_MEDIA_API_TOKEN` | Apple Music developer token (set to `token_here` for auto-fetch, or provide a JWT)                  | —                                                    |
+| `TIDAL_TOKEN`                 | Tidal authentication token                                                                          | —                                                    |
+| `GOOGLE_DRIVE_COOKIES`        | Cookie header for accessing private Google Drive files                                              | —                                                    |
 
 > **Note:** `GUILD_ID` and `ADMIN_ROLE_IDS` are **not required** for new installs — these are configured through the in-app setup wizard. They're only needed for existing deployments migrating from an earlier version.
 
