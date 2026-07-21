@@ -7,6 +7,7 @@ import {
   ArrowUpIcon,
   BombIcon,
   CircleNotchIcon,
+  DotsSixVerticalIcon,
   DotsThreeOutlineVerticalIcon,
   LightningIcon,
   ListIcon,
@@ -37,6 +38,7 @@ import { useAdminView } from '../context/AdminViewContext';
 import { usePermissions } from '../context/PermissionsContext';
 import { usePlayer } from '../context/PlayerContext';
 import { type CooldownState } from '../hooks/useCooldownGuard';
+import { SortableListProvider, useSortableItem } from '../hooks/useSortableVirtualList';
 import { queueItemVariants } from '../lib/motion';
 import { getSourceKey } from '../utils/source';
 import { getRandomIdleIcon } from './EmptyState';
@@ -83,16 +85,6 @@ export interface MobileQuickControls {
   onShuffleToggle: () => void;
 }
 
-type VirtualQueueItem =
-  | {
-      type: 'song';
-      variant: 'priority' | 'regular';
-      song: QueuedSong;
-      listIndex: number;
-      key: string;
-    }
-  | { type: 'header'; variant: 'priority' | 'regular'; key: string };
-
 export default function QueuePanel({
   mobileQuickControls,
 }: {
@@ -123,42 +115,40 @@ export default function QueuePanel({
 
   const canManage = isAdminView || hasPermission('queue.manage');
 
-  const virtualItems: VirtualQueueItem[] = useMemo(() => {
-    const items: VirtualQueueItem[] = [];
-    if (priorityQueue.length > 0) {
-      items.push({ type: 'header', variant: 'priority', key: 'header-priority' });
-      for (const [i, song] of priorityQueue.entries()) {
-        items.push({
-          type: 'song',
-          variant: 'priority',
-          song,
-          listIndex: i,
-          key: `p-${song.id}`,
-        });
-      }
-    }
-    if (queue.length > 0) {
-      items.push({ type: 'header', variant: 'regular', key: 'header-regular' });
-      for (const [i, song] of queue.entries()) {
-        items.push({
-          type: 'song',
-          variant: 'regular',
-          song,
-          listIndex: i,
-          key: `r-${song.id}`,
-        });
-      }
-    }
-    return items;
-  }, [priorityQueue, queue]);
+  const priorityIds = useMemo(() => priorityQueue.map((s) => s.id), [priorityQueue]);
+  const queueIds = useMemo(() => queue.map((s) => s.id), [queue]);
 
-  const virtualizer = useVirtualizer({
-    count: virtualItems.length,
-    getItemKey: (i) => virtualItems[i]?.key,
+  const priorityVirtualizer = useVirtualizer({
+    count: priorityQueue.length,
+    getItemKey: (i) => priorityQueue[i]?.id ?? i,
     getScrollElement: () => scrollRef.current,
-    estimateSize: (i) => (virtualItems[i]?.type === 'header' ? 36 : 92),
+    estimateSize: () => 92,
     overscan: 5,
   });
+
+  const queueVirtualizer = useVirtualizer({
+    count: queue.length,
+    getItemKey: (i) => queue[i]?.id ?? i,
+    getScrollElement: () => scrollRef.current,
+    estimateSize: () => 92,
+    overscan: 5,
+  });
+
+  const priorityContainerStyle = useMemo(
+    () => ({
+      height: `${priorityVirtualizer.getTotalSize()}px`,
+      position: 'relative' as const,
+    }),
+    [priorityVirtualizer]
+  );
+
+  const queueContainerStyle = useMemo(
+    () => ({
+      height: `${queueVirtualizer.getTotalSize()}px`,
+      position: 'relative' as const,
+    }),
+    [queueVirtualizer]
+  );
 
   const isQueueEmpty = queue.length === 0 && priorityQueue.length === 0 && !currentSong;
 
@@ -272,6 +262,20 @@ export default function QueuePanel({
     [reorderQueue]
   );
 
+  const handlePriorityReorder = useCallback(
+    async (orderedIds: string[]) => {
+      await reorderQueue(orderedIds, 'priority');
+    },
+    [reorderQueue]
+  );
+
+  const handleQueueReorder = useCallback(
+    async (orderedIds: string[]) => {
+      await reorderQueue(orderedIds, 'queue');
+    },
+    [reorderQueue]
+  );
+
   const handleToggleMenu = useCallback(() => {
     setMenuOpen(!menuOpen);
   }, [menuOpen]);
@@ -297,12 +301,6 @@ export default function QueuePanel({
   const handleCancelClear = useCallback(() => {
     setClearConfirm(false);
   }, []);
-
-  const totalHeight = virtualizer.getTotalSize();
-  const virtualContainerStyle = useMemo(
-    () => ({ height: `${totalHeight}px`, position: 'relative' as const }),
-    [totalHeight]
-  );
 
   const menuItems: MenuItem[] = useMemo(() => {
     const items: MenuItem[] = [];
@@ -405,7 +403,7 @@ export default function QueuePanel({
         </AnimatePresence>
 
         {/* Empty state */}
-        {virtualItems.length === 0 && (
+        {priorityQueue.length === 0 && queue.length === 0 && (
           <div className='py-8 text-center'>
             <p className='text-faint font-mono text-[11px]'>queue is empty</p>
           </div>
@@ -413,82 +411,125 @@ export default function QueuePanel({
       </div>
 
       {/* Virtualized scroll container */}
-      {virtualItems.length > 0 && (
+      {(priorityQueue.length > 0 || queue.length > 0) && (
         <div
           ref={scrollRef}
           className='min-h-0 flex-1 overflow-y-auto px-4 pb-4'
           style={SCROLL_MASK_STYLE}
         >
-          <div style={virtualContainerStyle}>
-            {virtualizer.getVirtualItems().map((virtualRow) => {
-              const item = virtualItems[virtualRow.index];
-              if (item == null) {
-                return null;
-              }
+          {/* Priority queue section */}
+          {priorityQueue.length > 0 && (
+            <SortableListProvider
+              itemIds={priorityIds}
+              onReorder={handlePriorityReorder}
+              scrollContainerRef={scrollRef}
+            >
+              <h2 className='font-display text-fg text-lg tracking-wider'>
+                <LightningIcon size={16} weight='duotone' className='mr-1 inline' />
+                Up Next
+                <span className='text-accent ml-2 font-mono text-xs tracking-normal normal-case'>
+                  {priorityQueue.length}
+                </span>
+              </h2>
+              <div style={priorityContainerStyle}>
+                {priorityVirtualizer.getVirtualItems().map((virtualRow) => {
+                  const song = priorityQueue[virtualRow.index];
+                  if (!song) {
+                    return null;
+                  }
+                  return (
+                    <div
+                      key={virtualRow.key}
+                      data-index={virtualRow.index}
+                      ref={priorityVirtualizer.measureElement}
+                      className='pb-1'
+                      style={getVirtualRowStyle(virtualRow.start)}
+                    >
+                      <m.div
+                        initial='initial'
+                        animate='animate'
+                        variants={queueItemVariants}
+                        transition={QUEUE_TRANSITION}
+                      >
+                        <QueueSongItem
+                          song={song}
+                          index={virtualRow.index}
+                          variant='priority'
+                          canManage={canManage}
+                          targetQueue={priorityQueue}
+                          onRemove={handleRemove}
+                          onPromote={handlePromote}
+                          onDemote={handleDemote}
+                          onMoveUp={handleMoveUp}
+                          onMoveDown={handleMoveDown}
+                          onMoveToTop={handleMoveToTop}
+                          onMoveToBottom={handleMoveToBottom}
+                        />
+                      </m.div>
+                    </div>
+                  );
+                })}
+              </div>
+            </SortableListProvider>
+          )}
 
-              if (item.type === 'header') {
-                return (
-                  <div
-                    key={item.key}
-                    data-index={virtualRow.index}
-                    ref={virtualizer.measureElement}
-                    style={getVirtualRowStyle(virtualRow.start)}
-                  >
-                    {item.variant === 'priority' ? (
-                      <h2 className='font-display text-fg text-lg tracking-wider'>
-                        <LightningIcon size={16} weight='duotone' className='mr-1 inline' />
-                        Up Next
-                        <span className='text-accent ml-2 font-mono text-xs tracking-normal normal-case'>
-                          {priorityQueue.length}
-                        </span>
-                      </h2>
-                    ) : (
-                      <h2 className='font-display text-fg text-lg tracking-wider'>
-                        Queue
-                        {queue.length > 0 && (
-                          <span className='text-muted ml-2 font-mono text-xs tracking-normal normal-case'>
-                            {queue.length}
-                          </span>
-                        )}
-                      </h2>
-                    )}
-                  </div>
-                );
-              }
-
-              return (
-                <div
-                  key={item.key}
-                  data-index={virtualRow.index}
-                  ref={virtualizer.measureElement}
-                  className='pb-1'
-                  style={getVirtualRowStyle(virtualRow.start)}
-                >
-                  <m.div
-                    initial='initial'
-                    animate='animate'
-                    variants={queueItemVariants}
-                    transition={QUEUE_TRANSITION}
-                  >
-                    <QueueSongItem
-                      song={item.song}
-                      index={item.listIndex}
-                      variant={item.variant}
-                      canManage={canManage}
-                      targetQueue={item.variant === 'priority' ? priorityQueue : queue}
-                      onRemove={handleRemove}
-                      onPromote={handlePromote}
-                      onDemote={handleDemote}
-                      onMoveUp={handleMoveUp}
-                      onMoveDown={handleMoveDown}
-                      onMoveToTop={handleMoveToTop}
-                      onMoveToBottom={handleMoveToBottom}
-                    />
-                  </m.div>
-                </div>
-              );
-            })}
-          </div>
+          {/* Regular queue section */}
+          {queue.length > 0 && (
+            <SortableListProvider
+              itemIds={queueIds}
+              onReorder={handleQueueReorder}
+              scrollContainerRef={scrollRef}
+            >
+              {priorityQueue.length > 0 && <div className='mt-4' />}
+              <h2 className='font-display text-fg text-lg tracking-wider'>
+                Queue
+                {queue.length > 0 && (
+                  <span className='text-muted ml-2 font-mono text-xs tracking-normal normal-case'>
+                    {queue.length}
+                  </span>
+                )}
+              </h2>
+              <div style={queueContainerStyle}>
+                {queueVirtualizer.getVirtualItems().map((virtualRow) => {
+                  const song = queue[virtualRow.index];
+                  if (!song) {
+                    return null;
+                  }
+                  return (
+                    <div
+                      key={virtualRow.key}
+                      data-index={virtualRow.index}
+                      ref={queueVirtualizer.measureElement}
+                      className='pb-1'
+                      style={getVirtualRowStyle(virtualRow.start)}
+                    >
+                      <m.div
+                        initial='initial'
+                        animate='animate'
+                        variants={queueItemVariants}
+                        transition={QUEUE_TRANSITION}
+                      >
+                        <QueueSongItem
+                          song={song}
+                          index={virtualRow.index}
+                          variant='regular'
+                          canManage={canManage}
+                          targetQueue={queue}
+                          onRemove={handleRemove}
+                          onPromote={handlePromote}
+                          onDemote={handleDemote}
+                          onMoveUp={handleMoveUp}
+                          onMoveDown={handleMoveDown}
+                          onMoveToTop={handleMoveToTop}
+                          onMoveToBottom={handleMoveToBottom}
+                        />
+                      </m.div>
+                    </div>
+                  );
+                })}
+              </div>
+            </SortableListProvider>
+          )}
         </div>
       )}
 
@@ -555,6 +596,10 @@ const QueueSongItem = memo(function QueueSongItem({
   onMoveToTop: (targetQueue: QueuedSong[], songId: string, target: 'queue' | 'priority') => void;
   onMoveToBottom: (targetQueue: QueuedSong[], songId: string, target: 'queue' | 'priority') => void;
 }) {
+  const { itemRef, dragHandleRef, isDragging, isAnyDragging, isDropTarget } = useSortableItem(
+    song.id,
+    index
+  );
   const [menuOpen, setMenuOpen] = useState(false);
   const triggerRef = useRef<HTMLButtonElement>(null);
   const handleToggleSongMenu = useCallback((e: React.MouseEvent) => {
@@ -664,8 +709,24 @@ const QueueSongItem = memo(function QueueSongItem({
   const sourceKey = useMemo(() => getSourceKey(song.sourceUrl), [song.sourceUrl]);
 
   return (
-    <div className='overflow-hidden rounded-lg' style={CARD_BG_STYLE}>
-      <div className='group flex items-center gap-3 px-3 py-2'>
+    <div ref={itemRef} className='relative overflow-hidden rounded-lg' style={CARD_BG_STYLE}>
+      {/* Drop target highlight */}
+      {isDropTarget && (
+        <div className='bg-accent/10 pointer-events-none absolute inset-0 z-10 rounded-lg' />
+      )}
+      <div className={`group flex items-center gap-3 px-3 py-2 ${isDragging ? 'opacity-50' : ''}`}>
+        {/* Drag handle */}
+        {canManage && (
+          <button
+            ref={dragHandleRef}
+            type='button'
+            className={`text-faint hover:text-muted shrink-0 cursor-grab rounded opacity-0 transition-opacity active:cursor-grabbing ${isAnyDragging ? 'opacity-100' : 'group-hover:opacity-100'}`}
+            aria-label={`Drag to reorder "${song.nickname ?? song.title}"`}
+          >
+            <DotsSixVerticalIcon size={18} weight='bold' />
+          </button>
+        )}
+
         {/* Index */}
         <span
           className={`w-4 shrink-0 text-right font-mono text-[10px] ${accent ? 'text-accent' : 'text-faint'}`}
