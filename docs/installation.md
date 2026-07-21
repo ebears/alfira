@@ -5,6 +5,7 @@ This guide covers everything you need to set up Alfira for both development and 
 ## Table of Contents
 
 - [Prerequisites](#prerequisites)
+- [Networking & Access](#networking--access)
 - [Discord Application Setup](#discord-application-setup)
 - [Configuration](#configuration)
 - [Development Setup](#development-setup)
@@ -18,11 +19,10 @@ This guide covers everything you need to set up Alfira for both development and 
 
 ### For Production
 
-| Requirement       | Version | Notes                                     |
-| ----------------- | ------- | ----------------------------------------- |
-| Docker            | 20.10+  | With Docker Compose plugin                |
-| Reverse Proxy     | Any     | Caddy (recommended), Nginx, Traefik, etc. |
-| Domain (optional) | —       | For HTTPS/TLS termination                 |
+| Requirement            | Version | Notes                                    |
+| ---------------------- | ------- | ---------------------------------------- |
+| Docker                 | 20.10+  | With Docker Compose plugin               |
+| Reverse proxy + domain | Any     | Only needed for remote multi-user access |
 
 ### For Development
 
@@ -31,6 +31,49 @@ This guide covers everything you need to set up Alfira for both development and 
 | Bun         | 1.3+    | For local development                 |
 | Docker      | 20.10+  | With Docker Compose plugin (optional) |
 | Git         | Any     | For cloning the repository            |
+
+---
+
+## Networking & Access
+
+Alfira's web UI is how you browse your library, manage playlists, and control playback. The bot itself is outbound-only — it connects to Discord's gateway, no incoming ports needed. The networking requirements are purely about who can reach the web UI.
+
+| Who uses the web UI                    | What you need                                                                 |
+| -------------------------------------- | ----------------------------------------------------------------------------- |
+| Just you, same machine                 | Nothing extra — `localhost` works out of the box                              |
+| You, from other devices on your LAN    | Use your machine's LAN IP as the redirect URI                                 |
+| Multiple people, from outside your LAN | A domain, reverse proxy, and TLS (or a tunnel service like Cloudflare Tunnel) |
+
+### Local & LAN Access
+
+If you're the only one using the web UI — or accessing it from other devices on your home network — no reverse proxy or domain is needed.
+
+- **Same machine:** Set `DISCORD_REDIRECT_URI` to `http://localhost:3001/auth/callback`
+- **LAN access:** Set it to `http://<your-lan-ip>:3001/auth/callback` (e.g., `http://192.168.1.100:3001/auth/callback`)
+
+Add the matching URL to your Discord application's redirect URIs in the Developer Portal. Discord allows `localhost` and LAN IPs without TLS.
+
+### Remote Access (for sharing the web UI with others)
+
+If you want other people to use the web UI from outside your network, you'll need a public-facing HTTPS URL. The standard approach is a reverse proxy with automatic TLS:
+
+**Caddy** (recommended) — handles TLS certificates via Let's Encrypt with minimal configuration:
+
+```
+your-domain.com {
+    reverse_proxy localhost:3001
+}
+```
+
+**Cloudflare Tunnel** — if you don't have a domain, Cloudflare Tunnel (`cloudflared`) gives you a public HTTPS URL without DNS or TLS configuration:
+
+```bash
+cloudflared tunnel create alfira
+cloudflared tunnel route dns alfira alfira.example.com  # or skip for a *.cfargotunnel.com URL
+cloudflared tunnel run --url localhost:3001 alfira
+```
+
+Use the resulting URL as your `DISCORD_REDIRECT_URI`.
 
 ---
 
@@ -98,13 +141,13 @@ docker compose up -d
 
 #### Required
 
-| Variable                | Description                       | Example                                 |
-| ----------------------- | --------------------------------- | --------------------------------------- |
-| `DISCORD_CLIENT_ID`     | Discord application client ID     | `123456789012345678`                    |
-| `DISCORD_CLIENT_SECRET` | Discord application client secret | `abc123...`                             |
-| `DISCORD_BOT_TOKEN`     | Discord bot token                 | `MTAwMC4...`                            |
-| `DISCORD_REDIRECT_URI`  | OAuth2 redirect URI               | `https://your-domain.com/auth/callback` |
-| `JWT_SECRET`            | Secret for signing JWT tokens     | `your-secure-random-string`             |
+| Variable                | Description                       | Example                               |
+| ----------------------- | --------------------------------- | ------------------------------------- |
+| `DISCORD_CLIENT_ID`     | Discord application client ID     | `123456789012345678`                  |
+| `DISCORD_CLIENT_SECRET` | Discord application client secret | `abc123...`                           |
+| `DISCORD_BOT_TOKEN`     | Discord bot token                 | `MTAwMC4...`                          |
+| `DISCORD_REDIRECT_URI`  | OAuth2 redirect URI               | `http://localhost:3001/auth/callback` |
+| `JWT_SECRET`            | Secret for signing JWT tokens     | `your-secure-random-string`           |
 
 > **Security:** Use a strong, random `JWT_SECRET`. Generate one with: `openssl rand -hex 32`
 
@@ -131,15 +174,18 @@ docker compose up -d
 
 > **Music sources:** Spotify, Apple Music, and Tidal require credentials to work. Without them, these sources cannot be enabled — their checkboxes will show a warning in the setup wizard and admin settings. YouTube, SoundCloud, and Google Drive work out of the box.
 
-### Reverse Proxy
+### Configuring Your Redirect URI
 
-For use with a reverse proxy, change `DISCORD_REDIRECT_URI` to point to your custom domain:
+Set `DISCORD_REDIRECT_URI` based on how you'll access the web UI:
 
-| Variable               | Local (Docker)                        | Reverse Proxy                           |
-| ---------------------- | ------------------------------------- | --------------------------------------- |
-| `DISCORD_REDIRECT_URI` | `http://localhost:3001/auth/callback` | `https://your-domain.com/auth/callback` |
+| Access                 | Redirect URI                                             |
+| ---------------------- | -------------------------------------------------------- |
+| Same machine           | `http://localhost:3001/auth/callback`                    |
+| LAN                    | `http://192.168.1.100:3001/auth/callback`                |
+| Remote (reverse proxy) | `https://your-domain.com/auth/callback`                  |
+| Remote (tunnel)        | `https://your-tunnel-url.cfargotunnel.com/auth/callback` |
 
-> **Important:** Ensure your redirect URL in the Discord Developer Portal matches exactly. If you changed the exposed port in docker-compose.yml, use that port here.
+> **Important:** The redirect URI you set here must match exactly what you add in the Discord Developer Portal under OAuth2 → Redirects. If you changed the exposed port in docker-compose.yml, use that port.
 
 ### Discord Application Setup
 
@@ -165,9 +211,10 @@ For use with a reverse proxy, change `DISCORD_REDIRECT_URI` to point to your cus
 
 1. Navigate to **OAuth2** → **General**.
 2. Copy the **Client secret** — this is your `DISCORD_CLIENT_SECRET`.
-3. Add your redirect URL:
-   - Local (Docker): `http://localhost:3001/auth/callback`
-   - Reverse Proxy: `https://your-domain.com/auth/callback`
+3. Add your redirect URL (see [Configuring Your Redirect URI](#configuring-your-redirect-uri) above):
+   - Same machine: `http://localhost:3001/auth/callback`
+   - LAN: `http://<your-lan-ip>:3001/auth/callback`
+   - Remote: `https://your-domain.com/auth/callback`
 4. Click **"Save Changes"**.
 
 #### 4. Invite the Bot to Your Server
