@@ -7,7 +7,7 @@
   ],
   "type": "module",
   "scripts": {
-    "dev": "bun run web:build && NODELINK_HOME=.nodelink bun --watch --env-file=.env packages/server/src/index.ts",
+    "dev": "bun run check && bun run web:build && NODELINK_HOME=.nodelink bun --watch --env-file=.env packages/server/src/index.ts",
     "dev:docker": "bun run check && bun run --filter @alfira/server build && docker compose -f docker-compose.dev.yml up --build",
     "web:build": "bun run --filter @alfira/web build",
     "discord:unregister-commands": "bun run packages/server/src/utils/unregisterCommands.ts",
