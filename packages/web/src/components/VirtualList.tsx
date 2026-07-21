@@ -39,6 +39,9 @@ export interface VirtualListProps<T> {
   skeleton: React.ReactNode;
   emptyTitle: string;
   emptyMessage?: string;
+  /** Optional external scroll container ref. When provided, the component
+   *  uses it instead of creating its own. Useful for DnD auto-scroll. */
+  scrollRef?: React.RefObject<HTMLDivElement | null>;
 }
 
 // ---------------------------------------------------------------------------
@@ -62,8 +65,10 @@ function VirtualListInner<T>({
   skeleton,
   emptyTitle,
   emptyMessage,
+  scrollRef: externalScrollRef,
 }: VirtualListProps<T>) {
-  const scrollRef = useRef<HTMLDivElement>(null);
+  const internalScrollRef = useRef<HTMLDivElement>(null);
+  const scrollRef = externalScrollRef ?? internalScrollRef;
   const containerRef = useRef<HTMLDivElement>(null);
 
   // Keep the user-provided getItemKey in a ref so the virtualizer's

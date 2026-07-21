@@ -381,6 +381,10 @@ export function togglePlaylistVisibility(
   return patch(`/api/playlists/${playlistId}/visibility${params}`, { isPrivate });
 }
 
+export function reorderPlaylistSongs(playlistId: string, songIds: string[]): Promise<void> {
+  return patch(`/api/playlists/${playlistId}/reorder`, { songIds });
+}
+
 // ---------------------------------------------------------------------------
 // Player API Functions
 // ---------------------------------------------------------------------------

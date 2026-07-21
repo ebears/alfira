@@ -66,6 +66,10 @@ const PlaylistRemoveSongsSchema = v.object({
   songIds: v.pipe(v.array(v.string()), v.minLength(1), v.maxLength(5000)),
 });
 
+const PlaylistReorderSchema = v.object({
+  songIds: v.pipe(v.array(v.string()), v.minLength(1), v.maxLength(5000)),
+});
+
 // ---------------------------------------------------------------------------
 // GET /api/playlists — paginated list of playlists
 // ---------------------------------------------------------------------------
@@ -790,6 +794,87 @@ async function handleBulkRemoveSongs(
 }
 
 // ---------------------------------------------------------------------------
+// PATCH /api/playlists/:id/reorder — reorder songs in a playlist
+// ---------------------------------------------------------------------------
+async function handleReorderSongs(
+  ctx: RouteContext,
+  request: Request,
+  params: Record<string, string>
+): Promise<Response> {
+  const { id: playlistId } = params;
+  const guards = checkGuards(ctx);
+  if (guards instanceof Response) {
+    return guards;
+  }
+  const { user } = guards;
+
+  const playlist = await requirePlaylist(playlistId, user);
+  if (playlist instanceof Response) {
+    return playlist;
+  }
+
+  // Smart playlists are auto-managed — reject manual reorder
+  if (playlist.tagNameLower) {
+    return json({ error: 'Cannot reorder a smart playlist. It is managed by its tag.' }, 409);
+  }
+
+  let raw: unknown;
+  try {
+    raw = await request.json();
+  } catch {
+    return json({ error: 'Invalid JSON body.' }, 400);
+  }
+
+  const parsed = v.safeParse(PlaylistReorderSchema, raw);
+  if (!parsed.success) {
+    return json({ error: 'songIds must be a non-empty array.' }, 400);
+  }
+
+  const { songIds } = parsed.output;
+
+  // Verify all songIds belong to this playlist and the count matches
+  const existing = await db
+    .select({ songId: playlistSongTable.songId })
+    .from(playlistSongTable)
+    .where(eq(playlistSongTable.playlistId, playlistId));
+
+  const existingIds = new Set(existing.map((e) => e.songId));
+
+  if (songIds.length !== existingIds.size) {
+    return json(
+      {
+        error: `songIds count (${songIds.length}) does not match playlist song count (${existingIds.size}).`,
+      },
+      400
+    );
+  }
+
+  for (const id of songIds) {
+    if (!existingIds.has(id)) {
+      return json({ error: `Song ${id} is not in this playlist.` }, 400);
+    }
+  }
+
+  // Delete all and re-insert with new positions in a transaction
+  await db.transaction(async (tx) => {
+    await tx.delete(playlistSongTable).where(eq(playlistSongTable.playlistId, playlistId));
+
+    const rows = songIds.map((songId, index) => ({
+      playlistId,
+      songId,
+      position: index,
+    }));
+
+    await tx.insert(playlistSongTable).values(rows);
+  });
+
+  const value = await getPlaylistSongCount(playlistId);
+  emitPlaylistUpdated(formatPlaylist(playlist, value));
+
+  return json({ message: 'Playlist reordered.' });
+}
+
+// ---------------------------------------------------------------------------
 export const handlePlaylists = routeTable('/api/playlists', {
   rateLimit: { windowMs: 60_000, maxRequests: 20, bucket: 'playlists-mutations' },
   routes: [
@@ -801,6 +886,7 @@ export const handlePlaylists = routeTable('/api/playlists', {
     ['PATCH', '/:id/visibility', handlePatchVisibility],
     ['GET', '/:id', handleGetPlaylist],
     ['PATCH', '/:id', handlePatchPlaylist],
+    ['PATCH', '/:id/reorder', handleReorderSongs],
     ['DELETE', '/:id', handleDeletePlaylist],
   ],
 });
