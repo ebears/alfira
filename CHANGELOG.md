@@ -46,25 +46,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Added agent operating mode guidelines to AGENTS.md (#720)
 
-## [0.2.2] - 2026-07-19
-
-### Changed
-
-- **Scroll ownership refactored** — Each page now owns its own scroll container instead of a shared `<main>` element, giving pages independent scroll behavior and fixing layout conflicts between the now-playing bar and virtualized lists (#690, #694, #695, #696, #697).
-- **NowPlayingBar in normal flow** — The now-playing bar is no longer fixed-positioned. It sits in the normal document flow at root level, full-width, eliminating layout jank when the queue panel opens and closes (#695, #696).
-- **Virtual list polish** — Spacing tightened and a scroll fade effect added at the bottom of virtualized lists for a cleaner look (#694).
+## [0.2.2] - 2026-07-22
 
 ### Fixed
 
-- **Portal menu flash** — Context menus no longer flash at the top-left corner of the viewport on Chromium before positioning (#695).
-- **Queue panel close jank** — Eliminated visual jank when closing the queue panel, and fixed a grid view layout flash on mount (#697).
-- **Page padding restored** — Full page padding restored across all virtualized views after the scroll refactor. Bottom padding removed from virtualized page wrappers and end spacers removed from VirtualList in favor of explicit page-level padding (#696).
-- **Horizontal scrollbar** — List item animation overflow is now clipped, preventing an unwanted horizontal scrollbar from appearing (#696).
-- **Flexbox fill** — Virtualized views now use flexbox fill instead of hardcoded `maxHeight`, adapting properly to available space (#690).
+- Eliminate queue panel close jank and grid view layout flash (#697)
+- Fix portal menu flash at top-left on Chromium
+- Fix virtualized list padding, spacing, and scroll overflow across all views
+- Fix NowPlayingBar positioning: full-width, normal flow instead of fixed
 
-### Docs
+### Changed
 
-- Updated release workflow documentation with version bump and release notes steps (#693).
+- Move scroll ownership from `main` to individual pages
+- Tighten virtual list spacing and add scroll fade
+- Update release workflow documentation
+
+### Dependencies
+
+- Bumped `tailwindcss` from 4.3.2 to 4.3.3
+- Bumped `@tailwindcss/cli` from 4.3.2 to 4.3.3
 
 ## [0.2.1] - 2026-07-19
 
