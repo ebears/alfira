@@ -22,6 +22,7 @@ The bot and API run in a **single Bun process**. For detailed architecture (star
 | Frontend     | React 19 + Tailwind CSS 4                     |
 | Linting      | oxlint + oxfmt                                |
 | Typechecking | oxlint (--type-aware --type-check, uses tsgo) |
+| Testing      | Bun's built-in test runner                    |
 
 ## Design Principles
 
@@ -33,7 +34,7 @@ Every decision in this project traces back to one of these. The agent should fol
 - **Web UI as primary interface** — The Discord bot is the playback engine; the web app is the control plane. This avoids Discord's rate limits and UX constraints.
 - **Audio is audio — no assumptions about content** — Works equally as a music bot or tabletop audio player. The data model (songs, playlists, tags) is content-type-agnostic: a pop song and an hour-long dungeon ambience are the same shape.
 - **Single source of truth** — Every concept, pattern, and piece of knowledge has one canonical home. Before creating something new, check if it already exists or can be extended. If nothing fits and your change would duplicate what already exists across files, extract the commonality into a shared location first. This applies as much to UI patterns (one toast, one button variant, one data-fetching hook) as it does to types and utilities. Copy-pasting is a last resort, not a first move.
-- **Strict linting — zero warnings, zero excuses** — The linter is configured for maximum correctness signal with minimal noise. Warnings are errors (`--deny-warnings`). Stale disable directives are errors (`reportUnusedDisableDirectives`). Type-aware rules run everywhere. Every PR must pass `bun run check` with zero diagnostics. This isn't pedantry — it's a quality ratchet that prevents drift and catches real bugs before they reach production.
+- **Strict linting — zero warnings, zero excuses** — The linter is configured for maximum correctness signal with minimal noise. Warnings are errors (`--deny-warnings`). Stale disable directives are errors (`reportUnusedDisableDirectives`). Type-aware rules run everywhere. Every PR must pass `bun run check` (lint, format, typecheck, and tests) with zero diagnostics. This isn't pedantry — it's a quality ratchet that prevents drift and catches real bugs before they reach production.
 
 ## Development Commands
 
@@ -44,8 +45,11 @@ bun run dev
 # Build the web UI (needed after web/src changes before docker compose restart)
 bun run web:build
 
-# Lint + typecheck + format (run before committing)
+# Lint + typecheck + format + tests (run before committing)
 bun run check
+
+# Run tests only
+bun test
 
 # Typecheck only
 bun run typecheck
@@ -178,7 +182,7 @@ refactor(server): extract shared audio filter builders
 
 ### Before Committing
 
-Always run `bun run check` and resolve any lint/format issues before committing.
+Always run `bun run check` and resolve any lint, format, or test failures before committing.
 
 ## Agent Operating Mode
 

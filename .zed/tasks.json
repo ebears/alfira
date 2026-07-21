@@ -6,6 +6,12 @@
     "use_new_terminal": true
   },
   {
+    "label": "test",
+    "command": "bun test",
+    "cwd": "$ZED_WORKTREE_ROOT",
+    "use_new_terminal": true
+  },
+  {
     "label": "check",
     "command": "bun run check",
     "cwd": "$ZED_WORKTREE_ROOT",
