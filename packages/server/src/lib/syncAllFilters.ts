@@ -59,15 +59,19 @@ export async function syncAllFilters(): Promise<void> {
       release: row.compressorRelease,
       gain: row.compressorGain,
     }).compressor;
+  } else {
+    filters.compressor = null;
   }
 
-  // Equalizer
+  // Equalizer — must be [] (not null) to clear, per Lavalink v4 spec.
   if (row.eqEnabled) {
     const bands = Array.from({ length: 15 }, (_, i) => {
       const key = `eqBand${i}` as keyof typeof row;
       return row[key] as number;
     });
     filters.equalizer = buildEqualizerFilter(bands);
+  } else {
+    filters.equalizer = [];
   }
 
   // Karaoke
@@ -78,6 +82,8 @@ export async function syncAllFilters(): Promise<void> {
       filterBand: row.karaokeFilterBand,
       filterWidth: row.karaokeFilterWidth,
     }).karaoke;
+  } else {
+    filters.karaoke = null;
   }
 
   // Timescale
@@ -87,6 +93,8 @@ export async function syncAllFilters(): Promise<void> {
       pitch: row.timescalePitch,
       rate: row.timescaleRate,
     }).timescale;
+  } else {
+    filters.timescale = null;
   }
 
   // Tremolo
@@ -95,6 +103,8 @@ export async function syncAllFilters(): Promise<void> {
       frequency: row.tremoloFrequency,
       depth: row.tremoloDepth,
     }).tremolo;
+  } else {
+    filters.tremolo = null;
   }
 
   // Vibrato
@@ -103,6 +113,8 @@ export async function syncAllFilters(): Promise<void> {
       frequency: row.vibratoFrequency,
       depth: row.vibratoDepth,
     }).vibrato;
+  } else {
+    filters.vibrato = null;
   }
 
   // Rotation
@@ -110,6 +122,8 @@ export async function syncAllFilters(): Promise<void> {
     filters.rotation = buildRotationFilter({
       rotationHz: row.rotationHz,
     }).rotation;
+  } else {
+    filters.rotation = null;
   }
 
   // Distortion
@@ -124,6 +138,8 @@ export async function syncAllFilters(): Promise<void> {
       offset: row.distortionOffset,
       scale: row.distortionScale,
     }).distortion;
+  } else {
+    filters.distortion = null;
   }
 
   // Channel mix
@@ -134,6 +150,8 @@ export async function syncAllFilters(): Promise<void> {
       rightToLeft: row.channelMixRightToLeft,
       rightToRight: row.channelMixRightToRight,
     }).channelMix;
+  } else {
+    filters.channelMix = null;
   }
 
   // Low pass
@@ -141,6 +159,8 @@ export async function syncAllFilters(): Promise<void> {
     filters.lowPass = buildLowPassFilter({
       smoothing: row.lowPassSmoothing,
     }).lowPass;
+  } else {
+    filters.lowPass = null;
   }
 
   try {
