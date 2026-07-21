@@ -396,6 +396,17 @@ async function handleDeleteSong(
   return new Response(null, { status: 204 });
 }
 
+const SongPatchSchema = v.partial(
+  v.object({
+    nickname: v.unknown(),
+    artist: v.unknown(),
+    album: v.unknown(),
+    artwork: v.unknown(),
+    tags: v.unknown(),
+    volumeBoost: v.unknown(),
+  })
+);
+
 // ---------------------------------------------------------------------------
 // PATCH /api/songs/:id — update song fields. Admin only.
 // ---------------------------------------------------------------------------
@@ -417,7 +428,12 @@ async function handlePatchSong(
     return json({ error: 'Invalid JSON body.' }, 400);
   }
 
-  const body = raw as Record<string, unknown>;
+  const parsed = v.safeParse(SongPatchSchema, raw);
+  if (!parsed.success) {
+    return json({ error: 'Invalid request body.', details: v.flatten(parsed.issues) }, 400);
+  }
+
+  const body = parsed.output;
 
   const [existing] = await db.select().from(songTable).where(eq(songTable.id, id)).limit(1);
   if (!existing) {
@@ -427,7 +443,7 @@ async function handlePatchSong(
   const data: Record<string, unknown> = {};
 
   // Nickname
-  if ('nickname' in body) {
+  if (body.nickname !== undefined) {
     const result = validateNickname(body.nickname);
     if (!result.ok) {
       return result.response;
@@ -436,17 +452,17 @@ async function handlePatchSong(
   }
 
   // Artist
-  if ('artist' in body) {
+  if (body.artist !== undefined) {
     data.artist = validateOptionalString(body.artist);
   }
 
   // Album
-  if ('album' in body) {
+  if (body.album !== undefined) {
     data.album = validateOptionalString(body.album);
   }
 
   // Artwork
-  if ('artwork' in body) {
+  if (body.artwork !== undefined) {
     const artworkResult = validateArtworkUrl(body.artwork);
     if (!artworkResult.ok) {
       return artworkResult.response;
@@ -459,7 +475,7 @@ async function handlePatchSong(
   const oldTagsLower = new Set((existing.tags ?? []).map((t: string) => t.toLowerCase()));
   let processedTags: string[] | undefined;
 
-  if ('tags' in body) {
+  if (body.tags !== undefined) {
     const tagsResult = validateTags(body.tags);
     if (!tagsResult.ok) {
       return tagsResult.response;
@@ -470,7 +486,7 @@ async function handlePatchSong(
 
   // Volume boost
   let processedVolumeBoost: number | null | undefined;
-  if ('volumeBoost' in body) {
+  if (body.volumeBoost !== undefined) {
     const volumeResult = validateVolumeBoost(body.volumeBoost);
     if (!volumeResult.ok) {
       return volumeResult.response;

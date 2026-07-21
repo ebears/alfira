@@ -145,6 +145,7 @@ class LavalinkSocket extends EventEmitter<LavalinkEvents> {
     headers['Client-Name'] = 'Alfira';
 
     // Bun extends WebSocket constructor with { headers } option
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion
     const ws = new WebSocket(this.url, { headers } as never);
     this.ws = ws;
 
@@ -156,6 +157,7 @@ class LavalinkSocket extends EventEmitter<LavalinkEvents> {
     ws.addEventListener('message', (event: MessageEvent) => {
       let msg: LavalinkMessage;
       try {
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion
         msg = JSON.parse(event.data as string) as LavalinkMessage;
       } catch {
         logger.warn({ raw: String(event.data).slice(0, 200) }, 'Lavalink: unparseable message');

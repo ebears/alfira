@@ -49,6 +49,7 @@ export async function fetchGuildRoles(guildId: string): Promise<SetupRole[]> {
       return [];
     }
 
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion
     const roles = (await res.json()) as {
       id: string;
       name: string;

@@ -38,7 +38,9 @@ async function deleteCommand(
       const errText = await res.text();
       let retryAfter = 1000; // default 1s
       try {
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion
         const err = JSON.parse(errText) as Record<string, unknown>;
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion
         retryAfter = Math.ceil(((err.retry_after as number | undefined) ?? 1) * 1000) + 100; // add buffer
       } catch {
         // ignore parse errors
@@ -81,6 +83,7 @@ export async function unregisterStaleCommands(): Promise<void> {
     return;
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion
   const commands = (await res.json()) as { id: string; name: string }[];
 
   if (commands.length === 0) {
@@ -104,6 +107,7 @@ export async function unregisterStaleCommands(): Promise<void> {
   );
 
   if (globalRes.ok) {
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion
     const globalCommands = (await globalRes.json()) as { id: string; name: string }[];
     for (const cmd of globalCommands) {
       await deleteCommand(

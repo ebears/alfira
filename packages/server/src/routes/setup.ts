@@ -61,6 +61,7 @@ async function handleGetStatus(
           headers: botHeaders(),
         });
         if (res.ok) {
+          // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion
           const guild = (await res.json()) as { name: string };
           guildName = guild.name;
         }
@@ -107,6 +108,7 @@ async function handleGetGuilds(
       return json({ error: 'Could not fetch guild list from Discord.' }, 502);
     }
 
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion
     const guilds = (await res.json()) as {
       id: string;
       name: string;
@@ -186,6 +188,7 @@ async function handleGetChannels(
       return json({ error: 'Could not fetch channels from Discord.' }, 502);
     }
 
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion
     const channels = (await res.json()) as {
       id: string;
       name: string;
@@ -233,6 +236,7 @@ async function handlePostComplete(
   };
 
   try {
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion
     body = (await request.json()) as typeof body;
   } catch {
     return json({ error: 'Invalid JSON body.' }, 400);

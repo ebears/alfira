@@ -45,6 +45,7 @@ const prevVoiceChannel = new Map<string, string | null>();
 // ---------------------------------------------------------------------------
 
 function handleVoiceStateUpdate(data: unknown): void {
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion
   const d = data as {
     guild_id: string;
     user_id: string;
@@ -124,11 +125,13 @@ function handleVoiceStateUpdate(data: unknown): void {
 }
 
 function handleVoiceServerUpdate(data: unknown): void {
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion
   const d = data as { guild_id: string; token: string; endpoint: string };
   setPendingConnectionDetails(d.guild_id, d.token, d.endpoint);
 }
 
 function handleReady(data: unknown): void {
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion
   const ready = data as { user: { id: string; username: string } };
   setBotUserId(ready.user.id);
   logger.info(`Bot logged in as ${ready.user.username}`);

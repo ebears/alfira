@@ -257,8 +257,7 @@ export default defineConfig({
     // type-aware safety — tsgolint rules that catch runtime bugs
     // -----------------------------------------------------------------------
     // `x as Type` assertion that contradicts known types — silent type lie
-    // TODO: fix 148 violations, then change to 'warn'
-    '@typescript-eslint/no-unsafe-type-assertion': 'off',
+    '@typescript-eslint/no-unsafe-type-assertion': 'warn',
     // String coercion of an object without .toString() — produces "[object Object]"
     '@typescript-eslint/no-base-to-string': 'warn',
     // `for (const k in arr)` — iterates string indices, a classic footgun
@@ -397,6 +396,14 @@ export default defineConfig({
         'unicorn/prefer-dom-node-dataset': 'off',
         'unicorn/prefer-keyboard-event-key': 'off',
         'unicorn/prefer-modern-dom-apis': 'off',
+      },
+    },
+
+    // Web: no-unsafe-type-assertion deferred to a follow-up PR
+    {
+      files: ['packages/web/**'],
+      rules: {
+        '@typescript-eslint/no-unsafe-type-assertion': 'off',
       },
     },
 
