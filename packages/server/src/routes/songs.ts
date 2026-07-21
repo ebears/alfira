@@ -3,7 +3,7 @@ import * as v from 'valibot';
 
 import { getGuildId } from '../lib/config';
 import { type RouteContext } from '../lib/context';
-import { resolveDisplayNames } from '../lib/displayName';
+import { getUserDisplayName, resolveDisplayNames } from '../lib/displayName';
 import { json } from '../lib/json';
 import { parsePagination } from '../lib/pagination';
 import { checkGuards } from '../lib/routeGuards';
@@ -127,8 +127,13 @@ async function handleBulkTag(ctx: RouteContext, request: Request): Promise<Respo
   // Re-fetch updated songs and emit events
   const updatedSongs = await db.select().from(songTable).where(inArray(songTable.id, updatedIds));
 
+  // Resolve display names before emitting so the frontend doesn't lose them
+  const bulkTagNameMap = await resolveDisplayNames(updatedSongs);
   for (const s of updatedSongs) {
-    emitSongUpdated(formatSong(s));
+    emitSongUpdated({
+      ...formatSong(s),
+      addedByDisplayName: bulkTagNameMap.get(s.addedBy) ?? s.addedBy,
+    });
   }
 
   // If tags changed, re-sync any smart playlists tracking affected tags
@@ -248,8 +253,13 @@ async function handleBulkEdit(ctx: RouteContext, request: Request): Promise<Resp
   // Re-fetch updated songs and emit events
   const updatedSongs = await db.select().from(songTable).where(inArray(songTable.id, ids));
 
+  // Resolve display names before emitting so the frontend doesn't lose them
+  const bulkEditNameMap = await resolveDisplayNames(updatedSongs);
   for (const s of updatedSongs) {
-    emitSongUpdated(formatSong(s));
+    emitSongUpdated({
+      ...formatSong(s),
+      addedByDisplayName: bulkEditNameMap.get(s.addedBy) ?? s.addedBy,
+    });
   }
 
   // If tags changed, re-sync any smart playlists tracking affected tags
@@ -261,10 +271,12 @@ async function handleBulkEdit(ctx: RouteContext, request: Request): Promise<Resp
   // in the queue / now playing.
   const bulkPlayer = getPlayer(getGuildId());
   if (bulkPlayer) {
-    if (processedVolumeBoost != null) {
+    // Use !== undefined so we handle explicit null (clear boost → 0)
+    // as well as explicit 0.
+    if (processedVolumeBoost !== undefined) {
       const currentSong = bulkPlayer.getCurrentSong();
       if (currentSong && ids.includes(currentSong.id)) {
-        bulkPlayer.updateVolumeBoost(processedVolumeBoost);
+        bulkPlayer.updateVolumeBoost(processedVolumeBoost ?? 0);
       }
     }
     const bulkFields: Record<string, unknown> = {};
@@ -505,7 +517,11 @@ async function handlePatchSong(
     return json({ error: 'Failed to update song.' }, 500);
   }
 
-  emitSongUpdated(formatSong(updatedSong));
+  const patchedDisplayName = await getUserDisplayName(updatedSong.addedBy);
+  emitSongUpdated({
+    ...formatSong(updatedSong),
+    addedByDisplayName: patchedDisplayName,
+  });
 
   // If tags changed, re-sync any smart playlists tracking affected tags
   if (processedTags) {
@@ -518,11 +534,13 @@ async function handlePatchSong(
   // regular queue) so the UI reflects metadata changes immediately.
   const player = getPlayer(getGuildId());
   if (player) {
-    // Volume boost also needs live audio update
-    if (processedVolumeBoost != null) {
+    // Volume boost also needs live audio update.
+    // Use !== undefined so we handle explicit null (clear boost → 0)
+    // as well as explicit 0.
+    if (processedVolumeBoost !== undefined) {
       const currentSong = player.getCurrentSong();
       if (currentSong?.id === id) {
-        player.updateVolumeBoost(processedVolumeBoost);
+        player.updateVolumeBoost(processedVolumeBoost ?? 0);
       }
     }
 
