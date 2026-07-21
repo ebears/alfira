@@ -9,7 +9,17 @@ export default defineConfig({
 
   ignorePatterns: ['.pi/**', '.zed/**'],
 
-  plugins: ['react', 'react-perf', 'jsx-a11y', 'typescript', 'promise', 'import'],
+  plugins: [
+    'react',
+    'react-perf',
+    'jsx-a11y',
+    'typescript',
+    'promise',
+    'import',
+    'unicorn',
+    'oxc',
+    'eslint',
+  ],
 
   rules: {
     // -----------------------------------------------------------------------
@@ -61,7 +71,7 @@ export default defineConfig({
     'no-unsafe-finally': 'error',
     'no-unsafe-optional-chaining': 'error',
     'no-unused-labels': 'error',
-    'no-unused-vars': 'warn',
+    '@typescript-eslint/no-unused-vars': 'warn',
     'use-isnan': 'error',
     'for-direction': 'error',
     'require-yield': 'error',
@@ -114,7 +124,7 @@ export default defineConfig({
     'no-dupe-class-members': 'error',
     'no-dupe-keys': 'error',
     'no-empty': 'warn',
-    '@typescript-eslint/no-explicit-any': 'warn',
+    '@typescript-eslint/no-explicit-any': 'error',
     'no-fallthrough': 'error',
     'no-func-assign': 'error',
     'no-global-assign': 'error',
@@ -188,8 +198,9 @@ export default defineConfig({
     // style
     // -----------------------------------------------------------------------
     curly: 'error',
-    // a ? b : c ? d : e — unreadable; use if/else or extract
-    'unicorn/no-nested-ternary': 'warn',
+    // a ? b : c ? d : e — unreadable; use if/else or extract.
+    // NOTE: oxfmt strips parens from nested ternaries, so this rule is off.
+    'unicorn/no-nested-ternary': 'off',
     'no-useless-concat': 'warn',
     'object-shorthand': 'warn',
     '@typescript-eslint/array-type': 'warn',
@@ -252,6 +263,8 @@ export default defineConfig({
     '@typescript-eslint/no-unsafe-return': 'warn',
     // Conditions that are always truthy/falsy — dead code detector
     '@typescript-eslint/no-unnecessary-condition': 'warn',
+    // void expressions (arr.push, el.remove) used where a value is expected
+    '@typescript-eslint/no-confusing-void-expression': 'warn',
 
     // -----------------------------------------------------------------------
     // type-aware safety — tsgolint rules that catch runtime bugs
@@ -340,6 +353,8 @@ export default defineConfig({
     'no-console': 'warn',
     // Set.has(x) over arr.includes(x) — O(1) vs O(n), better signaling
     'unicorn/prefer-set-has': 'warn',
+    // Set.size / Map.size over .length — correctness
+    'unicorn/prefer-set-size': 'warn',
 
     // -----------------------------------------------------------------------
     // modern JS/TS — prefer modern, idiomatic APIs
@@ -376,6 +391,13 @@ export default defineConfig({
     'unicorn/prefer-keyboard-event-key': 'warn',
     // DOM: el.replaceWith() over parent.replaceChild()
     'unicorn/prefer-modern-dom-apis': 'warn',
+    // Number.isNaN() over isNaN(), Number.isFinite() over isFinite(), etc.
+    'unicorn/prefer-number-properties': 'warn',
+    // Enforce kebab-case, PascalCase, or camelCase filenames
+    'unicorn/filename-case': [
+      'warn',
+      { cases: { kebabCase: true, pascalCase: true, camelCase: true } },
+    ],
   },
 
   overrides: [
@@ -617,6 +639,24 @@ export default defineConfig({
       files: ['packages/web/src/hooks/useSocket.ts'],
       rules: {
         'non-nullable-type-assertion-style': 'off',
+      },
+    },
+
+    // React useEffect callbacks legitimately return cleanup functions.
+    // consistent-return can't distinguish React's void | Destructor contract.
+    {
+      files: ['packages/web/**'],
+      rules: {
+        '@typescript-eslint/consistent-return': 'off',
+      },
+    },
+
+    // Bun WebSocket upgrade: return; after server.upgrade() exits the fetch handler
+    // without producing a Response — correct Bun pattern, not a missing return.
+    {
+      files: ['packages/server/src/index.ts'],
+      rules: {
+        '@typescript-eslint/consistent-return': 'off',
       },
     },
   ],

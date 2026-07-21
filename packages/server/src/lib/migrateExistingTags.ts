@@ -49,8 +49,8 @@ export async function runTagMigration(): Promise<{ normalized: number; errors: n
           .where(sql`id = ${song.id}`);
         normalized++;
       }
-    } catch (err) {
-      logger.error({ songId: song.id, err }, 'Error normalizing tags');
+    } catch (error) {
+      logger.error({ songId: song.id, error }, 'Error normalizing tags');
       errors++;
     }
   }
@@ -64,8 +64,8 @@ if (import.meta.filename.includes('migrateExistingTags')) {
   void (async () => {
     try {
       await runTagMigration();
-    } catch (err) {
-      logger.fatal(err, 'Tag migration failed');
+    } catch (error) {
+      logger.fatal(error, 'Tag migration failed');
       process.exit(1);
     }
   })();

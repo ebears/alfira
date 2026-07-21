@@ -47,7 +47,7 @@ export const PlaylistRow = memo(
       <Card
         hoverable
         animate
-        className='rounded-xl flex items-center gap-3 md:gap-4 px-4 md:px-5 py-3.5 md:py-4 cursor-pointer group'
+        className='group flex cursor-pointer items-center gap-3 rounded-xl px-4 py-3.5 md:gap-4 md:px-5 md:py-4'
         style={cardStyle}
         data-playlist-id={dataPlaylistId}
         onClick={onClick}
@@ -56,27 +56,27 @@ export const PlaylistRow = memo(
         tabIndex={0}
       >
         {/* Cover art grid or fallback icon */}
-        <div className='w-16 h-16 md:w-20 md:h-20 rounded-xl overflow-hidden clay-flat shrink-0'>
+        <div className='clay-flat h-16 w-16 shrink-0 overflow-hidden rounded-xl md:h-20 md:w-20'>
           {hasArtwork ? (
-            <div className='grid grid-cols-2 grid-rows-2 w-full h-full'>
+            <div className='grid h-full w-full grid-cols-2 grid-rows-2'>
               {cells.map((url, i) => (
                 // eslint-disable-next-line react/no-array-index-key -- cells are always exactly 4, never reorder
-                <div key={i} className='overflow-hidden bg-elevated'>
-                  <ArtworkImage src={url ?? undefined} alt='' className='w-full h-full' />
+                <div key={i} className='bg-elevated overflow-hidden'>
+                  <ArtworkImage src={url ?? undefined} alt='' className='h-full w-full' />
                 </div>
               ))}
             </div>
           ) : (
-            <div className='w-full h-full bg-elevated flex items-center justify-center'>
+            <div className='bg-elevated flex h-full w-full items-center justify-center'>
               <PlaylistIcon size={32} weight='duotone' className='text-accent' />
             </div>
           )}
         </div>
 
         {/* Info */}
-        <div className='flex-1 min-w-0'>
+        <div className='min-w-0 flex-1'>
           <div className='flex items-center gap-2'>
-            <p className='font-body font-medium text-fg transition-colors duration-150'>
+            <p className='font-body text-fg font-medium transition-colors duration-150'>
               {playlist.name}
             </p>
             {playlist.isPrivate && (
@@ -93,7 +93,7 @@ export const PlaylistRow = memo(
               </span>
             )}
           </div>
-          <p className='font-mono text-xs text-muted mt-0.5'>
+          <p className='text-muted mt-0.5 font-mono text-xs'>
             {count} {count === 1 ? 'song' : 'songs'}
           </p>
         </div>
@@ -101,7 +101,7 @@ export const PlaylistRow = memo(
         <CaretRightIcon
           size={18}
           weight='duotone'
-          className='text-faint group-hover:text-muted transition-colors duration-150 md:w-4 md:h-4'
+          className='text-faint group-hover:text-muted transition-colors duration-150 md:h-4 md:w-4'
         />
       </Card>
     );

@@ -363,8 +363,8 @@ async function handleCreateRequest(ctx: RouteContext, request: Request): Promise
         void (async () => {
           try {
             await sendRequestNotification('approved', formatRequest(reqRow), user, ctx);
-          } catch (err) {
-            logger.warn({ err }, 'Failed to send playlist auto-approve notification');
+          } catch (error) {
+            logger.warn({ error }, 'Failed to send playlist auto-approve notification');
           }
         })();
       }
@@ -518,8 +518,8 @@ async function handleCreateRequest(ctx: RouteContext, request: Request): Promise
       void (async () => {
         try {
           await sendRequestNotification('approved', formatRequest(reqRow), user, ctx);
-        } catch (err) {
-          logger.warn({ err }, 'Failed to send auto-approve notification');
+        } catch (error) {
+          logger.warn({ error }, 'Failed to send auto-approve notification');
         }
       })();
     }
@@ -528,8 +528,8 @@ async function handleCreateRequest(ctx: RouteContext, request: Request): Promise
     if (notifyDm) {
       try {
         await sendRequestDm(user.discordId, 'approved', metadata.title);
-      } catch (err) {
-        logger.warn({ err }, 'Failed to send auto-approve DM');
+      } catch (error) {
+        logger.warn({ error }, 'Failed to send auto-approve DM');
       }
     }
 
@@ -611,7 +611,7 @@ async function handleGetRequests(ctx: RouteContext, request: Request): Promise<R
       .where(where),
   ]);
 
-  const total = parseInt(String(countResult[0]?.count ?? 0), 10);
+  const total = Number.parseInt(String(countResult[0]?.count ?? 0), 10);
 
   // Resolve display names for requesters
   const nameMap = await resolveDisplayNames(requests.map((r) => ({ addedBy: r.requestedBy })));
@@ -694,8 +694,8 @@ async function handlePatchRequest(
     void (async () => {
       try {
         await sendRequestNotification('denied', formatted, user, ctx);
-      } catch (err) {
-        logger.warn({ err }, 'Failed to send denied notification');
+      } catch (error) {
+        logger.warn({ error }, 'Failed to send denied notification');
       }
     })();
 
@@ -703,8 +703,8 @@ async function handlePatchRequest(
     if (existing.notifyDm) {
       try {
         await sendRequestDm(existing.requestedBy, 'denied', existing.title);
-      } catch (err) {
-        logger.warn({ err }, 'Failed to send denied DM');
+      } catch (error) {
+        logger.warn({ error }, 'Failed to send denied DM');
       }
     }
 
@@ -770,8 +770,8 @@ async function handlePatchRequest(
     if (existing.notifyDm) {
       try {
         await sendRequestDm(existing.requestedBy, 'approved', existing.title);
-      } catch (err) {
-        logger.warn({ err }, 'Failed to send approved DM');
+      } catch (error) {
+        logger.warn({ error }, 'Failed to send approved DM');
       }
     }
 
@@ -786,8 +786,8 @@ async function handlePatchRequest(
     void (async () => {
       try {
         await sendRequestNotification('approved', formatted, user, ctx);
-      } catch (err) {
-        logger.warn({ err }, 'Failed to send playlist approved notification');
+      } catch (error) {
+        logger.warn({ error }, 'Failed to send playlist approved notification');
       }
     })();
 
@@ -835,8 +835,8 @@ async function handlePatchRequest(
   if (existing.notifyDm) {
     try {
       await sendRequestDm(existing.requestedBy, 'approved', existing.title);
-    } catch (err) {
-      logger.warn({ err }, 'Failed to send approved DM');
+    } catch (error) {
+      logger.warn({ error }, 'Failed to send approved DM');
     }
   }
 
@@ -851,8 +851,8 @@ async function handlePatchRequest(
   void (async () => {
     try {
       await sendRequestNotification('approved', formatted, user, ctx);
-    } catch (err) {
-      logger.warn({ err }, 'Failed to send approved notification');
+    } catch (error) {
+      logger.warn({ error }, 'Failed to send approved notification');
     }
   })();
 

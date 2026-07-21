@@ -93,7 +93,7 @@ const PlayerOverrideContext = createContext<(elapsed: number | undefined) => voi
 export function PlayerProvider({ children }: { children: React.ReactNode }) {
   const [state, setState] = useState<QueueState>(EMPTY_STATE);
   const [loading, setLoading] = useState(true);
-  const [overrideElapsed, setOverrideElapsed] = useState<number | undefined>(undefined);
+  const [overrideElapsed, setOverrideElapsed] = useState<number | undefined>();
   // Initialize the WebSocket connection (singleton, safe to call on every render).
   useSocket();
 

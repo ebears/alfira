@@ -38,45 +38,51 @@ export const RequestCard = memo(function RequestCard({
     : (req.artworkUrl ?? req.thumbnailUrl);
   const dateLabel = new Date(req.createdAt).toLocaleDateString();
 
-  const handleCancel = useCallback(() => onCancel(req.id), [onCancel, req.id]);
-  const handleApprove = useCallback(() => onApprove(req.id), [onApprove, req.id]);
-  const handleDeny = useCallback(() => onDeny(req.id), [onDeny, req.id]);
+  const handleCancel = useCallback(() => {
+    onCancel(req.id);
+  }, [onCancel, req.id]);
+  const handleApprove = useCallback(() => {
+    onApprove(req.id);
+  }, [onApprove, req.id]);
+  const handleDeny = useCallback(() => {
+    onDeny(req.id);
+  }, [onDeny, req.id]);
 
   return (
-    <Card className='rounded-xl flex items-center gap-4 p-4'>
+    <Card className='flex items-center gap-4 rounded-xl p-4'>
       {/* Thumbnail */}
       {thumbnailUrl ? (
         <ArtworkImage
           src={thumbnailUrl}
           alt=''
-          className='w-14 h-14 rounded-lg shrink-0 border border-border'
+          className='border-border h-14 w-14 shrink-0 rounded-lg border'
         />
       ) : (
-        <div className='w-14 h-14 rounded-lg bg-muted/20 shrink-0 flex items-center justify-center'>
-          <span className='text-muted text-xs font-mono'>{isPlaylist ? 'PL' : 'TR'}</span>
+        <div className='bg-muted/20 flex h-14 w-14 shrink-0 items-center justify-center rounded-lg'>
+          <span className='text-muted font-mono text-xs'>{isPlaylist ? 'PL' : 'TR'}</span>
         </div>
       )}
 
       {/* Info */}
-      <div className='flex-1 min-w-0'>
-        <p className='font-body text-sm text-fg truncate'>{req.title}</p>
-        <div className='flex items-center gap-1.5 mt-0.5'>
+      <div className='min-w-0 flex-1'>
+        <p className='font-body text-fg truncate text-sm'>{req.title}</p>
+        <div className='mt-0.5 flex items-center gap-1.5'>
           {req.sourceName && req.sourceName !== 'playlist' && (
             <SourceIcon sourceKey={req.sourceName} />
           )}
-          <span className='font-mono text-[10px] text-muted'>{formatDuration(req.duration)}</span>
+          <span className='text-muted font-mono text-[10px]'>{formatDuration(req.duration)}</span>
           {isPlaylist && req.playlistData && (
-            <span className='font-mono text-[10px] text-muted'>
+            <span className='text-muted font-mono text-[10px]'>
               · {req.playlistData.videoCount} tracks
             </span>
           )}
-          <span className='font-mono text-[10px] text-muted'>
+          <span className='text-muted font-mono text-[10px]'>
             · {req.requestedByDisplayName ?? req.requestedBy}
           </span>
-          <span className='font-mono text-[10px] text-faint'>· {dateLabel}</span>
+          <span className='text-faint font-mono text-[10px]'>· {dateLabel}</span>
         </div>
         {!isPending && req.reviewedBy && (
-          <p className='font-mono text-[10px] text-muted mt-0.5'>
+          <p className='text-muted mt-0.5 font-mono text-[10px]'>
             Reviewed {req.closedAt ? new Date(req.closedAt).toLocaleDateString() : ''}
           </p>
         )}
@@ -84,7 +90,7 @@ export const RequestCard = memo(function RequestCard({
 
       {/* Status badge */}
       <span
-        className={`px-2 py-0.5 rounded-full text-[10px] font-mono uppercase border shrink-0 ${
+        className={`shrink-0 rounded-full border px-2 py-0.5 font-mono text-[10px] uppercase ${
           statusColors[req.status] ?? 'bg-muted/10 text-muted border-muted/20'
         }`}
       >
@@ -93,7 +99,7 @@ export const RequestCard = memo(function RequestCard({
 
       {/* Actions */}
       {isPending && (
-        <div className='flex items-center gap-2 shrink-0'>
+        <div className='flex shrink-0 items-center gap-2'>
           {isOwn && (
             <Button
               variant='inherit'

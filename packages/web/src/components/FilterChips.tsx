@@ -37,13 +37,13 @@ const FilterTagChip = memo(function FilterTagChip({ tag, onRemove }: FilterTagCh
 
   return (
     <span
-      className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-medium whitespace-nowrap select-none ${colors.bg} ${colors.text}`}
+      className={`inline-flex items-center gap-1 rounded px-2 py-0.5 text-[11px] font-medium whitespace-nowrap select-none ${colors.bg} ${colors.text}`}
     >
       <TagIcon size={11} weight='fill' />
       <span>{tag}</span>
       <button
         type='button'
-        className='ml-0.5 cursor-pointer rounded-full p-px hover:bg-black/10 dark:hover:bg-white/10 transition-colors'
+        className='ml-0.5 cursor-pointer rounded-full p-px transition-colors hover:bg-black/10 dark:hover:bg-white/10'
         onClick={handleRemove}
         aria-label={`Remove tag filter: ${tag}`}
       >
@@ -71,12 +71,12 @@ const FilterSourceChip = memo(function FilterSourceChip({
   );
 
   return (
-    <span className='inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-medium whitespace-nowrap select-none bg-elevated text-muted border border-border/50'>
+    <span className='bg-elevated text-muted border-border/50 inline-flex items-center gap-1 rounded border px-2 py-0.5 text-[11px] font-medium whitespace-nowrap select-none'>
       <SourceIcon sourceKey={source} />
       <span>{SOURCE_LABELS[source] ?? source}</span>
       <button
         type='button'
-        className='ml-0.5 cursor-pointer rounded-full p-px hover:bg-black/10 dark:hover:bg-white/10 transition-colors'
+        className='ml-0.5 cursor-pointer rounded-full p-px transition-colors hover:bg-black/10 dark:hover:bg-white/10'
         onClick={handleRemove}
         aria-label={`Remove source filter: ${SOURCE_LABELS[source] ?? source}`}
       >
@@ -104,7 +104,7 @@ export default function FilterChips({
   onRemoveSource,
 }: FilterChipsProps) {
   return (
-    <div className='flex items-center gap-2 flex-wrap'>
+    <div className='flex flex-wrap items-center gap-2'>
       {tags.map((tag) => (
         <FilterTagChip key={`tag-${tag}`} tag={tag} onRemove={onRemoveTag} />
       ))}

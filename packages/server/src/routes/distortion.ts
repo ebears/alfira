@@ -34,14 +34,14 @@ function handleDistortionGet(
 
   return json({
     enabled: row?.distortionEnabled ?? false,
-    sinOffset: row?.distortionSinOffset ?? 0.0,
-    sinScale: row?.distortionSinScale ?? 1.0,
-    cosOffset: row?.distortionCosOffset ?? 0.0,
-    cosScale: row?.distortionCosScale ?? 1.0,
-    tanOffset: row?.distortionTanOffset ?? 0.0,
-    tanScale: row?.distortionTanScale ?? 1.0,
-    offset: row?.distortionOffset ?? 0.0,
-    scale: row?.distortionScale ?? 1.0,
+    sinOffset: row?.distortionSinOffset ?? 0,
+    sinScale: row?.distortionSinScale ?? 1,
+    cosOffset: row?.distortionCosOffset ?? 0,
+    cosScale: row?.distortionCosScale ?? 1,
+    tanOffset: row?.distortionTanOffset ?? 0,
+    tanScale: row?.distortionTanScale ?? 1,
+    offset: row?.distortionOffset ?? 0,
+    scale: row?.distortionScale ?? 1,
   });
 }
 

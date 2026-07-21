@@ -148,7 +148,7 @@ export async function syncAllFilters(): Promise<void> {
 
   try {
     await updateNodeLinkPlayer(guildId, sessionId, { filters });
-  } catch (err) {
-    logger.error({ err }, 'Failed to sync audio filters to NodeLink');
+  } catch (error) {
+    logger.error({ error }, 'Failed to sync audio filters to NodeLink');
   }
 }

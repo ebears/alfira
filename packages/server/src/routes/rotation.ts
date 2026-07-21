@@ -27,7 +27,7 @@ function handleRotationGet(
 
   return json({
     enabled: row?.rotationEnabled ?? false,
-    rotationHz: row?.rotationHz ?? 0.0,
+    rotationHz: row?.rotationHz ?? 0,
   });
 }
 

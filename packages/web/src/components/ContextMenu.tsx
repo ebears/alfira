@@ -151,7 +151,7 @@ export function ContextMenu({
   // Position calculation — useLayoutEffect runs before paint, preventing a (0,0) flash.
   useLayoutEffect(() => {
     if (!isOpen || !triggerRef.current) {
-      return undefined;
+      return;
     }
 
     const lastUpdateRef = { current: 0 };
@@ -210,7 +210,7 @@ export function ContextMenu({
   // Close on outside click
   useEffect(() => {
     if (!isOpen) {
-      return undefined;
+      return;
     }
 
     const handler = (e: MouseEvent | TouchEvent) => {
@@ -232,7 +232,7 @@ export function ContextMenu({
   // Close on Escape (or go back from submenu)
   useEffect(() => {
     if (!isOpen) {
-      return undefined;
+      return;
     }
 
     const handler = (e: KeyboardEvent) => {
@@ -251,7 +251,9 @@ export function ContextMenu({
     };
 
     document.addEventListener('keydown', handler);
-    return () => document.removeEventListener('keydown', handler);
+    return () => {
+      document.removeEventListener('keydown', handler);
+    };
   }, [
     isOpen,
     onClose,
@@ -344,7 +346,7 @@ export function ContextMenu({
       onKeyDown={activeEditItemId ? undefined : handleKeyDown}
       onClick={handleStopPropagation}
     >
-      <div className='glass-popover outline-2 outline-accent/20'>
+      <div className='glass-popover outline-accent/20 outline-2'>
         {activeSubmenu ? (
           <SubmenuPanel
             config={activeSubmenu}
@@ -363,7 +365,7 @@ export function ContextMenu({
               return (
                 <div key={item.id}>
                   {(index > 0 || item.separatorBefore) && (
-                    <div className='border-b border-muted/50' />
+                    <div className='border-muted/50 border-b' />
                   )}
                   <InfoRow item={item} />
                 </div>
@@ -371,7 +373,7 @@ export function ContextMenu({
             }
             return (
               <div key={item.id}>
-                {index > 0 && <div className='border-b border-muted/50' />}
+                {index > 0 && <div className='border-muted/50 border-b' />}
                 <MenuItemRow
                   item={item}
                   focusedIndex={focusedIndex}
@@ -440,7 +442,7 @@ function InfoRow({ item }: { item: MenuItem }) {
   return (
     <div
       role='presentation'
-      className='px-3 py-1.5 text-xs font-mono text-muted flex items-center gap-2'
+      className='text-muted flex items-center gap-2 px-3 py-1.5 font-mono text-xs'
     >
       {item.icon && <span className='shrink-0'>{item.icon}</span>}
       <span className='truncate'>{item.info?.label}</span>

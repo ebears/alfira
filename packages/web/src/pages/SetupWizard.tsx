@@ -59,7 +59,7 @@ function RoleColorDot({ color }: { color: number | null }) {
     () => ({ backgroundColor: getRoleBgColor(color) }),
     [color]
   );
-  return <span className='w-3 h-3 rounded-full shrink-0' style={style} />;
+  return <span className='h-3 w-3 shrink-0 rounded-full' style={style} />;
 }
 
 function SourceCheckbox({
@@ -71,7 +71,9 @@ function SourceCheckbox({
   checked: boolean;
   onToggle: (key: string) => void;
 }) {
-  const handleChange = useCallback(() => onToggle(sourceKey), [sourceKey, onToggle]);
+  const handleChange = useCallback(() => {
+    onToggle(sourceKey);
+  }, [sourceKey, onToggle]);
   return <Checkbox checked={checked} onChange={handleChange} />;
 }
 
@@ -84,7 +86,9 @@ function RoleCheckbox({
   checked: boolean;
   onToggle: (id: string) => void;
 }) {
-  const handleChange = useCallback(() => onToggle(roleId), [roleId, onToggle]);
+  const handleChange = useCallback(() => {
+    onToggle(roleId);
+  }, [roleId, onToggle]);
   return <Checkbox checked={checked} onChange={handleChange} />;
 }
 
@@ -147,7 +151,7 @@ export default function SetupWizard() {
   // Auto-refresh guild list when on the guild step and no guilds are found.
   useEffect(() => {
     if (step !== 'guild' || guilds.length > 0) {
-      return undefined;
+      return;
     }
 
     let cancelled = false;
@@ -244,8 +248,8 @@ export default function SetupWizard() {
       // then redirect to /login for a fresh OAuth flow.
       await logout();
       window.location.href = '/login';
-    } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Failed to save configuration.');
+    } catch (error: unknown) {
+      setError(error instanceof Error ? error.message : 'Failed to save configuration.');
       setSaving(false);
       setStep('confirm');
     }
@@ -306,15 +310,13 @@ export default function SetupWizard() {
     setStep('timeout');
   }, []);
 
-  const handleTimeoutChange = useCallback(
-    (e: React.ChangeEvent<HTMLInputElement>) => setTimeoutMinutes(Number(e.target.value)),
-    []
-  );
+  const handleTimeoutChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    setTimeoutMinutes(Number(e.target.value));
+  }, []);
 
-  const handlePublicUrlChange = useCallback(
-    (e: React.ChangeEvent<HTMLInputElement>) => setPublicUrl(e.target.value),
-    []
-  );
+  const handlePublicUrlChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    setPublicUrl(e.target.value);
+  }, []);
 
   const timeoutRangeStyle = useMemo(
     () =>
@@ -333,21 +335,21 @@ export default function SetupWizard() {
 
   if (loading) {
     return (
-      <div className='h-full flex items-center justify-center bg-elevated'>
+      <div className='bg-elevated flex h-full items-center justify-center'>
         <Spinner size='lg' />
       </div>
     );
   }
 
   return (
-    <div className='min-h-full bg-surface flex items-center justify-center p-4'>
+    <div className='bg-surface flex min-h-full items-center justify-center p-4'>
       <div className='w-full max-w-lg'>
         {/* Progress dots */}
-        <div className='flex justify-center gap-2 mb-8'>
+        <div className='mb-8 flex justify-center gap-2'>
           {STEP_ORDER.slice(1).map((s, i) => (
             <div
               key={s}
-              className={`w-2 h-2 rounded-full transition-colors ${
+              className={`h-2 w-2 rounded-full transition-colors ${
                 i < stepIndex - 1
                   ? 'bg-accent'
                   : i === stepIndex - 1
@@ -363,17 +365,17 @@ export default function SetupWizard() {
         {/* Step content */}
         <div className='glass-modal p-6 md:p-8'>
           {step === 'welcome' && (
-            <div className='text-center space-y-6'>
+            <div className='space-y-6 text-center'>
               <div className='flex justify-center'>
-                <div className='w-16 h-16 rounded-full bg-accent/10 border border-accent/30 flex items-center justify-center'>
+                <div className='bg-accent/10 border-accent/30 flex h-16 w-16 items-center justify-center rounded-full border'>
                   <ShieldCheckIcon size={32} weight='duotone' className='text-accent' />
                 </div>
               </div>
               <div>
-                <h1 className='font-display text-2xl text-fg tracking-wider mb-2'>
+                <h1 className='font-display text-fg mb-2 text-2xl tracking-wider'>
                   Welcome to Alfira
                 </h1>
-                <p className='text-sm text-muted leading-relaxed'>
+                <p className='text-muted text-sm leading-relaxed'>
                   Let&apos;s get your music bot configured. You&apos;ll pick your server, choose
                   admin roles, and set a few preferences.
                 </p>
@@ -386,24 +388,24 @@ export default function SetupWizard() {
 
           {step === 'guild' && (
             <div className='space-y-5'>
-              <h2 className='font-display text-xl text-fg'>Choose a Server</h2>
-              <p className='text-sm text-muted'>
+              <h2 className='font-display text-fg text-xl'>Choose a Server</h2>
+              <p className='text-muted text-sm'>
                 Select the Discord server Alfira will operate in.
               </p>
               {guilds.length === 0 ? (
-                <div className='p-4 rounded-lg bg-warning/10 text-warning text-sm space-y-3'>
+                <div className='bg-warning/10 text-warning space-y-3 rounded-lg p-4 text-sm'>
                   <p>No servers found. Invite the bot to a Discord server first.</p>
                   {clientId && (
                     <a
                       href={`https://discord.com/oauth2/authorize?client_id=${clientId}&permissions=3148800&scope=bot+applications.commands`}
                       target='_blank'
                       rel='noopener noreferrer'
-                      className='inline-block px-4 py-2 rounded-lg bg-accent text-elevated text-sm font-body hover:opacity-90 transition-opacity'
+                      className='bg-accent text-elevated font-body inline-block rounded-lg px-4 py-2 text-sm transition-opacity hover:opacity-90'
                     >
                       Invite Alfira to a Server
                     </a>
                   )}
-                  <p className='text-xs text-warning/70'>Checking for servers every few seconds…</p>
+                  <p className='text-warning/70 text-xs'>Checking for servers every few seconds…</p>
                   {refreshingGuilds && <Spinner size='md' />}
                 </div>
               ) : (
@@ -411,7 +413,7 @@ export default function SetupWizard() {
                   {guilds.map((g) => (
                     <label
                       key={g.id}
-                      className={`flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-colors ${
+                      className={`flex cursor-pointer items-center gap-3 rounded-lg border p-3 transition-colors ${
                         selectedGuildId === g.id
                           ? 'border-accent bg-accent/5'
                           : 'border-border hover:border-muted'
@@ -426,7 +428,7 @@ export default function SetupWizard() {
                         data-guild={g.id}
                         className='accent-accent'
                       />
-                      <span className='text-sm text-fg'>{g.name}</span>
+                      <span className='text-fg text-sm'>{g.name}</span>
                     </label>
                   ))}
                 </div>
@@ -436,7 +438,7 @@ export default function SetupWizard() {
                   type='button'
                   onClick={handleGoToStep}
                   data-step='welcome'
-                  className='flex items-center gap-1 text-sm text-muted hover:text-fg transition-colors cursor-pointer'
+                  className='text-muted hover:text-fg flex cursor-pointer items-center gap-1 text-sm transition-colors'
                 >
                   <CaretLeftIcon size={14} />
                   Back
@@ -457,9 +459,9 @@ export default function SetupWizard() {
             <div className='space-y-5'>
               <div className='flex items-center gap-3'>
                 <MusicNotesIcon size={24} weight='duotone' className='text-accent' />
-                <h2 className='font-display text-xl text-fg'>Music Sources</h2>
+                <h2 className='font-display text-fg text-xl'>Music Sources</h2>
               </div>
-              <p className='text-sm text-muted'>
+              <p className='text-muted text-sm'>
                 Choose which music platforms Alfira can play from. At least one source must be
                 enabled.
               </p>
@@ -468,7 +470,7 @@ export default function SetupWizard() {
                   <>
                     <label
                       key={source.key}
-                      className={`flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-colors ${
+                      className={`flex cursor-pointer items-center gap-3 rounded-lg border p-3 transition-colors ${
                         selectedSourceKeys.has(source.key)
                           ? 'border-accent bg-accent/5'
                           : 'border-border hover:border-muted'
@@ -480,25 +482,25 @@ export default function SetupWizard() {
                         onToggle={toggleSource}
                       />
                       <SourceIcon sourceKey={source.key} className='shrink-0' />
-                      <span className='text-sm text-fg'>{source.displayName}</span>
+                      <span className='text-fg text-sm'>{source.displayName}</span>
                       {source.helpText && (
-                        <span className='relative group'>
+                        <span className='group relative'>
                           <QuestionIcon
                             size={14}
                             weight='duotone'
                             className='text-muted cursor-help'
                           />
-                          <span className='glass-tooltip absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-56 p-2'>
+                          <span className='glass-tooltip absolute bottom-full left-1/2 mb-2 w-56 -translate-x-1/2 p-2'>
                             {source.helpText}
                           </span>
                         </span>
                       )}
                       {selectedSourceKeys.size === 1 && selectedSourceKeys.has(source.key) && (
-                        <span className='text-xs text-muted ml-auto'>(must keep at least one)</span>
+                        <span className='text-muted ml-auto text-xs'>(must keep at least one)</span>
                       )}
                     </label>
                     {source.requiresCredentials && selectedSourceKeys.has(source.key) && (
-                      <p className='text-xs text-warning ml-9'>
+                      <p className='text-warning ml-9 text-xs'>
                         This source requires credentials to be configured via environment variables
                         before it can play music.
                       </p>
@@ -507,14 +509,14 @@ export default function SetupWizard() {
                 ))}
               </div>
               {selectedSourceKeys.size === 0 && (
-                <p className='text-xs text-danger'>Please enable at least one music source.</p>
+                <p className='text-danger text-xs'>Please enable at least one music source.</p>
               )}
               <div className='flex justify-between pt-2'>
                 <button
                   type='button'
                   onClick={handleGoToStep}
                   data-step='guild'
-                  className='flex items-center gap-1 text-sm text-muted hover:text-fg transition-colors cursor-pointer'
+                  className='text-muted hover:text-fg flex cursor-pointer items-center gap-1 text-sm transition-colors'
                 >
                   <CaretLeftIcon size={14} />
                   Back
@@ -532,20 +534,20 @@ export default function SetupWizard() {
 
           {step === 'roles' && (
             <div className='space-y-5'>
-              <h2 className='font-display text-xl text-fg'>Admin Roles</h2>
-              <p className='text-sm text-muted'>
+              <h2 className='font-display text-fg text-xl'>Admin Roles</h2>
+              <p className='text-muted text-sm'>
                 Select which roles can manage Alfira (add songs, control playback, etc.).
               </p>
               {roles.length === 0 ? (
-                <div className='p-4 rounded-lg bg-warning/10 text-warning text-sm'>
+                <div className='bg-warning/10 text-warning rounded-lg p-4 text-sm'>
                   No roles found in this server. Create roles in Discord first.
                 </div>
               ) : (
-                <div className='space-y-2 max-h-64 overflow-y-auto'>
+                <div className='max-h-64 space-y-2 overflow-y-auto'>
                   {roles.map((r) => (
                     <label
                       key={r.id}
-                      className={`flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-colors ${
+                      className={`flex cursor-pointer items-center gap-3 rounded-lg border p-3 transition-colors ${
                         selectedRoleIds.has(r.id)
                           ? 'border-accent bg-accent/5'
                           : 'border-border hover:border-muted'
@@ -557,7 +559,7 @@ export default function SetupWizard() {
                         onToggle={toggleRole}
                       />
                       <RoleColorDot color={r.color} />
-                      <span className='text-sm text-fg'>{r.name}</span>
+                      <span className='text-fg text-sm'>{r.name}</span>
                     </label>
                   ))}
                 </div>
@@ -567,7 +569,7 @@ export default function SetupWizard() {
                   type='button'
                   onClick={handleGoToStep}
                   data-step='sources'
-                  className='flex items-center gap-1 text-sm text-muted hover:text-fg transition-colors cursor-pointer'
+                  className='text-muted hover:text-fg flex cursor-pointer items-center gap-1 text-sm transition-colors'
                 >
                   <CaretLeftIcon size={14} />
                   Back
@@ -587,20 +589,20 @@ export default function SetupWizard() {
             <div className='space-y-5'>
               <div className='flex items-center gap-3'>
                 <MegaphoneIcon size={24} weight='duotone' className='text-accent' />
-                <h2 className='font-display text-xl text-fg'>Notification Channel</h2>
+                <h2 className='font-display text-fg text-xl'>Notification Channel</h2>
               </div>
-              <p className='text-sm text-muted'>
+              <p className='text-muted text-sm'>
                 Alfira can post a message when it leaves a voice channel due to inactivity. Choose a
                 text channel, or skip this step.
               </p>
               {channels.length === 0 ? (
-                <p className='text-sm text-muted'>No text channels found.</p>
+                <p className='text-muted text-sm'>No text channels found.</p>
               ) : (
-                <div className='space-y-2 max-h-64 overflow-y-auto'>
+                <div className='max-h-64 space-y-2 overflow-y-auto'>
                   {channels.map((c) => (
                     <label
                       key={c.id}
-                      className={`flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-colors ${
+                      className={`flex cursor-pointer items-center gap-3 rounded-lg border p-3 transition-colors ${
                         selectedChannelId === c.id
                           ? 'border-accent bg-accent/5'
                           : 'border-border hover:border-muted'
@@ -615,7 +617,7 @@ export default function SetupWizard() {
                         data-channel={c.id}
                         className='accent-accent'
                       />
-                      <span className='text-sm text-fg'># {c.name}</span>
+                      <span className='text-fg text-sm'># {c.name}</span>
                     </label>
                   ))}
                 </div>
@@ -625,7 +627,7 @@ export default function SetupWizard() {
                   type='button'
                   onClick={handleGoToStep}
                   data-step='roles'
-                  className='flex items-center gap-1 text-sm text-muted hover:text-fg transition-colors cursor-pointer'
+                  className='text-muted hover:text-fg flex cursor-pointer items-center gap-1 text-sm transition-colors'
                 >
                   <CaretLeftIcon size={14} />
                   Back
@@ -646,9 +648,9 @@ export default function SetupWizard() {
             <div className='space-y-5'>
               <div className='flex items-center gap-3'>
                 <TimerIcon size={24} weight='duotone' className='text-accent' />
-                <h2 className='font-display text-xl text-fg'>Idle Timeout</h2>
+                <h2 className='font-display text-fg text-xl'>Idle Timeout</h2>
               </div>
-              <p className='text-sm text-muted'>
+              <p className='text-muted text-sm'>
                 How many minutes before Alfira automatically leaves when nobody is listening?
               </p>
               <div className='flex items-center gap-4'>
@@ -658,10 +660,10 @@ export default function SetupWizard() {
                   max={120}
                   value={timeoutMinutes}
                   onChange={handleTimeoutChange}
-                  className='flex-1 range-input range-input-h'
+                  className='range-input range-input-h flex-1'
                   style={timeoutRangeStyle}
                 />
-                <span className='font-mono text-lg text-fg w-20 text-right whitespace-nowrap'>
+                <span className='text-fg w-20 text-right font-mono text-lg whitespace-nowrap'>
                   {timeoutMinutes} min
                 </span>
               </div>
@@ -670,7 +672,7 @@ export default function SetupWizard() {
                   type='button'
                   onClick={handleGoToStep}
                   data-step='channel'
-                  className='flex items-center gap-1 text-sm text-muted hover:text-fg transition-colors cursor-pointer'
+                  className='text-muted hover:text-fg flex cursor-pointer items-center gap-1 text-sm transition-colors'
                 >
                   <CaretLeftIcon size={14} />
                   Back
@@ -686,9 +688,9 @@ export default function SetupWizard() {
             <div className='space-y-5'>
               <div className='flex items-center gap-3'>
                 <GlobeIcon size={24} weight='duotone' className='text-accent' />
-                <h2 className='font-display text-xl text-fg'>Public URL</h2>
+                <h2 className='font-display text-fg text-xl'>Public URL</h2>
               </div>
-              <p className='text-sm text-muted'>
+              <p className='text-muted text-sm'>
                 Optional — the URL your users will use to access Alfira (e.g.,
                 https://music.yourserver.com). This can be changed later in settings.
               </p>
@@ -704,7 +706,7 @@ export default function SetupWizard() {
                   type='button'
                   onClick={handleGoToStep}
                   data-step='timeout'
-                  className='flex items-center gap-1 text-sm text-muted hover:text-fg transition-colors cursor-pointer'
+                  className='text-muted hover:text-fg flex cursor-pointer items-center gap-1 text-sm transition-colors'
                 >
                   <CaretLeftIcon size={14} />
                   Back
@@ -718,12 +720,12 @@ export default function SetupWizard() {
 
           {step === 'confirm' && (
             <div className='space-y-5'>
-              <h2 className='font-display text-xl text-fg text-center'>Ready to Go</h2>
-              <p className='text-sm text-muted text-center'>
+              <h2 className='font-display text-fg text-center text-xl'>Ready to Go</h2>
+              <p className='text-muted text-center text-sm'>
                 Review your settings below, then finish setup.
               </p>
 
-              <div className='space-y-3 bg-base rounded-lg p-4'>
+              <div className='bg-base space-y-3 rounded-lg p-4'>
                 <div className='flex justify-between text-sm'>
                   <span className='text-muted'>Server</span>
                   <span className='text-fg'>
@@ -771,7 +773,7 @@ export default function SetupWizard() {
                   type='button'
                   onClick={handleGoToStep}
                   data-step='publicUrl'
-                  className='flex items-center gap-1 text-sm text-muted hover:text-fg transition-colors cursor-pointer'
+                  className='text-muted hover:text-fg flex cursor-pointer items-center gap-1 text-sm transition-colors'
                 >
                   <CaretLeftIcon size={14} />
                   Back

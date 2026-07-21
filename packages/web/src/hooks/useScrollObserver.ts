@@ -46,6 +46,7 @@ export function useScrollObserver(
 
   const didMountRef = useRef(0);
   const tickingRef = useRef(false);
+  // eslint-disable-next-line unicorn/no-useless-undefined
   const timeoutRef = useRef<ReturnType<typeof setTimeout>>(undefined);
   const scrollTopRef = useRef(0);
 
@@ -56,7 +57,7 @@ export function useScrollObserver(
   useEffect(() => {
     const el = elementRef.current;
     if (!el) {
-      return undefined;
+      return;
     }
 
     const onScroll = () => {
@@ -83,7 +84,9 @@ export function useScrollObserver(
     setScrollTop(el.scrollTop);
 
     el.addEventListener('scroll', onScroll, { passive: true });
-    return () => el.removeEventListener('scroll', onScroll);
+    return () => {
+      el.removeEventListener('scroll', onScroll);
+    };
     // elementRef is a stable ref object; the effect only needs to re-run
     // if the underlying element changes (handled via the early return).
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -128,7 +131,7 @@ export function useScrollObserver(
   useLayoutEffect(() => {
     const el = elementRef.current;
     if (!el) {
-      return undefined;
+      return;
     }
 
     setHeight(el.clientHeight);
@@ -148,7 +151,9 @@ export function useScrollObserver(
     });
     ro.observe(el);
 
-    return () => ro.disconnect();
+    return () => {
+      ro.disconnect();
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 

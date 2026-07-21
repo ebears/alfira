@@ -56,10 +56,10 @@ function SkeletonGrid() {
         {Array.from({ length: 8 }).map((_, i) => (
           <div
             key={`skeleton-${i}`}
-            className='rounded-lg bg-elevated clay-resting overflow-hidden'
+            className='bg-elevated clay-resting overflow-hidden rounded-lg'
           >
-            <Skeleton className='aspect-square m-3 rounded-lg' />
-            <div className='p-4 flex flex-col gap-2'>
+            <Skeleton className='m-3 aspect-square rounded-lg' />
+            <div className='flex flex-col gap-2 p-4'>
               <Skeleton className='h-3.5 w-3/5' />
               <Skeleton className='h-3 w-4/5' />
               <Skeleton className='h-3 w-2/5' />
@@ -195,9 +195,13 @@ export const VirtualSongGrid = memo(function VirtualSongGrid({
             isAdminView={p.isAdminView}
             playlists={p.playlists}
             onDelete={p.onDelete}
-            onPlay={() => p.onPlay(song.id)}
+            onPlay={() => {
+              p.onPlay(song.id);
+            }}
             isPlaying={isPlaying}
-            onAddToQueue={() => p.onAddToQueue(song.id)}
+            onAddToQueue={() => {
+              p.onAddToQueue(song.id);
+            }}
             selectionMode={sel}
             isSelected={selSelected}
             onToggleSelect={p.onToggleSelect ? () => p.onToggleSelect?.(song.id) : undefined}
@@ -263,14 +267,14 @@ export const VirtualSongGrid = memo(function VirtualSongGrid({
   );
 
   return (
-    <div ref={scrollRefCallback} className='pt-3 min-h-0 flex-1' style={scrollStyle}>
+    <div ref={scrollRefCallback} className='min-h-0 flex-1 pt-3' style={scrollStyle}>
       {showSkeleton && <SkeletonGrid />}
 
       {showEmpty && (
         <div className='px-4 pt-4'>
-          <div className='text-center py-16'>
+          <div className='py-16 text-center'>
             <p className='text-fg font-semibold'>{emptyTitle}</p>
-            {emptyMessage && <p className='text-muted text-sm mt-1'>{emptyMessage}</p>}
+            {emptyMessage && <p className='text-muted mt-1 text-sm'>{emptyMessage}</p>}
           </div>
         </div>
       )}
@@ -279,11 +283,11 @@ export const VirtualSongGrid = memo(function VirtualSongGrid({
       <div style={masonryWrapperStyle}>{masonry}</div>
 
       {isContentReady && isFetching && (
-        <div className='flex justify-center py-4 gap-2'>
+        <div className='flex justify-center gap-2 py-4'>
           {Array.from({ length: 3 }).map((_, i) => (
             <div
               key={`loading-dot-${i}`}
-              className='h-3 w-3 rounded-full bg-border animate-pulse'
+              className='bg-border h-3 w-3 animate-pulse rounded-full'
             />
           ))}
         </div>
@@ -294,7 +298,7 @@ export const VirtualSongGrid = memo(function VirtualSongGrid({
           <button
             type='button'
             onClick={onRetry}
-            className='font-mono text-xs text-muted hover:text-fg transition-colors underline'
+            className='text-muted hover:text-fg font-mono text-xs underline transition-colors'
           >
             Failed to load more. Retry
           </button>

@@ -40,10 +40,9 @@ export function SongEditProvider({ children }: { children: ReactNode }) {
         if (openSongId != null) {
           setClosingSongId(openSongId);
           setOpenSongId(null);
-          closeTimerRef.current = window.setTimeout(
-            () => setClosingSongId(null),
-            CLOSE_DURATION_MS
-          );
+          closeTimerRef.current = window.setTimeout(() => {
+            setClosingSongId(null);
+          }, CLOSE_DURATION_MS);
         }
         return;
       }
@@ -52,7 +51,9 @@ export function SongEditProvider({ children }: { children: ReactNode }) {
         // Toggling off the same song
         setClosingSongId(id);
         setOpenSongId(null);
-        closeTimerRef.current = window.setTimeout(() => setClosingSongId(null), CLOSE_DURATION_MS);
+        closeTimerRef.current = window.setTimeout(() => {
+          setClosingSongId(null);
+        }, CLOSE_DURATION_MS);
         return;
       }
 
@@ -60,7 +61,9 @@ export function SongEditProvider({ children }: { children: ReactNode }) {
       if (openSongId != null) {
         setClosingSongId(openSongId);
         setOpenSongId(id);
-        closeTimerRef.current = window.setTimeout(() => setClosingSongId(null), CLOSE_DURATION_MS);
+        closeTimerRef.current = window.setTimeout(() => {
+          setClosingSongId(null);
+        }, CLOSE_DURATION_MS);
       } else if (closingSongId != null) {
         // Previous song is still closing; keep it closing, just open the new one
         setOpenSongId(id);
@@ -74,7 +77,7 @@ export function SongEditProvider({ children }: { children: ReactNode }) {
   // Close panel when clicking outside any song edit container
   useEffect(() => {
     if (openSongId == null) {
-      return undefined;
+      return;
     }
 
     const handleMouseDown = (e: MouseEvent) => {
@@ -85,7 +88,9 @@ export function SongEditProvider({ children }: { children: ReactNode }) {
     };
 
     document.addEventListener('mousedown', handleMouseDown);
-    return () => document.removeEventListener('mousedown', handleMouseDown);
+    return () => {
+      document.removeEventListener('mousedown', handleMouseDown);
+    };
   }, [openSongId, setOpenSongIdSequenced]);
 
   const value = useMemo(

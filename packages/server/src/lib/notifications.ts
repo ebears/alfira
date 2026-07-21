@@ -63,8 +63,8 @@ export async function sendRequestNotification(
       },
       body: JSON.stringify({ content }),
     });
-  } catch (err) {
-    logger.warn({ err }, 'Failed to send request notification');
+  } catch (error) {
+    logger.warn({ error }, 'Failed to send request notification');
   }
 }
 
@@ -107,7 +107,7 @@ export async function sendRequestDm(
       },
       body: JSON.stringify({ content: messages[status] }),
     });
-  } catch (err) {
-    logger.warn({ err, discordId }, 'Failed to send request DM');
+  } catch (error) {
+    logger.warn({ error, discordId }, 'Failed to send request DM');
   }
 }

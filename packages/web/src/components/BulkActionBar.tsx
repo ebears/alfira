@@ -35,26 +35,26 @@ export default function BulkActionBar({
     loadedCount < totalCount ? `Select all ${loadedCount}` : `Select all ${totalCount}`;
 
   return (
-    <div className='fixed bottom-20 md:bottom-18 left-0 right-0 z-50 flex justify-center pb-4 md:pb-6 pointer-events-none'>
-      <SpringUp className='pointer-events-auto flex items-center gap-3 px-4 py-3 bg-elevated border border-border rounded-xl shadow-2xl'>
-        <span className='text-sm font-mono text-fg tabular-nums'>
+    <div className='pointer-events-none fixed right-0 bottom-20 left-0 z-50 flex justify-center pb-4 md:bottom-18 md:pb-6'>
+      <SpringUp className='bg-elevated border-border pointer-events-auto flex items-center gap-3 rounded-xl border px-4 py-3 shadow-2xl'>
+        <span className='text-fg font-mono text-sm tabular-nums'>
           {count} / {totalCount} selected
         </span>
 
         <button
           type='button'
-          className='text-xs text-muted hover:text-accent transition-colors cursor-pointer'
+          className='text-muted hover:text-accent cursor-pointer text-xs transition-colors'
           onClick={allLoadedSelected ? onDeselectAll : onSelectAll}
         >
           {allLoadedSelected ? 'Deselect all' : selectLabel}
         </button>
 
-        <div className='w-px h-5 bg-border' />
+        <div className='bg-border h-5 w-px' />
 
         {canDelete && (
           <Button
             variant='danger'
-            className='text-xs flex items-center gap-1.5'
+            className='flex items-center gap-1.5 text-xs'
             onClick={onDelete}
             disabled={isDeleting}
           >
@@ -67,7 +67,7 @@ export default function BulkActionBar({
           <Button
             variant='inherit'
             surface='surface'
-            className='text-xs flex items-center gap-1.5'
+            className='flex items-center gap-1.5 text-xs'
             onClick={onTag}
           >
             <TagIcon size={14} weight='duotone' />
@@ -77,7 +77,7 @@ export default function BulkActionBar({
 
         <button
           type='button'
-          className='ml-1 p-1 text-muted hover:text-fg transition-colors cursor-pointer'
+          className='text-muted hover:text-fg ml-1 cursor-pointer p-1 transition-colors'
           onClick={onDeselectAll}
           title='Clear selection'
         >

@@ -152,7 +152,7 @@ export default function SongEditPanel({ song, isOpen, onClose }: SongEditPanelPr
         tags: t,
         volumeBoost: vo,
       } = fieldsRef.current();
-      const parsedRaw = vo.trim() === '' ? null : parseInt(vo.trim(), 10);
+      const parsedRaw = vo.trim() === '' ? null : Number.parseInt(vo.trim(), 10);
       const parsedBoost =
         parsedRaw != null && !Number.isNaN(parsedRaw) && parsedRaw !== 0 ? parsedRaw : null;
 
@@ -202,7 +202,7 @@ export default function SongEditPanel({ song, isOpen, onClose }: SongEditPanelPr
         tags: t,
         volumeBoost: vo,
       } = fieldsRef.current();
-      const parsedRaw = vo.trim() === '' ? null : parseInt(vo.trim(), 10);
+      const parsedRaw = vo.trim() === '' ? null : Number.parseInt(vo.trim(), 10);
       const parsedBoost =
         parsedRaw != null && !Number.isNaN(parsedRaw) && parsedRaw !== 0 ? parsedRaw : null;
 
@@ -241,7 +241,9 @@ export default function SongEditPanel({ song, isOpen, onClose }: SongEditPanelPr
     [doSave]
   );
 
-  const handlePanelClick = useCallback((e: React.MouseEvent) => e.stopPropagation(), []);
+  const handlePanelClick = useCallback((e: React.MouseEvent) => {
+    e.stopPropagation();
+  }, []);
 
   const panelStyle = useMemo(
     () => (closing ? ({ pointerEvents: 'none' } as const) : undefined),
@@ -262,7 +264,7 @@ export default function SongEditPanel({ song, isOpen, onClose }: SongEditPanelPr
 
   const handleTagPillRemove = useCallback(
     (e: React.MouseEvent<HTMLButtonElement>) => {
-      const tag = e.currentTarget.closest('[data-tag]')?.getAttribute('data-tag');
+      const tag = e.currentTarget.closest<HTMLElement>('[data-tag]')?.dataset.tag;
       if (tag) {
         removeTag(tag);
       }
@@ -270,17 +272,18 @@ export default function SongEditPanel({ song, isOpen, onClose }: SongEditPanelPr
     [removeTag]
   );
 
-  const handleTagInputChange = useCallback(
-    (e: React.ChangeEvent<HTMLInputElement>) => setTagInput(e.target.value),
-    []
-  );
+  const handleTagInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    setTagInput(e.target.value);
+  }, []);
 
   const handleTagToggle = useCallback(
     (tag: string) => {
       if (tags.includes(tag)) {
         removeTag(tag);
       } else {
-        flushSync(() => setTags((prev) => [...prev, tag]));
+        flushSync(() => {
+          setTags((prev) => [...prev, tag]);
+        });
       }
     },
     [tags, removeTag]
@@ -302,7 +305,7 @@ export default function SongEditPanel({ song, isOpen, onClose }: SongEditPanelPr
       style={panelStyle}
       onClick={handlePanelClick}
     >
-      <div className='px-3 md:px-4 pt-4 pb-4 border-t border-border'>
+      <div className='border-border border-t px-3 pt-4 pb-4 md:px-4'>
         <div className='flex flex-col gap-3'>
           <Field
             id='panel-name'
@@ -342,12 +345,12 @@ export default function SongEditPanel({ song, isOpen, onClose }: SongEditPanelPr
           <div>
             <label
               htmlFor='panel-tag-input'
-              className='block font-mono text-[10px] text-muted uppercase mb-1'
+              className='text-muted mb-1 block font-mono text-[10px] uppercase'
             >
               Tags
             </label>
             <div
-              className='input text-sm flex flex-wrap gap-1.5 items-center min-h-9.5 cursor-text relative'
+              className='input relative flex min-h-9.5 cursor-text flex-wrap items-center gap-1.5 text-sm'
               onClick={handleFocusTagInput}
             >
               {tags.map((tag) => {
@@ -355,7 +358,7 @@ export default function SongEditPanel({ song, isOpen, onClose }: SongEditPanelPr
                 return (
                   <span
                     key={tag}
-                    className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-mono ${c.bg} ${c.text} border ${c.border}`}
+                    className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 font-mono text-xs ${c.bg} ${c.text} border ${c.border}`}
                   >
                     {tag}
                     <button
@@ -372,7 +375,7 @@ export default function SongEditPanel({ song, isOpen, onClose }: SongEditPanelPr
               <input
                 id='panel-tag-input'
                 ref={tagInputRef}
-                className='flex-1 min-w-20 bg-transparent outline-none text-sm text-fg placeholder:text-faint'
+                className='text-fg placeholder:text-faint min-w-20 flex-1 bg-transparent text-sm outline-none'
                 placeholder={tags.length === 0 ? 'Custom grouping (enter to confirm)' : ''}
                 value={tagInput}
                 onChange={handleTagInputChange}
@@ -420,7 +423,8 @@ function VolumeSlider({
   max: number;
   onKeyDown?: (e: React.KeyboardEvent<HTMLInputElement>) => void;
 }) {
-  const numeric = value.trim() === '' ? 0 : Math.min(max, Math.max(min, parseInt(value, 10) || 0));
+  const numeric =
+    value.trim() === '' ? 0 : Math.min(max, Math.max(min, Number.parseInt(value, 10) || 0));
   const pct = `${((numeric - min) / (max - min)) * 100}%`;
 
   const handleChange = useCallback(
@@ -437,7 +441,7 @@ function VolumeSlider({
     if (value.trim() === '') {
       onChange('0');
     } else {
-      const n = parseInt(value, 10);
+      const n = Number.parseInt(value, 10);
       if (!Number.isNaN(n)) {
         onChange(String(Math.min(max, Math.max(min, n))));
       }
@@ -445,7 +449,9 @@ function VolumeSlider({
   }, [value, onChange, min, max]);
 
   const handleRangeChange = useCallback(
-    (e: React.ChangeEvent<HTMLInputElement>) => onChange(e.target.value),
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      onChange(e.target.value);
+    },
     [onChange]
   );
 
@@ -459,18 +465,18 @@ function VolumeSlider({
 
   return (
     <div>
-      <span className='block font-mono text-[10px] text-muted uppercase mb-1'>Volume Boost</span>
+      <span className='text-muted mb-1 block font-mono text-[10px] uppercase'>Volume Boost</span>
       <div className='flex items-center gap-3'>
         <input
           id='panel-volume-boost'
-          className='input text-sm w-16 text-center'
+          className='input w-16 text-center text-sm'
           type='text'
           value={value}
           onChange={handleChange}
           onKeyDown={onKeyDown}
           onBlur={handleBlur}
         />
-        <span className='text-xs text-muted font-mono w-8 text-left'>%</span>
+        <span className='text-muted w-8 text-left font-mono text-xs'>%</span>
         <input
           type='range'
           min={min}
@@ -509,12 +515,14 @@ function Field({
   max?: number;
 }) {
   const handleChange = useCallback(
-    (e: React.ChangeEvent<HTMLInputElement>) => onChange(e.target.value),
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      onChange(e.target.value);
+    },
     [onChange]
   );
   return (
     <div>
-      <label htmlFor={id} className='block font-mono text-[10px] text-muted uppercase mb-1'>
+      <label htmlFor={id} className='text-muted mb-1 block font-mono text-[10px] uppercase'>
         {label}
       </label>
       <input
@@ -544,7 +552,7 @@ function CheckIcon() {
       strokeWidth='3'
       strokeLinecap='round'
       strokeLinejoin='round'
-      className='text-green-400 inline-block'
+      className='inline-block text-green-400'
       aria-label='Added'
     >
       <title>Added</title>
@@ -628,7 +636,9 @@ function TagDropdown({
       }
     };
     document.addEventListener('mousedown', handler);
-    return () => document.removeEventListener('mousedown', handler);
+    return () => {
+      document.removeEventListener('mousedown', handler);
+    };
   }, [onClose]);
 
   const filtered = availableTags.filter(
@@ -654,7 +664,7 @@ function TagDropdown({
 
   const handleItemMouseEnter = useCallback(
     (e: React.MouseEvent<HTMLDivElement>) => {
-      const idx = parseInt(e.currentTarget.dataset.index ?? '0', 10);
+      const idx = Number.parseInt(e.currentTarget.dataset.index ?? '0', 10);
       onHighlight(idx);
     },
     [onHighlight]
@@ -663,11 +673,11 @@ function TagDropdown({
   const dropdown = (
     <div
       ref={dropdownRef}
-      className='fixed z-50 min-w-45 glass-popover max-h-48'
+      className='glass-popover fixed z-50 max-h-48 min-w-45'
       style={TAG_DROPDOWN_PLACEHOLDER_STYLE}
     >
       {filtered.length === 0 ? (
-        <div className='px-3 py-2 text-xs text-muted cursor-default'>
+        <div className='text-muted cursor-default px-3 py-2 text-xs'>
           {availableTags.length === 0 ? 'No tags yet' : 'No matches'}
         </div>
       ) : (
@@ -677,7 +687,7 @@ function TagDropdown({
           return (
             <div
               key={tag.nameLower}
-              className={`flex items-center gap-2 px-3 py-2 text-sm cursor-pointer ${
+              className={`flex cursor-pointer items-center gap-2 px-3 py-2 text-sm ${
                 i === highlightedIndex ? 'bg-elevated' : 'hover:bg-elevated/70'
               }`}
               onMouseDown={handleItemMouseDown}
@@ -686,7 +696,7 @@ function TagDropdown({
               data-index={i}
             >
               <span className={`font-mono text-xs ${c.text}`}>{tag.canonicalName}</span>
-              <span className='ml-auto text-muted text-xs'>
+              <span className='text-muted ml-auto text-xs'>
                 {isAdded ? <CheckIcon /> : <CrossIcon />}
               </span>
             </div>

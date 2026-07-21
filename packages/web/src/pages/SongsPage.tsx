@@ -54,7 +54,9 @@ export default function SongsPage() {
   const [playingId, setPlayingId] = useState<string | null>(null);
   const { handleAddToQueue, notification } = useAddToQueue();
   const { notify } = useNotification();
-  const handleSetDeleteId = useCallback((id: string | null) => setDeleteId(id), []);
+  const handleSetDeleteId = useCallback((id: string | null) => {
+    setDeleteId(id);
+  }, []);
 
   // Bulk selection
   const bulk = useBulkSelection();
@@ -153,7 +155,6 @@ export default function SongsPage() {
   // ── Comparator for re-sorting after real-time mutations ──────────────
   const songCompareFn = useMemo(() => {
     const dir = order === 'asc' ? 1 : -1;
-    // eslint-disable-next-line typescript/consistent-return
     return (a: Song, b: Song): number => {
       switch (sort) {
         case 'title': {
@@ -280,8 +281,8 @@ export default function SongsPage() {
         removeItem(id);
       }
       notify(`Deleted ${allIds.length} song${allIds.length !== 1 ? 's' : ''}`, 'success');
-    } catch (err: unknown) {
-      notify(apiErrorMessage(err, 'Failed to delete songs.'), 'error', 5000);
+    } catch (error: unknown) {
+      notify(apiErrorMessage(error, 'Failed to delete songs.'), 'error', 5000);
     } finally {
       setBulkDeleting(false);
       bulk.clearAll();
@@ -303,8 +304,8 @@ export default function SongsPage() {
         }
         notify(`Updated ${allIds.length} song${allIds.length !== 1 ? 's' : ''}`, 'success');
         setBulkEditingOpen(false);
-      } catch (err: unknown) {
-        notify(apiErrorMessage(err, 'Failed to update songs.'), 'error', 5000);
+      } catch (error: unknown) {
+        notify(apiErrorMessage(error, 'Failed to update songs.'), 'error', 5000);
       } finally {
         setBulkEditingApplying(false);
         bulk.clearAll();
@@ -325,9 +326,9 @@ export default function SongsPage() {
           startFromSongId: songId,
         });
         notify('Started playback', 'success');
-      } catch (err: unknown) {
+      } catch (error: unknown) {
         notifyUnlessRateLimit(
-          err,
+          error,
           'Could not start playback. Is the bot in a voice channel?',
           notify
         );
@@ -341,7 +342,9 @@ export default function SongsPage() {
   const pageStyle = useMemo(() => ({ paddingBottom: 0 }), []);
 
   const handleSearchChange = useCallback(
-    (v: string) => updateParam('search', v || null),
+    (v: string) => {
+      updateParam('search', v || null);
+    },
     [updateParam]
   );
 
@@ -380,7 +383,9 @@ export default function SongsPage() {
   );
 
   const handleRemoveTag = useCallback(
-    (tag: string) => updateParam('tags', filterTags.filter((t) => t !== tag).join(',') || null),
+    (tag: string) => {
+      updateParam('tags', filterTags.filter((t) => t !== tag).join(',') || null);
+    },
     [filterTags, updateParam]
   );
 
@@ -395,7 +400,9 @@ export default function SongsPage() {
   );
 
   const handleRemoveSource = useCallback(
-    (s: string) => updateParam('source', filterSources.filter((x) => x !== s).join(',') || null),
+    (s: string) => {
+      updateParam('source', filterSources.filter((x) => x !== s).join(',') || null);
+    },
     [filterSources, updateParam]
   );
 
@@ -417,26 +424,36 @@ export default function SongsPage() {
     }
   }, [deleteId, handleDelete]);
 
-  const handleCancelDelete = useCallback(() => setDeleteId(null), []);
+  const handleCancelDelete = useCallback(() => {
+    setDeleteId(null);
+  }, []);
 
-  const handleCancelBulkDelete = useCallback(() => setBulkDeleteConfirm(false), []);
+  const handleCancelBulkDelete = useCallback(() => {
+    setBulkDeleteConfirm(false);
+  }, []);
 
-  const handleBulkTag = useCallback(() => setBulkEditingOpen(true), []);
+  const handleBulkTag = useCallback(() => {
+    setBulkEditingOpen(true);
+  }, []);
 
-  const handleSelectAll = useCallback(() => bulk.selectAll(items.map((s) => s.id)), [bulk, items]);
+  const handleSelectAll = useCallback(() => {
+    bulk.selectAll(items.map((s) => s.id));
+  }, [bulk, items]);
 
-  const handleCloseBulkEdit = useCallback(() => setBulkEditingOpen(false), []);
+  const handleCloseBulkEdit = useCallback(() => {
+    setBulkEditingOpen(false);
+  }, []);
 
   return (
-    <div className='p-4 md:p-8 flex flex-col min-h-0 h-full' style={pageStyle}>
+    <div className='flex h-full min-h-0 flex-col p-4 md:p-8' style={pageStyle}>
       <PageHeader
         icon={MusicNotesIcon}
         title='Songs'
         subtitle={`Music library${hasLoaded ? ` • ${total} track${total !== 1 ? 's' : ''}` : ''}`}
       >
-        <span className='relative group'>
+        <span className='group relative'>
           <QuestionIcon size={20} weight='duotone' className='text-muted cursor-help' />
-          <span className='glass-tooltip absolute right-0 top-full mt-2 w-64 p-3 leading-relaxed'>
+          <span className='glass-tooltip absolute top-full right-0 mt-2 w-64 p-3 leading-relaxed'>
             Songs are added through the <span className='text-accent'>Requests</span> page. Submit a
             URL there — admins review and approve it, or it&rsquo;s added instantly if you have
             permission.
@@ -472,7 +489,7 @@ export default function SongsPage() {
         {viewMode === 'list' ? (
           <m.div
             key='list'
-            className='flex-1 min-h-0 flex flex-col'
+            className='flex min-h-0 flex-1 flex-col'
             variants={pageVariants}
             initial='initial'
             animate='animate'
@@ -512,7 +529,7 @@ export default function SongsPage() {
         ) : (
           <m.div
             key='grid'
-            className='flex-1 min-h-0 flex flex-col'
+            className='flex min-h-0 flex-1 flex-col'
             variants={pageVariants}
             initial='initial'
             animate='animate'
@@ -632,7 +649,7 @@ function DeleteConfirmDialog({
         <>
           Remove <span className='text-fg font-semibold'>"{song.nickname ?? song.title}"</span> from
           the library?{' '}
-          <span className='font-mono text-xs text-danger/70'>
+          <span className='text-danger/70 font-mono text-xs'>
             this will remove it from all playlists too.
           </span>
         </>

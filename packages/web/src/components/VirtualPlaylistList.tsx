@@ -33,7 +33,7 @@ function SkeletonList() {
       {Array.from({ length: 4 }).map((_, i) => (
         // eslint-disable-next-line react/no-array-index-key -- static skeleton placeholders
         <div key={`skeleton-${i}`} className='card flex items-center gap-4 px-5 py-4'>
-          <Skeleton className='w-10 h-10 rounded' />
+          <Skeleton className='h-10 w-10 rounded' />
           <div className='flex-1 space-y-2'>
             <Skeleton className='h-3 w-48' />
             <Skeleton className='h-2.5 w-24' />

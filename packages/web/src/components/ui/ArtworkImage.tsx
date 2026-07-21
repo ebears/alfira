@@ -17,7 +17,9 @@ export function ArtworkImage({
 }: ArtworkImageProps) {
   const [loaded, setLoaded] = useState(false);
 
-  const handleLoad = useCallback(() => setLoaded(true), []);
+  const handleLoad = useCallback(() => {
+    setLoaded(true);
+  }, []);
 
   if (!src) {
     return null;
@@ -26,7 +28,7 @@ export function ArtworkImage({
   return (
     <div className={`relative ${className}`}>
       {!loaded && (
-        <div className='absolute inset-0 bg-elevated flex items-center justify-center'>
+        <div className='bg-elevated absolute inset-0 flex items-center justify-center'>
           <DiscIcon
             size={20}
             weight='duotone'
@@ -40,7 +42,7 @@ export function ArtworkImage({
         loading='lazy'
         decoding='async'
         onLoad={handleLoad}
-        className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-200 ${loaded ? 'opacity-100' : 'opacity-0'} ${imageClassName}`}
+        className={`absolute inset-0 h-full w-full object-cover transition-opacity duration-200 ${loaded ? 'opacity-100' : 'opacity-0'} ${imageClassName}`}
       />
     </div>
   );

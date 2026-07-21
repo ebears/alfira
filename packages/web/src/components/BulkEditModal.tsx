@@ -46,7 +46,7 @@ export default function BulkEditModal({ count, onApply, onClose, isApplying }: B
   // Close tag dropdown when clicking outside
   useEffect(() => {
     if (!showDropdown) {
-      return undefined;
+      return;
     }
     const handler = (e: MouseEvent) => {
       const target = e.target as Node;
@@ -60,7 +60,9 @@ export default function BulkEditModal({ count, onApply, onClose, isApplying }: B
       }
     };
     document.addEventListener('mousedown', handler);
-    return () => document.removeEventListener('mousedown', handler);
+    return () => {
+      document.removeEventListener('mousedown', handler);
+    };
   }, [showDropdown]);
 
   // Volume boost
@@ -182,7 +184,9 @@ export default function BulkEditModal({ count, onApply, onClose, isApplying }: B
     [toggleClear]
   );
 
-  const handleBackdropClick = useCallback((e: React.MouseEvent) => e.stopPropagation(), []);
+  const handleBackdropClick = useCallback((e: React.MouseEvent) => {
+    e.stopPropagation();
+  }, []);
 
   const handleFocusTagInput = useCallback(() => {
     tagInputRef.current?.focus();
@@ -192,7 +196,7 @@ export default function BulkEditModal({ count, onApply, onClose, isApplying }: B
   const handleTagPillRemove = useCallback(
     (e: React.MouseEvent<HTMLButtonElement>) => {
       e.stopPropagation();
-      const tag = e.currentTarget.closest('[data-tag]')?.getAttribute('data-tag');
+      const tag = e.currentTarget.closest<HTMLElement>('[data-tag]')?.dataset.tag;
       if (tag) {
         removeTag(tag);
       }
@@ -206,9 +210,13 @@ export default function BulkEditModal({ count, onApply, onClose, isApplying }: B
     setHighlightedIdx(0);
   }, []);
 
-  const handleTagInputFocus = useCallback(() => setShowDropdown(true), []);
+  const handleTagInputFocus = useCallback(() => {
+    setShowDropdown(true);
+  }, []);
 
-  const handleClearTags = useCallback(() => toggleClear('tags'), [toggleClear]);
+  const handleClearTags = useCallback(() => {
+    toggleClear('tags');
+  }, [toggleClear]);
 
   const handleDropdownSelect = useCallback(
     (e: React.MouseEvent<HTMLButtonElement>) => {
@@ -243,12 +251,13 @@ export default function BulkEditModal({ count, onApply, onClose, isApplying }: B
     }
   }, [volumeBoost]);
 
-  const handleVolumeRangeChange = useCallback(
-    (e: React.ChangeEvent<HTMLInputElement>) => setVolumeBoost(e.target.value),
-    []
-  );
+  const handleVolumeRangeChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    setVolumeBoost(e.target.value);
+  }, []);
 
-  const handleClearVolumeBoost = useCallback(() => toggleClear('volumeBoost'), [toggleClear]);
+  const handleClearVolumeBoost = useCallback(() => {
+    toggleClear('volumeBoost');
+  }, [toggleClear]);
 
   const volumeRangeStyle = useMemo(
     () => ({ '--volume-pct': volumePct }) as React.CSSProperties,
@@ -313,11 +322,11 @@ export default function BulkEditModal({ count, onApply, onClose, isApplying }: B
   return (
     <Backdrop onClose={onClose}>
       <SpringUp
-        className='w-full max-w-md mx-4 p-6 glass-modal max-h-[85vh] overflow-y-auto'
+        className='glass-modal mx-4 max-h-[85vh] w-full max-w-md overflow-y-auto p-6'
         onClick={handleBackdropClick}
       >
-        <h2 className='font-display text-lg text-fg mb-1'>Edit {count} songs</h2>
-        <p className='text-xs text-muted font-mono mb-4'>
+        <h2 className='font-display text-fg mb-1 text-lg'>Edit {count} songs</h2>
+        <p className='text-muted mb-4 font-mono text-xs'>
           Fill in fields you want to change. Blank fields are left unchanged. Use clear to reset a
           field.
         </p>
@@ -328,13 +337,13 @@ export default function BulkEditModal({ count, onApply, onClose, isApplying }: B
               <div className='flex-1'>
                 <label
                   htmlFor={`bulk-edit-${key}`}
-                  className='block font-mono text-[10px] text-muted uppercase mb-1'
+                  className='text-muted mb-1 block font-mono text-[10px] uppercase'
                 >
                   {label}
                 </label>
                 <input
                   id={`bulk-edit-${key}`}
-                  className={`input text-sm w-full${clearFields.has(key) ? ' opacity-30 pointer-events-none' : ''}`}
+                  className={`input text-sm w-full${clearFields.has(key) ? ' pointer-events-none opacity-30' : ''}`}
                   placeholder={placeholder}
                   value={fieldValues[key]}
                   onChange={handleFieldChange}
@@ -342,15 +351,15 @@ export default function BulkEditModal({ count, onApply, onClose, isApplying }: B
                   disabled={clearFields.has(key)}
                 />
               </div>
-              <label className='flex flex-col items-center gap-0.5 shrink-0 pt-5 cursor-pointer'>
+              <label className='flex shrink-0 cursor-pointer flex-col items-center gap-0.5 pt-5'>
                 <input
                   type='checkbox'
-                  className='sr-only peer'
+                  className='peer sr-only'
                   checked={clearFields.has(key)}
                   onChange={handleClearField}
                   data-field={key}
                 />
-                <span className='text-[9px] font-mono uppercase text-muted peer-checked:text-danger transition-colors'>
+                <span className='text-muted peer-checked:text-danger font-mono text-[9px] uppercase transition-colors'>
                   Clear
                 </span>
                 <EraserIcon
@@ -368,14 +377,14 @@ export default function BulkEditModal({ count, onApply, onClose, isApplying }: B
               <div className='flex-1'>
                 <label
                   htmlFor='bulk-edit-tags'
-                  className='block font-mono text-[10px] text-muted uppercase mb-1'
+                  className='text-muted mb-1 block font-mono text-[10px] uppercase'
                 >
                   Tags
                 </label>
                 {/* eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-static-element-interactions -- container click focuses inner input */}
                 <div
                   ref={tagAreaRef}
-                  className={`input text-sm flex flex-wrap gap-1.5 items-center min-h-9.5 cursor-text relative${clearFields.has('tags') ? ' opacity-30 pointer-events-none' : ''}`}
+                  className={`input flex min-h-9.5 cursor-text flex-wrap items-center gap-1.5 text-sm relative${clearFields.has('tags') ? ' pointer-events-none opacity-30' : ''}`}
                   onClick={handleFocusTagInput}
                 >
                   {tags.map((tag) => {
@@ -383,7 +392,7 @@ export default function BulkEditModal({ count, onApply, onClose, isApplying }: B
                     return (
                       <span
                         key={tag}
-                        className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-xs font-medium ${c.bg} ${c.text} ${c.border} border`}
+                        className={`inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-xs font-medium ${c.bg} ${c.text} ${c.border} border`}
                       >
                         {tag}
                         <button
@@ -400,7 +409,7 @@ export default function BulkEditModal({ count, onApply, onClose, isApplying }: B
                   <input
                     ref={tagInputRef}
                     id='bulk-edit-tags'
-                    className='bg-transparent outline-none flex-1 min-w-30 text-sm placeholder:text-faint py-0.5'
+                    className='placeholder:text-faint min-w-30 flex-1 bg-transparent py-0.5 text-sm outline-none'
                     placeholder={
                       tags.length === 0 ? 'Type a tag and press Enter...' : 'Add another...'
                     }
@@ -412,14 +421,14 @@ export default function BulkEditModal({ count, onApply, onClose, isApplying }: B
                   />
                 </div>
               </div>
-              <label className='flex flex-col items-center gap-0.5 shrink-0 pt-5 cursor-pointer'>
+              <label className='flex shrink-0 cursor-pointer flex-col items-center gap-0.5 pt-5'>
                 <input
                   type='checkbox'
-                  className='sr-only peer'
+                  className='peer sr-only'
                   checked={clearFields.has('tags')}
                   onChange={handleClearTags}
                 />
-                <span className='text-[9px] font-mono uppercase text-muted peer-checked:text-danger transition-colors'>
+                <span className='text-muted peer-checked:text-danger font-mono text-[9px] uppercase transition-colors'>
                   Clear
                 </span>
                 <EraserIcon
@@ -435,7 +444,7 @@ export default function BulkEditModal({ count, onApply, onClose, isApplying }: B
               <div className='relative'>
                 <div
                   ref={tagDropdownRef}
-                  className='absolute top-1 left-0 right-0 glass-popover z-30 max-h-40'
+                  className='glass-popover absolute top-1 right-0 left-0 z-30 max-h-40'
                 >
                   {filtered.map((t, i) => {
                     const c = getTagColorClasses(t.canonicalName, t.color);
@@ -443,7 +452,7 @@ export default function BulkEditModal({ count, onApply, onClose, isApplying }: B
                       <button
                         key={t.nameLower}
                         type='button'
-                        className={`w-full text-left px-3 py-1.5 text-sm transition-colors cursor-pointer ${
+                        className={`w-full cursor-pointer px-3 py-1.5 text-left text-sm transition-colors ${
                           i === highlightedIdx
                             ? 'bg-accent/10 text-accent'
                             : 'text-fg hover:bg-surface'
@@ -452,7 +461,7 @@ export default function BulkEditModal({ count, onApply, onClose, isApplying }: B
                         data-tag={t.nameLower}
                       >
                         <span
-                          className={`inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium ${c.bg} ${c.text}`}
+                          className={`inline-flex items-center rounded px-1.5 py-0.5 text-xs font-medium ${c.bg} ${c.text}`}
                         >
                           {t.canonicalName}
                         </span>
@@ -469,14 +478,14 @@ export default function BulkEditModal({ count, onApply, onClose, isApplying }: B
             <div className='flex-1'>
               <label
                 htmlFor='bulk-edit-volumeboost'
-                className='block font-mono text-[10px] text-muted uppercase mb-1'
+                className='text-muted mb-1 block font-mono text-[10px] uppercase'
               >
                 Volume Boost (dB)
               </label>
               <div className='flex items-center gap-3'>
                 <input
                   id='bulk-edit-volumeboost'
-                  className='input text-sm w-16 text-center disabled:opacity-30 disabled:cursor-not-allowed'
+                  className='input w-16 text-center text-sm disabled:cursor-not-allowed disabled:opacity-30'
                   placeholder='0'
                   type='text'
                   value={volumeBoost}
@@ -484,27 +493,27 @@ export default function BulkEditModal({ count, onApply, onClose, isApplying }: B
                   onBlur={handleVolumeBlur}
                   disabled={clearFields.has('volumeBoost')}
                 />
-                <span className='text-xs text-muted font-mono w-8 text-left'>dB</span>
+                <span className='text-muted w-8 text-left font-mono text-xs'>dB</span>
                 <input
                   type='range'
                   min={-100}
                   max={200}
                   value={volumeNumeric}
                   onChange={handleVolumeRangeChange}
-                  className={`volume-range-input${clearFields.has('volumeBoost') ? ' opacity-30 pointer-events-none' : ''}`}
+                  className={`volume-range-input${clearFields.has('volumeBoost') ? ' pointer-events-none opacity-30' : ''}`}
                   disabled={clearFields.has('volumeBoost')}
                   style={volumeRangeStyle}
                 />
               </div>
             </div>
-            <label className='flex flex-col items-center gap-0.5 shrink-0 pt-5 cursor-pointer'>
+            <label className='flex shrink-0 cursor-pointer flex-col items-center gap-0.5 pt-5'>
               <input
                 type='checkbox'
-                className='sr-only peer'
+                className='peer sr-only'
                 checked={clearFields.has('volumeBoost')}
                 onChange={handleClearVolumeBoost}
               />
-              <span className='text-[9px] font-mono uppercase text-muted peer-checked:text-danger transition-colors'>
+              <span className='text-muted peer-checked:text-danger font-mono text-[9px] uppercase transition-colors'>
                 Clear
               </span>
               <EraserIcon
@@ -517,7 +526,7 @@ export default function BulkEditModal({ count, onApply, onClose, isApplying }: B
         </div>
 
         {/* Actions */}
-        <div className='flex justify-end gap-2 mt-4'>
+        <div className='mt-4 flex justify-end gap-2'>
           <Button variant='inherit' surface='surface' onClick={onClose} className='text-xs'>
             Cancel
           </Button>

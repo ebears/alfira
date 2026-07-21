@@ -12,10 +12,10 @@ export function useAddToQueue() {
       try {
         await addToPriorityQueue(songId);
         notify('Added to Up Next', 'success');
-      } catch (err: unknown) {
-        if (!isRateLimitError(err)) {
+      } catch (error: unknown) {
+        if (!isRateLimitError(error)) {
           notify(
-            apiErrorMessage(err, 'Could not add to queue. Is the bot in a voice channel?'),
+            apiErrorMessage(error, 'Could not add to queue. Is the bot in a voice channel?'),
             'error',
             5000
           );

@@ -97,9 +97,19 @@ function log(level: LogLevel, first: LogArg, second?: string): void {
 }
 
 export const logger = {
-  debug: (obj: LogArg, msg?: string) => log('debug', obj, msg),
-  info: (obj: LogArg, msg?: string) => log('info', obj, msg),
-  warn: (obj: LogArg, msg?: string) => log('warn', obj, msg),
-  error: (obj: LogArg, msg?: string) => log('error', obj, msg),
-  fatal: (obj: LogArg, msg?: string) => log('fatal', obj, msg),
+  debug: (obj: LogArg, msg?: string) => {
+    log('debug', obj, msg);
+  },
+  info: (obj: LogArg, msg?: string) => {
+    log('info', obj, msg);
+  },
+  warn: (obj: LogArg, msg?: string) => {
+    log('warn', obj, msg);
+  },
+  error: (obj: LogArg, msg?: string) => {
+    log('error', obj, msg);
+  },
+  fatal: (obj: LogArg, msg?: string) => {
+    log('fatal', obj, msg);
+  },
 };

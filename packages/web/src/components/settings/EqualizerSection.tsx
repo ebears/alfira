@@ -44,7 +44,9 @@ const EqBandSlider = memo(function EqBandSlider({
   onChange,
 }: EqBandSliderProps) {
   const handleChange = useCallback(
-    (e: React.ChangeEvent<HTMLInputElement>) => onChange(index, parseInt(e.target.value, 10)),
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      onChange(index, Number.parseInt(e.target.value, 10));
+    },
     [onChange, index]
   );
 
@@ -64,8 +66,8 @@ const EqBandSlider = memo(function EqBandSlider({
   );
 
   return (
-    <div className='flex flex-col items-center gap-1 shrink-0'>
-      <span className='font-mono text-[10px] text-muted'>{label}</span>
+    <div className='flex shrink-0 flex-col items-center gap-1'>
+      <span className='text-muted font-mono text-[10px]'>{label}</span>
       <div className='relative h-[120px] w-2'>
         <input
           type='range'
@@ -77,9 +79,9 @@ const EqBandSlider = memo(function EqBandSlider({
           className='range-input'
           style={sliderStyle}
         />
-        <div className='absolute inset-x-0 top-1/2 h-px bg-border/50 pointer-events-none' />
+        <div className='bg-border/50 pointer-events-none absolute inset-x-0 top-1/2 h-px' />
       </div>
-      <span className='font-mono text-[10px] text-fg min-w-[2em] text-right'>{gainLabel}</span>
+      <span className='text-fg min-w-[2em] text-right font-mono text-[10px]'>{gainLabel}</span>
     </div>
   );
 });
@@ -157,7 +159,9 @@ export default function EqualizerSection() {
     });
   }, []);
 
-  const handleToggle = useCallback(() => setEqEnabled((v) => !v), []);
+  const handleToggle = useCallback(() => {
+    setEqEnabled((v) => !v);
+  }, []);
 
   // EQ curve SVG visualization
   const curvePath = (() => {
@@ -183,22 +187,22 @@ export default function EqualizerSection() {
   }
 
   return (
-    <div className={`space-y-4 ${dimmed ? 'opacity-40 pointer-events-none' : ''}`}>
+    <div className={`space-y-4 ${dimmed ? 'pointer-events-none opacity-40' : ''}`}>
       {/* Enabled toggle */}
       <div className='flex items-center gap-3'>
-        <span className='font-mono text-[11px] text-muted w-20 shrink-0'>Enabled</span>
+        <span className='text-muted w-20 shrink-0 font-mono text-[11px]'>Enabled</span>
         <button
           type='button'
           role='switch'
           aria-checked={eqEnabled}
           aria-label='Enable equalizer'
           onClick={handleToggle}
-          className={`relative shrink-0 w-9 h-5 rounded-full transition-colors cursor-pointer focus:outline-none focus:ring-2 focus:ring-accent/50 focus:ring-offset-2 focus:ring-offset-surface ${
+          className={`focus:ring-accent/50 focus:ring-offset-surface relative h-5 w-9 shrink-0 cursor-pointer rounded-full transition-colors focus:ring-2 focus:ring-offset-2 focus:outline-none ${
             eqEnabled ? 'bg-accent' : 'bg-border'
           }`}
         >
           <span
-            className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full transition-transform bg-elevated ${
+            className={`bg-elevated absolute top-0.5 left-0.5 h-4 w-4 rounded-full transition-transform ${
               eqEnabled ? 'translate-x-4' : 'translate-x-0'
             }`}
           />
@@ -206,7 +210,7 @@ export default function EqualizerSection() {
       </div>
 
       {/* EQ curve preview */}
-      <svg viewBox={`0 0 ${curvePath.W} ${curvePath.H}`} className='w-full h-14' aria-hidden='true'>
+      <svg viewBox={`0 0 ${curvePath.W} ${curvePath.H}`} className='h-14 w-full' aria-hidden='true'>
         <line
           x1={curvePath.pad}
           y1={curvePath.centerY}
@@ -244,7 +248,7 @@ export default function EqualizerSection() {
       </div>
 
       {/* Actions */}
-      <div className='flex gap-2 pt-1 justify-end'>
+      <div className='flex justify-end gap-2 pt-1'>
         <Button
           variant='primary'
           size='icon'

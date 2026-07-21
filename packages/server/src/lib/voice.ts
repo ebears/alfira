@@ -40,10 +40,8 @@ export async function resolveOrAutoJoinPlayer(
 > {
   const guildId = getGuildId();
   const existingPlayer = getPlayer(guildId);
-  if (existingPlayer) {
-    if (lavalink.isGuildConnected(guildId)) {
-      return { ok: true, player: existingPlayer };
-    }
+  if (existingPlayer && lavalink.isGuildConnected(guildId)) {
+    return { ok: true, player: existingPlayer };
   }
 
   const gateway = getClient();

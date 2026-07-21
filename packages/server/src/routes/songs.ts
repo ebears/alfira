@@ -348,7 +348,7 @@ async function handleGetSongs(ctx: RouteContext, request: Request): Promise<Resp
       .from(songTable)
       .where(where),
   ]);
-  const total = parseInt(String(countResult[0]?.count ?? 0), 10);
+  const total = Number.parseInt(String(countResult[0]?.count ?? 0), 10);
 
   // Resolve Discord display names for unique addedBy IDs
   const nameMap = await resolveDisplayNames(songs);

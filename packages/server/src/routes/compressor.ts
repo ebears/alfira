@@ -32,7 +32,7 @@ function handleCompressorGet(
   return json({
     enabled: row?.compressorEnabled ?? false,
     threshold: row?.compressorThreshold ?? -6,
-    ratio: row?.compressorRatio ?? 4.0,
+    ratio: row?.compressorRatio ?? 4,
     attack: row?.compressorAttack ?? 5,
     release: row?.compressorRelease ?? 50,
     gain: row?.compressorGain ?? 3,

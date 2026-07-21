@@ -13,7 +13,7 @@ const sizeClasses: Record<NonNullable<SpinnerProps['size']>, string> = {
 export const Spinner = memo(function Spinner({ size = 'sm' }: SpinnerProps) {
   return (
     <span
-      className={`${sizeClasses[size]} border-accent border-t-transparent rounded-full animate-spin inline-block`}
+      className={`${sizeClasses[size]} border-accent inline-block animate-spin rounded-full border-t-transparent`}
     />
   );
 });

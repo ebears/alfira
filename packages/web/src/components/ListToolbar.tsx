@@ -95,6 +95,7 @@ export default function ListToolbar({
 }: ListToolbarProps) {
   // ── Search (local mirror + debounce) ─────────────────────────────
   const [searchInput, setSearchInput] = useState(searchValue);
+  // eslint-disable-next-line unicorn/no-useless-undefined
   const debounceRef = useRef<ReturnType<typeof setTimeout>>(undefined);
 
   // Sync local input ← external value (e.g. browser back/forward on SongsPage)
@@ -122,7 +123,7 @@ export default function ListToolbar({
   // Close dropdown on outside click
   useEffect(() => {
     if (!sortOpen) {
-      return undefined;
+      return;
     }
     const handler = (e: MouseEvent) => {
       if (sortRef.current && !sortRef.current.contains(e.target as Node)) {
@@ -130,17 +131,27 @@ export default function ListToolbar({
       }
     };
     document.addEventListener('mousedown', handler);
-    return () => document.removeEventListener('mousedown', handler);
+    return () => {
+      document.removeEventListener('mousedown', handler);
+    };
   }, [sortOpen]);
 
   const hasActiveSort = sort !== defaultSort || order !== 'desc';
 
-  const handleOpenFilter = useCallback(() => setFilterOpen(true), []);
-  const handleCloseFilter = useCallback(() => setFilterOpen(false), []);
-  const handleToggleSort = useCallback(() => setSortOpen((v) => !v), []);
+  const handleOpenFilter = useCallback(() => {
+    setFilterOpen(true);
+  }, []);
+  const handleCloseFilter = useCallback(() => {
+    setFilterOpen(false);
+  }, []);
+  const handleToggleSort = useCallback(() => {
+    setSortOpen((v) => !v);
+  }, []);
 
   const handleSearchChange = useCallback(
-    (e: React.ChangeEvent<HTMLInputElement>) => handleSearchInputChange(e.target.value),
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      handleSearchInputChange(e.target.value);
+    },
     [handleSearchInputChange]
   );
 
@@ -176,11 +187,11 @@ export default function ListToolbar({
   return (
     <>
       {/* ── Toolbar ── */}
-      <div className='flex items-center gap-2 mb-1'>
+      <div className='mb-1 flex items-center gap-2'>
         {/* Search */}
         <div className='relative flex-1'>
           <MagnifyingGlassIcon
-            className='absolute left-3 top-1/2 -translate-y-1/2 text-faint w-4 h-4 md:w-3.5 md:h-3.5'
+            className='text-faint absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 md:h-3.5 md:w-3.5'
             weight='duotone'
           />
           <input
@@ -235,7 +246,7 @@ export default function ListToolbar({
           </Button>
 
           {sortOpen && (
-            <div className='absolute right-0 top-full mt-1.5 w-48 glass-popover z-20 py-1 origin-top-right'>
+            <div className='glass-popover absolute top-full right-0 z-20 mt-1.5 w-48 origin-top-right py-1'>
               {sortOptions.map((opt) => {
                 const isActive = sort === opt.value;
                 return (
@@ -316,7 +327,9 @@ const SortOptionItem = memo(function SortOptionItem({
   order: 'asc' | 'desc';
   onClick: (value: string) => void;
 }) {
-  const handleClick = useCallback(() => onClick(opt.value), [onClick, opt.value]);
+  const handleClick = useCallback(() => {
+    onClick(opt.value);
+  }, [onClick, opt.value]);
   const handleArrowClick = useCallback(
     (e: React.MouseEvent) => {
       e.stopPropagation();
@@ -328,7 +341,7 @@ const SortOptionItem = memo(function SortOptionItem({
   return (
     <button
       type='button'
-      className={`w-full flex items-center justify-between px-3 py-2 text-sm font-body transition-colors ${
+      className={`font-body flex w-full items-center justify-between px-3 py-2 text-sm transition-colors ${
         isActive ? 'text-accent bg-accent/5' : 'text-fg hover:bg-surface active:bg-surface/80'
       }`}
       onClick={handleClick}
@@ -337,7 +350,7 @@ const SortOptionItem = memo(function SortOptionItem({
       {isActive && (
         <button
           type='button'
-          className='cursor-pointer p-0.5 rounded hover:bg-black/10 dark:hover:bg-white/10 transition-colors'
+          className='cursor-pointer rounded p-0.5 transition-colors hover:bg-black/10 dark:hover:bg-white/10'
           onClick={handleArrowClick}
           title={order === 'asc' ? 'Switch to descending' : 'Switch to ascending'}
         >

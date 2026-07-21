@@ -41,7 +41,7 @@ export function usePaginatedData<T, A extends unknown[], M = undefined>({
   compareFn,
 }: UsePaginatedDataOptions<T, A, M>): UsePaginatedDataReturn<T, M> {
   const [items, setItems] = useState<T[]>([]);
-  const [metadata, setMetadata] = useState<M | undefined>(undefined);
+  const [metadata, setMetadata] = useState<M | undefined>();
   const [isLoading, setIsLoading] = useState(false);
   const [isFetching, setIsFetching] = useState(false);
   const [isError, setIsError] = useState(false);
@@ -54,7 +54,8 @@ export function usePaginatedData<T, A extends unknown[], M = undefined>({
   const isFetchingRef = useRef(false);
   const isMountedRef = useRef(true);
   const hasEverLoadedRef = useRef(false);
-  const loadingTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  // eslint-disable-next-line unicorn/no-useless-undefined
+  const loadingTimerRef = useRef<ReturnType<typeof setTimeout>>(undefined);
   const resetInProgressRef = useRef(false);
 
   hasMoreRef.current = hasMore;

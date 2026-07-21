@@ -29,7 +29,7 @@ export function Backdrop({
 
   return (
     <div
-      className='fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-4 cursor-default'
+      className='fixed inset-0 z-50 flex cursor-default items-center justify-center bg-black/70 p-4'
       onMouseDown={handleMouseDown}
       onKeyDown={handleKeyDown}
       role='presentation'

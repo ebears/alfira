@@ -9,25 +9,25 @@ import { Button } from '../ui/Button';
 
 const DEFAULTS = {
   enabled: false,
-  sinOffset: 0.0,
-  sinScale: 1.0,
-  cosOffset: 0.0,
-  cosScale: 1.0,
-  tanOffset: 0.0,
-  tanScale: 1.0,
-  offset: 0.0,
-  scale: 1.0,
+  sinOffset: 0,
+  sinScale: 1,
+  cosOffset: 0,
+  cosScale: 1,
+  tanOffset: 0,
+  tanScale: 1,
+  offset: 0,
+  scale: 1,
 };
 
 const SLIDERS = [
-  { key: 'sinOffset', label: 'Sin Offset', min: -1.0, max: 1.0, step: 0.05, unit: '' },
-  { key: 'sinScale', label: 'Sin Scale', min: 0.0, max: 5.0, step: 0.1, unit: '' },
-  { key: 'cosOffset', label: 'Cos Offset', min: -1.0, max: 1.0, step: 0.05, unit: '' },
-  { key: 'cosScale', label: 'Cos Scale', min: 0.0, max: 5.0, step: 0.1, unit: '' },
-  { key: 'tanOffset', label: 'Tan Offset', min: -1.0, max: 1.0, step: 0.05, unit: '' },
-  { key: 'tanScale', label: 'Tan Scale', min: 0.0, max: 5.0, step: 0.1, unit: '' },
-  { key: 'offset', label: 'Offset', min: -1.0, max: 1.0, step: 0.05, unit: '' },
-  { key: 'scale', label: 'Scale', min: 0.0, max: 5.0, step: 0.1, unit: '' },
+  { key: 'sinOffset', label: 'Sin Offset', min: -1, max: 1, step: 0.05, unit: '' },
+  { key: 'sinScale', label: 'Sin Scale', min: 0, max: 5, step: 0.1, unit: '' },
+  { key: 'cosOffset', label: 'Cos Offset', min: -1, max: 1, step: 0.05, unit: '' },
+  { key: 'cosScale', label: 'Cos Scale', min: 0, max: 5, step: 0.1, unit: '' },
+  { key: 'tanOffset', label: 'Tan Offset', min: -1, max: 1, step: 0.05, unit: '' },
+  { key: 'tanScale', label: 'Tan Scale', min: 0, max: 5, step: 0.1, unit: '' },
+  { key: 'offset', label: 'Offset', min: -1, max: 1, step: 0.05, unit: '' },
+  { key: 'scale', label: 'Scale', min: 0, max: 5, step: 0.1, unit: '' },
 ] as const;
 
 type SliderKey = (typeof SLIDERS)[number]['key'];
@@ -44,7 +44,9 @@ const DistortionSlider = memo(function DistortionSlider({
   onChange,
 }: DistortionSliderProps) {
   const handleChange = useCallback(
-    (e: React.ChangeEvent<HTMLInputElement>) => onChange(key, parseFloat(e.target.value)),
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      onChange(key, Number.parseFloat(e.target.value));
+    },
     [onChange, key]
   );
 
@@ -56,8 +58,8 @@ const DistortionSlider = memo(function DistortionSlider({
 
   return (
     <div className='flex items-center gap-3'>
-      <span className='font-mono text-[11px] text-muted w-20 shrink-0'>{label}</span>
-      <span className='font-mono text-[11px] text-fg w-14 shrink-0'>{value.toFixed(2)}</span>
+      <span className='text-muted w-20 shrink-0 font-mono text-[11px]'>{label}</span>
+      <span className='text-fg w-14 shrink-0 font-mono text-[11px]'>{value.toFixed(2)}</span>
       <input
         type='range'
         min={min}
@@ -65,7 +67,7 @@ const DistortionSlider = memo(function DistortionSlider({
         step={step}
         value={value}
         onChange={handleChange}
-        className='flex-1 range-input range-input-h'
+        className='range-input range-input-h flex-1'
         style={sliderStyle}
       />
     </div>
@@ -145,7 +147,9 @@ export default function DistortionSection() {
     setValues((v) => ({ ...v, [key]: value }));
   }, []);
 
-  const handleToggle = useCallback(() => setValues((v) => ({ ...v, enabled: !v.enabled })), []);
+  const handleToggle = useCallback(() => {
+    setValues((v) => ({ ...v, enabled: !v.enabled }));
+  }, []);
 
   const dimmed = !canManage;
 
@@ -154,21 +158,21 @@ export default function DistortionSection() {
   }
 
   return (
-    <div className={`space-y-3 ${dimmed ? 'opacity-40 pointer-events-none' : ''}`}>
+    <div className={`space-y-3 ${dimmed ? 'pointer-events-none opacity-40' : ''}`}>
       <div className='flex items-center gap-3'>
-        <span className='font-mono text-[11px] text-muted w-20 shrink-0'>Enabled</span>
+        <span className='text-muted w-20 shrink-0 font-mono text-[11px]'>Enabled</span>
         <button
           type='button'
           role='switch'
           aria-checked={values.enabled}
           aria-label='Enable distortion'
           onClick={handleToggle}
-          className={`relative shrink-0 w-9 h-5 rounded-full transition-colors cursor-pointer focus:outline-none focus:ring-2 focus:ring-accent/50 focus:ring-offset-2 focus:ring-offset-surface ${
+          className={`focus:ring-accent/50 focus:ring-offset-surface relative h-5 w-9 shrink-0 cursor-pointer rounded-full transition-colors focus:ring-2 focus:ring-offset-2 focus:outline-none ${
             values.enabled ? 'bg-accent' : 'bg-border'
           }`}
         >
           <span
-            className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full transition-transform bg-elevated ${
+            className={`bg-elevated absolute top-0.5 left-0.5 h-4 w-4 rounded-full transition-transform ${
               values.enabled ? 'translate-x-4' : 'translate-x-0'
             }`}
           />
@@ -186,7 +190,7 @@ export default function DistortionSection() {
         ))}
       </div>
 
-      <div className='flex gap-2 pt-1 justify-end'>
+      <div className='flex justify-end gap-2 pt-1'>
         <Button
           variant='primary'
           size='icon'

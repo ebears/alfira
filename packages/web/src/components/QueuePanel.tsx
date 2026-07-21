@@ -127,7 +127,7 @@ export default function QueuePanel({
     const items: VirtualQueueItem[] = [];
     if (priorityQueue.length > 0) {
       items.push({ type: 'header', variant: 'priority', key: 'header-priority' });
-      priorityQueue.forEach((song, i) => {
+      for (const [i, song] of priorityQueue.entries()) {
         items.push({
           type: 'song',
           variant: 'priority',
@@ -135,11 +135,11 @@ export default function QueuePanel({
           listIndex: i,
           key: `p-${song.id}`,
         });
-      });
+      }
     }
     if (queue.length > 0) {
       items.push({ type: 'header', variant: 'regular', key: 'header-regular' });
-      queue.forEach((song, i) => {
+      for (const [i, song] of queue.entries()) {
         items.push({
           type: 'song',
           variant: 'regular',
@@ -147,7 +147,7 @@ export default function QueuePanel({
           listIndex: i,
           key: `r-${song.id}`,
         });
-      });
+      }
     }
     return items;
   }, [priorityQueue, queue]);
@@ -272,17 +272,31 @@ export default function QueuePanel({
     [reorderQueue]
   );
 
-  const handleToggleMenu = useCallback(() => setMenuOpen(!menuOpen), [menuOpen]);
-  const handleCloseMenu = useCallback(() => setMenuOpen(false), []);
-  const handleCloseQuickAdd = useCallback(() => setShowQuickAdd(false), []);
-  const handleAddedQuickAdd = useCallback(() => setShowQuickAdd(false), []);
-  const handleCloseOverride = useCallback(() => setShowOverride(false), []);
-  const handleOverrideDone = useCallback(() => setShowOverride(false), []);
+  const handleToggleMenu = useCallback(() => {
+    setMenuOpen(!menuOpen);
+  }, [menuOpen]);
+  const handleCloseMenu = useCallback(() => {
+    setMenuOpen(false);
+  }, []);
+  const handleCloseQuickAdd = useCallback(() => {
+    setShowQuickAdd(false);
+  }, []);
+  const handleAddedQuickAdd = useCallback(() => {
+    setShowQuickAdd(false);
+  }, []);
+  const handleCloseOverride = useCallback(() => {
+    setShowOverride(false);
+  }, []);
+  const handleOverrideDone = useCallback(() => {
+    setShowOverride(false);
+  }, []);
   const handleConfirmClear = useCallback(async () => {
     setClearConfirm(false);
     await handleClear();
   }, [handleClear]);
-  const handleCancelClear = useCallback(() => setClearConfirm(false), []);
+  const handleCancelClear = useCallback(() => {
+    setClearConfirm(false);
+  }, []);
 
   const totalHeight = virtualizer.getTotalSize();
   const virtualContainerStyle = useMemo(
@@ -297,7 +311,9 @@ export default function QueuePanel({
         id: 'quick-add',
         label: 'Quick Add',
         icon: <PlusCircleIcon size={14} weight='duotone' />,
-        onClick: () => setShowQuickAdd(true),
+        onClick: () => {
+          setShowQuickAdd(true);
+        },
       });
     }
     if (isAdminView || hasPermission('queue.override')) {
@@ -306,7 +322,9 @@ export default function QueuePanel({
         label: 'Override',
         icon: <PlayIcon size={14} weight='duotone' />,
         danger: true,
-        onClick: () => setShowOverride(true),
+        onClick: () => {
+          setShowOverride(true);
+        },
       });
     }
     if (isAdminView || hasPermission('queue.manage')) {
@@ -316,7 +334,9 @@ export default function QueuePanel({
         icon: <BombIcon size={14} weight='duotone' />,
         danger: true,
         disabled: clearBusy || isQueueEmpty,
-        onClick: () => setClearConfirm(true),
+        onClick: () => {
+          setClearConfirm(true);
+        },
       });
     }
     return items;
@@ -324,7 +344,7 @@ export default function QueuePanel({
 
   if (loading) {
     return (
-      <div className='flex flex-col h-full'>
+      <div className='flex h-full flex-col'>
         <PanelHeader
           triggerRef={triggerRef}
           menuOpen={menuOpen}
@@ -332,7 +352,7 @@ export default function QueuePanel({
           mobileQuickControls={mobileQuickControls}
           showActions={false}
         />
-        <div className='flex-1 p-4 space-y-3'>
+        <div className='flex-1 space-y-3 p-4'>
           <Skeleton className='h-5 w-48 rounded' />
           <Skeleton className='h-12 w-full rounded' />
           <Skeleton className='h-12 w-full rounded' />
@@ -343,7 +363,7 @@ export default function QueuePanel({
   }
 
   return (
-    <div className='flex flex-col h-full'>
+    <div className='flex h-full flex-col'>
       <PanelHeader
         triggerRef={triggerRef}
         menuOpen={menuOpen}
@@ -353,7 +373,7 @@ export default function QueuePanel({
       />
 
       {/* Fixed content: Now Playing */}
-      <div className='p-4 space-y-4 shrink-0'>
+      <div className='shrink-0 space-y-4 p-4'>
         <AnimatePresence mode='wait'>
           {currentSong ? (
             <m.div
@@ -387,7 +407,7 @@ export default function QueuePanel({
         {/* Empty state */}
         {virtualItems.length === 0 && (
           <div className='py-8 text-center'>
-            <p className='font-mono text-[11px] text-faint'>queue is empty</p>
+            <p className='text-faint font-mono text-[11px]'>queue is empty</p>
           </div>
         )}
       </div>
@@ -396,7 +416,7 @@ export default function QueuePanel({
       {virtualItems.length > 0 && (
         <div
           ref={scrollRef}
-          className='flex-1 overflow-y-auto px-4 pb-4 min-h-0'
+          className='min-h-0 flex-1 overflow-y-auto px-4 pb-4'
           style={SCROLL_MASK_STYLE}
         >
           <div style={virtualContainerStyle}>
@@ -415,18 +435,18 @@ export default function QueuePanel({
                     style={getVirtualRowStyle(virtualRow.start)}
                   >
                     {item.variant === 'priority' ? (
-                      <h2 className='font-display text-lg text-fg tracking-wider'>
-                        <LightningIcon size={16} weight='duotone' className='inline mr-1' />
+                      <h2 className='font-display text-fg text-lg tracking-wider'>
+                        <LightningIcon size={16} weight='duotone' className='mr-1 inline' />
                         Up Next
-                        <span className='ml-2 font-mono text-xs text-accent normal-case tracking-normal'>
+                        <span className='text-accent ml-2 font-mono text-xs tracking-normal normal-case'>
                           {priorityQueue.length}
                         </span>
                       </h2>
                     ) : (
-                      <h2 className='font-display text-lg text-fg tracking-wider'>
+                      <h2 className='font-display text-fg text-lg tracking-wider'>
                         Queue
                         {queue.length > 0 && (
-                          <span className='ml-2 font-mono text-xs text-muted normal-case tracking-normal'>
+                          <span className='text-muted ml-2 font-mono text-xs tracking-normal normal-case'>
                             {queue.length}
                           </span>
                         )}
@@ -541,7 +561,9 @@ const QueueSongItem = memo(function QueueSongItem({
     e.stopPropagation();
     setMenuOpen((prev) => !prev);
   }, []);
-  const handleCloseSongMenu = useCallback(() => setMenuOpen(false), []);
+  const handleCloseSongMenu = useCallback(() => {
+    setMenuOpen(false);
+  }, []);
   const isPriority = variant === 'priority';
   const isFirst = index === 0;
   const isLast = index >= targetQueue.length - 1;
@@ -588,28 +610,36 @@ const QueueSongItem = memo(function QueueSongItem({
         label: 'Move Up',
         icon: <ArrowUpIcon size={14} weight='duotone' />,
         disabled: isFirst,
-        onClick: () => onMoveUp(targetQueue, song.id, isPriority ? 'priority' : 'queue'),
+        onClick: () => {
+          onMoveUp(targetQueue, song.id, isPriority ? 'priority' : 'queue');
+        },
       });
       items.push({
         id: 'move-down',
         label: 'Move Down',
         icon: <ArrowDownIcon size={14} weight='duotone' />,
         disabled: isLast,
-        onClick: () => onMoveDown(targetQueue, song.id, isPriority ? 'priority' : 'queue'),
+        onClick: () => {
+          onMoveDown(targetQueue, song.id, isPriority ? 'priority' : 'queue');
+        },
       });
       items.push({
         id: 'move-top',
         label: 'Move to Top',
         icon: <ArrowLineUpIcon size={14} weight='duotone' />,
         disabled: isFirst,
-        onClick: () => onMoveToTop(targetQueue, song.id, isPriority ? 'priority' : 'queue'),
+        onClick: () => {
+          onMoveToTop(targetQueue, song.id, isPriority ? 'priority' : 'queue');
+        },
       });
       items.push({
         id: 'move-bottom',
         label: 'Move to Bottom',
         icon: <ArrowLineDownIcon size={14} weight='duotone' />,
         disabled: isLast,
-        onClick: () => onMoveToBottom(targetQueue, song.id, isPriority ? 'priority' : 'queue'),
+        onClick: () => {
+          onMoveToBottom(targetQueue, song.id, isPriority ? 'priority' : 'queue');
+        },
       });
     }
 
@@ -634,47 +664,47 @@ const QueueSongItem = memo(function QueueSongItem({
   const sourceKey = useMemo(() => getSourceKey(song.sourceUrl), [song.sourceUrl]);
 
   return (
-    <div className='rounded-lg overflow-hidden' style={CARD_BG_STYLE}>
-      <div className='flex items-center gap-3 px-3 py-2 group'>
+    <div className='overflow-hidden rounded-lg' style={CARD_BG_STYLE}>
+      <div className='group flex items-center gap-3 px-3 py-2'>
         {/* Index */}
         <span
-          className={`font-mono text-[10px] w-4 text-right shrink-0 ${accent ? 'text-accent' : 'text-faint'}`}
+          className={`w-4 shrink-0 text-right font-mono text-[10px] ${accent ? 'text-accent' : 'text-faint'}`}
         >
           {index + 1}
         </span>
 
         {/* Thumbnail */}
-        <div className='overflow-hidden w-10 h-10 rounded border border-border shrink-0 bg-elevated'>
+        <div className='border-border bg-elevated h-10 w-10 shrink-0 overflow-hidden rounded border'>
           <ArtworkImage
             src={song.artwork ?? song.thumbnailUrl}
             alt={song.nickname ?? song.title}
-            className='w-full h-full'
+            className='h-full w-full'
             imageClassName='scale-[1.33]'
           />
         </div>
 
         {/* Info */}
-        <div className='flex-1 min-w-0 flex flex-col justify-center gap-0.5'>
-          <p className='text-xs font-semibold text-fg leading-tight flex items-center gap-1.5 min-w-0'>
-            <MusicNoteIcon size={13} weight='fill' className='shrink-0 text-muted' />
+        <div className='flex min-w-0 flex-1 flex-col justify-center gap-0.5'>
+          <p className='text-fg flex min-w-0 items-center gap-1.5 text-xs leading-tight font-semibold'>
+            <MusicNoteIcon size={13} weight='fill' className='text-muted shrink-0' />
             <span className='truncate'>{song.nickname ?? song.title}</span>
           </p>
-          <div className='flex items-center gap-2 text-[11px] text-muted min-w-0'>
+          <div className='text-muted flex min-w-0 items-center gap-2 text-[11px]'>
             {song.artist && (
-              <span className='max-w-[16ch] flex items-center gap-1 min-w-0'>
+              <span className='flex max-w-[16ch] min-w-0 items-center gap-1'>
                 <UserIcon size={12} weight='fill' className='shrink-0' />
                 <span className='truncate'>{song.artist}</span>
               </span>
             )}
             <DurationBadge seconds={song.duration} className='text-[11px]' />
           </div>
-          <div className='flex items-center gap-2 text-[11px] text-muted min-w-0'>
+          <div className='text-muted flex min-w-0 items-center gap-2 text-[11px]'>
             {sourceKey && (
-              <span className='flex items-center shrink-0 [&_svg]:w-3.5 [&_svg]:h-3.5'>
+              <span className='flex shrink-0 items-center [&_svg]:h-3.5 [&_svg]:w-3.5'>
                 <SourceIcon sourceKey={sourceKey} />
               </span>
             )}
-            <span className='max-w-[16ch] flex items-center gap-1 min-w-0'>
+            <span className='flex max-w-[16ch] min-w-0 items-center gap-1'>
               <UserCircleIcon size={12} weight='fill' className='shrink-0' />
               <span className='truncate'>{song.requestedBy}</span>
             </span>
@@ -682,7 +712,7 @@ const QueueSongItem = memo(function QueueSongItem({
         </div>
 
         {/* Badges */}
-        <div className='flex items-center gap-2 shrink-0'>
+        <div className='flex shrink-0 items-center gap-2'>
           <VolumeBoostBadge volumeBoost={song.volumeBoost} />
         </div>
 
@@ -696,7 +726,7 @@ const QueueSongItem = memo(function QueueSongItem({
             aria-haspopup='true'
             aria-expanded={menuOpen}
             aria-label='Song actions'
-            className={`opacity-0 group-hover:opacity-100 transition-opacity shrink-0 w-6 h-6 ${menuOpen ? 'pressed text-accent opacity-100' : 'text-muted hover:text-fg'}`}
+            className={`h-6 w-6 shrink-0 opacity-0 transition-opacity group-hover:opacity-100 ${menuOpen ? 'pressed text-accent opacity-100' : 'text-muted hover:text-fg'}`}
             onClick={handleToggleSongMenu}
           >
             <DotsThreeOutlineVerticalIcon size={14} weight='duotone' />
@@ -743,9 +773,9 @@ const PanelHeader = memo(function PanelHeader({
     );
 
   return (
-    <div className='flex items-center justify-between px-4 py-3 border-b border-border shrink-0'>
-      <h1 className='font-display text-3xl text-accent tracking-wider flex items-center gap-2'>
-        <QueueIcon size={24} weight='duotone' className='shrink-0 relative top-1' />
+    <div className='border-border flex shrink-0 items-center justify-between border-b px-4 py-3'>
+      <h1 className='font-display text-accent flex items-center gap-2 text-3xl tracking-wider'>
+        <QueueIcon size={24} weight='duotone' className='relative top-1 shrink-0' />
         Queue
       </h1>
       <div className='flex items-center gap-1'>
@@ -848,39 +878,39 @@ const NowPlayingCard = memo(function NowPlayingCard({
     <div className='card overflow-hidden' style={CARD_BG_STYLE}>
       <div className='flex gap-4 p-4'>
         {/* Artwork */}
-        <div className='relative shrink-0 overflow-hidden rounded-xl bg-elevated'>
+        <div className='bg-elevated relative shrink-0 overflow-hidden rounded-xl'>
           <ArtworkImage
             src={song.artwork ?? song.thumbnailUrl}
             alt={song.nickname ?? song.title}
-            className='w-20 h-20 rounded-xl border border-border'
+            className='border-border h-20 w-20 rounded-xl border'
             imageClassName='scale-[1.33]'
           />
         </div>
 
         {/* Info */}
-        <div className='flex-1 flex flex-col justify-center min-w-0 gap-1.5'>
+        <div className='flex min-w-0 flex-1 flex-col justify-center gap-1.5'>
           <a
             href={song.sourceUrl}
             target='_blank'
             rel='noopener noreferrer'
-            className='text-xs font-semibold text-fg hover:text-accent leading-tight flex items-center gap-1.5 min-w-0'
+            className='text-fg hover:text-accent flex min-w-0 items-center gap-1.5 text-xs leading-tight font-semibold'
           >
-            <MusicNoteIcon size={13} weight='fill' className='shrink-0 text-muted' />
+            <MusicNoteIcon size={13} weight='fill' className='text-muted shrink-0' />
             <span className='truncate'>{song.nickname ?? song.title}</span>
           </a>
-          <div className='flex items-center gap-2 text-[11px] text-muted min-w-0'>
+          <div className='text-muted flex min-w-0 items-center gap-2 text-[11px]'>
             {song.artist && (
-              <span className='max-w-[16ch] flex items-center gap-1 min-w-0'>
+              <span className='flex max-w-[16ch] min-w-0 items-center gap-1'>
                 <UserIcon size={12} weight='fill' className='shrink-0' />
                 <span className='truncate'>{song.artist}</span>
               </span>
             )}
-            <span className='max-w-[16ch] flex items-center gap-1 min-w-0'>
+            <span className='flex max-w-[16ch] min-w-0 items-center gap-1'>
               <UserCircleIcon size={12} weight='fill' className='shrink-0' />
               <span className='truncate'>{song.requestedBy}</span>
             </span>
             {sourceKey && (
-              <span className='flex items-center shrink-0 [&_svg]:w-3.5 [&_svg]:h-3.5'>
+              <span className='flex shrink-0 items-center [&_svg]:h-3.5 [&_svg]:w-3.5'>
                 <SourceIcon sourceKey={sourceKey} />
               </span>
             )}
@@ -889,16 +919,16 @@ const NowPlayingCard = memo(function NowPlayingCard({
 
           {/* Progress */}
           <div className='mt-1'>
-            <div className='relative h-1.5 w-full bg-elevated rounded-full overflow-hidden'>
+            <div className='bg-elevated relative h-1.5 w-full overflow-hidden rounded-full'>
               <div
                 ref={registerProgress}
-                className='absolute inset-y-0 left-0 bg-accent rounded-full'
+                className='bg-accent absolute inset-y-0 left-0 rounded-full'
                 style={ZERO_WIDTH_STYLE}
               />
             </div>
-            <div className='flex justify-between mt-1'>
-              <span className='font-mono text-[10px] text-muted'>{formatDuration(elapsed)}</span>
-              <span className='font-mono text-[10px] text-muted'>
+            <div className='mt-1 flex justify-between'>
+              <span className='text-muted font-mono text-[10px]'>{formatDuration(elapsed)}</span>
+              <span className='text-muted font-mono text-[10px]'>
                 {formatDuration(song.duration)}
               </span>
             </div>
@@ -914,10 +944,10 @@ const IdleCard = memo(function IdleCard() {
   return (
     <div className='card flex items-center justify-center py-8' style={CARD_BG_STYLE}>
       <div className='text-center'>
-        <div className='w-12 h-12 rounded-full bg-elevated border border-border flex items-center justify-center mx-auto mb-3'>
+        <div className='bg-elevated border-border mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full border'>
           <Icon size={20} weight='duotone' className='text-faint' />
         </div>
-        <p className='font-display text-xl text-faint tracking-wider mb-1'>Nothing Playing</p>
+        <p className='font-display text-faint mb-1 text-xl tracking-wider'>Nothing Playing</p>
       </div>
     </div>
   );

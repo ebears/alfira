@@ -37,6 +37,7 @@ export function useProgressBar(
   // Tracks the last overrideElapsed value we've already applied, so periodic
   // sync broadcasts (which re-run the effect) don't re-apply a stale override
   // and flash the time text back to the seek target.
+  // eslint-disable-next-line unicorn/no-useless-undefined
   const lastOverrideRef = useRef<number | undefined>(undefined);
 
   const registerProgress = useCallback((ref: HTMLDivElement | null) => {
@@ -60,7 +61,7 @@ export function useProgressBar(
   const isPlaying = !!state.currentSong && state.isPlaying && !state.isPaused;
   const isPaused = state.isPaused;
   const trackStartedAt = state.trackStartedAt;
-  const speed = state.timescaleSpeed ?? 1.0;
+  const speed = state.timescaleSpeed ?? 1;
   const nodeLinkPosition = state.nodeLinkPosition ?? null;
   const nodeLinkTime = state.nodeLinkTime ?? null;
 
@@ -150,7 +151,7 @@ export function useProgressBar(
         }
       }
 
-      return undefined;
+      return;
     }
 
     // ---- Starting loops ----

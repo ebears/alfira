@@ -27,7 +27,7 @@ function handleLowPassGet(
 
   return json({
     enabled: row?.lowPassEnabled ?? false,
-    smoothing: row?.lowPassSmoothing ?? 20.0,
+    smoothing: row?.lowPassSmoothing ?? 20,
   });
 }
 

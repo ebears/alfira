@@ -15,16 +15,17 @@ export default function SettingsToggle({
   onChange,
   disabled = false,
 }: SettingsToggleProps) {
-  const handleClick = useCallback(
-    () => !disabled && onChange(!checked),
-    [disabled, onChange, checked]
-  );
+  const handleClick = useCallback(() => {
+    if (!disabled) {
+      onChange(!checked);
+    }
+  }, [disabled, onChange, checked]);
 
   return (
-    <div className={`flex items-start gap-4 ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}>
-      <div className='flex-1 min-w-0'>
-        <p className='font-body text-sm font-medium text-fg'>{label}</p>
-        {description && <p className='font-mono text-[11px] text-muted mt-0.5'>{description}</p>}
+    <div className={`flex items-start gap-4 ${disabled ? 'cursor-not-allowed opacity-50' : ''}`}>
+      <div className='min-w-0 flex-1'>
+        <p className='font-body text-fg text-sm font-medium'>{label}</p>
+        {description && <p className='text-muted mt-0.5 font-mono text-[11px]'>{description}</p>}
       </div>
       <button
         type='button'
@@ -33,13 +34,13 @@ export default function SettingsToggle({
         aria-label={label}
         disabled={disabled}
         onClick={handleClick}
-        className={`relative shrink-0 w-11 h-6 rounded-full transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-accent/50 focus:ring-offset-2 focus:ring-offset-surface mt-1.5 ${
+        className={`focus:ring-accent/50 focus:ring-offset-surface relative mt-1.5 h-6 w-11 shrink-0 rounded-full transition-colors duration-200 focus:ring-2 focus:ring-offset-2 focus:outline-none ${
           checked ? 'bg-accent' : 'bg-elevated'
         } ${disabled ? 'cursor-not-allowed' : 'cursor-pointer'}`}
       >
         <span
-          className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full transition-transform duration-200 ${
-            checked ? 'translate-x-5 bg-elevated' : 'translate-x-0 bg-muted'
+          className={`absolute top-0.5 left-0.5 h-5 w-5 rounded-full transition-transform duration-200 ${
+            checked ? 'bg-elevated translate-x-5' : 'bg-muted translate-x-0'
           }`}
         />
       </button>

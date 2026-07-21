@@ -14,6 +14,7 @@ export default defineConfig({
   arrowParens: 'always',
   quoteProps: 'as-needed',
   insertFinalNewline: true,
+  sortTailwindcss: true,
   sortImports: {
     groups: [
       'type-import',
