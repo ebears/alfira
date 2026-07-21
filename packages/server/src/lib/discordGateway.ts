@@ -43,6 +43,13 @@ interface GatewayInvalidSession {
 
 type DispatchHandler = (eventName: string, data: unknown) => void;
 
+interface VoiceStateData {
+  user_id: string;
+  channel_id: string | null;
+  session_id?: string;
+  member?: { user?: { bot?: boolean } };
+}
+
 // ---------------------------------------------------------------------------
 // Gateway client
 // ---------------------------------------------------------------------------
@@ -214,7 +221,7 @@ export class DiscordGateway {
             const ready = dispatch.d as {
               session_id: string;
               user: { id: string; username: string };
-            };
+            } & Record<string, unknown>;
             this.sessionId = ready.session_id;
             this.reconnectAttempts = 0;
 
@@ -233,6 +240,12 @@ export class DiscordGateway {
               this.readyResolve();
               this.readyResolve = null;
             }
+
+            // Seed voice states from the READY payload so we know about
+            // members already in voice channels before we connected.
+            // Without this, a bot restart leaves voice state tracking
+            // empty until someone leaves and re-joins.
+            this.seedVoiceStatesFromReady(ready);
             return;
           }
 
@@ -246,6 +259,13 @@ export class DiscordGateway {
               this.readyResolve = null;
             }
             return;
+          }
+
+          // GUILD_CREATE carries full guild data (including voice_states)
+          // that the READY payload doesn't include.  Seed voice tracking
+          // from it so we know about members already in voice channels.
+          if (dispatch.t === 'GUILD_CREATE') {
+            this.seedVoiceStatesFromGuildCreate(dispatch.d);
           }
 
           // Track voice states from VOICE_STATE_UPDATE for REST-free lookups.
@@ -417,6 +437,82 @@ export class DiscordGateway {
     if (this.identifyTimeout) {
       clearTimeout(this.identifyTimeout);
       this.identifyTimeout = null;
+    }
+  }
+
+  /**
+   * Populate voice state tracking from guild data in the READY payload.
+   *
+   * READY guilds are partial objects that may or may not include
+   * voice_states — Discord sends full guild data (with voice_states)
+   * via GUILD_CREATE events shortly after.  We attempt to seed from
+   * READY for best-effort coverage, but GUILD_CREATE is the primary
+   * source of truth.
+   */
+  private seedVoiceStatesFromReady(ready: Record<string, unknown>): void {
+    const guilds = ready.guilds as
+      | {
+          id: string;
+          voice_states?: VoiceStateData[];
+        }[]
+      | undefined;
+
+    if (!guilds) {
+      return;
+    }
+
+    for (const guild of guilds) {
+      if (guild.voice_states) {
+        this.seedGuildVoiceStates(guild.id, guild.voice_states);
+      }
+    }
+  }
+
+  /**
+   * Populate voice state tracking from a GUILD_CREATE event.
+   *
+   * GUILD_CREATE is sent after READY and carries the full guild object
+   * including voice_states for all members currently in voice channels.
+   * This is the primary mechanism for learning about pre-existing voice
+   * state after a fresh connection.
+   */
+  private seedVoiceStatesFromGuildCreate(data: unknown): void {
+    const guild = data as {
+      id: string;
+      voice_states?: VoiceStateData[];
+    };
+
+    if (guild.voice_states) {
+      this.seedGuildVoiceStates(guild.id, guild.voice_states);
+    }
+  }
+
+  /**
+   * Update internal voice state tracking and fire synthetic
+   * VOICE_STATE_UPDATE events so startDiscord.ts handlers populate
+   * humanVoiceMembers / prevVoiceChannel.
+   */
+  private seedGuildVoiceStates(guildId: string, voiceStates: VoiceStateData[]): void {
+    for (const vs of voiceStates) {
+      // Update internal tracking.
+      if (vs.channel_id) {
+        this.voiceStates.set(vs.user_id, vs.channel_id);
+      } else {
+        this.voiceStates.delete(vs.user_id);
+      }
+
+      // Dispatch a synthetic VOICE_STATE_UPDATE so startDiscord.ts
+      // handlers populate humanVoiceMembers / prevVoiceChannel too.
+      const eventData = {
+        guild_id: guildId,
+        user_id: vs.user_id,
+        channel_id: vs.channel_id,
+        session_id: vs.session_id,
+        member: vs.member,
+      };
+      for (const handler of this.handlers) {
+        handler('VOICE_STATE_UPDATE', eventData);
+      }
     }
   }
 
