@@ -26,16 +26,59 @@ This guide covers everything you need to set up Alfira for both development and 
 
 ### For Development
 
-| Requirement | Version | Notes                      |
-| ----------- | ------- | -------------------------- |
-| Docker      | 20.10+  | With Docker Compose plugin |
-| Git         | Any     | For cloning the repository |
-
-No local Node.js installation needed — Docker handles everything.
+| Requirement | Version | Notes                                   |
+| ----------- | ------- | --------------------------------------- |
+| Bun         | 1.3+    | For local development                   |
+| Docker      | 20.10+  | With Docker Compose plugin (optional)   |
+| Git         | Any     | For cloning the repository              |
 
 ---
 
-## Setup
+## Development Setup
+
+Two options — local development (fast, recommended for active development) or Docker (full production-like stack).
+
+### Option 1: Local Development (recommended)
+
+Runs the server directly with hot reload via `bun --watch`. No Docker needed for the server.
+
+```bash
+# 1. Clone and install dependencies
+git clone https://github.com/ebears/alfira.git
+cd alfira
+bun install
+
+# 2. Configure environment
+cp .env.example .env
+nano .env  # fill in required values (see table below)
+
+# 3. One-time NodeLink setup
+bun setup:nodelink
+
+# 4. Start the dev server — web UI at http://localhost:3001
+bun dev
+```
+
+The server auto-restarts on file changes. For web/frontend changes during a session, run `bun web:build` in another terminal and refresh.
+
+### Option 2: Docker Development
+
+Builds and runs the full stack in Docker — identical to production.
+
+```bash
+# 1. Clone and configure (same as above)
+git clone https://github.com/ebears/alfira.git
+cd alfira
+cp .env.example .env
+nano .env
+
+# 2. Start the full Docker stack
+bun dev:docker
+```
+
+---
+
+## Production Setup
 
 Alfira uses pre-built Docker images from the GitHub Container Registry.
 
@@ -69,7 +112,7 @@ docker compose up -d
 
 | Variable                      | Description                                                                                         | Default                     |
 | ----------------------------- | --------------------------------------------------------------------------------------------------- | --------------------------- |
-| `DATABASE_URL`                | SQLite database path                                                                                | Set automatically in Docker |
+| `DATABASE_URL`                | SQLite database path                                                                                | `data/alfira.db` (local), `/data/alfira.db` (Docker) |
 | `GUILD_ID`                    | Pre-seed Discord server ID (for existing deployments)                                               | —                           |
 | `ADMIN_ROLE_IDS`              | Pre-seed admin role IDs (for existing deployments)                                                  | —                           |
 | `VOICE_IDLE_TIMEOUT_MINUTES`  | Override idle timeout (can also be set via wizard/settings)                                         | `5`                         |
