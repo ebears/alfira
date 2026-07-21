@@ -3,6 +3,9 @@ import { describe, expect, mock, test } from 'bun:test';
 // eqBands imports from ../shared/db which requires DATABASE_URL at module
 // level. Mock it before the module is loaded (static imports are hoisted,
 // so we must use dynamic import after the mock call).
+// NOTE: search.test.ts also mocks ../shared/db (with $client). Bun shares
+// mock.module registrations across test files, so all mocks must export a
+// superset of keys to avoid "export not found" errors.
 void mock.module('../shared/db', () => ({
   tables: {
     guildSettings: {
@@ -23,6 +26,8 @@ void mock.module('../shared/db', () => ({
       eqBand14: {},
     },
   },
+  $client: { query: mock(() => ({ all: mock(() => []) })) },
+  db: {},
 }));
 
 const { buildEqualizerFilter, eqBandsFromRow, eqBandValues } = await import('./eqBands');
