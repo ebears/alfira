@@ -1,6 +1,7 @@
 import { AnimatePresence } from 'motion/react';
 import * as m from 'motion/react-m';
 import { useLocation, useOutlet } from 'react-router-dom';
+
 import { pageVariants, viewTransition } from '../lib/motion';
 
 /**
@@ -14,7 +15,9 @@ export function AnimatedOutlet() {
   const outlet = useOutlet();
   const location = useLocation();
 
-  if (!outlet) return null;
+  if (!outlet) {
+    return null;
+  }
 
   return (
     <AnimatePresence mode='wait'>

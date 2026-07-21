@@ -9,7 +9,9 @@ const DISCORD_API_BASE = 'https://discord.com/api/v10';
 
 function botToken(): string {
   const token = process.env.DISCORD_BOT_TOKEN;
-  if (!token) throw new Error('DISCORD_BOT_TOKEN is not set');
+  if (!token) {
+    throw new Error('DISCORD_BOT_TOKEN is not set');
+  }
   return token;
 }
 
@@ -27,7 +29,7 @@ async function discordFetch(path: string): Promise<Response> {
     const retryAfter = res.headers.get('Retry-After');
     const delayMs = retryAfter ? Number.parseFloat(retryAfter) * 1000 : 1000;
     logger.warn({ path, delayMs }, 'Discord REST rate limited, retrying');
-    await new Promise((r) => setTimeout(r, delayMs));
+    await new Promise((resolve) => setTimeout(resolve, delayMs));
     return fetch(url, {
       headers: { Authorization: `Bot ${botToken()}` },
     });
@@ -128,7 +130,9 @@ export async function fetchGuildMember(
 
   // Deduplicate in-flight requests.
   const inflight = inflightRequests.get(cacheKey);
-  if (inflight) return inflight;
+  if (inflight) {
+    return inflight;
+  }
 
   const promise = doFetchGuildMember(guildId, userId, cacheKey);
   inflightRequests.set(cacheKey, promise);

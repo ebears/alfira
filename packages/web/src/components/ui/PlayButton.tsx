@@ -1,5 +1,8 @@
+import type React from 'react';
+
 import { CircleNotchIcon, PlayIcon } from '@phosphor-icons/react';
-import { memo, useMemo } from 'react';
+import { memo, useCallback, useMemo } from 'react';
+
 import { useCooldownGuard } from '../../hooks/useCooldownGuard';
 import { Button } from './Button';
 import { cooldownButtonProps } from './cooldownButtonProps';
@@ -24,23 +27,30 @@ export const PlayButton = memo(function PlayButton({
     [coolingDown, statusTitle, handleCooldownClick]
   );
 
+  const handleMouseDown = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+  }, []);
+
+  const handleClick = useCallback(
+    (e: React.MouseEvent) => {
+      e.stopPropagation();
+      if (coolingDown) {
+        handleCooldownClick();
+      } else {
+        onClick();
+      }
+    },
+    [coolingDown, handleCooldownClick, onClick]
+  );
+
   return (
     <Button
       variant='primary'
       size='icon'
       {...cooldownButtonProps(cooldown, { onClick, disabled: isPlaying, title })}
-      onMouseDown={(e) => {
-        e.preventDefault();
-        e.stopPropagation();
-      }}
-      onClick={(e) => {
-        e.stopPropagation();
-        if (coolingDown) {
-          handleCooldownClick();
-        } else {
-          onClick();
-        }
-      }}
+      onMouseDown={handleMouseDown}
+      onClick={handleClick}
       className={`shrink-0 disabled:cursor-default ${className}`}
     >
       {isPlaying ? (

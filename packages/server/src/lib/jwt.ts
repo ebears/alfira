@@ -26,8 +26,10 @@ function base64urlDecode(input: string): string {
 
 /** Parse an expiresIn string like "1h", "30d", "15m" to seconds. */
 function parseExpiresIn(expiresIn: string): number {
-  const match = expiresIn.match(/^(\d+)([smhd])$/);
-  if (!match || !match[1] || !match[2]) throw new Error(`Invalid expiresIn format: ${expiresIn}`);
+  const match = /^(\d+)([smhd])$/.exec(expiresIn);
+  if (!match?.[1] || !match[2]) {
+    throw new Error(`Invalid expiresIn format: ${expiresIn}`);
+  }
   const num = parseInt(match[1], 10);
   const unit = match[2];
   const multipliers: Record<string, number> = { s: 1, m: 60, h: 3600, d: 86400 };
@@ -74,11 +76,13 @@ export function sign(
  */
 export function verify<T = Record<string, unknown>>(token: string, secret: string): T | null {
   const parts = token.split('.');
-  if (parts.length !== 3) return null;
+  if (parts.length !== 3) {
+    return null;
+  }
 
-  const headerB64 = parts[0] as string;
-  const payloadB64 = parts[1] as string;
-  const signatureB64 = parts[2] as string;
+  const headerB64 = parts[0];
+  const payloadB64 = parts[1];
+  const signatureB64 = parts[2];
 
   // Verify the signature using constant-time comparison
   const data = `${headerB64}.${payloadB64}`;
@@ -92,7 +96,7 @@ export function verify<T = Record<string, unknown>>(token: string, secret: strin
   // Decode and parse the payload
   let payload: Record<string, unknown>;
   try {
-    payload = JSON.parse(base64urlDecode(payloadB64));
+    payload = JSON.parse(base64urlDecode(payloadB64)) as Record<string, unknown>;
   } catch {
     return null;
   }

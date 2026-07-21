@@ -14,7 +14,7 @@ import { updateRateLimit } from '../hooks/useRateLimit';
 const TIMEOUT_MS = 10_000;
 
 // Map URL path prefixes to server-side rate limit bucket names.
-const RATE_LIMIT_BUCKETS: Array<[prefix: string, bucket: string]> = [
+const RATE_LIMIT_BUCKETS: [prefix: string, bucket: string][] = [
   ['/api/player', 'player-mutations'],
   ['/api/songs', 'songs-mutations'],
   ['/api/playlists', 'playlists-mutations'],
@@ -24,10 +24,14 @@ function extractRateLimit(url: string, headers: Headers): void {
   const limit = headers.get('X-RateLimit-Limit');
   const remaining = headers.get('X-RateLimit-Remaining');
   const reset = headers.get('X-RateLimit-Reset');
-  if (limit === null || remaining === null || reset === null) return;
+  if (limit === null || remaining === null || reset === null) {
+    return;
+  }
 
   const bucket = RATE_LIMIT_BUCKETS.find(([prefix]) => url.startsWith(prefix))?.[1];
-  if (!bucket) return;
+  if (!bucket) {
+    return;
+  }
 
   updateRateLimit(bucket, Number(limit), Number(remaining), Number(reset));
 }
@@ -50,10 +54,10 @@ async function fetchWithTimeout(url: string, init?: RequestInit): Promise<Respon
 // the same refresh promise rather than triggering multiple refresh calls.
 // ---------------------------------------------------------------------------
 let isRefreshing = false;
-let failedQueue: Array<{
+let failedQueue: {
   resolve: () => void;
   reject: (error: unknown) => void;
-}> = [];
+}[] = [];
 
 // Separate flag so trySilentRefresh doesn't interfere with wrappedFetch's refresh
 let isSilentRefreshing = false;
@@ -84,7 +88,9 @@ async function refreshToken(): Promise<RefreshResult> {
       method: 'POST',
       credentials: 'include',
     });
-    if (res.ok) return { ok: true };
+    if (res.ok) {
+      return { ok: true };
+    }
     // 503 = Discord temporarily unreachable, old token still valid → retryable.
     // 401 = token permanently invalid (expired / revoked).
     return { ok: false, retryable: res.status === 503 };
@@ -119,10 +125,8 @@ export async function trySilentRefresh(): Promise<boolean> {
   // Retry up to 3 times total for transient failures (Discord 429/503, network).
   let result = await refreshToken();
   for (let attempt = 0; attempt < 2 && !result.ok && result.retryable; attempt++) {
-    console.warn(
-      `[auth] trySilentRefresh: retry ${attempt + 1}/2 after ${result.ok ? 'success' : 'retryable failure'}`
-    );
-    await new Promise((r) => setTimeout(r, 1500));
+    console.warn(`[auth] trySilentRefresh: retry ${attempt + 1}/2 after retryable failure`);
+    await new Promise((resolve) => setTimeout(resolve, 1500));
     result = await refreshToken();
   }
 
@@ -216,11 +220,11 @@ async function wrappedFetch(
     let errorMessage = `API error: ${response.status}`;
     let errorCode: string | undefined;
     try {
-      const errorBody = await response.json();
-      if (errorBody?.error) {
+      const errorBody = (await response.json()) as { error?: string; code?: string };
+      if (errorBody.error) {
         errorMessage = errorBody.error;
       }
-      if (errorBody?.code) {
+      if (errorBody.code) {
         errorCode = errorBody.code;
       }
     } catch {

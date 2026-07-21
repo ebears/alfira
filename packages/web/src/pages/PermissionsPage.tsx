@@ -1,9 +1,11 @@
 import { ShieldCheckIcon, TrashIcon } from '@phosphor-icons/react';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { memo, useCallback, useEffect, useMemo, useState } from 'react';
+
 import { fetchPermissions, type PermissionsResponse, updatePermission } from '../api/api';
 import ConfirmModal from '../components/ConfirmModal';
 import EmptyState from '../components/EmptyState';
 import { Button } from '../components/ui/Button';
+import { Card } from '../components/ui/Card';
 import Checkbox from '../components/ui/Checkbox';
 import { ErrorBanner } from '../components/ui/ErrorBanner';
 import { PageHeader } from '../components/ui/PageHeader';
@@ -73,16 +75,20 @@ export default function PermissionsPage() {
     async function load() {
       try {
         const result = await fetchPermissions();
-        if (cancelled) return;
+        if (cancelled) {
+          return;
+        }
         setData(result);
         setMapping(result.mapping);
         setSavedMapping(result.mapping);
       } catch {
-        if (cancelled) return;
+        if (cancelled) {
+          return;
+        }
         setError('Could not load permissions.');
       }
     }
-    load();
+    void load();
     return () => {
       cancelled = true;
     };
@@ -94,7 +100,9 @@ export default function PermissionsPage() {
     const normalize = (m: Record<string, string[]>) => {
       const out: Record<string, string[]> = {};
       for (const [k, v] of Object.entries(m)) {
-        if (v.length > 0) out[k] = v;
+        if (v.length > 0) {
+          out[k] = v;
+        }
       }
       return JSON.stringify(out);
     };
@@ -108,12 +116,16 @@ export default function PermissionsPage() {
   }, [mapping, explicitlyManaged]);
 
   const managedRoles = useMemo(() => {
-    if (!data) return [];
+    if (!data) {
+      return [];
+    }
     return data.roles.filter((r) => managedRoleIds.has(r.id));
   }, [data, managedRoleIds]);
 
   const unmanagedRoles = useMemo(() => {
-    if (!data) return [];
+    if (!data) {
+      return [];
+    }
     return data.roles.filter((r) => !managedRoleIds.has(r.id));
   }, [data, managedRoleIds]);
 
@@ -140,7 +152,9 @@ export default function PermissionsPage() {
   }, []);
 
   const removeRole = useCallback(() => {
-    if (!roleToRemove) return;
+    if (!roleToRemove) {
+      return;
+    }
     const roleId = roleToRemove;
     setRoleToRemove(null);
 
@@ -166,14 +180,21 @@ export default function PermissionsPage() {
   const toggleExpanded = useCallback((roleId: string) => {
     setExpandedRoles((prev) => {
       const next = new Set(prev);
-      if (next.has(roleId)) next.delete(roleId);
-      else next.add(roleId);
+      if (next.has(roleId)) {
+        next.delete(roleId);
+      } else {
+        next.add(roleId);
+      }
       return next;
     });
   }, []);
 
+  const handleCancelRemove = useCallback(() => setRoleToRemove(null), []);
+
   const handleSave = useCallback(async () => {
-    if (!data) return;
+    if (!data) {
+      return;
+    }
     setSaving(true);
     setError(null);
     setSuccessMsg(null);
@@ -244,15 +265,15 @@ export default function PermissionsPage() {
       ) : (
         <div className='space-y-4'>
           {managedRoles.map((role) => (
-            <RoleCard
+            <ManagedRoleCard
               key={role.id}
               role={role}
               mapping={mapping}
               labels={data.labels}
               isExpanded={expandedRoles.has(role.id)}
-              onToggleExpand={() => toggleExpanded(role.id)}
-              onTogglePermission={(action) => togglePermission(role.id, action)}
-              onRemove={() => confirmRemoveRole(role.id)}
+              toggleExpanded={toggleExpanded}
+              togglePermission={togglePermission}
+              confirmRemoveRole={confirmRemoveRole}
             />
           ))}
         </div>
@@ -280,7 +301,7 @@ export default function PermissionsPage() {
           }
           confirmLabel='Remove'
           onConfirm={removeRole}
-          onCancel={() => setRoleToRemove(null)}
+          onCancel={handleCancelRemove}
         />
       )}
     </div>
@@ -300,6 +321,43 @@ interface RoleCardProps {
   onRemove: () => void;
 }
 
+const ManagedRoleCard = memo(function ManagedRoleCard({
+  role,
+  mapping,
+  labels,
+  isExpanded,
+  toggleExpanded,
+  togglePermission,
+  confirmRemoveRole,
+}: {
+  role: { id: string; name: string; color: number };
+  mapping: Record<string, string[]>;
+  labels: Record<string, string>;
+  isExpanded: boolean;
+  toggleExpanded: (id: string) => void;
+  togglePermission: (roleId: string, action: string) => void;
+  confirmRemoveRole: (id: string) => void;
+}) {
+  const handleToggleExpand = useCallback(() => toggleExpanded(role.id), [toggleExpanded, role.id]);
+  const handleTogglePermission = useCallback(
+    (action: string) => togglePermission(role.id, action),
+    [togglePermission, role.id]
+  );
+  const handleRemove = useCallback(() => confirmRemoveRole(role.id), [confirmRemoveRole, role.id]);
+
+  return (
+    <RoleCard
+      role={role}
+      mapping={mapping}
+      labels={labels}
+      isExpanded={isExpanded}
+      onToggleExpand={handleToggleExpand}
+      onTogglePermission={handleTogglePermission}
+      onRemove={handleRemove}
+    />
+  );
+});
+
 function RoleCard({
   role,
   mapping,
@@ -314,22 +372,32 @@ function RoleCard({
     summary: categorySummary(mapping, role.id, cat.actions),
   }));
 
+  const dotStyle = useMemo(
+    () => ({
+      backgroundColor: role.color
+        ? `#${role.color.toString(16).padStart(6, '0')}`
+        : 'var(--color-muted)',
+    }),
+    [role.color]
+  );
+
+  const handleRemoveClick = useCallback(
+    (e: React.MouseEvent) => {
+      e.stopPropagation();
+      onRemove();
+    },
+    [onRemove]
+  );
+
   return (
-    <div className='bg-elevated clay-resting rounded-xl overflow-hidden hover:clay-raised hover:-translate-y-px active:clay-flat active:translate-y-0 transition-all duration-100'>
+    <Card hoverable className='rounded-xl overflow-hidden'>
       {/* Header row — clickable to toggle expand */}
       <button
         type='button'
         className='flex items-center gap-3 px-5 py-3 cursor-pointer w-full'
         onClick={onToggleExpand}
       >
-        <span
-          className='w-3 h-3 rounded-full shrink-0'
-          style={{
-            backgroundColor: role.color
-              ? `#${role.color.toString(16).padStart(6, '0')}`
-              : 'var(--color-muted)',
-          }}
-        />
+        <span className='w-3 h-3 rounded-full shrink-0' style={dotStyle} />
         <span className='text-sm font-medium text-fg'>{role.name}</span>
 
         {/* Category badges */}
@@ -352,10 +420,7 @@ function RoleCard({
         <Button
           variant='danger'
           size='icon'
-          onClick={(e) => {
-            e.stopPropagation();
-            onRemove();
-          }}
+          onClick={handleRemoveClick}
           title={`Remove ${role.name}`}
           aria-label={`Remove ${role.name}`}
           className='shrink-0'
@@ -369,32 +434,81 @@ function RoleCard({
         <div className='border-t border-border px-5 py-4'>
           <div className='grid grid-cols-1 md:grid-cols-3 gap-5'>
             {summaries.map((cat) => (
-              <div key={cat.key}>
-                <h4 className='text-xs font-mono text-muted uppercase tracking-wider mb-2.5'>
-                  <span className='text-sm mr-1.5'>{cat.icon}</span>
-                  {cat.key}
-                </h4>
-                <div className='space-y-2'>
-                  {cat.actions.map((action) => {
-                    const checked = (mapping[action] ?? []).includes(role.id);
-                    return (
-                      <label
-                        key={action}
-                        className='flex items-center gap-2.5 text-sm text-fg cursor-pointer group'
-                      >
-                        <Checkbox checked={checked} onChange={() => onTogglePermission(action)} />
-                        <span className='group-hover:text-fg transition-colors'>
-                          {labels[action] ?? action}
-                        </span>
-                      </label>
-                    );
-                  })}
-                </div>
-              </div>
+              <CategorySection
+                key={cat.key}
+                cat={cat}
+                mapping={mapping}
+                roleId={role.id}
+                labels={labels}
+                onTogglePermission={onTogglePermission}
+              />
             ))}
           </div>
         </div>
       )}
-    </div>
+    </Card>
   );
 }
+
+const CategorySection = memo(function CategorySection({
+  cat,
+  mapping,
+  roleId,
+  labels,
+  onTogglePermission,
+}: {
+  cat: {
+    key: string;
+    icon: string;
+    actions: readonly string[];
+    summary: { granted: number; total: number };
+  };
+  mapping: Record<string, string[]>;
+  roleId: string;
+  labels: Record<string, string>;
+  onTogglePermission: (action: string) => void;
+}) {
+  return (
+    <div>
+      <h4 className='text-xs font-mono text-muted uppercase tracking-wider mb-2.5'>
+        <span className='text-sm mr-1.5'>{cat.icon}</span>
+        {cat.key}
+      </h4>
+      <div className='space-y-2'>
+        {cat.actions.map((action) => {
+          const checked = (mapping[action] ?? []).includes(roleId);
+          return (
+            <PermissionCheckbox
+              key={action}
+              action={action}
+              checked={checked}
+              label={labels[action] ?? action}
+              onToggle={onTogglePermission}
+            />
+          );
+        })}
+      </div>
+    </div>
+  );
+});
+
+const PermissionCheckbox = memo(function PermissionCheckbox({
+  action,
+  checked,
+  label,
+  onToggle,
+}: {
+  action: string;
+  checked: boolean;
+  label: string;
+  onToggle: (action: string) => void;
+}) {
+  const handleChange = useCallback(() => onToggle(action), [onToggle, action]);
+
+  return (
+    <label className='flex items-center gap-2.5 text-sm text-fg cursor-pointer group'>
+      <Checkbox checked={checked} onChange={handleChange} />
+      <span className='group-hover:text-fg transition-colors'>{label}</span>
+    </label>
+  );
+});

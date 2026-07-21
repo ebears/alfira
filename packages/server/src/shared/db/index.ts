@@ -1,6 +1,7 @@
 import { Database } from 'bun:sqlite';
 import { eq, sql } from 'drizzle-orm';
 import { drizzle } from 'drizzle-orm/bun-sqlite';
+
 import * as schema from './schema';
 
 // ---------------------------------------------------------------------------
@@ -16,8 +17,8 @@ if (!DATABASE_URL) {
 }
 
 const sqliteDb = new Database(DATABASE_URL, { create: true, strict: true });
-sqliteDb.exec('PRAGMA journal_mode=WAL;');
-sqliteDb.exec('PRAGMA foreign_keys=ON;');
+sqliteDb.run('PRAGMA journal_mode=WAL;');
+sqliteDb.run('PRAGMA foreign_keys=ON;');
 export const db = drizzle(sqliteDb, { schema });
 
 export type * from './schema';
@@ -50,7 +51,9 @@ export async function findPlaylistWithSongs(playlistId: string) {
     .leftJoin(schema.song, eq(schema.song.id, schema.playlistSong.songId))
     .where(eq(schema.playlist.id, playlistId));
 
-  if (result.length === 0) return null;
+  if (result.length === 0) {
+    return null;
+  }
 
   const songs = result
     .filter((r) => r.PlaylistSong !== null && r.Song !== null)

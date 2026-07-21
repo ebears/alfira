@@ -1,6 +1,7 @@
 import { useVirtualizer } from '@tanstack/react-virtual';
 import * as m from 'motion/react-m';
-import { memo, useEffect, useLayoutEffect, useRef } from 'react';
+import { memo, useEffect, useLayoutEffect, useMemo, useRef } from 'react';
+
 import { listItemVariants } from '../lib/motion';
 import EmptyState from './EmptyState';
 
@@ -84,7 +85,9 @@ function VirtualListInner<T>({
   const virtualizer = useVirtualizer({
     count: totalCount,
     getItemKey: (i: number) => {
-      if (i >= itemsRef.current.length) return '__loader__';
+      if (i >= itemsRef.current.length) {
+        return '__loader__';
+      }
       const item = itemsRef.current[i];
       return item != null ? getItemKeyRef.current(item, i) : `__missing__${i}`;
     },
@@ -116,11 +119,26 @@ function VirtualListInner<T>({
 
   // Reveal the container once content is committed (avoids staggered paint).
   const showSkeleton = isLoading;
-  const showEmpty = hasLoaded && items.length === 0;
+  const showEmpty = hasLoaded && items.length === 0 && !isFetching;
   const showContent = !isLoading && hasLoaded && items.length > 0;
 
+  // Stable styles for the outer containers.
+  const containerStyle = useMemo(() => ({ opacity: 0, transition: 'opacity 120ms ease' }), []);
+
+  const scrollMaskStyle = useMemo(
+    () => ({
+      WebkitMaskImage:
+        'linear-gradient(to bottom, transparent 0%, black 20px, black calc(100% - 20px), transparent 100%)',
+      maskImage:
+        'linear-gradient(to bottom, transparent 0%, black 20px, black calc(100% - 20px), transparent 100%)',
+    }),
+    []
+  );
+
   useLayoutEffect(() => {
-    if (!containerRef.current) return;
+    if (!containerRef.current) {
+      return;
+    }
     containerRef.current.style.opacity = showContent || showEmpty || showSkeleton ? '1' : '0';
   }, [showContent, showEmpty, showSkeleton]);
 
@@ -128,7 +146,7 @@ function VirtualListInner<T>({
     <div
       ref={containerRef}
       className='relative flex-1 min-h-0 flex flex-col overflow-x-hidden'
-      style={{ opacity: 0, transition: 'opacity 120ms ease' }}
+      style={containerStyle}
     >
       {showSkeleton && skeleton}
 
@@ -138,12 +156,7 @@ function VirtualListInner<T>({
         <div
           ref={scrollRef}
           className='overflow-y-auto overflow-x-hidden px-2 pt-3 min-h-0 flex-1 bg-surface'
-          style={{
-            WebkitMaskImage:
-              'linear-gradient(to bottom, transparent 0%, black 20px, black calc(100% - 20px), transparent 100%)',
-            maskImage:
-              'linear-gradient(to bottom, transparent 0%, black 20px, black calc(100% - 20px), transparent 100%)',
-          }}
+          style={scrollMaskStyle}
         >
           <div
             style={{
@@ -182,10 +195,9 @@ function VirtualListInner<T>({
                     ) : isFetching ? (
                       <div className='flex justify-center py-4 gap-2'>
                         {Array.from({ length: 3 }).map((_, i) => (
-                          // eslint-disable-next-line react/no-array-index-key -- static loading indicator, order never changes
                           <div
                             key={`loading-dot-${i}`}
-                            className='skeleton h-3 w-3 rounded-full animate-pulse'
+                            className='h-3 w-3 rounded-full bg-border animate-pulse'
                           />
                         ))}
                       </div>
@@ -200,7 +212,9 @@ function VirtualListInner<T>({
                 );
               }
 
-              if (!item) return null;
+              if (!item) {
+                return null;
+              }
 
               // Spacer to create visual gap between items — rendered inside
               // the fixed-height row so it doesn't affect measurement.
@@ -216,7 +230,6 @@ function VirtualListInner<T>({
                     width: '100%',
                     height: `${virtualRow.size}px`,
                     transform: `translateY(${virtualRow.start}px)`,
-                    overflow: 'hidden',
                   }}
                 >
                   <m.div layout initial='initial' animate='animate' variants={listItemVariants}>

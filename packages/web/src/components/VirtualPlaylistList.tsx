@@ -1,6 +1,8 @@
-import type { Playlist } from '@alfira/server/shared';
-import { memo } from 'react';
+import { type Playlist } from '@alfira/server/shared';
+import { memo, useCallback, useMemo } from 'react';
+
 import PlaylistRow from './PlaylistRow';
+import { Skeleton } from './ui/Skeleton';
 import { VirtualList } from './VirtualList';
 
 // ---------------------------------------------------------------------------
@@ -31,10 +33,10 @@ function SkeletonList() {
       {Array.from({ length: 4 }).map((_, i) => (
         // eslint-disable-next-line react/no-array-index-key -- static skeleton placeholders
         <div key={`skeleton-${i}`} className='card flex items-center gap-4 px-5 py-4'>
-          <div className='skeleton w-10 h-10 rounded' />
+          <Skeleton className='w-10 h-10 rounded' />
           <div className='flex-1 space-y-2'>
-            <div className='skeleton h-3 w-48' />
-            <div className='skeleton h-2.5 w-24' />
+            <Skeleton className='h-3 w-48' />
+            <Skeleton className='h-2.5 w-24' />
           </div>
         </div>
       ))}
@@ -59,18 +61,27 @@ export const VirtualPlaylistList = memo(function VirtualPlaylistList({
   emptyTitle,
   emptyMessage,
 }: VirtualPlaylistListProps) {
+  const getItemKey = useCallback((playlist: Playlist) => playlist.id, []);
+
+  const renderItem = useCallback(
+    (playlist: Playlist) => (
+      <PlaylistRow
+        playlist={playlist}
+        animationDelay='0ms'
+        onClick={onRowClick}
+        data-playlist-id={playlist.id}
+      />
+    ),
+    [onRowClick]
+  );
+
+  const skeleton = useMemo(() => <SkeletonList />, []);
+
   return (
     <VirtualList
       items={items}
-      getItemKey={(playlist) => playlist.id}
-      renderItem={(playlist) => (
-        <PlaylistRow
-          playlist={playlist}
-          animationDelay='0ms'
-          onClick={onRowClick}
-          data-playlist-id={playlist.id}
-        />
-      )}
+      getItemKey={getItemKey}
+      renderItem={renderItem}
       estimateSize={120}
       itemClassName='pb-4'
       isLoading={isLoading}
@@ -80,7 +91,7 @@ export const VirtualPlaylistList = memo(function VirtualPlaylistList({
       hasMore={hasMore}
       onRetry={onRetry}
       onFetchMore={onFetchMore}
-      skeleton={<SkeletonList />}
+      skeleton={skeleton}
       emptyTitle={emptyTitle}
       emptyMessage={emptyMessage}
     />

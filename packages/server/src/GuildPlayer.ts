@@ -1,13 +1,14 @@
 import { eq } from 'drizzle-orm';
+
 import { buildCompressorFilter } from './lib/applyNodeLinkFilter';
 import { buildEqualizerFilter, EQ_BAND_COLUMNS, eqBandsFromRow } from './lib/eqBands';
+import { connectToVoice, getClient } from './lib/gatewayState';
 import { lavalink, type TrackEndReason } from './lib/lavalink';
 import { emitPlayerUpdate } from './lib/socket';
 import { PlaybackCursor } from './PlaybackCursor';
-import type { LoopMode, QueuedSong, QueueState } from './shared';
+import { type LoopMode, type QueuedSong, type QueueState } from './shared';
 import { db, tables } from './shared/db';
 import { logger } from './shared/logger';
-import { connectToVoice, getClient } from './lib/gatewayState';
 import {
   destroyNodeLinkPlayer,
   getStreamFormat,
@@ -18,7 +19,7 @@ import {
 export class GuildPlayer {
   private static readonly MAX_CONSECUTIVE_FAILURES = 3;
 
-  private queue: PlaybackCursor<QueuedSong> = new PlaybackCursor();
+  private queue = new PlaybackCursor<QueuedSong>();
   private priorityQueue: QueuedSong[] = [];
   private currentSong: QueuedSong | null = null;
   private loopMode: LoopMode = 'off';
@@ -55,10 +56,14 @@ export class GuildPlayer {
   // Auto-leave idle timer.
   private idleLeaveTimer: ReturnType<typeof setTimeout> | null = null;
 
-  private async getIdleTimeoutMinutes(): Promise<number> {
+  // Periodic sync broadcast during playback — pushes fresh NodeLink position
+  // data to clients so they can correct client-side clock drift.
+  private syncInterval: ReturnType<typeof setInterval> | null = null;
+
+  private getIdleTimeoutMinutes(): number {
     // Read from DB first (set via setup wizard or admin settings).
     try {
-      const row = await db
+      const row = db
         .select({ timeout: tables.guildSettings.voiceIdleTimeoutMinutes })
         .from(tables.guildSettings)
         .where(eq(tables.guildSettings.id, 1))
@@ -76,14 +81,18 @@ export class GuildPlayer {
     return Number.isFinite(parsed) && parsed > 0 ? parsed : 5;
   }
 
-  private async scheduleIdleLeave(): Promise<void> {
+  private scheduleIdleLeave(): void {
     this.cancelIdleLeave();
-    const minutes = await this.getIdleTimeoutMinutes();
+    const minutes = this.getIdleTimeoutMinutes();
     this.idleLeaveTimer = setTimeout(
       () => {
-        this.leaveOnIdle().catch(() => {
-          // noop — errors are already logged inside leaveOnIdle
-        });
+        void (async () => {
+          try {
+            await this.leaveOnIdle();
+          } catch {
+            // noop — errors are already logged inside leaveOnIdle
+          }
+        })();
       },
       minutes * 60 * 1000
     );
@@ -106,7 +115,7 @@ export class GuildPlayer {
   ];
 
   private async leaveOnIdle(): Promise<void> {
-    const timeoutMinutes = await this.getIdleTimeoutMinutes();
+    const timeoutMinutes = this.getIdleTimeoutMinutes();
     logger.info(
       { guildId: this.guildId },
       `Auto-leaving voice channel after idle (${timeoutMinutes} minutes).`
@@ -116,7 +125,7 @@ export class GuildPlayer {
 
     // Send notification to the configured channel, if any.
     try {
-      const row = await db
+      const row = db
         .select({ channelId: tables.guildSettings.afkNotificationChannelId })
         .from(tables.guildSettings)
         .where(eq(tables.guildSettings.id, 1))
@@ -166,7 +175,9 @@ export class GuildPlayer {
     this._unsubTrackEnd = lavalink.onTrackEnd(this.guildId, (reason: TrackEndReason) => {
       // 'replaced' fires when a new track replaces the current one (normal).
       // 'stopped' fires when we explicitly stop/clear.
-      if (reason === 'replaced' || reason === 'stopped') return;
+      if (reason === 'replaced' || reason === 'stopped') {
+        return;
+      }
 
       logger.debug(
         { guildId: this.guildId, reason, track: this.currentSong?.title },
@@ -179,9 +190,13 @@ export class GuildPlayer {
         this.gaplessTransition = true;
       }
 
-      this.onTrackEnd().catch(() => {
-        // errors logged in handlePlaybackFailure
-      });
+      void (async () => {
+        try {
+          await this.onTrackEnd();
+        } catch {
+          // errors logged in handlePlaybackFailure
+        }
+      })();
     });
 
     this._unsubTrackError = lavalink.onTrackError(
@@ -210,7 +225,7 @@ export class GuildPlayer {
   private destroyPlayer(): void {
     const sessionId = this.getSessionId();
     if (sessionId) {
-      destroyNodeLinkPlayer(this.guildId, sessionId);
+      void destroyNodeLinkPlayer(this.guildId, sessionId);
     }
 
     // Force-reset playing state so a subsequent play sends a new track
@@ -291,7 +306,9 @@ export class GuildPlayer {
   }
 
   async skip(): Promise<void> {
-    if (this.currentSong === null) return;
+    if (this.currentSong === null) {
+      return;
+    }
 
     // Stop the current track via REST.
     const sessionId = this.getSessionId();
@@ -309,6 +326,7 @@ export class GuildPlayer {
   stop(): void {
     this.stopping = true;
     this.cancelIdleLeave();
+    this.clearSyncInterval();
     this.currentSong = null;
     this.queue.clear();
     this.priorityQueue = [];
@@ -364,7 +382,9 @@ export class GuildPlayer {
    */
   promoteSong(songId: string): boolean {
     const removed = this.queue.removeWhere((s) => s.id === songId);
-    if (removed.length === 0) return false;
+    if (removed.length === 0) {
+      return false;
+    }
 
     // Push to the end of priority — earlier promotions play first
     this.priorityQueue.push(...removed);
@@ -379,7 +399,9 @@ export class GuildPlayer {
    */
   demoteSong(songId: string): boolean {
     const prioIdx = this.priorityQueue.findIndex((s) => s.id === songId);
-    if (prioIdx === -1) return false;
+    if (prioIdx === -1) {
+      return false;
+    }
 
     // Remove from priority and insert at the front of the regular queue
     // so it plays first among unplayed regular songs.
@@ -452,10 +474,14 @@ export class GuildPlayer {
   }
 
   async togglePause(): Promise<boolean> {
-    if (!this.currentSong) return false;
+    if (!this.currentSong) {
+      return false;
+    }
 
     const sessionId = this.getSessionId();
-    if (!sessionId) return false;
+    if (!sessionId) {
+      return false;
+    }
 
     if (this.paused) {
       this.cancelIdleLeave();
@@ -468,11 +494,13 @@ export class GuildPlayer {
       }
       await updateNodeLinkPlayer(this.guildId, sessionId, { paused: false });
       this.paused = false;
+      this.startSyncInterval();
     } else {
       this.pausedAt = Date.now();
       await updateNodeLinkPlayer(this.guildId, sessionId, { paused: true });
       this.paused = true;
-      await this.scheduleIdleLeave();
+      this.clearSyncInterval();
+      this.scheduleIdleLeave();
     }
 
     this.broadcast();
@@ -480,15 +508,23 @@ export class GuildPlayer {
   }
 
   async seek(positionMs: number): Promise<void> {
-    if (!this.currentSong) return;
+    if (!this.currentSong) {
+      return;
+    }
 
     const sessionId = this.getSessionId();
-    if (!sessionId) return;
+    if (!sessionId) {
+      return;
+    }
 
     const durationMs = this.currentSong.duration * 1000;
     const clampedMs = Math.max(0, Math.min(positionMs, durationMs));
 
     await updateNodeLinkPlayer(this.guildId, sessionId, { position: clampedMs });
+
+    // Invalidate the stored NodeLink position so the broadcast uses the
+    // freshly-set trackStartedAt instead of the stale pre-seek position.
+    lavalink.resetPlayerPosition(this.guildId);
 
     this.trackStartedAt = Date.now() - clampedMs;
     if (this.paused && this.pausedAt !== null) {
@@ -503,12 +539,16 @@ export class GuildPlayer {
   }
 
   public updateVolumeBoost(boost: number): void {
-    if (!this.currentSong) return;
+    if (!this.currentSong) {
+      return;
+    }
 
     const sessionId = this.getSessionId();
-    if (!sessionId) return;
+    if (!sessionId) {
+      return;
+    }
 
-    updateNodeLinkPlayer(this.guildId, sessionId, {
+    void updateNodeLinkPlayer(this.guildId, sessionId, {
       volume: 100 + boost,
     });
   }
@@ -536,12 +576,24 @@ export class GuildPlayer {
 
     const merge = (s: QueuedSong): QueuedSong => {
       const updated = { ...s };
-      if ('nickname' in fields) updated.nickname = fields.nickname ?? undefined;
-      if ('artist' in fields) updated.artist = fields.artist ?? undefined;
-      if ('album' in fields) updated.album = fields.album ?? undefined;
-      if ('artwork' in fields) updated.artwork = fields.artwork ?? undefined;
-      if ('tags' in fields) updated.tags = fields.tags;
-      if ('volumeBoost' in fields) updated.volumeBoost = fields.volumeBoost ?? undefined;
+      if ('nickname' in fields) {
+        updated.nickname = fields.nickname ?? undefined;
+      }
+      if ('artist' in fields) {
+        updated.artist = fields.artist ?? undefined;
+      }
+      if ('album' in fields) {
+        updated.album = fields.album ?? undefined;
+      }
+      if ('artwork' in fields) {
+        updated.artwork = fields.artwork ?? undefined;
+      }
+      if ('tags' in fields) {
+        updated.tags = fields.tags;
+      }
+      if ('volumeBoost' in fields) {
+        updated.volumeBoost = fields.volumeBoost ?? undefined;
+      }
       return updated;
     };
 
@@ -564,7 +616,9 @@ export class GuildPlayer {
 
     // Regular queue
     const regularUpdated = this.queue.updateWhere((s) => idSet.has(s.id), merge);
-    if (regularUpdated > 0) changed = true;
+    if (regularUpdated > 0) {
+      changed = true;
+    }
 
     if (changed) {
       this.broadcast();
@@ -580,11 +634,39 @@ export class GuildPlayer {
   }
 
   isPlaying(): boolean {
-    if (this.currentSong === null || this.paused) return false;
+    if (this.currentSong === null || this.paused) {
+      return false;
+    }
     return true;
   }
 
   getQueueState(): QueueState {
+    // Always include NodeLink ground-truth position so clients can correct
+    // clock drift. Timescale speed is still gated behind the filter being
+    // active — a non-1.0 speed stored in the DB is meaningless otherwise.
+    let timescaleSpeed: number | undefined;
+    let nodeLinkPosition: number | null = null;
+    let nodeLinkTime: number | null = null;
+    try {
+      const nodePos = lavalink.getPlayerPosition(this.guildId);
+      nodeLinkPosition = nodePos?.position ?? null;
+      nodeLinkTime = nodePos?.time ?? null;
+
+      const row = db
+        .select({
+          enabled: tables.guildSettings.timescaleEnabled,
+          speed: tables.guildSettings.timescaleSpeed,
+        })
+        .from(tables.guildSettings)
+        .where(eq(tables.guildSettings.id, 1))
+        .get();
+      if (row?.enabled) {
+        timescaleSpeed = row.speed;
+      }
+    } catch {
+      // DB not available — leave timescale fields absent.
+    }
+
     return {
       isPlaying: this.isPlaying(),
       isPaused: this.paused,
@@ -596,6 +678,9 @@ export class GuildPlayer {
       queue: this.queue.toRemaining(),
       trackStartedAt: this.trackStartedAt,
       nextTrack: this.peekNextTrack(),
+      timescaleSpeed,
+      nodeLinkPosition,
+      nodeLinkTime,
     };
   }
 
@@ -607,8 +692,24 @@ export class GuildPlayer {
     }
   }
 
+  private static readonly SYNC_INTERVAL_MS = 5_000;
+
+  private startSyncInterval(): void {
+    this.clearSyncInterval();
+    this.syncInterval = setInterval(() => {
+      this.broadcast();
+    }, GuildPlayer.SYNC_INTERVAL_MS);
+  }
+
+  private clearSyncInterval(): void {
+    if (this.syncInterval !== null) {
+      clearInterval(this.syncInterval);
+      this.syncInterval = null;
+    }
+  }
+
   private broadcast(): void {
-    void emitPlayerUpdate(this.getQueueState());
+    emitPlayerUpdate(this.getQueueState());
   }
 
   private peekNextTrack(): QueuedSong | null {
@@ -631,7 +732,9 @@ export class GuildPlayer {
   }
 
   private async playNext(): Promise<void> {
-    if (this.playNextLock) return;
+    if (this.playNextLock) {
+      return;
+    }
     this.playNextLock = true;
     try {
       await this.playNextUnlocked();
@@ -673,7 +776,7 @@ export class GuildPlayer {
         this.currentSong = null;
         this.queue.clear();
         this.broadcast();
-        await this.scheduleIdleLeave();
+        this.scheduleIdleLeave();
         return;
       }
     }
@@ -710,7 +813,7 @@ export class GuildPlayer {
     }
 
     // Load guild settings once for both code paths.
-    const settings = await db
+    const settings = db
       .select({
         enabled: tables.guildSettings.compressorEnabled,
         threshold: tables.guildSettings.compressorThreshold,
@@ -764,14 +867,14 @@ export class GuildPlayer {
       }
 
       const t1 = Date.now();
-      await updateNodeLinkPlayer(
-        this.guildId,
-        sessionId,
-        patch as Parameters<typeof updateNodeLinkPlayer>[2]
-      );
+      await updateNodeLinkPlayer(this.guildId, sessionId, patch);
       const t2 = Date.now();
 
       this.consecutiveFailures = 0;
+      // Invalidate the previous track's NodeLink position before setting
+      // the new trackStartedAt, otherwise the stale position bleeds into
+      // the broadcast and the progress bar starts at the wrong offset.
+      lavalink.resetPlayerPosition(this.guildId);
       this.trackStartedAt = Date.now();
       this.pausedAt = null;
 
@@ -782,6 +885,7 @@ export class GuildPlayer {
       }
 
       this.broadcast();
+      this.startSyncInterval();
       const t3 = Date.now();
 
       logger.info(
@@ -861,14 +965,13 @@ export class GuildPlayer {
       }
     }
 
-    await updateNodeLinkPlayer(
-      this.guildId,
-      sessionId,
-      patch as Parameters<typeof updateNodeLinkPlayer>[2]
-    );
+    await updateNodeLinkPlayer(this.guildId, sessionId, patch);
     const tCold3 = Date.now();
 
     this.consecutiveFailures = 0;
+    // Same as the gapless path — discard the previous track's NodeLink
+    // position so the broadcast uses the fresh trackStartedAt.
+    lavalink.resetPlayerPosition(this.guildId);
     this.trackStartedAt = Date.now();
     this.pausedAt = null;
 
@@ -879,6 +982,7 @@ export class GuildPlayer {
     }
 
     this.broadcast();
+    this.startSyncInterval();
 
     logger.info(
       {
@@ -895,7 +999,9 @@ export class GuildPlayer {
 
   private preloadNextTrack(sessionId: string): void {
     const nextTrack = this.peekNextTrack();
-    if (!nextTrack) return;
+    if (!nextTrack) {
+      return;
+    }
 
     const attempt = async () => {
       try {
@@ -915,7 +1021,7 @@ export class GuildPlayer {
         }
       }
     };
-    attempt(); // fire-and-forget — don't block the caller
+    void attempt(); // fire-and-forget — don't block the caller
   }
 
   private async fetchStreamWithRetry(
@@ -955,8 +1061,11 @@ export class GuildPlayer {
   }
 
   private async onTrackEnd(): Promise<void> {
-    if (this.playNextLock) return;
+    if (this.playNextLock) {
+      return;
+    }
 
+    this.clearSyncInterval();
     this.trackStartedAt = null;
     this.pausedAt = null;
 
@@ -965,7 +1074,9 @@ export class GuildPlayer {
       return;
     }
 
-    if (!this.currentSong) return;
+    if (!this.currentSong) {
+      return;
+    }
 
     await this.playNext();
   }

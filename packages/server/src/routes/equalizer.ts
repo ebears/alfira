@@ -1,15 +1,11 @@
 import { eq } from 'drizzle-orm';
-import type { RouteContext } from '../index';
-import { applyNodeLinkFilter } from '../lib/applyNodeLinkFilter';
-import {
-  buildEqualizerFilter,
-  EQ_BAND_COLUMNS,
-  eqBandsFromRow,
-  eqBandValues,
-} from '../lib/eqBands';
+
+import { type RouteContext } from '../lib/context';
+import { EQ_BAND_COLUMNS, eqBandsFromRow, eqBandValues } from '../lib/eqBands';
 import { json } from '../lib/json';
 import { checkGuards } from '../lib/routeGuards';
 import { routeTable } from '../lib/routeTable';
+import { syncAllFilters } from '../lib/syncAllFilters';
 import { db, tables } from '../shared/db';
 
 interface EqualizerPayload {
@@ -17,15 +13,17 @@ interface EqualizerPayload {
   enabled: boolean;
 }
 
-async function handleEqualizerGet(
+function handleEqualizerGet(
   ctx: RouteContext,
   _request: Request,
   _params: Record<string, string>
-): Promise<Response> {
-  const guards = await checkGuards(ctx, { admin: true, permission: 'audio.manage' });
-  if (guards instanceof Response) return guards;
+): Response {
+  const guards = checkGuards(ctx, { admin: true, permission: 'audio.manage' });
+  if (guards instanceof Response) {
+    return guards;
+  }
 
-  const row = await db
+  const row = db
     .select({
       ...EQ_BAND_COLUMNS,
       eqEnabled: tables.guildSettings.eqEnabled,
@@ -45,8 +43,10 @@ async function handleEqualizerPatch(
   request: Request,
   _params: Record<string, string>
 ): Promise<Response> {
-  const guards = await checkGuards(ctx, { admin: true, permission: 'audio.manage' });
-  if (guards instanceof Response) return guards;
+  const guards = checkGuards(ctx, { admin: true, permission: 'audio.manage' });
+  if (guards instanceof Response) {
+    return guards;
+  }
 
   let body: EqualizerPayload;
   try {
@@ -74,8 +74,7 @@ async function handleEqualizerPatch(
   }
 
   // Upsert into DB
-  await db
-    .insert(tables.guildSettings)
+  db.insert(tables.guildSettings)
     .values({ id: 1, eqEnabled: enabled, ...eqBandValues(bands) })
     .onConflictDoUpdate({
       target: tables.guildSettings.id,
@@ -83,8 +82,8 @@ async function handleEqualizerPatch(
     })
     .run();
 
-  // Apply to live NodeLink player if connected
-  await applyNodeLinkFilter({ equalizer: buildEqualizerFilter(bands) }, 'equalizer');
+  // Apply all enabled filters to live NodeLink player
+  await syncAllFilters();
 
   return json({ bands, enabled });
 }

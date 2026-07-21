@@ -1,4 +1,5 @@
 import { and, eq, inArray, sql } from 'drizzle-orm';
+
 import { db, tables } from '../shared/db';
 import { emitPlaylistUpdated } from './socket';
 
@@ -19,7 +20,9 @@ export async function syncPlaylistToTag(
     .where(eq(playlistTable.id, playlistId))
     .limit(1);
 
-  if (!playlist?.tagNameLower) return null;
+  if (!playlist?.tagNameLower) {
+    return null;
+  }
 
   await db.transaction(async (tx) => {
     // Remove all existing playlist-song entries
@@ -32,7 +35,9 @@ export async function syncPlaylistToTag(
       .where(sql`lower(${songTable.tags}) LIKE lower(${`%${playlist.tagNameLower}%`})`)
       .orderBy(songTable.title);
 
-    if (songs.length === 0) return;
+    if (songs.length === 0) {
+      return;
+    }
 
     await tx.insert(playlistSongTable).values(
       songs.map((song, index) => ({
@@ -51,7 +56,9 @@ export async function syncPlaylistToTag(
  * Called after song tag mutations (bulk tag, bulk edit, single patch).
  */
 export async function reSyncPlaylistsForTags(tagNamesLower: string[]): Promise<void> {
-  if (tagNamesLower.length === 0) return;
+  if (tagNamesLower.length === 0) {
+    return;
+  }
 
   const affectedPlaylists = await db
     .select({ id: playlistTable.id, tagNameLower: playlistTable.tagNameLower })
@@ -64,14 +71,18 @@ export async function reSyncPlaylistsForTags(tagNamesLower: string[]): Promise<v
     );
 
   for (const pl of affectedPlaylists) {
-    if (!pl.tagNameLower) continue;
+    if (!pl.tagNameLower) {
+      continue;
+    }
     await syncPlaylistToTag(pl.id);
     const [updatedPl] = await db
       .select()
       .from(playlistTable)
       .where(eq(playlistTable.id, pl.id))
       .limit(1);
-    if (!updatedPl) continue;
+    if (!updatedPl) {
+      continue;
+    }
 
     const [{ count }] = await db
       .select({ count: sql<number>`count(*)` })

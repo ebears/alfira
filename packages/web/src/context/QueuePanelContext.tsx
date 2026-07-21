@@ -1,4 +1,5 @@
 import type React from 'react';
+
 import { createContext, useContext, useEffect, useMemo, useState } from 'react';
 
 interface QueuePanelContextValue {
@@ -12,7 +13,9 @@ export function QueuePanelProvider({ children }: { children: React.ReactNode }) 
   const [queueOpen, setQueueOpen] = useState(() => {
     if (typeof window !== 'undefined') {
       const stored = localStorage.getItem('alfira-queue-open');
-      if (stored !== null) return stored === 'true';
+      if (stored !== null) {
+        return stored === 'true';
+      }
     }
     return false;
   });
@@ -30,6 +33,8 @@ export function QueuePanelProvider({ children }: { children: React.ReactNode }) 
 
 export function useQueuePanel(): QueuePanelContextValue {
   const ctx = useContext(QueuePanelContext);
-  if (!ctx) throw new Error('useQueuePanel must be used inside QueuePanelProvider');
+  if (!ctx) {
+    throw new Error('useQueuePanel must be used inside QueuePanelProvider');
+  }
   return ctx;
 }

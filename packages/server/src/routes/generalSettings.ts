@@ -1,9 +1,10 @@
 import { eq } from 'drizzle-orm';
-import type { RouteContext } from '../index';
+
+import { type RouteContext } from '../lib/context';
 import { json } from '../lib/json';
 import { checkGuards } from '../lib/routeGuards';
 import { routeTable } from '../lib/routeTable';
-import type { GeneralSettings } from '../shared';
+import { type GeneralSettings } from '../shared';
 import { db, tables } from '../shared/db';
 import { refreshEnabledSources, SOURCE_DEFINITIONS } from '../startDiscord';
 
@@ -34,15 +35,17 @@ const SETTINGS_COLUMNS = {
 // ---------------------------------------------------------------------------
 // GET /api/settings/general
 // ---------------------------------------------------------------------------
-async function handleGetGeneral(
+function handleGetGeneral(
   ctx: RouteContext,
   _request: Request,
   _params: Record<string, string>
-): Promise<Response> {
-  const guards = await checkGuards(ctx, { admin: true });
-  if (guards instanceof Response) return guards;
+): Response {
+  const guards = checkGuards(ctx, { admin: true });
+  if (guards instanceof Response) {
+    return guards;
+  }
 
-  const row = await db
+  const row = db
     .select(SETTINGS_COLUMNS)
     .from(tables.guildSettings)
     .where(eq(tables.guildSettings.id, 1))
@@ -65,7 +68,7 @@ async function handleGetGeneral(
     );
   }
 
-  return json(attachAvailableSources(row as Omit<GeneralSettings, 'availableSources'>));
+  return json(attachAvailableSources(row));
 }
 
 // ---------------------------------------------------------------------------
@@ -87,8 +90,10 @@ async function handlePatchGeneral(
   request: Request,
   _params: Record<string, string>
 ): Promise<Response> {
-  const guards = await checkGuards(ctx, { admin: true });
-  if (guards instanceof Response) return guards;
+  const guards = checkGuards(ctx, { admin: true });
+  if (guards instanceof Response) {
+    return guards;
+  }
 
   let body: GeneralSettingsPatch;
   try {
@@ -169,8 +174,7 @@ async function handlePatchGeneral(
     return json({ error: 'No fields to update' }, 400);
   }
 
-  await db
-    .insert(tables.guildSettings)
+  db.insert(tables.guildSettings)
     .values({ id: 1, ...updates })
     .onConflictDoUpdate({
       target: tables.guildSettings.id,
@@ -184,7 +188,7 @@ async function handlePatchGeneral(
   }
 
   // Return the full updated row.
-  const row = await db
+  const row = db
     .select(SETTINGS_COLUMNS)
     .from(tables.guildSettings)
     .where(eq(tables.guildSettings.id, 1))

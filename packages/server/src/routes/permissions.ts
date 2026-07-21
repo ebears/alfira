@@ -1,6 +1,7 @@
 import { eq, inArray } from 'drizzle-orm';
-import type { RouteContext } from '../index';
+
 import { getGuildId } from '../lib/config';
+import { type RouteContext } from '../lib/context';
 import { fetchGuildRoles } from '../lib/discordRoles';
 import { json } from '../lib/json';
 import { checkGuards } from '../lib/routeGuards';
@@ -16,20 +17,20 @@ async function handleGetPermissions(
   _request: Request,
   _params: Record<string, string>
 ): Promise<Response> {
-  const guards = await checkGuards(ctx, { admin: true });
-  if (guards instanceof Response) return guards;
+  const guards = checkGuards(ctx, { admin: true });
+  if (guards instanceof Response) {
+    return guards;
+  }
 
   const guildId = getGuildId();
 
-  const [allRows, roles, settingsRow] = await Promise.all([
-    db.select().from(tables.rolePermission),
-    guildId ? fetchGuildRoles(guildId) : [],
-    db
-      .select({ adminRoleIds: tables.guildSettings.adminRoleIds })
-      .from(tables.guildSettings)
-      .where(eq(tables.guildSettings.id, 1))
-      .get(),
-  ]);
+  const allRows = db.select().from(tables.rolePermission).all();
+  const settingsRow = db
+    .select({ adminRoleIds: tables.guildSettings.adminRoleIds })
+    .from(tables.guildSettings)
+    .where(eq(tables.guildSettings.id, 1))
+    .get();
+  const roles = guildId ? await fetchGuildRoles(guildId) : [];
 
   // Filter out roles that are already super-admins (implied full access).
   const adminRoleIdSet = new Set(
@@ -43,7 +44,9 @@ async function handleGetPermissions(
   // Build mapping: action → roleIds
   const mapping: Record<string, string[]> = {};
   for (const row of allRows) {
-    if (!mapping[row.action]) mapping[row.action] = [];
+    if (!mapping[row.action]) {
+      mapping[row.action] = [];
+    }
     mapping[row.action].push(row.roleId);
   }
 
@@ -64,8 +67,10 @@ async function handlePatchPermissions(
   request: Request,
   _params: Record<string, string>
 ): Promise<Response> {
-  const guards = await checkGuards(ctx, { admin: true });
-  if (guards instanceof Response) return guards;
+  const guards = checkGuards(ctx, { admin: true });
+  if (guards instanceof Response) {
+    return guards;
+  }
 
   let body: { action?: unknown; roleIds?: unknown };
   try {

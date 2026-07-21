@@ -1,6 +1,6 @@
-import { lavalink } from './lavalink';
 import { updateNodeLinkPlayer } from '../utils/nodelink';
-import type { DiscordGateway } from './discordGateway';
+import { type DiscordGateway } from './discordGateway';
+import { lavalink } from './lavalink';
 
 // ---------------------------------------------------------------------------
 // Gateway singleton
@@ -48,33 +48,40 @@ interface PendingVoiceConnection {
 
 const pendingVoiceConnections = new Map<string, PendingVoiceConnection>();
 
-function tryCompleteVoiceConnection(guildId: string): void {
+async function tryCompleteVoiceConnection(guildId: string): Promise<void> {
   const pending = pendingVoiceConnections.get(guildId);
-  if (!pending) return;
-  if (!pending.sessionId || !pending.token || !pending.endpoint) return;
+  if (!pending) {
+    return;
+  }
+  if (!pending.sessionId || !pending.token || !pending.endpoint) {
+    return;
+  }
 
   const sessionId = lavalink.getSessionId();
   if (!sessionId) {
     // Lavalink WebSocket hasn't received its 'ready' event yet.
     // Retry in 200ms — the connection was just initiated.
-    setTimeout(() => tryCompleteVoiceConnection(guildId), 200);
+    setTimeout(() => {
+      void tryCompleteVoiceConnection(guildId);
+    }, 200);
     return;
   }
 
   pendingVoiceConnections.delete(guildId);
 
-  updateNodeLinkPlayer(guildId, sessionId, {
-    voice: {
-      token: pending.token,
-      endpoint: pending.endpoint,
-      sessionId: pending.sessionId,
-    },
-  })
-    .then(() => {
-      lavalink.markConnected(guildId, true);
-      pending.resolve();
-    })
-    .catch((err: Error) => pending.reject(err));
+  try {
+    await updateNodeLinkPlayer(guildId, sessionId, {
+      voice: {
+        token: pending.token,
+        endpoint: pending.endpoint,
+        sessionId: pending.sessionId,
+      },
+    });
+    lavalink.markConnected(guildId, true);
+    pending.resolve();
+  } catch (err) {
+    pending.reject(err as Error);
+  }
 }
 
 /**
@@ -119,7 +126,7 @@ export function completePendingConnection(guildId: string, sessionId: string): v
   const pending = pendingVoiceConnections.get(guildId);
   if (pending) {
     pending.sessionId = sessionId;
-    tryCompleteVoiceConnection(guildId);
+    void tryCompleteVoiceConnection(guildId);
   }
 }
 
@@ -135,6 +142,6 @@ export function setPendingConnectionDetails(
   if (pending) {
     pending.token = token;
     pending.endpoint = endpoint;
-    tryCompleteVoiceConnection(guildId);
+    void tryCompleteVoiceConnection(guildId);
   }
 }

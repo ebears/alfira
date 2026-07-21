@@ -1,5 +1,13 @@
 import { fetchTags } from '@alfira/server/shared/api';
-import { createContext, type ReactNode, useCallback, useContext, useEffect, useState } from 'react';
+import {
+  createContext,
+  type ReactNode,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+} from 'react';
 
 export interface TagItem {
   canonicalName: string;
@@ -22,25 +30,27 @@ export function TagsProvider({ children }: { children: ReactNode }) {
   const [tagColorMap, setTagColorMap] = useState<Record<string, string | null>>({});
 
   const refreshTags = useCallback(() => {
-    fetchTags().then((fetched: TagItem[]) => {
+    void (async () => {
+      const fetched: TagItem[] = await fetchTags();
       setTags(fetched);
       const map: Record<string, string | null> = {};
       for (const tag of fetched) {
         map[tag.nameLower] = tag.color ?? null;
       }
       setTagColorMap(map);
-    });
+    })();
   }, []);
 
   useEffect(() => {
     refreshTags();
   }, [refreshTags]);
 
-  return (
-    <TagsContext.Provider value={{ tags, tagColorMap, refreshTags }}>
-      {children}
-    </TagsContext.Provider>
+  const value = useMemo(
+    () => ({ tags, tagColorMap, refreshTags }),
+    [tags, tagColorMap, refreshTags]
   );
+
+  return <TagsContext.Provider value={value}>{children}</TagsContext.Provider>;
 }
 
 export function useTagColors() {

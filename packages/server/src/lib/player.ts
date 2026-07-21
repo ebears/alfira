@@ -1,4 +1,4 @@
-import type { GuildPlayer } from '../startDiscord';
+import { type GuildPlayer } from '../startDiscord';
 import { getPlayer } from '../startDiscord';
 import { getGuildId } from './config';
 import { json } from './json';

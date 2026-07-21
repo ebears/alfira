@@ -1,6 +1,7 @@
-import type { Playlist } from '@alfira/server/shared';
+import { type Playlist } from '@alfira/server/shared';
 import { CaretRightIcon, GhostIcon, PlaylistIcon, TagIcon } from '@phosphor-icons/react';
-import { memo } from 'react';
+import { memo, useCallback, useMemo } from 'react';
+
 import { ArtworkImage } from './ui/ArtworkImage';
 import { Card } from './ui/Card';
 
@@ -13,7 +14,9 @@ interface PlaylistRowProps {
 
 /** Fill an array of artwork URLs to exactly 4 slots, repeating as needed. */
 function spreadUrls(urls: string[]): (string | null)[] {
-  if (urls.length === 0) return [null, null, null, null];
+  if (urls.length === 0) {
+    return [null, null, null, null];
+  }
   const result: (string | null)[] = [];
   for (let i = 0; i < 4; i++) {
     result.push(urls[i % urls.length] ?? null);
@@ -28,22 +31,28 @@ export const PlaylistRow = memo(
     const cells = spreadUrls(coverUrls);
     const hasArtwork = coverUrls.length > 0;
 
+    const cardStyle = useMemo(() => ({ animationDelay }), [animationDelay]);
+
+    const handleKeyDown = useCallback(
+      (e: React.KeyboardEvent) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          onClick(e as unknown as React.MouseEvent);
+        }
+      },
+      [onClick]
+    );
+
     return (
-      // eslint-disable-next-line jsx-a11y/prefer-tag-over-role -- uses Card wrapper which renders a div; keyboard handling present
       <Card
         hoverable
         animate
         className='rounded-xl flex items-center gap-3 md:gap-4 px-4 md:px-5 py-3.5 md:py-4 cursor-pointer group'
-        style={{ animationDelay }}
+        style={cardStyle}
         data-playlist-id={dataPlaylistId}
         onClick={onClick}
-        onKeyDown={(e: React.KeyboardEvent) => {
-          if (e.key === 'Enter' || e.key === ' ') {
-            e.preventDefault();
-            onClick(e as unknown as React.MouseEvent);
-          }
-        }}
-        role='button' // eslint-disable-line jsx-a11y/prefer-tag-over-role -- uses Card wrapper div; keyboard handling present
+        onKeyDown={handleKeyDown}
+        role='button'
         tabIndex={0}
       >
         {/* Cover art grid or fallback icon */}

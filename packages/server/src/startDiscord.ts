@@ -107,7 +107,7 @@ function handleVoiceStateUpdate(data: unknown): void {
         if (humanCount === 0) {
           humanVoiceMembers.delete(botChannelId);
           if (guildPlayer.getCurrentSong() && guildPlayer.isPlaying()) {
-            guildPlayer.togglePause();
+            void guildPlayer.togglePause();
             logger.info({ guildId }, "Auto-paused: no humans left in the bot's voice channel.");
           }
         }
@@ -138,11 +138,14 @@ function handleReady(data: unknown): void {
   const wsProtocol = nodelinkParsed.protocol === 'https:' ? 'wss:' : 'ws:';
   const wsUrl = `${wsProtocol}//${nodelinkParsed.hostname}:${nodelinkParsed.port || 2333}/v4/websocket`;
 
-  lavalink.connect(wsUrl, NODELINK_AUTH, ready.user.id).then(
-    () => logger.info('Lavalink WebSocket connected'),
-    (err: Error) =>
-      logger.error({ err }, 'Lavalink WebSocket connection failed — audio will be unavailable')
-  );
+  void (async () => {
+    try {
+      await lavalink.connect(wsUrl, NODELINK_AUTH, ready.user.id);
+      logger.info('Lavalink WebSocket connected');
+    } catch (err) {
+      logger.error({ err }, 'Lavalink WebSocket connection failed — audio will be unavailable');
+    }
+  })();
 }
 
 // ---------------------------------------------------------------------------

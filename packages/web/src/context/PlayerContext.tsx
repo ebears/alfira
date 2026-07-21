@@ -1,4 +1,6 @@
-import type { LoopMode, QueueState } from '@alfira/server/shared';
+import type React from 'react';
+
+import { type LoopMode, type QueueState } from '@alfira/server/shared';
 import {
   clearQueue,
   demoteQueueSong,
@@ -14,8 +16,8 @@ import {
   togglePause,
   unshuffleQueue,
 } from '@alfira/server/shared/api';
-import type React from 'react';
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
+
 import { useProgressBar } from '../hooks/useProgressBar';
 import { disposeSocket, onSocketEvent, useConnectionStatus, useSocket } from '../hooks/useSocket';
 
@@ -34,6 +36,8 @@ const EMPTY_STATE: QueueState = {
   trackStartedAt: null,
   nextTrack: null,
   compressorSettings: null,
+  nodeLinkPosition: null,
+  nodeLinkTime: null,
 };
 
 interface PlayerContextValue {
@@ -124,7 +128,7 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
   // ---------------------------------------------------------------------------
   useEffect(() => {
     // Fetch immediately when the context mounts.
-    refetch();
+    void refetch();
 
     const handlePlayerUpdate = (data: QueueState) => {
       setState(data);
@@ -144,7 +148,7 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
   const connectionStatus = useConnectionStatus();
   useEffect(() => {
     if (connectionStatus === 'connected') {
-      refetch();
+      void refetch();
     }
   }, [connectionStatus, refetch]);
 

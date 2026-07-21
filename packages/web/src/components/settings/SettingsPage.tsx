@@ -1,5 +1,6 @@
 import { WrenchIcon } from '@phosphor-icons/react';
 import { useEffect, useState } from 'react';
+
 import { fetchVersion } from '../../api/api';
 import { useAuth } from '../../context/AuthContext';
 import AdminSection from './AdminSection';
@@ -10,9 +11,14 @@ export default function SettingsPage() {
   const [version, setVersion] = useState<string | null>(null);
 
   useEffect(() => {
-    fetchVersion()
-      .then(({ version }) => setVersion(version))
-      .catch(() => setVersion(null));
+    void (async () => {
+      try {
+        const { version } = await fetchVersion();
+        setVersion(version);
+      } catch {
+        setVersion(null);
+      }
+    })();
   }, []);
 
   return (

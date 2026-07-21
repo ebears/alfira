@@ -1,4 +1,4 @@
-import type { SVGProps } from 'react';
+import { type SVGProps } from 'react';
 
 const SIZE = 14;
 
@@ -182,7 +182,7 @@ export function GoogleDriveIcon(props: IconProps) {
   );
 }
 
-const SOURCE_ICONS: Record<string, React.FC<IconProps>> = {
+const SOURCE_ICONS: Partial<Record<string, React.FC<IconProps>>> = {
   youtube: YouTubeIcon,
   soundcloud: SoundCloudIcon,
   spotify: SpotifyIcon,
@@ -193,6 +193,8 @@ const SOURCE_ICONS: Record<string, React.FC<IconProps>> = {
 
 export function SourceIcon({ sourceKey, ...props }: IconProps & { sourceKey: string }) {
   const Icon = SOURCE_ICONS[sourceKey];
-  if (!Icon) return null;
+  if (!Icon) {
+    return null;
+  }
   return <Icon {...props} />;
 }

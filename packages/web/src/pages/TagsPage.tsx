@@ -1,7 +1,8 @@
 import { deleteTag, fetchTagSongs, fetchTags, updateTag } from '@alfira/server/shared/api';
-import type { Song } from '@alfira/server/shared/types';
+import { type Song } from '@alfira/server/shared/types';
 import { MagnifyingGlassIcon, TagIcon, TrashIcon } from '@phosphor-icons/react';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { memo, useCallback, useEffect, useMemo, useState } from 'react';
+
 import ConfirmModal from '../components/ConfirmModal';
 import EmptyState from '../components/EmptyState';
 import TagTicker from '../components/TagTicker';
@@ -38,9 +39,11 @@ export default function TagsPage() {
   }, []);
 
   useEffect(() => {
-    fetchTags()
-      .then(setAllTags)
-      .finally(() => setLoadingTags(false));
+    void (async () => {
+      const tags = await fetchTags();
+      setAllTags(tags);
+      setLoadingTags(false);
+    })();
   }, []);
 
   const filtered = useMemo(
@@ -52,14 +55,18 @@ export default function TagsPage() {
     setSelected(tag);
     setEditingName(tag.canonicalName);
     setLoadingSongs(true);
-    fetchTagSongs(tag.nameLower)
-      .then(setTagSongs)
-      .finally(() => setLoadingSongs(false));
+    void (async () => {
+      const songs = await fetchTagSongs(tag.nameLower);
+      setTagSongs(songs);
+      setLoadingSongs(false);
+    })();
   }, []);
 
   const saveName = useCallback(
     async (nextName: string) => {
-      if (!selected || savingName) return;
+      if (!selected || savingName) {
+        return;
+      }
       setSavingName(true);
       try {
         const { tag } = await updateTag(selected.nameLower, { canonicalName: nextName });
@@ -79,9 +86,13 @@ export default function TagsPage() {
 
   const pickColor = useCallback(
     async (color: string) => {
-      if (!selected) return;
+      if (!selected) {
+        return;
+      }
       const effectiveColor = getTagColorClasses(selected.canonicalName, selected.color).name;
-      if (effectiveColor === color) return; // already the effective color
+      if (effectiveColor === color) {
+        return;
+      } // already the effective color
       // Optimistic update
       setAllTags((prev) =>
         prev.map((t) => (t.nameLower === selected.nameLower ? { ...t, color } : t))
@@ -95,7 +106,9 @@ export default function TagsPage() {
 
   const removeSong = useCallback(
     async (song: Song) => {
-      if (!selected) return;
+      if (!selected) {
+        return;
+      }
       const newTags = (song.tags ?? []).filter(
         (t) => t.toLowerCase() !== selected.nameLower.toLowerCase()
       );
@@ -108,7 +121,9 @@ export default function TagsPage() {
   );
 
   const handleDelete = useCallback(async () => {
-    if (!selected) return;
+    if (!selected) {
+      return;
+    }
     try {
       await deleteTag(selected.nameLower);
       setAllTags((prev) => prev.filter((t) => t.nameLower !== selected.nameLower));
@@ -119,6 +134,32 @@ export default function TagsPage() {
       setShowDeleteConfirm(false);
     }
   }, [selected, refreshTags]);
+
+  const handleSearchChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    setSearch(e.target.value);
+  }, []);
+
+  const handleNameChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    setEditingName(e.target.value);
+  }, []);
+
+  const handleNameBlur = useCallback(() => {
+    if (selected && editingName !== selected.canonicalName) {
+      void saveName(editingName);
+    }
+  }, [editingName, saveName, selected]);
+
+  const handleNameKeyDown = useCallback(
+    (e: React.KeyboardEvent<HTMLInputElement>) => {
+      if (e.key === 'Enter' && selected && editingName !== selected.canonicalName) {
+        void saveName(editingName);
+      }
+    },
+    [editingName, saveName, selected]
+  );
+
+  const handleShowDelete = useCallback(() => setShowDeleteConfirm(true), []);
+  const handleCancelDelete = useCallback(() => setShowDeleteConfirm(false), []);
 
   return (
     <div className='p-4 md:p-8 h-full overflow-y-auto'>
@@ -140,7 +181,7 @@ export default function TagsPage() {
               <input
                 type='text'
                 value={search}
-                onChange={(e) => setSearch(e.target.value)}
+                onChange={handleSearchChange}
                 placeholder='Search tags...'
                 className='input text-sm pl-9'
               />
@@ -164,25 +205,14 @@ export default function TagsPage() {
               />
             ) : (
               filtered.map((tag) => {
-                const colors = getTagColorClasses(tag.canonicalName, tag.color);
                 const isActive = selected?.nameLower === tag.nameLower;
                 return (
-                  <button
-                    type='button'
+                  <TagListItem
                     key={tag.nameLower}
-                    onClick={() => selectTag(tag)}
-                    className={`w-full flex items-center gap-2 px-3 py-2 text-left text-sm rounded transition-colors cursor-pointer ${
-                      isActive
-                        ? 'bg-accent/25 text-accent-foreground'
-                        : 'hover:bg-accent/10 text-fg'
-                    }`}
-                  >
-                    <span
-                      className={`inline-flex items-center px-1.5 py-0.5 rounded text-[13px] font-medium whitespace-nowrap ${colors.bg} ${colors.text}`}
-                    >
-                      {tag.canonicalName}
-                    </span>
-                  </button>
+                    tag={tag}
+                    isActive={isActive}
+                    onSelect={selectTag}
+                  />
                 );
               })
             )}
@@ -206,19 +236,15 @@ export default function TagsPage() {
                   <input
                     type='text'
                     value={editingName}
-                    onChange={(e) => setEditingName(e.target.value)}
-                    onBlur={() => editingName !== selected.canonicalName && saveName(editingName)}
-                    onKeyDown={(e) =>
-                      e.key === 'Enter' &&
-                      editingName !== selected.canonicalName &&
-                      saveName(editingName)
-                    }
+                    onChange={handleNameChange}
+                    onBlur={handleNameBlur}
+                    onKeyDown={handleNameKeyDown}
                     className='input text-sm flex-1'
                   />
                   <Button
                     variant='danger'
                     size='icon'
-                    onClick={() => setShowDeleteConfirm(true)}
+                    onClick={handleShowDelete}
                     title={`Delete "${selected.canonicalName}"`}
                     className='shrink-0 -mr-1'
                   >
@@ -237,28 +263,13 @@ export default function TagsPage() {
                     const isSelected =
                       getTagColorClasses(selected.canonicalName, selected.color).name === colorName;
                     return (
-                      <button
-                        type='button'
+                      <ColorButton
                         key={colorName}
-                        onClick={() => pickColor(colorName)}
-                        title={colorName}
-                        className={`w-8 h-8 rounded-full flex items-center justify-center transition-all cursor-pointer border border-border/40 ${
-                          isSelected
-                            ? 'opacity-100 ring-2 ring-offset-1 ring-offset-surface ring-fg'
-                            : 'opacity-80 hover:opacity-100'
-                        } ${colorClasses.bg} ${colorClasses.text}`}
-                      >
-                        {isSelected ? (
-                          <svg
-                            className='w-3.5 h-3.5'
-                            fill='currentColor'
-                            viewBox='0 0 12 12'
-                            aria-hidden='true'
-                          >
-                            <path d='M10.28 2.28L4.5 8.06l-2.78-2.79a.5.5 0 0 0-.71.71l3.15 3.15a.5.5 0 0 0 .71 0l6.36-6.36a.5.5 0 0 0 0-.71.5.5 0 0 0-.71 0z' />
-                          </svg>
-                        ) : null}
-                      </button>
+                        colorName={colorName}
+                        colorClasses={colorClasses}
+                        isSelected={isSelected}
+                        onPick={pickColor}
+                      />
                     );
                   })}
                 </div>
@@ -275,67 +286,9 @@ export default function TagsPage() {
                   <p className='text-sm text-muted text-center py-8'>No songs with this tag yet.</p>
                 ) : (
                   <div className='space-y-1'>
-                    {tagSongs.map((song) => {
-                      const allTags = song.tags ?? [];
-                      return (
-                        <div
-                          key={song.id}
-                          className='flex items-center gap-3 py-2 px-2 rounded-lg hover:bg-surface/80 transition-colors group'
-                        >
-                          <div className='w-12 h-12 rounded border border-border shrink-0 overflow-hidden bg-base'>
-                            {(song.artwork ?? song.thumbnailUrl) ? (
-                              <ArtworkImage
-                                src={song.artwork ?? song.thumbnailUrl}
-                                alt=''
-                                className='w-full h-full'
-                              />
-                            ) : (
-                              <div className='w-full h-full flex items-center justify-center text-faint text-[10px]' />
-                            )}
-                          </div>
-                          <div className='flex-1 min-w-0'>
-                            <p className='font-body text-sm text-fg truncate leading-snug'>
-                              {song.nickname || song.title}
-                            </p>
-                            <div className='flex items-center gap-2 flex-wrap'>
-                              {song.artist && (
-                                <span className='font-mono text-[11px] text-muted truncate'>
-                                  {song.artist}
-                                </span>
-                              )}
-                              {song.album && (
-                                <span className='font-mono text-[11px] text-faint truncate'>
-                                  {song.album}
-                                </span>
-                              )}
-                            </div>
-                            {allTags.length > 0 && <TagTicker tags={allTags} />}
-                          </div>
-                          <Button
-                            variant='inherit'
-                            size='icon'
-                            surface='base'
-                            onClick={() => removeSong(song)}
-                            title='Remove from this tag'
-                            className='shrink-0 opacity-0 group-hover:opacity-100 transition-opacity'
-                          >
-                            <svg
-                              className='w-3.5 h-3.5'
-                              fill='none'
-                              viewBox='0 0 16 16'
-                              aria-hidden='true'
-                            >
-                              <path
-                                d='M4 4l8 8M12 4l-8 8'
-                                stroke='currentColor'
-                                strokeWidth='1.5'
-                                strokeLinecap='round'
-                              />
-                            </svg>
-                          </Button>
-                        </div>
-                      );
-                    })}
+                    {tagSongs.map((song) => (
+                      <TagSongItem key={song.id} song={song} onRemove={removeSong} />
+                    ))}
                   </div>
                 )}
               </div>
@@ -350,9 +303,130 @@ export default function TagsPage() {
           message={`Delete "${selected.canonicalName}"? It will be removed from all songs.`}
           confirmLabel='Delete'
           onConfirm={handleDelete}
-          onCancel={() => setShowDeleteConfirm(false)}
+          onCancel={handleCancelDelete}
         />
       )}
     </div>
   );
 }
+
+// ---------------------------------------------------------------------------
+// Memoized sub-components — extracted from inline map callbacks to avoid
+// react-perf warnings for inline functions/objects as props.
+// ---------------------------------------------------------------------------
+
+const TagListItem = memo(function TagListItem({
+  tag,
+  isActive,
+  onSelect,
+}: {
+  tag: TagItem;
+  isActive: boolean;
+  onSelect: (tag: TagItem) => void;
+}) {
+  const colors = getTagColorClasses(tag.canonicalName, tag.color);
+  const handleClick = useCallback(() => onSelect(tag), [onSelect, tag]);
+
+  return (
+    <button
+      type='button'
+      onClick={handleClick}
+      className={`w-full flex items-center gap-2 px-3 py-2 text-left text-sm rounded transition-colors cursor-pointer ${
+        isActive ? 'bg-accent/25 text-accent-foreground' : 'hover:bg-accent/10 text-fg'
+      }`}
+    >
+      <span
+        className={`inline-flex items-center px-1.5 py-0.5 rounded text-[13px] font-medium whitespace-nowrap ${colors.bg} ${colors.text}`}
+      >
+        {tag.canonicalName}
+      </span>
+    </button>
+  );
+});
+
+const ColorButton = memo(function ColorButton({
+  colorName,
+  colorClasses,
+  isSelected,
+  onPick,
+}: {
+  colorName: string;
+  colorClasses: { bg: string; text: string; name: string };
+  isSelected: boolean;
+  onPick: (color: string) => void;
+}) {
+  const handleClick = useCallback(() => onPick(colorName), [onPick, colorName]);
+
+  return (
+    <button
+      type='button'
+      onClick={handleClick}
+      title={colorName}
+      className={`w-8 h-8 rounded-full flex items-center justify-center transition-all cursor-pointer border border-border/40 ${
+        isSelected
+          ? 'opacity-100 ring-2 ring-offset-1 ring-offset-surface ring-fg'
+          : 'opacity-80 hover:opacity-100'
+      } ${colorClasses.bg} ${colorClasses.text}`}
+    >
+      {isSelected ? (
+        <svg className='w-3.5 h-3.5' fill='currentColor' viewBox='0 0 12 12' aria-hidden='true'>
+          <path d='M10.28 2.28L4.5 8.06l-2.78-2.79a.5.5 0 0 0-.71.71l3.15 3.15a.5.5 0 0 0 .71 0l6.36-6.36a.5.5 0 0 0 0-.71.5.5 0 0 0-.71 0z' />
+        </svg>
+      ) : null}
+    </button>
+  );
+});
+
+const TagSongItem = memo(function TagSongItem({
+  song,
+  onRemove,
+}: {
+  song: Song;
+  onRemove: (song: Song) => void;
+}) {
+  const allTags = song.tags ?? [];
+  const handleRemove = useCallback(() => onRemove(song), [onRemove, song]);
+
+  return (
+    <div className='flex items-center gap-3 py-2 px-2 rounded-lg hover:bg-surface/80 transition-colors group'>
+      <div className='w-12 h-12 rounded border border-border shrink-0 overflow-hidden bg-base'>
+        {(song.artwork ?? song.thumbnailUrl) ? (
+          <ArtworkImage src={song.artwork ?? song.thumbnailUrl} alt='' className='w-full h-full' />
+        ) : (
+          <div className='w-full h-full flex items-center justify-center text-faint text-[10px]' />
+        )}
+      </div>
+      <div className='flex-1 min-w-0'>
+        <p className='font-body text-sm text-fg truncate leading-snug'>
+          {song.nickname ?? song.title}
+        </p>
+        <div className='flex items-center gap-2 flex-wrap'>
+          {song.artist && (
+            <span className='font-mono text-[11px] text-muted truncate'>{song.artist}</span>
+          )}
+          {song.album && (
+            <span className='font-mono text-[11px] text-faint truncate'>{song.album}</span>
+          )}
+        </div>
+        {allTags.length > 0 && <TagTicker tags={allTags} />}
+      </div>
+      <Button
+        variant='inherit'
+        size='icon'
+        surface='base'
+        onClick={handleRemove}
+        title='Remove from this tag'
+        className='shrink-0 opacity-0 group-hover:opacity-100 transition-opacity'
+      >
+        <svg className='w-3.5 h-3.5' fill='none' viewBox='0 0 16 16' aria-hidden='true'>
+          <path
+            d='M4 4l8 8M12 4l-8 8'
+            stroke='currentColor'
+            strokeWidth='1.5'
+            strokeLinecap='round'
+          />
+        </svg>
+      </Button>
+    </div>
+  );
+});

@@ -66,24 +66,47 @@ export function usePaginatedData<T, A extends unknown[], M = undefined>({
   const depsRef = useRef(deps);
   depsRef.current = deps;
 
+  // Detect dep changes synchronously during render so we can suppress
+  // stale empty states before the effect fires. Without this, there's a
+  // one-frame gap where the new tab's emptyTitle renders against the old
+  // (empty) items before isFetching is set to true in the effect.
+  const prevDepsRef = useRef<A>(deps);
+  const depsChanged =
+    hasEverLoadedRef.current &&
+    (prevDepsRef.current.length !== deps.length ||
+      prevDepsRef.current.some((d, i) => d !== deps[i]));
+  prevDepsRef.current = deps;
+
+  const effectiveIsFetching = isFetching || depsChanged;
+
   const compareFnRef = useRef(compareFn);
   compareFnRef.current = compareFn;
 
   const loadPage = useCallback(
     async (page: number, isInitial = false) => {
-      if (isFetchingRef.current) return;
-      if (!isInitial && !hasMoreRef.current) return;
+      if (isFetchingRef.current) {
+        return;
+      }
+      if (!isInitial && !hasMoreRef.current) {
+        return;
+      }
 
       if (isInitial) {
         resetInProgressRef.current = true;
         // Delay the skeleton by 200ms — if the fetch completes faster,
         // the skeleton is never rendered, avoiding a flash.
-        if (!hasEverLoadedRef.current) {
-          loadingTimerRef.current = setTimeout(() => {
-            if (isMountedRef.current) {
-              setIsLoading(true);
-            }
-          }, 200);
+        loadingTimerRef.current = setTimeout(() => {
+          if (isMountedRef.current) {
+            setIsLoading(true);
+          }
+        }, 200);
+        // On dep-change re-fetches, signal immediately that we're fetching
+        // so the empty-state guard can suppress stale empty messages from
+        // the previous deps (e.g. "No Pending Requests" when switching to
+        // History). First-ever loads don't need this — hasLoaded is still
+        // false, so the empty state is already suppressed.
+        if (hasEverLoadedRef.current) {
+          setIsFetching(true);
         }
       } else {
         setIsFetching(true);
@@ -92,15 +115,21 @@ export function usePaginatedData<T, A extends unknown[], M = undefined>({
 
       try {
         const result = await fetchPageRef.current(page, limit, ...depsRef.current);
-        if (!isMountedRef.current) return;
+        if (!isMountedRef.current) {
+          return;
+        }
 
         hasEverLoadedRef.current = true;
 
         if (isInitial) {
           setItems(result.items);
           setHasMore(result.hasMore);
-          if (result.total !== undefined) setTotal(result.total);
-          if (result.metadata !== undefined) setMetadata(result.metadata);
+          if (result.total !== undefined) {
+            setTotal(result.total);
+          }
+          if (result.metadata !== undefined) {
+            setMetadata(result.metadata);
+          }
           pageRef.current = 1;
         } else {
           setItems((prev) => [...prev, ...result.items]);
@@ -108,7 +137,9 @@ export function usePaginatedData<T, A extends unknown[], M = undefined>({
           pageRef.current = page;
         }
       } catch {
-        if (!isMountedRef.current) return;
+        if (!isMountedRef.current) {
+          return;
+        }
         setIsError(true);
       } finally {
         if (loadingTimerRef.current) {
@@ -127,7 +158,9 @@ export function usePaginatedData<T, A extends unknown[], M = undefined>({
   );
 
   const fetchNextPage = useCallback(() => {
-    if (!hasMoreRef.current || isFetchingRef.current || resetInProgressRef.current) return;
+    if (!hasMoreRef.current || isFetchingRef.current || resetInProgressRef.current) {
+      return;
+    }
     const nextPage = pageRef.current + 1;
     void loadPage(nextPage);
   }, [loadPage]);
@@ -139,9 +172,13 @@ export function usePaginatedData<T, A extends unknown[], M = undefined>({
   }, [loadPage]);
 
   const prepend = useCallback((item: T) => {
-    if (resetInProgressRef.current) return;
+    if (resetInProgressRef.current) {
+      return;
+    }
     setItems((prev) => {
-      if (prev.some((i) => (i as { id: string }).id === (item as { id: string }).id)) return prev;
+      if (prev.some((i) => (i as { id: string }).id === (item as { id: string }).id)) {
+        return prev;
+      }
       const next = [item, ...prev];
       if (compareFnRef.current) {
         next.sort(compareFnRef.current);
@@ -151,7 +188,9 @@ export function usePaginatedData<T, A extends unknown[], M = undefined>({
   }, []);
 
   const updateItem = useCallback((item: T) => {
-    if (resetInProgressRef.current) return;
+    if (resetInProgressRef.current) {
+      return;
+    }
     setItems((prev) => {
       const next = prev.map((i) =>
         (i as { id: string }).id === (item as { id: string }).id ? item : i
@@ -164,7 +203,9 @@ export function usePaginatedData<T, A extends unknown[], M = undefined>({
   }, []);
 
   const removeItem = useCallback((id: string) => {
-    if (resetInProgressRef.current) return;
+    if (resetInProgressRef.current) {
+      return;
+    }
     setItems((prev) => prev.filter((i) => (i as { id: string }).id !== id));
   }, []);
 
@@ -178,28 +219,36 @@ export function usePaginatedData<T, A extends unknown[], M = undefined>({
   }, [loadPage]);
 
   const refetch = useCallback(() => {
-    if (resetInProgressRef.current) return;
+    if (resetInProgressRef.current) {
+      return;
+    }
     setIsFetching(true);
     setIsError(false);
-    fetchPageRef
-      .current(1, limit, ...depsRef.current)
-      .then((result) => {
-        if (!isMountedRef.current) return;
+    void (async () => {
+      try {
+        const result = await fetchPageRef.current(1, limit, ...depsRef.current);
+        if (!isMountedRef.current) {
+          return;
+        }
         setItems(result.items);
         setHasMore(result.hasMore);
-        if (result.total !== undefined) setTotal(result.total);
-        if (result.metadata !== undefined) setMetadata(result.metadata);
-        pageRef.current = 1;
-      })
-      .catch(() => {
-        if (!isMountedRef.current) return;
-        setIsError(true);
-      })
-      .finally(() => {
-        if (isMountedRef.current) {
-          setIsFetching(false);
+        if (result.total !== undefined) {
+          setTotal(result.total);
         }
-      });
+        if (result.metadata !== undefined) {
+          setMetadata(result.metadata);
+        }
+        pageRef.current = 1;
+      } catch {
+        if (!isMountedRef.current) {
+          return;
+        }
+        setIsError(true);
+      }
+      if (isMountedRef.current) {
+        setIsFetching(false);
+      }
+    })();
   }, [limit]);
 
   // Initial load
@@ -223,7 +272,7 @@ export function usePaginatedData<T, A extends unknown[], M = undefined>({
     items,
     metadata,
     isLoading,
-    isFetching,
+    isFetching: effectiveIsFetching,
     isError,
     hasMore,
     total,

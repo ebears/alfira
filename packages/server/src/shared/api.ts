@@ -1,19 +1,19 @@
-import type {
-  GeneralSettings,
-  LoopMode,
-  PaginatedResult,
-  PaginationMeta,
-  Playlist,
-  PlaylistDetail,
-  QueueState,
-  RequestPreview,
-  SetupChannel,
-  SetupGuild,
-  SetupRole,
-  SetupStatus,
-  Song,
-  SongRequest,
-  User,
+import {
+  type GeneralSettings,
+  type LoopMode,
+  type PaginatedResult,
+  type PaginationMeta,
+  type Playlist,
+  type PlaylistDetail,
+  type QueueState,
+  type RequestPreview,
+  type SetupChannel,
+  type SetupGuild,
+  type SetupRole,
+  type SetupStatus,
+  type Song,
+  type SongRequest,
+  type User,
 } from './types';
 
 /**
@@ -127,11 +127,21 @@ export function fetchSongsPage(
   opts?: FetchSongsOptions
 ): Promise<PaginatedResult<Song>> {
   const params = new URLSearchParams({ page: String(page), limit: String(limit) });
-  if (opts?.search) params.set('search', opts.search);
-  if (opts?.sort) params.set('sort', opts.sort);
-  if (opts?.order) params.set('order', opts.order);
-  if (opts?.tags) params.set('tags', opts.tags);
-  if (opts?.source) params.set('source', opts.source);
+  if (opts?.search) {
+    params.set('search', opts.search);
+  }
+  if (opts?.sort) {
+    params.set('sort', opts.sort);
+  }
+  if (opts?.order) {
+    params.set('order', opts.order);
+  }
+  if (opts?.tags) {
+    params.set('tags', opts.tags);
+  }
+  if (opts?.source) {
+    params.set('source', opts.source);
+  }
   return get(`/api/songs?${params}`);
 }
 
@@ -191,8 +201,12 @@ export function fetchRequests(
   opts?: { status?: string; mine?: boolean }
 ): Promise<FetchRequestsResult> {
   const params = new URLSearchParams({ page: String(page), limit: String(limit) });
-  if (opts?.status) params.set('status', opts.status);
-  if (opts?.mine) params.set('mine', 'true');
+  if (opts?.status) {
+    params.set('status', opts.status);
+  }
+  if (opts?.mine) {
+    params.set('mine', 'true');
+  }
   return get(`/api/requests?${params}`);
 }
 
@@ -296,7 +310,9 @@ export function fetchPlaylistsPage(
   limit = 30
 ): Promise<PaginatedResult<Playlist>> {
   const params = new URLSearchParams({ page: String(page), limit: String(limit) });
-  if (adminView) params.set('adminView', 'true');
+  if (adminView) {
+    params.set('adminView', 'true');
+  }
   return get(`/api/playlists?${params}`);
 }
 
@@ -308,12 +324,24 @@ export function fetchPlaylistPage(
   opts?: FetchSongsOptions
 ): Promise<PlaylistDetail & { pagination: PaginationMeta }> {
   const params = new URLSearchParams({ page: String(page), limit: String(limit) });
-  if (adminView) params.set('adminView', 'true');
-  if (opts?.search) params.set('search', opts.search);
-  if (opts?.sort) params.set('sort', opts.sort);
-  if (opts?.order) params.set('order', opts.order);
-  if (opts?.tags) params.set('tags', opts.tags);
-  if (opts?.source) params.set('source', opts.source);
+  if (adminView) {
+    params.set('adminView', 'true');
+  }
+  if (opts?.search) {
+    params.set('search', opts.search);
+  }
+  if (opts?.sort) {
+    params.set('sort', opts.sort);
+  }
+  if (opts?.order) {
+    params.set('order', opts.order);
+  }
+  if (opts?.tags) {
+    params.set('tags', opts.tags);
+  }
+  if (opts?.source) {
+    params.set('source', opts.source);
+  }
   return get(`/api/playlists/${id}?${params}`);
 }
 
@@ -417,7 +445,7 @@ export function quickAddPlaylistToQueue(
   playlistTitle: string;
   totalVideos: number;
   queuedCount: number;
-  songs: Array<{ title: string; duration: number; thumbnailUrl: string; requestedBy: string }>;
+  songs: { title: string; duration: number; thumbnailUrl: string; requestedBy: string }[];
 }> {
   return post('/api/player/quick-add-playlist', {
     url,

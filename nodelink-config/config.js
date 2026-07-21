@@ -139,12 +139,12 @@ export default {
     },
     spotify: {
       enabled: !!(process.env.SPOTIFY_CLIENT_ID && process.env.SPOTIFY_CLIENT_SECRET),
-      clientId: process.env.SPOTIFY_CLIENT_ID || '',
-      clientSecret: process.env.SPOTIFY_CLIENT_SECRET || '',
+      clientId: process.env.SPOTIFY_CLIENT_ID ?? '',
+      clientSecret: process.env.SPOTIFY_CLIENT_SECRET ?? '',
     },
     applemusic: {
       enabled: !!process.env.APPLE_MUSIC_MEDIA_API_TOKEN,
-      mediaApiToken: process.env.APPLE_MUSIC_MEDIA_API_TOKEN || 'token_here',
+      mediaApiToken: process.env.APPLE_MUSIC_MEDIA_API_TOKEN ?? 'token_here',
     },
     deezer: {
       enabled: false,
@@ -239,7 +239,7 @@ export default {
     },
     tidal: {
       enabled: !!process.env.TIDAL_TOKEN,
-      token: process.env.TIDAL_TOKEN || 'token_here',
+      token: process.env.TIDAL_TOKEN ?? 'token_here',
     },
     pandora: {
       enabled: false,

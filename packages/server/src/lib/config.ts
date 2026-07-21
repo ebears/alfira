@@ -1,23 +1,30 @@
 import { eq } from 'drizzle-orm';
 import { readFileSync } from 'node:fs';
+
 import { db, tables } from '../shared/db';
 
 function resolveVersion(): string {
   const envVersion = process.env.ALFIRA_VERSION;
   // Explicit non-dev version — use as-is (e.g., v0.1.0 from Docker build arg).
-  if (envVersion && envVersion !== 'dev') return envVersion;
+  if (envVersion && envVersion !== 'dev') {
+    return envVersion;
+  }
 
   // Dev — check for explicit git hash override (e.g., from Docker build arg).
-  if (process.env.GIT_HASH) return `dev (${process.env.GIT_HASH})`;
+  if (process.env.GIT_HASH) {
+    return `dev (${process.env.GIT_HASH})`;
+  }
 
   // Dev — try to read the commit hash from the mounted .git directory.
   try {
     const head = readFileSync('/app/.git/HEAD', 'utf-8').trim();
-    const match = head.match(/^ref: (.+)$/);
+    const match = /^ref: (.+)$/.exec(head);
     const hash = match
       ? readFileSync(`/app/.git/${match[1]}`, 'utf-8').trim().slice(0, 7)
       : head.slice(0, 7);
-    if (hash) return `dev (${hash})`;
+    if (hash) {
+      return `dev (${hash})`;
+    }
   } catch {
     // No .git available — fall through to plain 'dev'.
   }
@@ -42,11 +49,13 @@ export function getGuildId(): string {
 }
 
 /** Must be called once during startup, after migrations and DB are ready. */
-export async function initGuildId(): Promise<void> {
-  if (_guildIdLoaded) return;
+export function initGuildId(): void {
+  if (_guildIdLoaded) {
+    return;
+  }
 
   try {
-    const row = await db
+    const row = db
       .select({ guildId: tables.guildSettings.guildId })
       .from(tables.guildSettings)
       .where(eq(tables.guildSettings.id, 1))

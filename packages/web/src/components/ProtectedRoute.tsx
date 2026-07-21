@@ -1,5 +1,7 @@
 import type React from 'react';
+
 import { Navigate, useLocation } from 'react-router-dom';
+
 import { useAuth } from '../context/AuthContext';
 import { Spinner } from './ui/Spinner';
 
@@ -18,12 +20,14 @@ export default function ProtectedRoute({ children }: { children: React.ReactNode
     );
   }
 
-  if (!user) return <Navigate to='/login' replace />;
+  if (!user) {
+    return <Navigate to='/login' replace />;
+  }
 
   // During first-run setup, lock all routes except /setup.
   if (user.isSetupAdmin && location.pathname !== '/setup') {
     return <Navigate to='/setup' replace />;
   }
 
-  return <>{children}</>;
+  return children;
 }

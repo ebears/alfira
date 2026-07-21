@@ -1,7 +1,7 @@
 import { Navigate, Route, Routes } from 'react-router-dom';
+
 import Layout from './components/Layout';
 import ProtectedRoute from './components/ProtectedRoute';
-import { LazyMotion, domAnimation } from './lib/motion';
 import SettingsPage from './components/settings/SettingsPage';
 import { AdminViewProvider } from './context/AdminViewContext';
 import { AuthProvider } from './context/AuthContext';
@@ -12,6 +12,7 @@ import { SongEditProvider } from './context/SongEditContext';
 import { SongMenuProvider } from './context/SongMenuContext';
 import { TagsProvider } from './context/TagsContext';
 import { ThemeProvider } from './context/ThemeContext';
+import { LazyMotion, domAnimation } from './lib/motion';
 import AudioPage from './pages/AudioPage';
 import LoginPage from './pages/LoginPage';
 import PermissionsPage from './pages/PermissionsPage';
@@ -21,6 +22,33 @@ import RequestsPage from './pages/RequestsPage';
 import SetupWizard from './pages/SetupWizard';
 import SongsPage from './pages/SongsPage';
 import TagsPage from './pages/TagsPage';
+
+// Route elements extracted to module scope — they are static configuration
+// that never changes, so re-creating them on every render is wasteful.
+const loginElement = <LoginPage />;
+const setupElement = (
+  <ProtectedRoute>
+    <SetupWizard />
+  </ProtectedRoute>
+);
+// PlayerProvider lives inside ProtectedRoute so it only polls while a user is authenticated.
+const appLayoutElement = (
+  <ProtectedRoute>
+    <PlayerProvider>
+      <Layout />
+    </PlayerProvider>
+  </ProtectedRoute>
+);
+const indexRedirect = <Navigate to='/songs' replace />;
+const songsElement = <SongsPage />;
+const playlistsElement = <PlaylistsPage />;
+const playlistDetailElement = <PlaylistDetailPage />;
+const settingsElement = <SettingsPage />;
+const audioElement = <AudioPage />;
+const tagsElement = <TagsPage />;
+const permissionsElement = <PermissionsPage />;
+const requestsElement = <RequestsPage />;
+const catchAllElement = <Navigate to='/' replace />;
 
 export default function App() {
   return (
@@ -34,37 +62,20 @@ export default function App() {
                   <SongEditProvider>
                     <SongMenuProvider>
                       <Routes>
-                        <Route path='/login' element={<LoginPage />} />
-                        <Route
-                          path='/setup'
-                          element={
-                            <ProtectedRoute>
-                              <SetupWizard />
-                            </ProtectedRoute>
-                          }
-                        />
-                        <Route
-                          path='/'
-                          element={
-                            <ProtectedRoute>
-                              {/* PlayerProvider lives inside ProtectedRoute so it only polls while a user is authenticated. */}
-                              <PlayerProvider>
-                                <Layout />
-                              </PlayerProvider>
-                            </ProtectedRoute>
-                          }
-                        >
-                          <Route index element={<Navigate to='/songs' replace />} />
-                          <Route path='songs' element={<SongsPage />} />
-                          <Route path='playlists' element={<PlaylistsPage />} />
-                          <Route path='playlists/:id' element={<PlaylistDetailPage />} />
-                          <Route path='settings' element={<SettingsPage />} />
-                          <Route path='audio' element={<AudioPage />} />
-                          <Route path='tags' element={<TagsPage />} />
-                          <Route path='permissions' element={<PermissionsPage />} />
-                          <Route path='requests' element={<RequestsPage />} />
+                        <Route path='/login' element={loginElement} />
+                        <Route path='/setup' element={setupElement} />
+                        <Route path='/' element={appLayoutElement}>
+                          <Route index element={indexRedirect} />
+                          <Route path='songs' element={songsElement} />
+                          <Route path='playlists' element={playlistsElement} />
+                          <Route path='playlists/:id' element={playlistDetailElement} />
+                          <Route path='settings' element={settingsElement} />
+                          <Route path='audio' element={audioElement} />
+                          <Route path='tags' element={tagsElement} />
+                          <Route path='permissions' element={permissionsElement} />
+                          <Route path='requests' element={requestsElement} />
                         </Route>
-                        <Route path='*' element={<Navigate to='/' replace />} />
+                        <Route path='*' element={catchAllElement} />
                       </Routes>
                     </SongMenuProvider>
                   </SongEditProvider>

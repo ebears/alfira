@@ -1,14 +1,15 @@
 import { eq } from 'drizzle-orm';
-import type { RouteContext } from '../index';
+
 import { refreshGuildId } from '../lib/config';
-import { refreshEnabledSources } from '../startDiscord';
+import { type RouteContext } from '../lib/context';
 import { botHeaders, fetchGuildRoles } from '../lib/discordRoles';
 import { json } from '../lib/json';
 import { checkGuards } from '../lib/routeGuards';
 import { routeTable } from '../lib/routeTable';
-import type { SetupChannel, SetupGuild } from '../shared';
+import { type SetupChannel, type SetupGuild } from '../shared';
 import { db, tables } from '../shared/db';
 import { logger } from '../shared/logger';
+import { refreshEnabledSources } from '../startDiscord';
 
 const DISCORD_API = 'https://discord.com/api/v10';
 
@@ -36,7 +37,7 @@ async function handleGetStatus(
   _params: Record<string, string>
 ): Promise<Response> {
   try {
-    const row = await db
+    const row = db
       .select({
         setupCompleted: tables.guildSettings.setupCompleted,
         guildId: tables.guildSettings.guildId,
@@ -91,8 +92,10 @@ async function handleGetGuilds(
   _request: Request,
   _params: Record<string, string>
 ): Promise<Response> {
-  const guards = await checkGuards(ctx, { setupMode: true });
-  if (guards instanceof Response) return guards;
+  const guards = checkGuards(ctx, { setupMode: true });
+  if (guards instanceof Response) {
+    return guards;
+  }
 
   try {
     const res = await fetch(`${DISCORD_API}/users/@me/guilds`, {
@@ -104,11 +107,11 @@ async function handleGetGuilds(
       return json({ error: 'Could not fetch guild list from Discord.' }, 502);
     }
 
-    const guilds = (await res.json()) as Array<{
+    const guilds = (await res.json()) as {
       id: string;
       name: string;
       icon: string | null;
-    }>;
+    }[];
 
     const result: SetupGuild[] = guilds.map((g) => ({
       id: g.id,
@@ -133,8 +136,10 @@ async function handleGetRoles(
   _params: Record<string, string>
 ): Promise<Response> {
   const url = new URL(request.url);
-  const guards = await checkGuards(ctx, { setupMode: true });
-  if (guards instanceof Response) return guards;
+  const guards = checkGuards(ctx, { setupMode: true });
+  if (guards instanceof Response) {
+    return guards;
+  }
 
   const guildId = url.searchParams.get('guildId');
   if (!guildId) {
@@ -155,8 +160,10 @@ async function handleGetChannels(
   _params: Record<string, string>
 ): Promise<Response> {
   const url = new URL(request.url);
-  const guards = await checkGuards(ctx, { setupMode: true });
-  if (guards instanceof Response) return guards;
+  const guards = checkGuards(ctx, { setupMode: true });
+  if (guards instanceof Response) {
+    return guards;
+  }
 
   const guildId = url.searchParams.get('guildId');
   if (!guildId) {
@@ -179,11 +186,11 @@ async function handleGetChannels(
       return json({ error: 'Could not fetch channels from Discord.' }, 502);
     }
 
-    const channels = (await res.json()) as Array<{
+    const channels = (await res.json()) as {
       id: string;
       name: string;
       type: number;
-    }>;
+    }[];
 
     // Type 0 = GUILD_TEXT. Filter to text channels only.
     const result: SetupChannel[] = channels
@@ -210,8 +217,10 @@ async function handlePostComplete(
   request: Request,
   _params: Record<string, string>
 ): Promise<Response> {
-  const guards = await checkGuards(ctx, { setupMode: true });
-  if (guards instanceof Response) return guards;
+  const guards = checkGuards(ctx, { setupMode: true });
+  if (guards instanceof Response) {
+    return guards;
+  }
 
   let body: {
     guildId?: unknown;
@@ -273,8 +282,7 @@ async function handlePostComplete(
       : 'youtube,soundcloud';
 
   try {
-    await db
-      .insert(tables.guildSettings)
+    db.insert(tables.guildSettings)
       .values({
         id: 1,
         guildId: body.guildId,

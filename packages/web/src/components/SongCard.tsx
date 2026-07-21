@@ -1,6 +1,7 @@
-import type { Playlist, Song } from '@alfira/server/shared';
-import { DiscIcon, MusicNoteIcon, UserIcon } from '@phosphor-icons/react';
-import React, { useMemo, useState } from 'react';
+import { type Playlist, type Song } from '@alfira/server/shared';
+import { DiscIcon, MicrophoneStageIcon, MusicNoteIcon, UserIcon } from '@phosphor-icons/react';
+import React, { useCallback, useMemo, useState } from 'react';
+
 import { usePermissions } from '../context/PermissionsContext';
 import { useSongEdit } from '../context/SongEditContext';
 import { useSongActions } from '../hooks/useSongActions';
@@ -63,8 +64,11 @@ const SongCardInner = ({
   const [isRowHovered, setIsRowHovered] = useState(false);
   const sourceKey = useMemo(() => getSourceKey(song.sourceUrl), [song.sourceUrl]);
 
-  const canEdit = isAdminView || hasPermission('songs.edit');
-  const canDelete = isAdminView || hasPermission('songs.delete');
+  const canEdit = isAdminView ?? hasPermission('songs.edit');
+  const canDelete = isAdminView ?? hasPermission('songs.delete');
+
+  // Stable wrapper for onDelete callback — song.id is stable per render cycle
+  const handleDelete = useCallback(() => onDelete?.(song.id), [onDelete, song.id]);
 
   const { menuOpen, setMenuOpen, triggerRef, menuItems } = useSongActions({
     song,
@@ -72,7 +76,7 @@ const SongCardInner = ({
     canDelete,
     playlists: playlists ?? [],
     onAddToQueue,
-    ...(onDelete ? { onDelete: () => onDelete(song.id) } : {}),
+    ...(onDelete ? { onDelete: handleDelete } : {}),
     onRemove,
     removeLabel,
   });
@@ -82,27 +86,75 @@ const SongCardInner = ({
     [delay]
   );
 
+  // Stable callbacks for ContextMenu
+  const handleMenuToggle = useCallback(() => setMenuOpen((v) => !v), [setMenuOpen]);
+  const handleMenuClose = useCallback(() => setMenuOpen(false), [setMenuOpen]);
+  const handleMenuMouseDown = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+  }, []);
+
+  // Stable callbacks for inline edit panels
+  const handleEditClose = useCallback(() => setOpenSongId(null), [setOpenSongId]);
+
+  // Stable callbacks for list variant
+  const handleMouseEnter = useCallback(() => setIsRowHovered(true), []);
+  const handleMouseLeave = useCallback(() => setIsRowHovered(false), []);
+  const pointerCursorStyle = useMemo(() => ({ cursor: 'pointer' }), []);
+
+  const handleListKeyDown = useCallback(
+    (e: React.KeyboardEvent) => {
+      if ((e.key === 'Enter' || e.key === ' ') && !selectionMode) {
+        e.preventDefault();
+        if (canEdit) {
+          setOpenSongId(isOpen ? null : song.id);
+        }
+      }
+    },
+    [canEdit, isOpen, selectionMode, setOpenSongId, song.id]
+  );
+
+  const handleCheckboxOverlayClick = useCallback((e: React.MouseEvent) => {
+    e.stopPropagation();
+  }, []);
+
+  const handleToggleSelect = useCallback(() => onToggleSelect?.(), [onToggleSelect]);
+
   // ── Grid variant ──────────────────────────────────────────────────────
+
+  // Grid/list click handlers — defined unconditionally before variant branches
+  // to satisfy rules-of-hooks. Each is only used in its respective branch.
+  const handleGridClick = useCallback(() => {
+    if (selectionMode) {
+      onToggleSelect?.();
+    } else if (canEdit) {
+      setOpenSongId(isOpen ? null : song.id);
+    }
+  }, [canEdit, isOpen, onToggleSelect, selectionMode, setOpenSongId, song.id]);
+
+  const handleListClick = useCallback(() => {
+    if (selectionMode) {
+      onToggleSelect?.();
+    } else if (canEdit) {
+      setOpenSongId(isOpen ? null : song.id);
+    }
+  }, [canEdit, isOpen, onToggleSelect, selectionMode, setOpenSongId, song.id]);
 
   if (variant === 'grid') {
     const tags = song.tags ?? [];
 
-    const handleGridClick = () => {
-      if (selectionMode) {
-        onToggleSelect?.();
-      } else if (canEdit) {
-        setOpenSongId(isOpen ? null : song.id);
-      }
-    };
-
     return (
       <Card
-        hoverable={!!isAdminView && !selectionMode}
-        className={`rounded-lg flex flex-col${(isAdminView && !selectionMode) || selectionMode ? ' cursor-pointer' : ''}${selectionMode ? ' select-none hover:ring-2 hover:ring-accent/50' : ''}${!selectionMode ? ' group' : ''}`}
+        hoverable={!!isAdminView}
+        className={`rounded-lg flex flex-col relative${(isAdminView && !selectionMode) || selectionMode ? ' cursor-pointer' : ''}${selectionMode ? ` select-none${isSelected ? ' ring-2 ring-accent' : ' hover:ring-2 hover:ring-accent/50'}` : ''}${!selectionMode ? ' group' : ''}`}
         style={gridStyle}
         data-song-edit-container
         onClick={handleGridClick}
       >
+        {isSelected && (
+          <div className='absolute inset-0 bg-accent/20 pointer-events-none rounded-lg z-10' />
+        )}
+
         {/* Clean thumbnail */}
         <div className='relative aspect-square overflow-hidden rounded-lg border border-border m-3 mb-0 bg-elevated'>
           <ArtworkImage
@@ -113,11 +165,10 @@ const SongCardInner = ({
           />
           {/* Selection checkbox overlay */}
           {selectionMode && (
-            <div className='absolute top-2 left-2 z-10' onClick={(e) => e.stopPropagation()}>
-              <Checkbox checked={isSelected} onChange={() => onToggleSelect?.()} size='md' />
+            <div className='absolute top-2 left-2 z-20' onClick={handleCheckboxOverlayClick}>
+              <Checkbox checked={isSelected} onChange={handleToggleSelect} size='md' />
             </div>
           )}
-          {isSelected && <div className='absolute inset-0 bg-accent/20 pointer-events-none' />}
         </div>
 
         {/* Info */}
@@ -126,7 +177,7 @@ const SongCardInner = ({
           <div className='flex items-center justify-between gap-2'>
             <p className='text-sm font-semibold text-fg leading-tight flex items-center gap-1.5 min-w-0'>
               <MusicNoteIcon size={13} weight='fill' className='shrink-0 text-muted' />
-              <span className='line-clamp-2'>{song.nickname || song.title}</span>
+              <span className='line-clamp-2'>{song.nickname ?? song.title}</span>
             </p>
             {sourceKey && (
               <span className='flex items-center shrink-0 [&_svg]:w-3.5 [&_svg]:h-3.5'>
@@ -138,7 +189,7 @@ const SongCardInner = ({
           <div className='flex items-center justify-between gap-2 text-xs text-muted overflow-hidden'>
             {song.artist ? (
               <span className='flex items-center gap-1 min-w-0'>
-                <UserIcon size={12} weight='fill' className='shrink-0' />
+                <MicrophoneStageIcon size={12} weight='fill' className='shrink-0' />
                 <span className='truncate'>{song.artist}</span>
               </span>
             ) : (
@@ -160,6 +211,17 @@ const SongCardInner = ({
             <VolumeBoostBadge volumeBoost={song.volumeBoost} />
           </div>
 
+          {/* Requested by */}
+          {song.addedBy ? (
+            <div className='flex items-center justify-between gap-2 text-xs text-muted overflow-hidden'>
+              <span className='flex items-center gap-1 min-w-0'>
+                <UserIcon size={12} weight='fill' className='shrink-0' />
+                <span className='truncate'>{song.addedByDisplayName ?? song.addedBy}</span>
+              </span>
+              <span />
+            </div>
+          ) : null}
+
           {/* Tags + Actions */}
           <div className='flex items-center justify-between gap-2 pt-1'>
             <div className='min-w-0'>{tags.length > 0 && <TagTicker tags={tags} />}</div>
@@ -173,12 +235,9 @@ const SongCardInner = ({
               >
                 <ContextMenuTrigger
                   ref={triggerRef}
-                  onToggle={() => setMenuOpen((v) => !v)}
+                  onToggle={handleMenuToggle}
                   isOpen={menuOpen}
-                  onMouseDown={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                  }}
+                  onMouseDown={handleMenuMouseDown}
                 />
               </div>
               <PlayButton onClick={onPlay} isPlaying={!!isPlaying} />
@@ -189,7 +248,7 @@ const SongCardInner = ({
             <ContextMenu
               items={menuItems}
               isOpen={menuOpen}
-              onClose={() => setMenuOpen(false)}
+              onClose={handleMenuClose}
               triggerRef={triggerRef}
             />
           )}
@@ -197,7 +256,7 @@ const SongCardInner = ({
 
         {/* Inline edit panel */}
         <div className={`expand-panel ${isOpen ? 'expanded' : ''}`}>
-          <SongEditPanel song={song} isOpen={isOpen} onClose={() => setOpenSongId(null)} />
+          <SongEditPanel song={song} isOpen={isOpen} onClose={handleEditClose} />
         </div>
       </Card>
     );
@@ -207,47 +266,38 @@ const SongCardInner = ({
 
   const tags = song.tags ?? [];
 
-  const handleListClick = () => {
-    if (selectionMode) {
-      onToggleSelect?.();
-    } else if (canEdit) {
-      setOpenSongId(isOpen ? null : song.id);
-    }
-  };
-
   return (
     <Card
-      hoverable={!!isAdminView && !selectionMode}
-      className={`rounded-lg flex flex-col${selectionMode ? ' select-none hover:ring-2 hover:ring-accent/50' : ''}${isSelected ? ' ring-2 ring-accent' : ''}`}
+      hoverable={!!isAdminView}
+      className={`rounded-lg flex flex-col relative${selectionMode ? ' select-none hover:ring-2 hover:ring-accent/50' : ''}${isSelected ? ' ring-2 ring-accent' : ''}`}
       data-song-id={song.id}
       data-song-edit-container
     >
+      {isSelected && (
+        <div className='absolute inset-0 bg-accent/20 pointer-events-none rounded-lg z-10' />
+      )}
+
       <div
         role='button'
         tabIndex={canEdit || selectionMode ? 0 : -1}
         className='flex items-center gap-3 md:gap-4 px-4 py-4 w-full text-left bg-transparent border-0'
         onClick={handleListClick}
-        onKeyDown={(e) => {
-          if ((e.key === 'Enter' || e.key === ' ') && !selectionMode) {
-            e.preventDefault();
-            if (canEdit) setOpenSongId(isOpen ? null : song.id);
-          }
-        }}
-        style={canEdit || selectionMode ? { cursor: 'pointer' } : undefined}
-        onMouseEnter={() => setIsRowHovered(true)}
-        onMouseLeave={() => setIsRowHovered(false)}
+        onKeyDown={handleListKeyDown}
+        style={canEdit || selectionMode ? pointerCursorStyle : undefined}
+        onMouseEnter={handleMouseEnter}
+        onMouseLeave={handleMouseLeave}
       >
         {/* Selection checkbox */}
         {selectionMode && (
-          <span onClick={(e) => e.stopPropagation()}>
-            <Checkbox checked={isSelected} onChange={() => onToggleSelect?.()} size='md' />
+          <span className='relative z-20' onClick={handleCheckboxOverlayClick}>
+            <Checkbox checked={isSelected} onChange={handleToggleSelect} size='md' />
           </span>
         )}
 
         <div className='overflow-hidden w-16 h-16 rounded border border-border shrink-0 bg-elevated'>
           <ArtworkImage
             src={song.artwork ?? song.thumbnailUrl}
-            alt={song.nickname || song.title}
+            alt={song.nickname ?? song.title}
             className='w-full h-full'
             imageClassName='scale-[1.33]'
           />
@@ -255,12 +305,12 @@ const SongCardInner = ({
         <div className='flex-1 min-w-0 flex flex-col justify-center gap-1.5'>
           <p className='text-sm font-semibold text-fg leading-tight flex items-center gap-1.5 min-w-0'>
             <MusicNoteIcon size={13} weight='fill' className='shrink-0 text-muted' />
-            <span className='truncate'>{song.nickname || song.title}</span>
+            <span className='truncate'>{song.nickname ?? song.title}</span>
           </p>
           <div className='flex items-center gap-2.5 flex-wrap text-xs text-muted min-w-0'>
             {song.artist && (
               <span className='max-w-[16ch] flex items-center gap-1 min-w-0'>
-                <UserIcon size={12} weight='fill' className='shrink-0' />
+                <MicrophoneStageIcon size={12} weight='fill' className='shrink-0' />
                 <span className='truncate'>{song.artist}</span>
               </span>
             )}
@@ -278,6 +328,12 @@ const SongCardInner = ({
                 <SourceIcon sourceKey={sourceKey} />
               </span>
             )}
+            {song.addedBy && (
+              <span className='max-w-[16ch] flex items-center gap-1 min-w-0'>
+                <UserIcon size={12} weight='fill' className='shrink-0' />
+                <span className='truncate'>{song.addedByDisplayName ?? song.addedBy}</span>
+              </span>
+            )}
             <DurationBadge seconds={song.duration} />
             <VolumeBoostBadge volumeBoost={song.volumeBoost} />
           </div>
@@ -291,12 +347,9 @@ const SongCardInner = ({
         >
           <ContextMenuTrigger
             ref={triggerRef}
-            onToggle={() => setMenuOpen((v) => !v)}
+            onToggle={handleMenuToggle}
             isOpen={menuOpen}
-            onMouseDown={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-            }}
+            onMouseDown={handleMenuMouseDown}
             className='w-12 h-12'
           />
         </div>
@@ -309,7 +362,7 @@ const SongCardInner = ({
           <ContextMenu
             items={menuItems}
             isOpen={menuOpen}
-            onClose={() => setMenuOpen(false)}
+            onClose={handleMenuClose}
             triggerRef={triggerRef}
           />
         )}
@@ -317,7 +370,7 @@ const SongCardInner = ({
 
       {/* Inline edit panel */}
       <div className={`expand-panel ${isOpen ? 'expanded' : ''}`}>
-        <SongEditPanel song={song} isOpen={isOpen} onClose={() => setOpenSongId(null)} />
+        <SongEditPanel song={song} isOpen={isOpen} onClose={handleEditClose} />
       </div>
     </Card>
   );

@@ -1,4 +1,5 @@
 import { sql } from 'drizzle-orm';
+
 import { $client } from '../shared/db';
 
 // ---------------------------------------------------------------------------
@@ -24,6 +25,7 @@ export function parseSongSortField(raw: string): SongSortField | null {
 // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Drizzle column refs are not assignable to SQL<unknown> but are valid sql`` interpolations
 type SqlInterpolatable = any;
 
+// eslint-disable-next-line typescript/consistent-return
 export function buildSongOrderBy(
   sortField: SongSortField,
   sortOrder: 'ASC' | 'DESC',
@@ -53,7 +55,7 @@ export function buildSongOrderBy(
       return sql`${c.album} IS NULL, lower(${c.album}) ${sql.raw(sortOrder)}`;
     case 'duration':
       return sql`${c.duration} ${sql.raw(sortOrder)}`;
-    default:
+    case 'createdAt':
       return sql`${c.createdAt} ${sql.raw(sortOrder)}`;
   }
 }
@@ -102,7 +104,9 @@ export function buildSongFilterClause(
     }
   }
 
-  if (clauses.length === 0) return undefined;
+  if (clauses.length === 0) {
+    return undefined;
+  }
   return sql.join(clauses, sql` AND `);
 }
 
@@ -122,7 +126,9 @@ export const SOURCE_LIKE_PATTERNS: Record<string, string[]> = {
 export function buildSongSearchClause(
   search: string | undefined
 ): ReturnType<typeof sql> | undefined {
-  if (!search) return undefined;
+  if (!search) {
+    return undefined;
+  }
 
   const tagMatchingIds = (
     $client.query(`SELECT id FROM "Song" WHERE lower(tags) LIKE lower(?)`).all(`%${search}%`) as {

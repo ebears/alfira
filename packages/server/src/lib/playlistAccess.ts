@@ -1,4 +1,5 @@
 import { count, eq } from 'drizzle-orm';
+
 import { db, tables } from '../shared/db';
 import { json } from './json';
 
@@ -14,7 +15,7 @@ interface PlaylistLike {
   isPrivate: boolean;
 }
 
-type PlaylistRow = {
+interface PlaylistRow {
   id: string;
   name: string;
   createdBy: string;
@@ -22,7 +23,7 @@ type PlaylistRow = {
   tagNameLower: string | null;
   createdAt: Date;
   _count?: { songs: number };
-};
+}
 
 /**
  * Checks if user can view/modify a playlist.
@@ -35,7 +36,9 @@ export function canAccessPlaylist(
   user: UserContext | undefined,
   adminView?: boolean
 ): { ok: true } | { ok: false; error: string } {
-  if (!playlist.isPrivate) return { ok: true };
+  if (!playlist.isPrivate) {
+    return { ok: true };
+  }
   const allowed =
     playlist.createdBy === user?.discordId || (user?.isAdmin === true && adminView === true);
   if (!allowed) {
@@ -65,7 +68,9 @@ async function findPlaylistOr404(id: string, withCount = false): Promise<Playlis
     .from(playlistTable)
     .where(eq(playlistTable.id, id))
     .limit(1);
-  if (!row) return null;
+  if (!row) {
+    return null;
+  }
   if (withCount) {
     const value = await getPlaylistSongCount(id);
     return { ...row, _count: { songs: value } };

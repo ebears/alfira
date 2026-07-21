@@ -1,6 +1,6 @@
-import type { GuildPlayer } from '../GuildPlayer';
-import type { RouteContext } from '../index';
+import { type GuildPlayer } from '../GuildPlayer';
 import { getGuildId } from '../lib/config';
+import { type RouteContext } from '../lib/context';
 import { json } from '../lib/json';
 import { lavalink } from '../lib/lavalink';
 import { requirePlayer, requirePlaying } from '../lib/player';
@@ -36,7 +36,9 @@ function handleGetQueue(
   _params: Record<string, string>
 ): Response {
   const guards = checkGuards(ctx);
-  if (guards instanceof Response) return guards;
+  if (guards instanceof Response) {
+    return guards;
+  }
 
   const player = getPlayer(getGuildId());
 
@@ -51,6 +53,10 @@ function handleGetQueue(
       priorityQueue: [],
       queue: [],
       trackStartedAt: null,
+      nextTrack: null,
+      timescaleSpeed: 1.0,
+      nodeLinkPosition: null,
+      nodeLinkTime: null,
     });
   }
 
@@ -61,8 +67,10 @@ function handleGetQueue(
 // POST /api/player/play — load songs and start playback
 // ---------------------------------------------------------------------------
 async function handlePlay(ctx: RouteContext, request: Request): Promise<Response> {
-  const guards = await checkGuards(ctx, { voice: true });
-  if (guards instanceof Response) return guards;
+  const guards = checkGuards(ctx, { voice: true });
+  if (guards instanceof Response) {
+    return guards;
+  }
   const { user } = guards;
 
   let body: {
@@ -80,7 +88,9 @@ async function handlePlay(ctx: RouteContext, request: Request): Promise<Response
   const { playlistId, mode, loop, startFromSongId } = body;
 
   const playerResult = await resolveOrAutoJoinPlayer(user.discordId);
-  if (!playerResult.ok) return playerResult.response;
+  if (!playerResult.ok) {
+    return playerResult.response;
+  }
   const player = playerResult.player;
 
   let dbSongs: (typeof songTable.$inferSelect)[];
@@ -145,11 +155,15 @@ async function handleSkip(
   _request: Request,
   _params: Record<string, string>
 ): Promise<Response> {
-  const guards = await checkGuards(ctx, { voice: true });
-  if (guards instanceof Response) return guards;
+  const guards = checkGuards(ctx, { voice: true });
+  if (guards instanceof Response) {
+    return guards;
+  }
 
   const playingResult = requirePlaying();
-  if (!playingResult.ok) return playingResult.response;
+  if (!playingResult.ok) {
+    return playingResult.response;
+  }
 
   await playingResult.player.skip();
   return json({ message: 'Skipped.' });
@@ -158,13 +172,15 @@ async function handleSkip(
 // ---------------------------------------------------------------------------
 // POST /api/player/leave — stop and disconnect
 // ---------------------------------------------------------------------------
-async function handleLeave(
+function handleLeave(
   ctx: RouteContext,
   _request: Request,
   _params: Record<string, string>
-): Promise<Response> {
-  const guards = await checkGuards(ctx, { voice: true });
-  if (guards instanceof Response) return guards;
+): Response {
+  const guards = checkGuards(ctx, { voice: true });
+  if (guards instanceof Response) {
+    return guards;
+  }
 
   const player = getPlayer(getGuildId());
 
@@ -172,7 +188,9 @@ async function handleLeave(
     return json({ error: 'The bot is not in a voice channel.' }, 409);
   }
 
-  if (player) player.stop();
+  if (player) {
+    player.stop();
+  }
 
   return json({ message: 'Left the voice channel.' });
 }
@@ -181,8 +199,10 @@ async function handleLeave(
 // POST /api/player/loop — set loop mode
 // ---------------------------------------------------------------------------
 async function handleLoop(ctx: RouteContext, request: Request): Promise<Response> {
-  const guards = await checkGuards(ctx, { voice: true });
-  if (guards instanceof Response) return guards;
+  const guards = checkGuards(ctx, { voice: true });
+  if (guards instanceof Response) {
+    return guards;
+  }
 
   let body: { mode?: LoopMode };
   try {
@@ -198,7 +218,9 @@ async function handleLoop(ctx: RouteContext, request: Request): Promise<Response
   }
 
   const playerResult = requirePlayer();
-  if (!playerResult.ok) return playerResult.response;
+  if (!playerResult.ok) {
+    return playerResult.response;
+  }
 
   playerResult.player.setLoopMode(mode);
   return json({ loopMode: mode });
@@ -207,13 +229,15 @@ async function handleLoop(ctx: RouteContext, request: Request): Promise<Response
 // ---------------------------------------------------------------------------
 // POST /api/player/shuffle — shuffle queue (admin only)
 // ---------------------------------------------------------------------------
-async function handleShuffle(
+function handleShuffle(
   ctx: RouteContext,
   _request: Request,
   _params: Record<string, string>
-): Promise<Response> {
-  const guards = await checkGuards(ctx, { admin: true, voice: true, permission: 'queue.manage' });
-  if (guards instanceof Response) return guards;
+): Response {
+  const guards = checkGuards(ctx, { admin: true, voice: true, permission: 'queue.manage' });
+  if (guards instanceof Response) {
+    return guards;
+  }
 
   const player = getPlayer(getGuildId());
 
@@ -228,16 +252,20 @@ async function handleShuffle(
 // ---------------------------------------------------------------------------
 // POST /api/player/unshuffle — restore original queue order (admin only)
 // ---------------------------------------------------------------------------
-async function handleUnshuffle(
+function handleUnshuffle(
   ctx: RouteContext,
   _request: Request,
   _params: Record<string, string>
-): Promise<Response> {
-  const guards = await checkGuards(ctx, { admin: true, voice: true, permission: 'queue.manage' });
-  if (guards instanceof Response) return guards;
+): Response {
+  const guards = checkGuards(ctx, { admin: true, voice: true, permission: 'queue.manage' });
+  if (guards instanceof Response) {
+    return guards;
+  }
 
   const playerResult = requirePlayer();
-  if (!playerResult.ok) return playerResult.response;
+  if (!playerResult.ok) {
+    return playerResult.response;
+  }
 
   playerResult.player.unshuffle();
   return json({ message: 'Queue order restored.' });
@@ -256,8 +284,10 @@ async function resolveUrlTempSong(
   request: Request,
   permission: 'queue.quickadd' | 'queue.manage' | 'queue.override'
 ): Promise<UrlTempSongResult> {
-  const guards = await checkGuards(ctx, { admin: true, voice: true, permission });
-  if (guards instanceof Response) return { ok: false, response: guards };
+  const guards = checkGuards(ctx, { admin: true, voice: true, permission });
+  if (guards instanceof Response) {
+    return { ok: false, response: guards };
+  }
   const { user } = guards;
 
   let body: { url?: unknown };
@@ -268,15 +298,21 @@ async function resolveUrlTempSong(
   }
 
   const urlResult = validateSourceUrl(body.url);
-  if (!urlResult.ok) return { ok: false, response: urlResult.response };
+  if (!urlResult.ok) {
+    return { ok: false, response: urlResult.response };
+  }
   const url = urlResult.value;
 
   const playerResult = await resolveOrAutoJoinPlayer(user.discordId);
-  if (!playerResult.ok) return { ok: false, response: playerResult.response };
+  if (!playerResult.ok) {
+    return { ok: false, response: playerResult.response };
+  }
   const player = playerResult.player;
 
   const metadataResult = await fetchSourceMetadata(url);
-  if (!metadataResult.ok) return { ok: false, response: metadataResult.response };
+  if (!metadataResult.ok) {
+    return { ok: false, response: metadataResult.response };
+  }
   const metadata = metadataResult.value;
 
   const queuedSong: QueuedSong = {
@@ -299,7 +335,9 @@ async function resolveUrlTempSong(
 // ---------------------------------------------------------------------------
 async function handleQuickAdd(ctx: RouteContext, request: Request): Promise<Response> {
   const result = await resolveUrlTempSong(ctx, request, 'queue.quickadd');
-  if (!result.ok) return result.response;
+  if (!result.ok) {
+    return result.response;
+  }
   await result.player.addToPriorityQueue(result.queuedSong);
   return json({
     message: `Added "${result.metadataTitle}" to the queue.`,
@@ -311,8 +349,10 @@ async function handleQuickAdd(ctx: RouteContext, request: Request): Promise<Resp
 // POST /api/player/quick-add-playlist — add playlist to queue (admin only)
 // ---------------------------------------------------------------------------
 async function handleQuickAddPlaylist(ctx: RouteContext, request: Request): Promise<Response> {
-  const guards = await checkGuards(ctx, { admin: true, voice: true, permission: 'queue.quickadd' });
-  if (guards instanceof Response) return guards;
+  const guards = checkGuards(ctx, { admin: true, voice: true, permission: 'queue.quickadd' });
+  if (guards instanceof Response) {
+    return guards;
+  }
   const { user } = guards;
 
   let body: { url?: unknown; maxVideos?: number };
@@ -324,15 +364,21 @@ async function handleQuickAddPlaylist(ctx: RouteContext, request: Request): Prom
 
   const maxVideos = clampMaxVideos(body.maxVideos);
   const urlResult = validatePlaylistUrl(body.url);
-  if (!urlResult.ok) return urlResult.response;
+  if (!urlResult.ok) {
+    return urlResult.response;
+  }
   const url = urlResult.value;
 
   const playerResult = await resolveOrAutoJoinPlayer(user.discordId);
-  if (!playerResult.ok) return playerResult.response;
+  if (!playerResult.ok) {
+    return playerResult.response;
+  }
   const player = playerResult.player;
 
   const playlistResult = await fetchPlaylistMetadata(url, maxVideos);
-  if (!playlistResult.ok) return playlistResult.response;
+  if (!playlistResult.ok) {
+    return playlistResult.response;
+  }
   const playlistMetadata = playlistResult.value;
 
   const requestedBy = user.username;
@@ -363,16 +409,20 @@ async function handleQuickAddPlaylist(ctx: RouteContext, request: Request): Prom
 // ---------------------------------------------------------------------------
 // POST /api/player/pause-toggle — pause/resume
 // ---------------------------------------------------------------------------
-async function handlePauseToggle(
+function handlePauseToggle(
   ctx: RouteContext,
   _request: Request,
   _params: Record<string, string>
-): Promise<Response> {
-  const guards = await checkGuards(ctx, { voice: true });
-  if (guards instanceof Response) return guards;
+): Response {
+  const guards = checkGuards(ctx, { voice: true });
+  if (guards instanceof Response) {
+    return guards;
+  }
 
   const playingResult = requirePlaying();
-  if (!playingResult.ok) return playingResult.response;
+  if (!playingResult.ok) {
+    return playingResult.response;
+  }
 
   const isPaused = playingResult.player.togglePause();
   return json({ isPaused });
@@ -382,8 +432,10 @@ async function handlePauseToggle(
 // POST /api/player/seek — seek to position in current track
 // ---------------------------------------------------------------------------
 async function handleSeek(ctx: RouteContext, request: Request): Promise<Response> {
-  const guards = await checkGuards(ctx, { voice: true });
-  if (guards instanceof Response) return guards;
+  const guards = checkGuards(ctx, { voice: true });
+  if (guards instanceof Response) {
+    return guards;
+  }
 
   let body: { position?: unknown };
   try {
@@ -399,7 +451,9 @@ async function handleSeek(ctx: RouteContext, request: Request): Promise<Response
   }
 
   const playingResult = requirePlaying();
-  if (!playingResult.ok) return playingResult.response;
+  if (!playingResult.ok) {
+    return playingResult.response;
+  }
 
   await playingResult.player.seek(position);
   return json(playingResult.player.getQueueState());
@@ -408,16 +462,20 @@ async function handleSeek(ctx: RouteContext, request: Request): Promise<Response
 // ---------------------------------------------------------------------------
 // POST /api/player/clear — clear queue (admin only)
 // ---------------------------------------------------------------------------
-async function handleClear(
+function handleClear(
   ctx: RouteContext,
   _request: Request,
   _params: Record<string, string>
-): Promise<Response> {
-  const guards = await checkGuards(ctx, { admin: true, voice: true, permission: 'queue.manage' });
-  if (guards instanceof Response) return guards;
+): Response {
+  const guards = checkGuards(ctx, { admin: true, voice: true, permission: 'queue.manage' });
+  if (guards instanceof Response) {
+    return guards;
+  }
 
   const playerResult = requirePlayer();
-  if (!playerResult.ok) return playerResult.response;
+  if (!playerResult.ok) {
+    return playerResult.response;
+  }
 
   playerResult.player.clearQueue();
   return json({ message: 'Queue cleared.' });
@@ -427,8 +485,10 @@ async function handleClear(
 // POST /api/player/add-to-priority — add library song to Up Next (admin only)
 // ---------------------------------------------------------------------------
 async function handleAddToPriority(ctx: RouteContext, request: Request): Promise<Response> {
-  const guards = await checkGuards(ctx, { admin: true, voice: true, permission: 'queue.manage' });
-  if (guards instanceof Response) return guards;
+  const guards = checkGuards(ctx, { admin: true, voice: true, permission: 'queue.manage' });
+  if (guards instanceof Response) {
+    return guards;
+  }
   const { user } = guards;
 
   let body: { songId?: unknown };
@@ -451,7 +511,9 @@ async function handleAddToPriority(ctx: RouteContext, request: Request): Promise
   }
 
   const playerResult = await resolveOrAutoJoinPlayer(user.discordId);
-  if (!playerResult.ok) return playerResult.response;
+  if (!playerResult.ok) {
+    return playerResult.response;
+  }
   const player = playerResult.player;
 
   const requestedBy = user.username;
@@ -467,7 +529,7 @@ async function handleAddToPriority(ctx: RouteContext, request: Request): Promise
   await player.addToPriorityQueue(queuedSong);
 
   return json({
-    message: `Added "${song.nickname || song.title}" to Up Next.`,
+    message: `Added "${song.nickname ?? song.title}" to Up Next.`,
     song: queuedSong,
   });
 }
@@ -477,7 +539,9 @@ async function handleAddToPriority(ctx: RouteContext, request: Request): Promise
 // ---------------------------------------------------------------------------
 async function handleOverride(ctx: RouteContext, request: Request): Promise<Response> {
   const result = await resolveUrlTempSong(ctx, request, 'queue.override');
-  if (!result.ok) return result.response;
+  if (!result.ok) {
+    return result.response;
+  }
   await result.player.replaceQueueAndPlay([result.queuedSong]);
   return json({
     message: `Now playing "${result.metadataTitle}".`,
@@ -488,17 +552,21 @@ async function handleOverride(ctx: RouteContext, request: Request): Promise<Resp
 // ---------------------------------------------------------------------------
 // DELETE /api/player/queue/:songId — remove a specific song from the queue
 // ---------------------------------------------------------------------------
-async function handleRemoveFromQueue(
+function handleRemoveFromQueue(
   ctx: RouteContext,
   _request: Request,
   params: Record<string, string>
-): Promise<Response> {
+): Response {
   const { songId } = params;
-  const guards = await checkGuards(ctx, { admin: true, voice: true, permission: 'queue.manage' });
-  if (guards instanceof Response) return guards;
+  const guards = checkGuards(ctx, { admin: true, voice: true, permission: 'queue.manage' });
+  if (guards instanceof Response) {
+    return guards;
+  }
 
   const playerResult = requirePlayer();
-  if (!playerResult.ok) return playerResult.response;
+  if (!playerResult.ok) {
+    return playerResult.response;
+  }
 
   const removed = playerResult.player.removeSongById(songId);
 
@@ -512,17 +580,21 @@ async function handleRemoveFromQueue(
 // ---------------------------------------------------------------------------
 // POST /api/player/queue/:songId/promote — move song to priority queue
 // ---------------------------------------------------------------------------
-async function handlePromoteSong(
+function handlePromoteSong(
   ctx: RouteContext,
   _request: Request,
   params: Record<string, string>
-): Promise<Response> {
+): Response {
   const { songId } = params;
-  const guards = await checkGuards(ctx, { admin: true, voice: true, permission: 'queue.manage' });
-  if (guards instanceof Response) return guards;
+  const guards = checkGuards(ctx, { admin: true, voice: true, permission: 'queue.manage' });
+  if (guards instanceof Response) {
+    return guards;
+  }
 
   const playerResult = requirePlayer();
-  if (!playerResult.ok) return playerResult.response;
+  if (!playerResult.ok) {
+    return playerResult.response;
+  }
 
   const promoted = playerResult.player.promoteSong(songId);
 
@@ -536,17 +608,21 @@ async function handlePromoteSong(
 // ---------------------------------------------------------------------------
 // POST /api/player/queue/:songId/demote — move song from priority to regular queue
 // ---------------------------------------------------------------------------
-async function handleDemoteSong(
+function handleDemoteSong(
   ctx: RouteContext,
   _request: Request,
   params: Record<string, string>
-): Promise<Response> {
+): Response {
   const { songId } = params;
-  const guards = await checkGuards(ctx, { admin: true, voice: true, permission: 'queue.manage' });
-  if (guards instanceof Response) return guards;
+  const guards = checkGuards(ctx, { admin: true, voice: true, permission: 'queue.manage' });
+  if (guards instanceof Response) {
+    return guards;
+  }
 
   const playerResult = requirePlayer();
-  if (!playerResult.ok) return playerResult.response;
+  if (!playerResult.ok) {
+    return playerResult.response;
+  }
 
   const demoted = playerResult.player.demoteSong(songId);
 
@@ -561,8 +637,10 @@ async function handleDemoteSong(
 // PATCH /api/player/queue/reorder — reorder remaining queue or priority items
 // ---------------------------------------------------------------------------
 async function handleReorderQueue(ctx: RouteContext, request: Request): Promise<Response> {
-  const guards = await checkGuards(ctx, { admin: true, voice: true, permission: 'queue.manage' });
-  if (guards instanceof Response) return guards;
+  const guards = checkGuards(ctx, { admin: true, voice: true, permission: 'queue.manage' });
+  if (guards instanceof Response) {
+    return guards;
+  }
 
   let body: { songIds?: unknown; target?: unknown };
   try {
@@ -582,7 +660,9 @@ async function handleReorderQueue(ctx: RouteContext, request: Request): Promise<
   }
 
   const playerResult = requirePlayer();
-  if (!playerResult.ok) return playerResult.response;
+  if (!playerResult.ok) {
+    return playerResult.response;
+  }
 
   try {
     if (target === 'priority') {

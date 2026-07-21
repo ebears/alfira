@@ -5,14 +5,21 @@ import {
   SignOutIcon,
   XCircleIcon,
 } from '@phosphor-icons/react';
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
+
 import { ADMIN_NAV_ITEMS, NAV_ITEMS } from '../constants';
 import { useAdminView } from '../context/AdminViewContext';
 import { useAuth } from '../context/AuthContext';
 import SettingsMenu from './SettingsMenu';
 import { Button } from './ui/Button';
 import { SpringUp } from './ui/SpringUp';
+
+// NavLink className render prop — React Router API, extracted to module scope for stable reference.
+const navLinkClassName = ({ isActive }: { isActive: boolean }) =>
+  `flex items-center rounded-xl font-body transition-all duration-150 cursor-pointer px-3 py-3 ${
+    isActive ? 'btn-inherit pressed' : 'btn-inherit'
+  }`;
 
 export default function MobileNav() {
   const { user, logout } = useAuth();
@@ -23,10 +30,14 @@ export default function MobileNav() {
 
   // Close drawer on escape key
   useEffect(() => {
-    if (!isOpen) return;
+    if (!isOpen) {
+      return undefined;
+    }
 
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') setIsOpen(false);
+      if (e.key === 'Escape') {
+        setIsOpen(false);
+      }
     };
 
     document.addEventListener('keydown', handleKeyDown);
@@ -47,7 +58,9 @@ export default function MobileNav() {
 
   // Close drawer when clicking outside
   useEffect(() => {
-    if (!isOpen) return;
+    if (!isOpen) {
+      return undefined;
+    }
 
     const handleClickOutside = (e: MouseEvent) => {
       if (drawerRef.current && !drawerRef.current.contains(e.target as Node)) {
@@ -59,10 +72,24 @@ export default function MobileNav() {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [isOpen]);
 
-  const handleLogout = async () => {
+  const handleLogout = useCallback(async () => {
     await logout();
-    navigate('/login');
-  };
+    void navigate('/login');
+  }, [logout, navigate]);
+
+  const handleOpen = useCallback(() => setIsOpen(true), []);
+  const handleClose = useCallback(() => setIsOpen(false), []);
+
+  const backdropKeyHandler = useCallback((e: React.KeyboardEvent) => {
+    if (e.key === 'Escape' || e.key === 'Enter') {
+      setIsOpen(false);
+    }
+  }, []);
+
+  const linkStyle = useMemo(
+    () => ({ '--btn-surface': 'var(--color-elevated)' }) as React.CSSProperties,
+    []
+  );
 
   return (
     <>
@@ -73,7 +100,7 @@ export default function MobileNav() {
           variant='inherit'
           surface='elevated'
           size='icon'
-          onClick={() => setIsOpen(true)}
+          onClick={handleOpen}
           aria-label='Open navigation menu'
         >
           <HashIcon size={24} weight='duotone' />
@@ -115,10 +142,8 @@ export default function MobileNav() {
             type='button'
             aria-label='Close navigation menu'
             className='bg-black/60 backdrop-blur-sm absolute inset-0'
-            onClick={() => setIsOpen(false)}
-            onKeyDown={(e) => {
-              if (e.key === 'Escape' || e.key === 'Enter') setIsOpen(false);
-            }}
+            onClick={handleClose}
+            onKeyDown={backdropKeyHandler}
           />
         </SpringUp>
       )}
@@ -146,7 +171,7 @@ export default function MobileNav() {
             variant='inherit'
             surface='elevated'
             size='icon'
-            onClick={() => setIsOpen(false)}
+            onClick={handleClose}
             aria-label='Close navigation menu'
           >
             <XCircleIcon size={24} weight='duotone' />
@@ -159,13 +184,9 @@ export default function MobileNav() {
             <NavLink
               key={to}
               to={to}
-              onClick={() => setIsOpen(false)}
-              className={({ isActive }) =>
-                `flex items-center rounded-xl font-body transition-all duration-150 cursor-pointer px-3 py-3 ${
-                  isActive ? 'btn-inherit pressed' : 'btn-inherit'
-                }`
-              }
-              style={{ '--btn-surface': 'var(--color-elevated)' } as React.CSSProperties}
+              onClick={handleClose}
+              className={navLinkClassName}
+              style={linkStyle}
             >
               <span className='mr-auto'>{label}</span>
               <Icon size={22} weight='duotone' />
@@ -180,13 +201,9 @@ export default function MobileNav() {
                 <NavLink
                   key={to}
                   to={to}
-                  onClick={() => setIsOpen(false)}
-                  className={({ isActive }) =>
-                    `flex items-center rounded-xl font-body transition-all duration-150 cursor-pointer px-3 py-3 ${
-                      isActive ? 'btn-inherit pressed' : 'btn-inherit'
-                    }`
-                  }
-                  style={{ '--btn-surface': 'var(--color-elevated)' } as React.CSSProperties}
+                  onClick={handleClose}
+                  className={navLinkClassName}
+                  style={linkStyle}
                 >
                   <span className='mr-auto'>{label}</span>
                   <Icon size={22} weight='duotone' />
@@ -199,7 +216,7 @@ export default function MobileNav() {
         {/* Bottom section: Settings, separator, user */}
         <div className='mt-auto'>
           {/* Settings Menu */}
-          <SettingsMenu collapsed={false} onClick={() => setIsOpen(false)} />
+          <SettingsMenu collapsed={false} onClick={handleClose} />
 
           {/* Separator above user section */}
           <div className='px-5'>

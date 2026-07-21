@@ -61,6 +61,20 @@ export const metadataTransition: Transition = {
   ease: 'easeOut',
 };
 
+/** Slide-up from bottom — used for mobile bottom sheets. */
+export const slideUp: Variants = {
+  initial: { y: '100%' },
+  animate: { y: 0 },
+  exit: { y: '100%' },
+};
+
+export const slideUpTransition: Transition = {
+  type: 'spring',
+  stiffness: 500,
+  damping: 28,
+  mass: 0.6,
+};
+
 /** Shared crossfade transition used for page and view mode changes. */
 export const viewTransition: Transition = {
   duration: 0.125,

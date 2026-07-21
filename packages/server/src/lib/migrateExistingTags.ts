@@ -35,7 +35,9 @@ export async function runTagMigration(): Promise<{ normalized: number; errors: n
   let errors = 0;
 
   for (const song of songs) {
-    if (!song.tags || !Array.isArray(song.tags) || song.tags.length === 0) continue;
+    if (!song.tags || !Array.isArray(song.tags) || song.tags.length === 0) {
+      continue;
+    }
 
     try {
       const canonicalTags = await canonicalizeTags(song.tags.map(normalizeTag));
@@ -59,8 +61,12 @@ export async function runTagMigration(): Promise<{ normalized: number; errors: n
 
 // Standalone entry point — run with: bun run packages/server/src/lib/migrateExistingTags.ts
 if (import.meta.filename.includes('migrateExistingTags')) {
-  runTagMigration().catch((err) => {
-    logger.fatal(err, 'Tag migration failed');
-    process.exit(1);
-  });
+  void (async () => {
+    try {
+      await runTagMigration();
+    } catch (err) {
+      logger.fatal(err, 'Tag migration failed');
+      process.exit(1);
+    }
+  })();
 }

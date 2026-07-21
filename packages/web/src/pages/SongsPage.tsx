@@ -1,11 +1,11 @@
-import type { Playlist, Song } from '@alfira/server/shared';
-import type { FetchSongsOptions } from '@alfira/server/shared/api';
+import { type Playlist, type Song } from '@alfira/server/shared';
+import { type BulkEditData, type FetchSongsOptions } from '@alfira/server/shared/api';
 import { MusicNotesIcon, QuestionIcon } from '@phosphor-icons/react';
 import { AnimatePresence } from 'motion/react';
 import * as m from 'motion/react-m';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { pageVariants, viewTransition } from '../lib/motion';
+
 import {
   bulkDeleteSongs,
   bulkEditSongs,
@@ -18,9 +18,7 @@ import BulkActionBar from '../components/BulkActionBar';
 import BulkEditModal from '../components/BulkEditModal';
 import ConfirmModal from '../components/ConfirmModal';
 import ListToolbar from '../components/ListToolbar';
-
 import NotificationToast from '../components/NotificationToast';
-
 import { PageHeader } from '../components/ui/PageHeader';
 import { VirtualSongGrid } from '../components/VirtualSongGrid';
 import { VirtualSongList } from '../components/VirtualSongList';
@@ -30,8 +28,9 @@ import { usePlayerState } from '../context/PlayerContext';
 import { useAddToQueue } from '../hooks/useAddToQueue';
 import { useBulkSelection } from '../hooks/useBulkSelection';
 import { useNotification } from '../hooks/useNotification';
-import { onSocketEvent } from '../hooks/useSocket';
 import { usePaginatedData } from '../hooks/usePaginatedData';
+import { onSocketEvent } from '../hooks/useSocket';
+import { pageVariants, viewTransition } from '../lib/motion';
 import { apiErrorMessage, notifyUnlessRateLimit } from '../utils/api';
 
 const ITEMS_PER_PAGE = 48;
@@ -118,58 +117,84 @@ export default function SongsPage() {
   // ── Build stable fetch options for the infinite scroll hook ─────────
   const songsOpts = useMemo<FetchSongsOptions>(() => {
     const opts: FetchSongsOptions = {};
-    if (search) opts.search = search;
-    if (sort !== 'createdAt') opts.sort = sort;
-    if (order !== 'desc') opts.order = order;
+    if (search) {
+      opts.search = search;
+    }
+    if (sort !== 'createdAt') {
+      opts.sort = sort;
+    }
+    if (order !== 'desc') {
+      opts.order = order;
+    }
     const tagsParam = filterTags.join(',');
     const sourceParam = filterSources.join(',');
-    if (tagsParam) opts.tags = tagsParam;
-    if (sourceParam) opts.source = sourceParam;
+    if (tagsParam) {
+      opts.tags = tagsParam;
+    }
+    if (sourceParam) {
+      opts.source = sourceParam;
+    }
     return opts;
   }, [search, sort, order, filterTags, filterSources]);
 
   // ── Lazy playlists fetch ────────────────────────────────────────────
   const [playlists, setPlaylists] = useState<Playlist[]>([]);
   useEffect(() => {
-    void getPlaylistsPage(isAdminView, 1, 100)
-      .then((p) => setPlaylists(p.items))
-      .catch(() => {
+    void (async () => {
+      try {
+        const p = await getPlaylistsPage(isAdminView, 1, 100);
+        setPlaylists(p.items);
+      } catch {
         /* Silently ignore playlist fetch error */
-      });
+      }
+    })();
   }, [isAdminView]);
 
   // ── Comparator for re-sorting after real-time mutations ──────────────
   const songCompareFn = useMemo(() => {
     const dir = order === 'asc' ? 1 : -1;
+    // eslint-disable-next-line typescript/consistent-return
     return (a: Song, b: Song): number => {
       switch (sort) {
         case 'title': {
           // Sort by display name: nickname if set, otherwise title
-          const aName = (a.nickname || a.title) ?? '';
-          const bName = (b.nickname || b.title) ?? '';
+          const aName = (a.nickname ?? a.title) || '';
+          const bName = (b.nickname ?? b.title) || '';
           return dir * aName.localeCompare(bName, undefined, { sensitivity: 'base' });
         }
         case 'artist': {
           const aArt = a.artist ?? '';
           const bArt = b.artist ?? '';
           // nulls last, regardless of direction
-          if (!aArt && !bArt) return 0;
-          if (!aArt) return dir;
-          if (!bArt) return -dir;
+          if (!aArt && !bArt) {
+            return 0;
+          }
+          if (!aArt) {
+            return dir;
+          }
+          if (!bArt) {
+            return -dir;
+          }
           return dir * aArt.localeCompare(bArt, undefined, { sensitivity: 'base' });
         }
         case 'album': {
           const aAlb = a.album ?? '';
           const bAlb = b.album ?? '';
-          if (!aAlb && !bAlb) return 0;
-          if (!aAlb) return dir;
-          if (!bAlb) return -dir;
+          if (!aAlb && !bAlb) {
+            return 0;
+          }
+          if (!aAlb) {
+            return dir;
+          }
+          if (!bAlb) {
+            return -dir;
+          }
           return dir * aAlb.localeCompare(bAlb, undefined, { sensitivity: 'base' });
         }
         case 'duration':
           return dir * ((a.duration ?? 0) - (b.duration ?? 0));
-        default:
-          // createdAt — newest first for desc, oldest first for asc
+        case 'createdAt':
+          // newest first for desc, oldest first for asc
           return dir * (new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
       }
     };
@@ -228,11 +253,11 @@ export default function SongsPage() {
     };
   }, [prepend, updateItem, removeItem]);
 
-  const handleDelete = async (id: string) => {
+  const handleDelete = useCallback(async (id: string) => {
     await deleteSong(id);
     setDeleteId(null);
     // Socket event will update the songs list
-  };
+  }, []);
 
   // ── Bulk actions ─────────────────────────────────────────────────────
   const handleBulkDelete = useCallback(() => {
@@ -240,7 +265,9 @@ export default function SongsPage() {
   }, []);
 
   const executeBulkDelete = useCallback(async () => {
-    if (bulk.count === 0) return;
+    if (bulk.count === 0) {
+      return;
+    }
     setBulkDeleteConfirm(false);
     setBulkDeleting(true);
     try {
@@ -263,8 +290,10 @@ export default function SongsPage() {
   }, [bulk, removeItem, notify]);
 
   const handleBulkEdit = useCallback(
-    async (data: import('@alfira/server/shared/api').BulkEditData) => {
-      if (bulk.count === 0) return;
+    async (data: BulkEditData) => {
+      if (bulk.count === 0) {
+        return;
+      }
       setBulkEditingApplying(true);
       try {
         const allIds = [...bulk.selectedIds];
@@ -309,8 +338,97 @@ export default function SongsPage() {
     [queueState.loopMode, notify]
   );
 
+  const pageStyle = useMemo(() => ({ paddingBottom: 0 }), []);
+
+  const handleSearchChange = useCallback(
+    (v: string) => updateParam('search', v || null),
+    [updateParam]
+  );
+
+  const handleSortChange = useCallback(
+    (field: string, newOrder: string) => {
+      setSearchParams(
+        (prev) => {
+          const next = new URLSearchParams(prev);
+          if (field === 'createdAt') {
+            next.delete('sort');
+          } else {
+            next.set('sort', field);
+          }
+          if (newOrder === 'asc') {
+            next.set('order', 'asc');
+          } else {
+            next.delete('order');
+          }
+          return next;
+        },
+        { replace: true }
+      );
+    },
+    [setSearchParams]
+  );
+
+  const handleAddTag = useCallback(
+    (tag: string) => {
+      const normalized = tag.toLowerCase();
+      if (filterTags.includes(normalized)) {
+        return;
+      }
+      updateParam('tags', [...filterTags, normalized].join(','));
+    },
+    [filterTags, updateParam]
+  );
+
+  const handleRemoveTag = useCallback(
+    (tag: string) => updateParam('tags', filterTags.filter((t) => t !== tag).join(',') || null),
+    [filterTags, updateParam]
+  );
+
+  const handleAddSource = useCallback(
+    (s: string) => {
+      if (filterSources.includes(s)) {
+        return;
+      }
+      updateParam('source', [...filterSources, s].join(','));
+    },
+    [filterSources, updateParam]
+  );
+
+  const handleRemoveSource = useCallback(
+    (s: string) => updateParam('source', filterSources.filter((x) => x !== s).join(',') || null),
+    [filterSources, updateParam]
+  );
+
+  const handleToggleSelectionMode = useCallback(() => {
+    if (selectionMode) {
+      bulk.clearAll();
+    }
+    setSelectionMode((v) => !v);
+  }, [selectionMode, bulk]);
+
+  const handleViewModeChange = useCallback((mode: 'list' | 'grid') => {
+    localStorage.setItem('alfira-song-view', mode);
+    setViewMode(mode);
+  }, []);
+
+  const handleConfirmDelete = useCallback(() => {
+    if (deleteId) {
+      void handleDelete(deleteId);
+    }
+  }, [deleteId, handleDelete]);
+
+  const handleCancelDelete = useCallback(() => setDeleteId(null), []);
+
+  const handleCancelBulkDelete = useCallback(() => setBulkDeleteConfirm(false), []);
+
+  const handleBulkTag = useCallback(() => setBulkEditingOpen(true), []);
+
+  const handleSelectAll = useCallback(() => bulk.selectAll(items.map((s) => s.id)), [bulk, items]);
+
+  const handleCloseBulkEdit = useCallback(() => setBulkEditingOpen(false), []);
+
   return (
-    <div className='p-4 md:p-8 flex flex-col min-h-0 h-full' style={{ paddingBottom: 0 }}>
+    <div className='p-4 md:p-8 flex flex-col min-h-0 h-full' style={pageStyle}>
       <PageHeader
         icon={MusicNotesIcon}
         title='Songs'
@@ -328,60 +446,25 @@ export default function SongsPage() {
 
       <ListToolbar
         searchValue={search}
-        onSearchChange={(v) => updateParam('search', v || null)}
+        onSearchChange={handleSearchChange}
         searchPlaceholder='Search by title, nickname, artist, album, or tag...'
         sortOptions={SORT_OPTIONS}
         sort={sort}
         order={order as 'asc' | 'desc'}
-        onSortChange={(field, newOrder) => {
-          setSearchParams(
-            (prev) => {
-              const next = new URLSearchParams(prev);
-              if (field === 'createdAt') {
-                next.delete('sort');
-              } else {
-                next.set('sort', field);
-              }
-              if (newOrder === 'asc') {
-                next.set('order', 'asc');
-              } else {
-                next.delete('order');
-              }
-              return next;
-            },
-            { replace: true }
-          );
-        }}
+        onSortChange={handleSortChange}
         defaultSort='createdAt'
         textSortFields={['title', 'artist', 'album']}
         filterTags={filterTags}
         filterSources={filterSources}
-        onAddTag={(tag) => {
-          const normalized = tag.toLowerCase();
-          if (filterTags.includes(normalized)) return;
-          updateParam('tags', [...filterTags, normalized].join(','));
-        }}
-        onRemoveTag={(tag) =>
-          updateParam('tags', filterTags.filter((t) => t !== tag).join(',') || null)
-        }
-        onAddSource={(s) => {
-          if (filterSources.includes(s)) return;
-          updateParam('source', [...filterSources, s].join(','));
-        }}
-        onRemoveSource={(s) =>
-          updateParam('source', filterSources.filter((x) => x !== s).join(',') || null)
-        }
+        onAddTag={handleAddTag}
+        onRemoveTag={handleRemoveTag}
+        onAddSource={handleAddSource}
+        onRemoveSource={handleRemoveSource}
         showBulkToggle={canBulk}
         selectionMode={selectionMode}
-        onToggleSelectionMode={() => {
-          if (selectionMode) bulk.clearAll();
-          setSelectionMode((v) => !v);
-        }}
+        onToggleSelectionMode={handleToggleSelectionMode}
         viewMode={viewMode}
-        onViewModeChange={(mode) => {
-          localStorage.setItem('alfira-song-view', mode);
-          setViewMode(mode);
-        }}
+        onViewModeChange={handleViewModeChange}
       />
 
       {/* Content */}
@@ -473,8 +556,8 @@ export default function SongsPage() {
       {deleteId && (
         <DeleteConfirmDialog
           song={items.find((s) => s.id === deleteId)}
-          onConfirm={() => handleDelete(deleteId)}
-          onCancel={() => setDeleteId(null)}
+          onConfirm={handleConfirmDelete}
+          onCancel={handleCancelDelete}
         />
       )}
 
@@ -492,7 +575,7 @@ export default function SongsPage() {
           }
           confirmLabel='Delete'
           onConfirm={executeBulkDelete}
-          onCancel={() => setBulkDeleteConfirm(false)}
+          onCancel={handleCancelBulkDelete}
         />
       )}
 
@@ -510,8 +593,8 @@ export default function SongsPage() {
           canDelete={canDelete}
           canTag={canEdit}
           onDelete={handleBulkDelete}
-          onTag={() => setBulkEditingOpen(true)}
-          onSelectAll={() => bulk.selectAll(items.map((s) => s.id))}
+          onTag={handleBulkTag}
+          onSelectAll={handleSelectAll}
           onDeselectAll={bulk.clearAll}
           isDeleting={bulkDeleting}
         />
@@ -522,7 +605,7 @@ export default function SongsPage() {
         <BulkEditModal
           count={bulk.count}
           onApply={handleBulkEdit}
-          onClose={() => setBulkEditingOpen(false)}
+          onClose={handleCloseBulkEdit}
           isApplying={bulkEditingApplying}
         />
       )}
@@ -539,13 +622,15 @@ function DeleteConfirmDialog({
   onConfirm: () => void;
   onCancel: () => void;
 }) {
-  if (!song) return null;
+  if (!song) {
+    return null;
+  }
   return (
     <ConfirmModal
       title='Delete Song'
       message={
         <>
-          Remove <span className='text-fg font-semibold'>"{song.nickname || song.title}"</span> from
+          Remove <span className='text-fg font-semibold'>"{song.nickname ?? song.title}"</span> from
           the library?{' '}
           <span className='font-mono text-xs text-danger/70'>
             this will remove it from all playlists too.

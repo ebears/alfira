@@ -1,28 +1,24 @@
-import type { Playlist, PlaylistDetail, Song, TagItem } from '@alfira/server/shared';
-import type { FetchSongsOptions } from '@alfira/server/shared/api';
+import { type Playlist, type PlaylistDetail, type Song, type TagItem } from '@alfira/server/shared';
+import { type BulkEditData, type FetchSongsOptions } from '@alfira/server/shared/api';
 import { fetchTags, updatePlaylistTag } from '@alfira/server/shared/api';
-import { AnimatePresence } from 'motion/react';
-import * as m from 'motion/react-m';
-import { pageVariants, viewTransition } from '../lib/motion';
-import { usePaginatedData } from '../hooks/usePaginatedData';
-
-type PlaylistDetailMeta = Omit<PlaylistDetail, 'songs'>;
-
 import {
   BombIcon,
   CaretLeftIcon,
   GhostIcon,
   LockIcon,
   LockOpenIcon,
-  PencilSimple,
+  PencilSimpleIcon,
   PlayCircleIcon,
   PlayIcon,
   PlusCircleIcon,
   ShuffleIcon,
   TagIcon,
 } from '@phosphor-icons/react';
+import { AnimatePresence } from 'motion/react';
+import * as m from 'motion/react-m';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
+
 import {
   bulkEditSongs,
   bulkRemoveSongsFromPlaylist,
@@ -37,14 +33,14 @@ import AddSongsModal from '../components/AddSongsModal';
 import BulkActionBar from '../components/BulkActionBar';
 import BulkEditModal from '../components/BulkEditModal';
 import ConfirmModal from '../components/ConfirmModal';
-import type { MenuItem } from '../components/ContextMenu';
+import { type MenuItem } from '../components/ContextMenu';
 import { ContextMenu, ContextMenuTrigger } from '../components/ContextMenu';
 import EmptyState from '../components/EmptyState';
 import ListToolbar from '../components/ListToolbar';
-
 import NotificationToast from '../components/NotificationToast';
-
 import { Button } from '../components/ui/Button';
+import { cooldownButtonProps } from '../components/ui/cooldownButtonProps';
+import { Skeleton } from '../components/ui/Skeleton';
 import { VirtualSongGrid } from '../components/VirtualSongGrid';
 import { VirtualSongList } from '../components/VirtualSongList';
 import { useAdminView } from '../context/AdminViewContext';
@@ -54,11 +50,14 @@ import { usePlayerState } from '../context/PlayerContext';
 import { useAddToQueue } from '../hooks/useAddToQueue';
 import { useBulkSelection } from '../hooks/useBulkSelection';
 import { useCooldownGuard } from '../hooks/useCooldownGuard';
-import { cooldownButtonProps } from '../components/ui/cooldownButtonProps';
 import { useNotification } from '../hooks/useNotification';
+import { usePaginatedData } from '../hooks/usePaginatedData';
 import { onSocketEvent } from '../hooks/useSocket';
+import { pageVariants, viewTransition } from '../lib/motion';
 import { apiErrorMessage, notifyUnlessRateLimit } from '../utils/api';
 import { getTagColorClasses } from '../utils/tagColors';
+
+type PlaylistDetailMeta = Omit<PlaylistDetail, 'songs'>;
 
 const ITEMS_PER_PAGE = 48;
 
@@ -113,13 +112,15 @@ export default function PlaylistDetailPage() {
   // Fetch tags for tag change submenu
   useEffect(() => {
     if (isAdminView || user?.discordId) {
-      fetchTags()
-        .then(setTags)
-        .catch(() => {
+      void (async () => {
+        try {
+          const tags = await fetchTags();
+          setTags(tags);
+        } catch {
           // Tags are non-critical — fail silently
-        });
+        }
+      })();
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isAdminView, user?.discordId]);
 
   const { state: queueState } = usePlayerState();
@@ -140,13 +141,23 @@ export default function PlaylistDetailPage() {
   // Build stable fetch options for the hook
   const songsOpts = useMemo<FetchSongsOptions>(() => {
     const opts: FetchSongsOptions = {};
-    if (search) opts.search = search;
-    if (sort !== 'position') opts.sort = sort;
-    if (order !== 'desc') opts.order = order;
+    if (search) {
+      opts.search = search;
+    }
+    if (sort !== 'position') {
+      opts.sort = sort;
+    }
+    if (order !== 'desc') {
+      opts.order = order;
+    }
     const t = filterTags.join(',');
     const s = filterSources.join(',');
-    if (t) opts.tags = t;
-    if (s) opts.source = s;
+    if (t) {
+      opts.tags = t;
+    }
+    if (s) {
+      opts.source = s;
+    }
     return opts;
   }, [search, sort, order, filterTags, filterSources]);
 
@@ -158,24 +169,36 @@ export default function PlaylistDetailPage() {
       switch (sort) {
         case 'title': {
           // Sort by display name: nickname if set, otherwise title
-          const aName = (a.song.nickname || a.song.title) ?? '';
-          const bName = (b.song.nickname || b.song.title) ?? '';
+          const aName = (a.song.nickname ?? a.song.title) || '';
+          const bName = (b.song.nickname ?? b.song.title) || '';
           return dir * aName.localeCompare(bName, undefined, { sensitivity: 'base' });
         }
         case 'artist': {
           const aArt = a.song.artist ?? '';
           const bArt = b.song.artist ?? '';
-          if (!aArt && !bArt) return 0;
-          if (!aArt) return dir;
-          if (!bArt) return -dir;
+          if (!aArt && !bArt) {
+            return 0;
+          }
+          if (!aArt) {
+            return dir;
+          }
+          if (!bArt) {
+            return -dir;
+          }
           return dir * aArt.localeCompare(bArt, undefined, { sensitivity: 'base' });
         }
         case 'album': {
           const aAlb = a.song.album ?? '';
           const bAlb = b.song.album ?? '';
-          if (!aAlb && !bAlb) return 0;
-          if (!aAlb) return dir;
-          if (!bAlb) return -dir;
+          if (!aAlb && !bAlb) {
+            return 0;
+          }
+          if (!aAlb) {
+            return dir;
+          }
+          if (!bAlb) {
+            return -dir;
+          }
           return dir * aAlb.localeCompare(bAlb, undefined, { sensitivity: 'base' });
         }
         case 'duration':
@@ -226,7 +249,7 @@ export default function PlaylistDetailPage() {
           isPrivate: pl.isPrivate,
           tagNameLower: pl.tagNameLower,
           createdAt: pl.createdAt,
-        } as PlaylistDetailMeta,
+        },
       };
     },
     limit: ITEMS_PER_PAGE,
@@ -240,12 +263,10 @@ export default function PlaylistDetailPage() {
   });
 
   // Derive PlaylistDetail for JSX — metadata from the hook, songs from items
-  const playlistDetail = playlistMeta
-    ? ({
-        ...playlistMeta,
-        songs,
-      } as PlaylistDetail)
-    : null;
+  const playlistDetail = useMemo(
+    () => (playlistMeta ? { ...playlistMeta, songs } : null),
+    [playlistMeta, songs]
+  );
 
   // Stable ref for callbacks — avoids playlistDetail changing every render
   const playlistDetailRef = useRef(playlistDetail);
@@ -256,10 +277,75 @@ export default function PlaylistDetailPage() {
   const canBulk = canEdit;
   const isSmart = !!playlistDetail?.tagNameLower;
 
+  const songItems: Song[] = useMemo(() => songs.map((ps) => ps.song), [songs]);
+
+  const pageStyle = useMemo(() => ({ paddingBottom: 0 }), []);
+  const handleGoBack = useCallback(() => navigate('/playlists'), [navigate]);
+  const handleToggleMenu = useCallback(() => setMenuOpen((v) => !v), []);
+  const handleCloseMenu = useCallback(() => setMenuOpen(false), []);
+  const handleSortChange = useCallback((field: string, newOrder: string) => {
+    setSort(field);
+    setOrder(newOrder);
+  }, []);
+  const handleAddTag = useCallback((tag: string) => {
+    const t = tag.toLowerCase();
+    setFilterTags((prev) => (prev.includes(t) ? prev : [...prev, t]));
+  }, []);
+  const handleRemoveTag = useCallback(
+    (tag: string) => setFilterTags((prev) => prev.filter((t) => t !== tag)),
+    []
+  );
+  const handleAddSource = useCallback(
+    (s: string) => setFilterSources((prev) => (prev.includes(s) ? prev : [...prev, s])),
+    []
+  );
+  const handleRemoveSource = useCallback(
+    (s: string) => setFilterSources((prev) => prev.filter((x) => x !== s)),
+    []
+  );
+  const handleToggleSelectionMode = useCallback(() => {
+    if (selectionMode) {
+      bulk.clearAll();
+    }
+    setSelectionMode((v) => !v);
+  }, [selectionMode, bulk]);
+  const handleViewModeChange = useCallback((mode: 'list' | 'grid') => {
+    localStorage.setItem('alfira-playlist-view', mode);
+    setViewMode(mode);
+  }, []);
+  const handleSongDelete = useCallback(
+    (id: string) => {
+      const ps = songs.find((p) => p.songId === id);
+      if (ps) {
+        setRemoveId(ps.songId);
+      }
+    },
+    [songs]
+  );
+  const handleCloseAddSongs = useCallback(() => setShowAddSongs(false), []);
+  const handleAddSongsAdded = useCallback(() => {
+    refetch();
+    setShowAddSongs(false);
+  }, [refetch]);
+  const handleCancelBulkRemove = useCallback(() => setBulkRemoveConfirm(false), []);
+  const handleCancelRemove = useCallback(() => setRemoveId(null), []);
+  const handleCancelDeletePlaylist = useCallback(() => setDeleteConfirm(false), []);
+  const handleCancelMakeSmart = useCallback(() => setTagSmartConfirm(null), []);
+  const handleBulkTag = useCallback(() => setBulkEditingOpen(true), []);
+  const handleSelectAll = useCallback(
+    () => bulk.selectAll(songs.map((ps) => ps.songId)),
+    [bulk, songs]
+  );
+  const handleEmptyAdd = useCallback(() => setShowAddSongs(true), []);
+
+  const handleCloseBulkEdit = useCallback(() => setBulkEditingOpen(false), []);
+
   // ── Socket: playlist updated (rename, visibility, song count changes) ──
   useEffect(() => {
     const handlePlaylistUpdated = (updated: Playlist) => {
-      if (updated.id !== idRef.current) return;
+      if (updated.id !== idRef.current) {
+        return;
+      }
       refetch();
     };
     const offUpdated = onSocketEvent('playlists:updated', handlePlaylistUpdated);
@@ -307,20 +393,31 @@ export default function PlaylistDetailPage() {
     }
   };
 
-  const handleRemoveSong = async (songId: string) => {
-    if (!playlistDetail) return;
-    const junction = songsRef.current.find((ps) => ps.songId === songId);
-    if (!junction) {
-      setRemoveId(null);
-      return;
+  const handleRemoveSong = useCallback(
+    async (songId: string) => {
+      if (!playlistDetail) {
+        return;
+      }
+      const junction = songsRef.current.find((ps) => ps.songId === songId);
+      if (!junction) {
+        setRemoveId(null);
+        return;
+      }
+      try {
+        await removeSongFromPlaylist(playlistDetail.id, songId);
+        removeItem(junction.id);
+      } finally {
+        setRemoveId(null);
+      }
+    },
+    [playlistDetail, removeItem]
+  );
+
+  const handleConfirmRemove = useCallback(() => {
+    if (removeId) {
+      void handleRemoveSong(removeId);
     }
-    try {
-      await removeSongFromPlaylist(playlistDetail.id, songId);
-      removeItem(junction.id);
-    } finally {
-      setRemoveId(null);
-    }
-  };
+  }, [removeId, handleRemoveSong]);
 
   // ── Bulk actions ─────────────────────────────────────────────────────
   const handleBulkRemove = useCallback(() => {
@@ -329,7 +426,9 @@ export default function PlaylistDetailPage() {
 
   const executeBulkRemove = useCallback(async () => {
     const pd = playlistDetailRef.current;
-    if (!pd || bulk.count === 0) return;
+    if (!pd || bulk.count === 0) {
+      return;
+    }
     setBulkRemoveConfirm(false);
     setBulkRemoving(true);
     try {
@@ -356,8 +455,10 @@ export default function PlaylistDetailPage() {
   }, [bulk, notify, removeItem]);
 
   const handleBulkEdit = useCallback(
-    async (data: import('@alfira/server/shared/api').BulkEditData) => {
-      if (bulk.count === 0) return;
+    async (data: BulkEditData) => {
+      if (bulk.count === 0) {
+        return;
+      }
       setBulkEditingApplying(true);
       try {
         const allIds = [...bulk.selectedIds];
@@ -378,14 +479,23 @@ export default function PlaylistDetailPage() {
     [bulk, notify]
   );
 
-  const handleDeletePlaylist = async () => {
-    if (!playlistDetail) return;
+  const handleDeletePlaylist = useCallback(async () => {
+    if (!playlistDetail) {
+      return;
+    }
     await deletePlaylist(playlistDetail.id);
-    navigate('/playlists');
-  };
+    void navigate('/playlists');
+  }, [playlistDetail, navigate]);
+
+  const handleConfirmDeletePlaylist = useCallback(() => {
+    setDeleteConfirm(false);
+    void handleDeletePlaylist();
+  }, [handleDeletePlaylist]);
 
   const handleToggleVisibility = async () => {
-    if (!playlistDetail) return;
+    if (!playlistDetail) {
+      return;
+    }
     try {
       const updated = await togglePlaylistVisibility(
         playlistDetail.id,
@@ -406,7 +516,9 @@ export default function PlaylistDetailPage() {
       { throwErrors = false }: { throwErrors?: boolean } = {}
     ) => {
       const pd = playlistDetailRef.current;
-      if (!pd) return;
+      if (!pd) {
+        return;
+      }
       setPlayingSongId(songId);
       try {
         await startPlayback({
@@ -429,7 +541,9 @@ export default function PlaylistDetailPage() {
 
   const handleConvertToRegular = useCallback(async () => {
     const pd = playlistDetailRef.current;
-    if (!pd) return;
+    if (!pd) {
+      return;
+    }
     try {
       await updatePlaylistTag(pd.id, null);
       refetch();
@@ -442,7 +556,9 @@ export default function PlaylistDetailPage() {
   const handleChangeTag = useCallback(
     async (tagNameLower: string) => {
       const pd = playlistDetailRef.current;
-      if (!pd) return;
+      if (!pd) {
+        return;
+      }
       try {
         await updatePlaylistTag(pd.id, tagNameLower);
         refetch();
@@ -457,7 +573,9 @@ export default function PlaylistDetailPage() {
   const handleMakeSmart = useCallback(
     async (tagNameLower: string) => {
       const pd = playlistDetailRef.current;
-      if (!pd) return;
+      if (!pd) {
+        return;
+      }
       setTagSmartConfirm(null);
       try {
         await updatePlaylistTag(pd.id, tagNameLower);
@@ -470,9 +588,17 @@ export default function PlaylistDetailPage() {
     [refetch, notify]
   );
 
+  const handleConfirmMakeSmart = useCallback(() => {
+    if (tagSmartConfirm) {
+      void handleMakeSmart(tagSmartConfirm);
+    }
+  }, [tagSmartConfirm, handleMakeSmart]);
+
   const handleAddPlaylistToQueue = useCallback(async () => {
     const pd = playlistDetailRef.current;
-    if (!pd) return;
+    if (!pd) {
+      return;
+    }
     try {
       await startPlayback({
         playlistId: pd.id,
@@ -503,7 +629,7 @@ export default function PlaylistDetailPage() {
           {
             id: 'rename',
             label: 'Rename',
-            icon: <PencilSimple size={14} weight='duotone' />,
+            icon: <PencilSimpleIcon size={14} weight='duotone' />,
             editSubmenu: {
               title: 'Rename',
               value: renameValue,
@@ -574,19 +700,20 @@ export default function PlaylistDetailPage() {
       : []),
   ];
 
-  if (isLoading || !hasLoaded) return <DetailSkeleton />;
-  if (!playlistDetail) return null;
-
-  // Extract plain songs from PlaylistDetailSong[]
-  const songItems: Song[] = songs.map((ps) => ps.song);
+  if (isLoading || !hasLoaded) {
+    return <DetailSkeleton />;
+  }
+  if (!playlistDetail) {
+    return null;
+  }
 
   return (
-    <div className='p-4 md:p-8 flex flex-col min-h-0 h-full' style={{ paddingBottom: 0 }}>
+    <div className='p-4 md:p-8 flex flex-col min-h-0 h-full' style={pageStyle}>
       {/* Back */}
       <Button
         variant='inherit'
         surface='surface'
-        onClick={() => navigate('/playlists')}
+        onClick={handleGoBack}
         className='flex items-center gap-1.5 font-mono text-xs mb-4 md:mb-6 min-h-11 md:min-h-0'
       >
         <CaretLeftIcon size={16} weight='duotone' className='md:w-3.5 md:h-3.5' />
@@ -631,7 +758,7 @@ export default function PlaylistDetailPage() {
                 {' • '}
                 {isOwner
                   ? 'Created by you'
-                  : `Created by ${playlistDetail.createdByDisplayName || playlistDetail.createdBy}`}
+                  : `Created by ${playlistDetail.createdByDisplayName ?? playlistDetail.createdBy}`}
               </>
             )}
           </p>
@@ -666,7 +793,7 @@ export default function PlaylistDetailPage() {
           </Button>
           <ContextMenuTrigger
             ref={menuTriggerRef}
-            onToggle={() => setMenuOpen((v) => !v)}
+            onToggle={handleToggleMenu}
             isOpen={menuOpen}
             surface='surface'
             size='default'
@@ -676,7 +803,7 @@ export default function PlaylistDetailPage() {
             <ContextMenu
               items={menuItems}
               isOpen={menuOpen}
-              onClose={() => setMenuOpen(false)}
+              onClose={handleCloseMenu}
               triggerRef={menuTriggerRef}
             />
           )}
@@ -690,32 +817,20 @@ export default function PlaylistDetailPage() {
         sortOptions={[...SORT_OPTIONS]}
         sort={sort}
         order={order as 'asc' | 'desc'}
-        onSortChange={(field, newOrder) => {
-          setSort(field);
-          setOrder(newOrder);
-        }}
+        onSortChange={handleSortChange}
         defaultSort='position'
         textSortFields={['title', 'artist', 'album']}
         filterTags={filterTags}
         filterSources={filterSources}
-        onAddTag={(tag) => {
-          const normalized = tag.toLowerCase();
-          setFilterTags((prev) => (prev.includes(normalized) ? prev : [...prev, normalized]));
-        }}
-        onRemoveTag={(tag) => setFilterTags((prev) => prev.filter((t) => t !== tag))}
-        onAddSource={(s) => setFilterSources((prev) => (prev.includes(s) ? prev : [...prev, s]))}
-        onRemoveSource={(s) => setFilterSources((prev) => prev.filter((x) => x !== s))}
+        onAddTag={handleAddTag}
+        onRemoveTag={handleRemoveTag}
+        onAddSource={handleAddSource}
+        onRemoveSource={handleRemoveSource}
         showBulkToggle={canBulk}
         selectionMode={selectionMode}
-        onToggleSelectionMode={() => {
-          if (selectionMode) bulk.clearAll();
-          setSelectionMode((v) => !v);
-        }}
+        onToggleSelectionMode={handleToggleSelectionMode}
         viewMode={viewMode}
-        onViewModeChange={(mode) => {
-          localStorage.setItem('alfira-playlist-view', mode);
-          setViewMode(mode);
-        }}
+        onViewModeChange={handleViewModeChange}
       />
 
       {/* Song list */}
@@ -729,7 +844,7 @@ export default function PlaylistDetailPage() {
           <EmptyState
             title='Empty Playlist'
             isAdmin={canEdit}
-            onAdd={() => setShowAddSongs(true)}
+            onAdd={handleEmptyAdd}
             addLabel='add some songs'
           />
         )
@@ -757,14 +872,7 @@ export default function PlaylistDetailPage() {
                 playingId={playingSongId}
                 onRetry={retry}
                 onFetchMore={fetchNextPage}
-                onDelete={
-                  selectionMode
-                    ? undefined
-                    : (id) => {
-                        const ps = songs.find((p) => p.songId === id);
-                        if (ps) setRemoveId(ps.songId);
-                      }
-                }
+                onDelete={selectionMode ? undefined : handleSongDelete}
                 onPlay={handlePlayFromSong}
                 onAddToQueue={handleAddToQueue}
                 selectionMode={selectionMode}
@@ -796,14 +904,7 @@ export default function PlaylistDetailPage() {
                 playingId={playingSongId}
                 onRetry={retry}
                 onFetchMore={fetchNextPage}
-                onDelete={
-                  selectionMode
-                    ? undefined
-                    : (id) => {
-                        const ps = songs.find((p) => p.songId === id);
-                        if (ps) setRemoveId(ps.songId);
-                      }
-                }
+                onDelete={selectionMode ? undefined : handleSongDelete}
                 onPlay={handlePlayFromSong}
                 onAddToQueue={handleAddToQueue}
                 selectionMode={selectionMode}
@@ -821,11 +922,8 @@ export default function PlaylistDetailPage() {
       {showAddSongs && (
         <AddSongsModal
           playlist={playlistDetail}
-          onClose={() => setShowAddSongs(false)}
-          onAdded={() => {
-            refetch();
-            setShowAddSongs(false);
-          }}
+          onClose={handleCloseAddSongs}
+          onAdded={handleAddSongsAdded}
         />
       )}
       {/* Notification Toast */}
@@ -846,7 +944,7 @@ export default function PlaylistDetailPage() {
           }
           confirmLabel='Remove'
           onConfirm={executeBulkRemove}
-          onCancel={() => setBulkRemoveConfirm(false)}
+          onCancel={handleCancelBulkRemove}
         />
       )}
       {removeId && (
@@ -856,14 +954,14 @@ export default function PlaylistDetailPage() {
             <>
               Remove{' '}
               <span className='text-fg font-semibold'>
-                "{songs.find((ps) => ps.songId === removeId)?.song?.title}"
+                "{songs.find((ps) => ps.songId === removeId)?.song.title}"
               </span>{' '}
               from this playlist? The song won't be deleted from the library.
             </>
           }
           confirmLabel='Remove'
-          onConfirm={() => handleRemoveSong(removeId)}
-          onCancel={() => setRemoveId(null)}
+          onConfirm={handleConfirmRemove}
+          onCancel={handleCancelRemove}
         />
       )}
       {deleteConfirm && (
@@ -871,11 +969,8 @@ export default function PlaylistDetailPage() {
           title='Delete Playlist'
           message='This playlist will be permanently deleted. This cannot be undone.'
           confirmLabel='Delete'
-          onConfirm={() => {
-            setDeleteConfirm(false);
-            handleDeletePlaylist();
-          }}
-          onCancel={() => setDeleteConfirm(false)}
+          onConfirm={handleConfirmDeletePlaylist}
+          onCancel={handleCancelDeletePlaylist}
         />
       )}
       {tagSmartConfirm && (
@@ -892,8 +987,8 @@ export default function PlaylistDetailPage() {
             </>
           }
           confirmLabel='Convert'
-          onConfirm={() => handleMakeSmart(tagSmartConfirm)}
-          onCancel={() => setTagSmartConfirm(null)}
+          onConfirm={handleConfirmMakeSmart}
+          onCancel={handleCancelMakeSmart}
         />
       )}
 
@@ -907,8 +1002,8 @@ export default function PlaylistDetailPage() {
           canTag={canEdit}
           deleteLabel='Remove selected'
           onDelete={handleBulkRemove}
-          onTag={() => setBulkEditingOpen(true)}
-          onSelectAll={() => bulk.selectAll(songItems.map((s) => s.id))}
+          onTag={handleBulkTag}
+          onSelectAll={handleSelectAll}
           onDeselectAll={bulk.clearAll}
           isDeleting={bulkRemoving}
         />
@@ -919,7 +1014,7 @@ export default function PlaylistDetailPage() {
         <BulkEditModal
           count={bulk.count}
           onApply={handleBulkEdit}
-          onClose={() => setBulkEditingOpen(false)}
+          onClose={handleCloseBulkEdit}
           isApplying={bulkEditingApplying}
         />
       )}
@@ -933,15 +1028,15 @@ export default function PlaylistDetailPage() {
 function DetailSkeleton() {
   return (
     <div className='p-8'>
-      <div className='skeleton h-3 w-20 mb-6 rounded' />
-      <div className='skeleton h-12 w-64 mb-2 rounded' />
-      <div className='skeleton h-3 w-24 mb-8 rounded' />
+      <Skeleton className='h-3 w-20 mb-6 rounded' />
+      <Skeleton className='h-12 w-64 mb-2 rounded' />
+      <Skeleton className='h-3 w-24 mb-8 rounded' />
       {Array.from({ length: 5 }).map((_, i) => (
         <div key={`skeleton-${i}`} className='flex items-center gap-4 py-3'>
-          <div className='skeleton w-6 h-3 rounded' />
-          <div className='skeleton w-10 h-7 rounded' />
-          <div className='skeleton h-3 flex-1 rounded' />
-          <div className='skeleton h-3 w-12 rounded' />
+          <Skeleton className='w-6 h-3 rounded' />
+          <Skeleton className='w-10 h-7 rounded' />
+          <Skeleton className='h-3 flex-1 rounded' />
+          <Skeleton className='h-3 w-12 rounded' />
         </div>
       ))}
     </div>

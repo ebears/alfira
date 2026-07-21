@@ -1,14 +1,14 @@
-import type { Playlist, Song } from '@alfira/server/shared';
+import { type Playlist, type Song } from '@alfira/server/shared';
 import {
   ArrowSquareOutIcon,
   BombIcon,
   CassetteTapeIcon,
-  UserIcon,
   VinylRecordIcon,
 } from '@phosphor-icons/react';
 import { useCallback, useMemo, useOptimistic, useRef, useState } from 'react';
+
 import { addSongToPlaylist } from '../api/api';
-import type { MenuItem } from '../components/ContextMenu';
+import { type MenuItem } from '../components/ContextMenu';
 import { useSongMenu } from '../context/SongMenuContext';
 import { useNotification } from './useNotification';
 
@@ -79,7 +79,7 @@ export function useSongActions({
         ? [
             {
               id: 'remove',
-              label: removeLabel || 'Remove',
+              label: removeLabel ?? 'Remove',
               icon: <BombIcon size={14} weight='duotone' />,
               danger: true,
               onClick: onRemove,
@@ -122,16 +122,6 @@ export function useSongActions({
                     danger: true,
                     onClick: onDelete,
                   } as MenuItem,
-                  {
-                    id: 'user-info',
-                    label: '',
-                    icon: <UserIcon size={14} weight='duotone' />,
-                    info: {
-                      label: song.addedByDisplayName || song.addedBy || '',
-                      icon: <UserIcon size={14} weight='duotone' />,
-                    },
-                    separatorBefore: true,
-                  },
                 ]
               : []),
           ]),
@@ -139,8 +129,6 @@ export function useSongActions({
     [
       onAddToQueue,
       song.sourceUrl,
-      song.addedByDisplayName,
-      song.addedBy,
       onRemove,
       removeLabel,
       onDelete,

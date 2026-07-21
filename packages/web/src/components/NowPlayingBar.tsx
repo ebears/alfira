@@ -1,4 +1,4 @@
-import type { QueuedSong } from '@alfira/server/shared';
+import { type QueuedSong } from '@alfira/server/shared';
 import { formatDuration } from '@alfira/server/shared';
 import {
   CircleNotchIcon,
@@ -12,14 +12,15 @@ import {
   ShuffleIcon,
   SkipForwardIcon,
 } from '@phosphor-icons/react';
-import { memo, useCallback, useEffect, useMemo, useRef } from 'react';
 import { AnimatePresence } from 'motion/react';
 import * as m from 'motion/react-m';
-import { metadataTransition, metadataVariants } from '../lib/motion';
+import { memo, useCallback, useEffect, useMemo, useRef } from 'react';
+
 import { usePlayer } from '../context/PlayerContext';
 import { useQueuePanel } from '../context/QueuePanelContext';
 import { useCooldownGuard, type CooldownState } from '../hooks/useCooldownGuard';
 import { useMutationHandler } from '../hooks/useMutationHandler';
+import { metadataTransition, metadataVariants, slideUp, slideUpTransition } from '../lib/motion';
 import { getSourceKey } from '../utils/source';
 import { BarButton } from './BarButton';
 import QueuePanel from './QueuePanel';
@@ -29,6 +30,20 @@ import { ArtworkImage } from './ui/ArtworkImage';
 import { Button } from './ui/Button';
 import { cooldownButtonProps } from './ui/cooldownButtonProps';
 import { VolumeBoostBadge } from './ui/VolumeBoostBadge';
+
+/* ---------------------------------------------------------------------------
+ * Module-level constants — stable references for memoized components
+ * --------------------------------------------------------------------------- */
+
+const NOOP = () => undefined;
+
+const MOBILE_PROGRESS_BOX_STYLE = { boxShadow: 'var(--clay-shadow-flat)' } as const;
+const ZERO_WIDTH_STYLE = { width: '0%' } as const;
+
+const ALBUM_ART_INITIAL = { opacity: 0, scale: 0.92 };
+const ALBUM_ART_ANIMATE = { opacity: 1, scale: 1 };
+const ALBUM_ART_EXIT = { opacity: 0, scale: 0.92 };
+const ALBUM_ART_TRANSITION = { duration: 0.2, ease: 'easeOut' } as const;
 
 /* ---------------------------------------------------------------------------
  * Memoized sub-components — these bail out of re-rendering when their props
@@ -224,17 +239,42 @@ const Scrubber = memo(function Scrubber({
   // Last known slider value during drag (used to commit seek on pointer up)
   const lastDragValueRef = useRef<number>(0);
 
+  // Stable ref callbacks — prevents memo bail-out breakage
+  const fillRefCallback = useCallback(
+    (ref: HTMLDivElement | null) => {
+      fillRef.current = ref;
+      registerProgress(ref);
+    },
+    [registerProgress]
+  );
+
+  const thumbRefCallback = useCallback(
+    (ref: HTMLDivElement | null) => {
+      thumbRef.current = ref;
+      if (ref) {
+        registerThumb(ref);
+      }
+    },
+    [registerThumb]
+  );
+
   // Position both fill bar and thumb directly in the DOM during drag.
   // Bypasses React + rAF entirely — immediate, jank-free visual feedback.
   const seekElements = useCallback((trackPct: number) => {
     const pctStr = `${trackPct * 100}%`;
-    if (fillRef.current) fillRef.current.style.width = pctStr;
-    if (thumbRef.current) thumbRef.current.style.left = pctStr;
+    if (fillRef.current) {
+      fillRef.current.style.width = pctStr;
+    }
+    if (thumbRef.current) {
+      thumbRef.current.style.left = pctStr;
+    }
   }, []);
 
   const handlePointerMove = useCallback(
     (e: PointerEvent) => {
-      if (!isDraggingRef.current || !trackRef.current) return;
+      if (!isDraggingRef.current || !trackRef.current) {
+        return;
+      }
       const rect = trackRef.current.getBoundingClientRect();
       const trackPct = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
       const seekSec = Math.round(trackPct * duration);
@@ -246,7 +286,9 @@ const Scrubber = memo(function Scrubber({
   );
 
   const handlePointerUp = useCallback(() => {
-    if (!isDraggingRef.current) return;
+    if (!isDraggingRef.current) {
+      return;
+    }
     isDraggingRef.current = false;
     document.removeEventListener('pointermove', handlePointerMove);
     document.removeEventListener('pointerup', handlePointerUp);
@@ -257,7 +299,9 @@ const Scrubber = memo(function Scrubber({
 
   const handlePointerDown = useCallback(
     (e: React.PointerEvent) => {
-      if (!isSeekable) return;
+      if (!isSeekable) {
+        return;
+      }
       e.currentTarget.setPointerCapture(e.pointerId);
       isDraggingRef.current = true;
       if (trackRef.current) {
@@ -277,13 +321,7 @@ const Scrubber = memo(function Scrubber({
   if (!isSeekable) {
     return (
       <div className='w-full h-2 clay-inset rounded-full relative overflow-hidden cursor-not-allowed opacity-50'>
-        <div
-          ref={(ref) => {
-            fillRef.current = ref;
-            registerProgress(ref);
-          }}
-          className='absolute inset-y-0 left-0 bg-accent rounded-full'
-        />
+        <div ref={fillRefCallback} className='absolute inset-y-0 left-0 bg-accent rounded-full' />
       </div>
     );
   }
@@ -294,20 +332,11 @@ const Scrubber = memo(function Scrubber({
       className='w-full h-2 clay-inset rounded-full relative cursor-pointer group'
       onPointerDown={handlePointerDown}
     >
-      <div
-        ref={(ref) => {
-          fillRef.current = ref;
-          registerProgress(ref);
-        }}
-        className='absolute inset-y-0 left-0 bg-accent rounded-full'
-      />
+      <div ref={fillRefCallback} className='absolute inset-y-0 left-0 bg-accent rounded-full' />
       {/* Fill & thumb — positioned entirely by useProgressBar (rAF + effect).
            No React style props. */}
       <div
-        ref={(ref) => {
-          thumbRef.current = ref;
-          if (ref) registerThumb(ref);
-        }}
+        ref={thumbRefCallback}
         className='scrubber-thumb absolute top-1/2 -translate-y-1/2 w-3.5 h-3.5 rounded-full bg-surface border-2 border-accent opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity'
       />
       {/* Invisible hit area for hovering */}
@@ -339,12 +368,12 @@ const ProgressBar = memo(function ProgressBar({
     return (
       <div
         className='md:hidden h-1 w-full clay-inset relative overflow-hidden'
-        style={{ boxShadow: 'var(--clay-shadow-flat)' }}
+        style={MOBILE_PROGRESS_BOX_STYLE}
       >
         <div
           ref={currentSong != null ? registerProgress : null}
           className='absolute inset-y-0 left-0 bg-accent'
-          style={{ width: '0%' }}
+          style={ZERO_WIDTH_STYLE}
         />
       </div>
     );
@@ -357,7 +386,7 @@ const ProgressBar = memo(function ProgressBar({
         duration={currentSong?.duration ?? 0}
         registerProgress={registerProgress}
         registerThumb={registerThumb}
-        onSeek={onSeek ?? (() => undefined)}
+        onSeek={onSeek ?? NOOP}
         setOverrideElapsed={setOverrideElapsed}
       />
     </div>
@@ -376,10 +405,10 @@ const AlbumArt = memo(function AlbumArt({ currentSong }: AlbumArtProps) {
       <m.div
         key={songKey}
         className='w-12 h-12 md:w-14 md:h-14 rounded border border-border shrink-0 overflow-hidden relative bg-elevated'
-        initial={{ opacity: 0, scale: 0.92 }}
-        animate={{ opacity: 1, scale: 1 }}
-        exit={{ opacity: 0, scale: 0.92 }}
-        transition={{ duration: 0.2, ease: 'easeOut' }}
+        initial={ALBUM_ART_INITIAL}
+        animate={ALBUM_ART_ANIMATE}
+        exit={ALBUM_ART_EXIT}
+        transition={ALBUM_ART_TRANSITION}
       >
         {currentSong ? (
           <ArtworkImage
@@ -415,7 +444,7 @@ const MetadataSection = memo(function MetadataSection({
     );
   }
 
-  const displayName = currentSong.nickname || currentSong.title;
+  const displayName = currentSong.nickname ?? currentSong.title;
   const sourceKey = getSourceKey(currentSong.sourceUrl);
   const songKey = currentSong.id;
 
@@ -499,14 +528,23 @@ export function NowPlayingBar() {
   );
   const { busy: shuffleBusy, handler: handleShuffleToggle } = useMutationHandler(
     useCallback(async () => {
-      if (isShuffled) await unshuffle();
-      else await shuffle();
+      if (isShuffled) {
+        await unshuffle();
+      } else {
+        await shuffle();
+      }
     }, [isShuffled, shuffle, unshuffle]),
     'Could not toggle shuffle.'
   );
 
   const handleStop = useCallback(() => {
-    leave().catch((e) => console.error(e));
+    void (async () => {
+      try {
+        await leave();
+      } catch (e) {
+        console.error(e);
+      }
+    })();
   }, [leave]);
 
   const handleSeek = useCallback(
@@ -521,6 +559,37 @@ export function NowPlayingBar() {
   useEffect(() => {
     setOverrideElapsed(undefined);
   }, [setOverrideElapsed]);
+
+  const handleQueueToggle = useCallback(() => setQueueOpen(!queueOpen), [queueOpen, setQueueOpen]);
+
+  const handleQueueClose = useCallback(() => setQueueOpen(false), [setQueueOpen]);
+
+  const mobileQuickControls = useMemo(
+    () => ({
+      currentSong,
+      loopMode,
+      isShuffled,
+      loopBusy,
+      shuffleBusy,
+      skipBusy,
+      cooldown,
+      onSkip: handleSkip,
+      onCycleLoop: handleCycleLoop,
+      onShuffleToggle: handleShuffleToggle,
+    }),
+    [
+      currentSong,
+      loopMode,
+      isShuffled,
+      loopBusy,
+      shuffleBusy,
+      skipBusy,
+      cooldown,
+      handleSkip,
+      handleCycleLoop,
+      handleShuffleToggle,
+    ]
+  );
 
   return (
     <div className='shrink-0 w-full bg-base'>
@@ -583,7 +652,7 @@ export function NowPlayingBar() {
             variant='inherit'
             surface='base'
             size='icon'
-            onClick={() => setQueueOpen(!queueOpen)}
+            onClick={handleQueueToggle}
             title='Queue'
             className={`shrink-0 md:w-12 md:h-12 ${
               queueOpen
@@ -609,7 +678,7 @@ export function NowPlayingBar() {
                 transition={metadataTransition}
               >
                 <p className='font-body text-sm font-semibold text-fg truncate text-right'>
-                  {currentSong.nickname || currentSong.title}
+                  {currentSong.nickname ?? currentSong.title}
                 </p>
                 {currentSong.artist && (
                   <p className='font-body text-xs text-muted truncate text-right'>
@@ -637,7 +706,7 @@ export function NowPlayingBar() {
             variant='inherit'
             surface='base'
             size='icon'
-            onClick={() => setQueueOpen(!queueOpen)}
+            onClick={handleQueueToggle}
             title='Queue'
             className={`shrink-0 md:w-12 md:h-12 ${
               queueOpen
@@ -655,25 +724,19 @@ export function NowPlayingBar() {
         <div className='md:hidden fixed inset-0 z-50'>
           <div
             className='absolute inset-0 bg-black/60 backdrop-blur-sm cursor-pointer'
-            onClick={() => setQueueOpen(false)}
+            onClick={handleQueueClose}
             role='presentation'
           />
-          <div className='absolute bottom-0 left-0 right-0 max-h-[85vh] bg-surface rounded-t-2xl flex flex-col clay-floating animate-slide-up'>
-            <QueuePanel
-              mobileQuickControls={{
-                currentSong,
-                loopMode,
-                isShuffled,
-                loopBusy,
-                shuffleBusy,
-                skipBusy,
-                cooldown,
-                onSkip: handleSkip,
-                onCycleLoop: handleCycleLoop,
-                onShuffleToggle: handleShuffleToggle,
-              }}
-            />
-          </div>
+          <m.div
+            className='absolute bottom-0 left-0 right-0 max-h-[85vh] bg-surface rounded-t-2xl flex flex-col clay-floating'
+            initial='initial'
+            animate='animate'
+            exit='exit'
+            variants={slideUp}
+            transition={slideUpTransition}
+          >
+            <QueuePanel mobileQuickControls={mobileQuickControls} />
+          </m.div>
         </div>
       )}
     </div>

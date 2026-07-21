@@ -1,4 +1,5 @@
 import { configureApiClient } from '@alfira/server/shared/api';
+
 import { client } from './client';
 
 // Configure the shared API service with the web client

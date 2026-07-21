@@ -1,8 +1,9 @@
-import type { Playlist, TagItem } from '@alfira/server/shared';
+import { type Playlist, type TagItem } from '@alfira/server/shared';
 import { fetchTags } from '@alfira/server/shared/api';
 import { PlaylistIcon } from '@phosphor-icons/react';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+
 import { getPlaylistsPage } from '../api/api';
 import { Backdrop } from '../components/Backdrop';
 import NotificationToast from '../components/NotificationToast';
@@ -13,8 +14,8 @@ import { VirtualPlaylistList } from '../components/VirtualPlaylistList';
 import { useAdminView } from '../context/AdminViewContext';
 import { CreatePlaylistSubmitButton, useCreatePlaylist } from '../hooks/useCreatePlaylist';
 import { useNotification } from '../hooks/useNotification';
-import { onSocketEvent } from '../hooks/useSocket';
 import { usePaginatedData } from '../hooks/usePaginatedData';
+import { onSocketEvent } from '../hooks/useSocket';
 
 const ITEMS_PER_PAGE = 48;
 
@@ -73,13 +74,20 @@ export default function PlaylistsPage() {
     (e: React.MouseEvent) => {
       const row = e.currentTarget.closest('[data-playlist-id]');
       const playlistId = row?.getAttribute('data-playlist-id');
-      if (playlistId) navigate(`/playlists/${playlistId}`);
+      if (playlistId) {
+        void navigate(`/playlists/${playlistId}`);
+      }
     },
     [navigate]
   );
 
+  const pageStyle = useMemo(() => ({ paddingBottom: 0 }), []);
+
+  const handleShowCreate = useCallback(() => setShowCreate(true), []);
+  const handleHideCreate = useCallback(() => setShowCreate(false), []);
+
   return (
-    <div className='p-4 md:p-8 flex flex-col min-h-0 h-full' style={{ paddingBottom: 0 }}>
+    <div className='p-4 md:p-8 flex flex-col min-h-0 h-full' style={pageStyle}>
       <PageHeader
         icon={PlaylistIcon}
         title='Playlists'
@@ -87,7 +95,7 @@ export default function PlaylistsPage() {
       >
         <Button
           variant='primary'
-          onClick={() => setShowCreate(true)}
+          onClick={handleShowCreate}
           className={showCreate ? 'pressed' : ''}
         >
           + New Playlist
@@ -109,7 +117,7 @@ export default function PlaylistsPage() {
         emptyMessage='Create one to get started'
       />
 
-      {showCreate && <CreatePlaylistModal onClose={() => setShowCreate(false)} />}
+      {showCreate && <CreatePlaylistModal onClose={handleHideCreate} />}
       {notification && <NotificationToast notification={notification} />}
     </div>
   );
@@ -125,11 +133,14 @@ function CreatePlaylistModal({ onClose }: { onClose: () => void }) {
   const [selectedTag, setSelectedTag] = useState('');
 
   useEffect(() => {
-    fetchTags()
-      .then(setTags)
-      .catch(() => {
+    void (async () => {
+      try {
+        const tags = await fetchTags();
+        setTags(tags);
+      } catch {
         // Tags are non-critical — fail silently
-      });
+      }
+    })();
   }, []);
 
   // Close modal on success (error === null means success)
@@ -138,6 +149,23 @@ function CreatePlaylistModal({ onClose }: { onClose: () => void }) {
       onClose();
     }
   }, [state, onClose]);
+
+  const handleNameChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    setName(e.target.value);
+  }, []);
+
+  const handleNameKeyDown = useCallback(
+    (e: React.KeyboardEvent<HTMLInputElement>) => {
+      if (e.key === 'Escape') {
+        onClose();
+      }
+    },
+    [onClose]
+  );
+
+  const handleTagChange = useCallback((e: React.ChangeEvent<HTMLSelectElement>) => {
+    setSelectedTag(e.target.value);
+  }, []);
 
   return (
     <Backdrop onClose={onClose}>
@@ -152,12 +180,8 @@ function CreatePlaylistModal({ onClose }: { onClose: () => void }) {
             className='input mb-3'
             placeholder='My Playlist'
             value={name}
-            onChange={(e) => {
-              setName(e.target.value);
-            }}
-            onKeyDown={(e) => {
-              if (e.key === 'Escape') onClose();
-            }}
+            onChange={handleNameChange}
+            onKeyDown={handleNameKeyDown}
             required
           />
           <div className='mb-3'>
@@ -166,7 +190,7 @@ function CreatePlaylistModal({ onClose }: { onClose: () => void }) {
               name='tagNameLower'
               className='input w-full'
               value={selectedTag}
-              onChange={(e) => setSelectedTag(e.target.value)}
+              onChange={handleTagChange}
             >
               <option value=''>None (manual playlist)</option>
               {tags.map((tag) => (

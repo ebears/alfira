@@ -1,6 +1,7 @@
 import { eq, inArray, sql } from 'drizzle-orm';
-import type { RouteContext } from '../index';
+
 import { getGuildId } from '../lib/config';
+import { type RouteContext } from '../lib/context';
 import { resolveDisplayNames } from '../lib/displayName';
 import { json } from '../lib/json';
 import { parsePagination } from '../lib/pagination';
@@ -32,8 +33,10 @@ const { song: songTable } = tables;
 // POST /api/songs/bulk-delete — delete multiple songs at once.
 // ---------------------------------------------------------------------------
 async function handleBulkDelete(ctx: RouteContext, request: Request): Promise<Response> {
-  const guards = await checkGuards(ctx, { admin: true, permission: 'songs.delete' });
-  if (guards instanceof Response) return guards;
+  const guards = checkGuards(ctx, { admin: true, permission: 'songs.delete' });
+  if (guards instanceof Response) {
+    return guards;
+  }
 
   let body: { ids?: unknown };
   try {
@@ -63,8 +66,10 @@ async function handleBulkDelete(ctx: RouteContext, request: Request): Promise<Re
 // POST /api/songs/bulk-tag — add or set tags on multiple songs at once.
 // ---------------------------------------------------------------------------
 async function handleBulkTag(ctx: RouteContext, request: Request): Promise<Response> {
-  const guards = await checkGuards(ctx, { admin: true, permission: 'songs.edit' });
-  if (guards instanceof Response) return guards;
+  const guards = checkGuards(ctx, { admin: true, permission: 'songs.edit' });
+  if (guards instanceof Response) {
+    return guards;
+  }
 
   let body: { ids?: unknown; tags?: unknown; mode?: unknown };
   try {
@@ -78,7 +83,9 @@ async function handleBulkTag(ctx: RouteContext, request: Request): Promise<Respo
   }
 
   const tagsResult = validateTags(body.tags);
-  if (!tagsResult.ok) return tagsResult.response;
+  if (!tagsResult.ok) {
+    return tagsResult.response;
+  }
 
   const ids = (body.ids as string[]).slice(0, 5000);
   const newTags = await canonicalizeTags(tagsResult.value);
@@ -123,8 +130,10 @@ async function handleBulkTag(ctx: RouteContext, request: Request): Promise<Respo
 // Fields left undefined are skipped. Fields listed in clearFields are set to null.
 // ---------------------------------------------------------------------------
 async function handleBulkEdit(ctx: RouteContext, request: Request): Promise<Response> {
-  const guards = await checkGuards(ctx, { admin: true, permission: 'songs.edit' });
-  if (guards instanceof Response) return guards;
+  const guards = checkGuards(ctx, { admin: true, permission: 'songs.edit' });
+  if (guards instanceof Response) {
+    return guards;
+  }
 
   let body: {
     ids?: unknown;
@@ -156,7 +165,9 @@ async function handleBulkEdit(ctx: RouteContext, request: Request): Promise<Resp
   // Nickname
   if ('nickname' in body && body.nickname !== undefined) {
     const result = validateNickname(body.nickname);
-    if (!result.ok) return result.response;
+    if (!result.ok) {
+      return result.response;
+    }
     data.nickname = result.value;
   } else if (clearFields.includes('nickname')) {
     data.nickname = null;
@@ -179,7 +190,9 @@ async function handleBulkEdit(ctx: RouteContext, request: Request): Promise<Resp
   // Artwork
   if ('artwork' in body && body.artwork !== undefined) {
     const artworkResult = validateArtworkUrl(body.artwork);
-    if (!artworkResult.ok) return artworkResult.response;
+    if (!artworkResult.ok) {
+      return artworkResult.response;
+    }
     data.artwork = artworkResult.value;
   } else if (clearFields.includes('artwork')) {
     data.artwork = null;
@@ -188,7 +201,9 @@ async function handleBulkEdit(ctx: RouteContext, request: Request): Promise<Resp
   // Tags
   if ('tags' in body && body.tags !== undefined) {
     const tagsResult = validateTags(body.tags);
-    if (!tagsResult.ok) return tagsResult.response;
+    if (!tagsResult.ok) {
+      return tagsResult.response;
+    }
     data.tags = await canonicalizeTags(tagsResult.value);
   } else if (clearFields.includes('tags')) {
     data.tags = [];
@@ -197,7 +212,9 @@ async function handleBulkEdit(ctx: RouteContext, request: Request): Promise<Resp
   // Volume boost
   if ('volumeBoost' in body && body.volumeBoost !== undefined) {
     const volumeResult = validateVolumeBoost(body.volumeBoost);
-    if (!volumeResult.ok) return volumeResult.response;
+    if (!volumeResult.ok) {
+      return volumeResult.response;
+    }
     data.volumeBoost = volumeResult.value;
   } else if (clearFields.includes('volumeBoost')) {
     data.volumeBoost = null;
@@ -232,16 +249,25 @@ async function handleBulkEdit(ctx: RouteContext, request: Request): Promise<Resp
       }
     }
     const bulkFields: Record<string, unknown> = {};
-    if ('nickname' in data) bulkFields.nickname = data.nickname;
-    if ('artist' in data) bulkFields.artist = data.artist;
-    if ('album' in data) bulkFields.album = data.album;
-    if ('artwork' in data) bulkFields.artwork = data.artwork;
-    if ('tags' in data) bulkFields.tags = data.tags;
-    if ('volumeBoost' in data) bulkFields.volumeBoost = data.volumeBoost;
-    bulkPlayer.updateSongMetadata(
-      ids,
-      bulkFields as Parameters<typeof bulkPlayer.updateSongMetadata>[1]
-    );
+    if ('nickname' in data) {
+      bulkFields.nickname = data.nickname;
+    }
+    if ('artist' in data) {
+      bulkFields.artist = data.artist;
+    }
+    if ('album' in data) {
+      bulkFields.album = data.album;
+    }
+    if ('artwork' in data) {
+      bulkFields.artwork = data.artwork;
+    }
+    if ('tags' in data) {
+      bulkFields.tags = data.tags;
+    }
+    if ('volumeBoost' in data) {
+      bulkFields.volumeBoost = data.volumeBoost;
+    }
+    bulkPlayer.updateSongMetadata(ids, bulkFields);
   }
 
   return json({ updated: ids.length });
@@ -251,8 +277,10 @@ async function handleBulkEdit(ctx: RouteContext, request: Request): Promise<Resp
 // GET /api/songs — paginated list of songs with sort & filter.
 // ---------------------------------------------------------------------------
 async function handleGetSongs(ctx: RouteContext, request: Request): Promise<Response> {
-  const guards = await checkGuards(ctx);
-  if (guards instanceof Response) return guards;
+  const guards = checkGuards(ctx);
+  if (guards instanceof Response) {
+    return guards;
+  }
 
   const url = new URL(request.url);
   const { page, limit, skip } = parsePagination(url);
@@ -331,8 +359,10 @@ async function handleDeleteSong(
   params: Record<string, string>
 ): Promise<Response> {
   const { id } = params;
-  const guards = await checkGuards(ctx, { admin: true, permission: 'songs.delete' });
-  if (guards instanceof Response) return guards;
+  const guards = checkGuards(ctx, { admin: true, permission: 'songs.delete' });
+  if (guards instanceof Response) {
+    return guards;
+  }
 
   const [existing] = await db.select().from(songTable).where(eq(songTable.id, id)).limit(1);
   if (!existing) {
@@ -356,8 +386,10 @@ async function handlePatchSong(
   params: Record<string, string>
 ): Promise<Response> {
   const { id } = params;
-  const guards = await checkGuards(ctx, { admin: true, permission: 'songs.edit' });
-  if (guards instanceof Response) return guards;
+  const guards = checkGuards(ctx, { admin: true, permission: 'songs.edit' });
+  if (guards instanceof Response) {
+    return guards;
+  }
 
   let body: Record<string, unknown>;
   try {
@@ -376,7 +408,9 @@ async function handlePatchSong(
   // Nickname
   if ('nickname' in body) {
     const result = validateNickname(body.nickname);
-    if (!result.ok) return result.response;
+    if (!result.ok) {
+      return result.response;
+    }
     data.nickname = result.value;
   }
 
@@ -393,7 +427,9 @@ async function handlePatchSong(
   // Artwork
   if ('artwork' in body) {
     const artworkResult = validateArtworkUrl(body.artwork);
-    if (!artworkResult.ok) return artworkResult.response;
+    if (!artworkResult.ok) {
+      return artworkResult.response;
+    }
     data.artwork = artworkResult.value;
   }
 
@@ -403,14 +439,18 @@ async function handlePatchSong(
 
   if ('tags' in body) {
     const tagsResult = validateTags(body.tags);
-    if (!tagsResult.ok) return tagsResult.response;
+    if (!tagsResult.ok) {
+      return tagsResult.response;
+    }
     data.tags = await canonicalizeTags(tagsResult.value);
   }
 
   // Volume boost
   if ('volumeBoost' in body) {
     const volumeResult = validateVolumeBoost(body.volumeBoost);
-    if (!volumeResult.ok) return volumeResult.response;
+    if (!volumeResult.ok) {
+      return volumeResult.response;
+    }
     data.volumeBoost = volumeResult.value;
   }
 
@@ -450,13 +490,25 @@ async function handlePatchSong(
     // Build fields object with only the keys that are actually in data —
     // undefined values still create keys, which would clear fields in merge.
     const fields: Record<string, unknown> = {};
-    if ('nickname' in data) fields.nickname = data.nickname;
-    if ('artist' in data) fields.artist = data.artist;
-    if ('album' in data) fields.album = data.album;
-    if ('artwork' in data) fields.artwork = data.artwork;
-    if ('tags' in data) fields.tags = data.tags;
-    if ('volumeBoost' in data) fields.volumeBoost = data.volumeBoost;
-    player.updateSongMetadata(id, fields as Parameters<typeof player.updateSongMetadata>[1]);
+    if ('nickname' in data) {
+      fields.nickname = data.nickname;
+    }
+    if ('artist' in data) {
+      fields.artist = data.artist;
+    }
+    if ('album' in data) {
+      fields.album = data.album;
+    }
+    if ('artwork' in data) {
+      fields.artwork = data.artwork;
+    }
+    if ('tags' in data) {
+      fields.tags = data.tags;
+    }
+    if ('volumeBoost' in data) {
+      fields.volumeBoost = data.volumeBoost;
+    }
+    player.updateSongMetadata(id, fields);
   }
 
   return json(formatSong(updatedSong));

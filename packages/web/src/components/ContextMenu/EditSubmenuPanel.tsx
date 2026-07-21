@@ -1,6 +1,9 @@
+import type React from 'react';
+
 import { CaretLeftIcon } from '@phosphor-icons/react';
-import { useEffect, useRef } from 'react';
-import type { MenuItem } from '../ContextMenu';
+import { useCallback, useEffect, useRef } from 'react';
+
+import { type MenuItem } from '../ContextMenu';
 import { SpringUp } from '../ui/SpringUp';
 
 interface EditSubmenuPanelProps {
@@ -17,6 +20,24 @@ export function EditSubmenuPanel({ config, onBack, onSave }: EditSubmenuPanelPro
     const timer = setTimeout(() => inputRef.current?.focus(), 50);
     return () => clearTimeout(timer);
   }, []);
+
+  const handleChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => config.onChange(e.target.value),
+    [config]
+  );
+
+  const handleKeyDown = useCallback(
+    (e: React.KeyboardEvent) => {
+      e.stopPropagation();
+      if (e.key === 'Enter') {
+        onSave();
+      }
+      if (e.key === 'Escape') {
+        onBack();
+      }
+    },
+    [onSave, onBack]
+  );
 
   return (
     <SpringUp>
@@ -36,12 +57,8 @@ export function EditSubmenuPanel({ config, onBack, onSave }: EditSubmenuPanelPro
           ref={inputRef}
           className='input text-xs py-1.5 px-2 w-full mb-2'
           value={config.value}
-          onChange={(e) => config.onChange(e.target.value)}
-          onKeyDown={(e) => {
-            e.stopPropagation();
-            if (e.key === 'Enter') onSave();
-            if (e.key === 'Escape') onBack();
-          }}
+          onChange={handleChange}
+          onKeyDown={handleKeyDown}
           disabled={config.saving}
           placeholder={config.placeholder ?? 'Enter value...'}
         />

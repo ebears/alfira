@@ -9,10 +9,17 @@ import {
   SortAscendingIcon,
   SquaresFourIcon,
 } from '@phosphor-icons/react';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { memo, useCallback, useEffect, useRef, useState } from 'react';
+
 import AddFilterPopover from './AddFilterPopover';
 import FilterChips from './FilterChips';
 import { Button } from './ui/Button';
+
+// ---------------------------------------------------------------------------
+// Constants
+// ---------------------------------------------------------------------------
+
+const EMPTY_TEXT_SORT_FIELDS: string[] = [];
 
 // ---------------------------------------------------------------------------
 // Types
@@ -73,7 +80,7 @@ export default function ListToolbar({
   order,
   onSortChange,
   defaultSort,
-  textSortFields = [],
+  textSortFields = EMPTY_TEXT_SORT_FIELDS,
   filterTags,
   filterSources,
   onAddTag,
@@ -98,7 +105,9 @@ export default function ListToolbar({
   const handleSearchInputChange = useCallback(
     (next: string) => {
       setSearchInput(next);
-      if (debounceRef.current) clearTimeout(debounceRef.current);
+      if (debounceRef.current) {
+        clearTimeout(debounceRef.current);
+      }
       debounceRef.current = setTimeout(() => {
         onSearchChange(next);
       }, 250);
@@ -112,7 +121,9 @@ export default function ListToolbar({
 
   // Close dropdown on outside click
   useEffect(() => {
-    if (!sortOpen) return;
+    if (!sortOpen) {
+      return undefined;
+    }
     const handler = (e: MouseEvent) => {
       if (sortRef.current && !sortRef.current.contains(e.target as Node)) {
         setSortOpen(false);
@@ -123,6 +134,20 @@ export default function ListToolbar({
   }, [sortOpen]);
 
   const hasActiveSort = sort !== defaultSort || order !== 'desc';
+
+  const handleOpenFilter = useCallback(() => setFilterOpen(true), []);
+  const handleCloseFilter = useCallback(() => setFilterOpen(false), []);
+  const handleToggleSort = useCallback(() => setSortOpen((v) => !v), []);
+
+  const handleSearchChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => handleSearchInputChange(e.target.value),
+    [handleSearchInputChange]
+  );
+
+  const handleViewModeToggle = useCallback(
+    () => onViewModeChange?.(viewMode === 'grid' ? 'list' : 'grid'),
+    [onViewModeChange, viewMode]
+  );
 
   const handleSortOptionClick = useCallback(
     (field: string) => {
@@ -162,7 +187,7 @@ export default function ListToolbar({
             className='input pl-10'
             placeholder={searchPlaceholder}
             value={searchInput}
-            onChange={(e) => handleSearchInputChange(e.target.value)}
+            onChange={handleSearchChange}
           />
         </div>
 
@@ -185,7 +210,7 @@ export default function ListToolbar({
         <Button
           variant='inherit'
           surface='surface'
-          onClick={() => setFilterOpen(true)}
+          onClick={handleOpenFilter}
           className={`flex items-center gap-1.5 px-2.5 ${
             hasActiveFilters ? 'pressed text-accent' : ''
           }`}
@@ -199,7 +224,7 @@ export default function ListToolbar({
           <Button
             variant='inherit'
             surface='surface'
-            onClick={() => setSortOpen((v) => !v)}
+            onClick={handleToggleSort}
             className={`flex items-center gap-1.5 px-2.5 ${
               sortOpen || hasActiveSort ? 'pressed text-accent' : ''
             }`}
@@ -214,35 +239,14 @@ export default function ListToolbar({
               {sortOptions.map((opt) => {
                 const isActive = sort === opt.value;
                 return (
-                  <button
+                  <SortOptionItem
                     key={opt.value}
-                    type='button'
-                    className={`w-full flex items-center justify-between px-3 py-2 text-sm font-body transition-colors ${
-                      isActive
-                        ? 'text-accent bg-accent/5'
-                        : 'text-fg hover:bg-surface active:bg-surface/80'
-                    }`}
-                    onClick={() => handleSortOptionClick(opt.value)}
-                  >
-                    <span>{opt.label}</span>
-                    {isActive && (
-                      <button
-                        type='button'
-                        className='cursor-pointer p-0.5 rounded hover:bg-black/10 dark:hover:bg-white/10 transition-colors'
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleSortOptionClick(opt.value);
-                        }}
-                        title={order === 'asc' ? 'Switch to descending' : 'Switch to ascending'}
-                      >
-                        {showDownArrow ? (
-                          <ArrowDownIcon size={14} weight='bold' />
-                        ) : (
-                          <ArrowUpIcon size={14} weight='bold' />
-                        )}
-                      </button>
-                    )}
-                  </button>
+                    opt={opt}
+                    isActive={isActive}
+                    showDownArrow={showDownArrow}
+                    order={order}
+                    onClick={handleSortOptionClick}
+                  />
                 );
               })}
             </div>
@@ -254,7 +258,7 @@ export default function ListToolbar({
           <Button
             variant='inherit'
             surface='surface'
-            onClick={() => onViewModeChange(viewMode === 'grid' ? 'list' : 'grid')}
+            onClick={handleViewModeToggle}
             className='flex items-center gap-1.5 px-2.5'
             title={viewMode === 'grid' ? 'List view' : 'Grid view'}
           >
@@ -288,9 +292,62 @@ export default function ListToolbar({
           onRemoveTag={onRemoveTag}
           onAddSource={onAddSource}
           onRemoveSource={onRemoveSource}
-          onClose={() => setFilterOpen(false)}
+          onClose={handleCloseFilter}
         />
       )}
     </>
   );
 }
+
+// ---------------------------------------------------------------------------
+// Sort option item — memoized to avoid per-item inline callbacks
+// ---------------------------------------------------------------------------
+
+const SortOptionItem = memo(function SortOptionItem({
+  opt,
+  isActive,
+  showDownArrow,
+  order,
+  onClick,
+}: {
+  opt: SortOption;
+  isActive: boolean;
+  showDownArrow: boolean;
+  order: 'asc' | 'desc';
+  onClick: (value: string) => void;
+}) {
+  const handleClick = useCallback(() => onClick(opt.value), [onClick, opt.value]);
+  const handleArrowClick = useCallback(
+    (e: React.MouseEvent) => {
+      e.stopPropagation();
+      onClick(opt.value);
+    },
+    [onClick, opt.value]
+  );
+
+  return (
+    <button
+      type='button'
+      className={`w-full flex items-center justify-between px-3 py-2 text-sm font-body transition-colors ${
+        isActive ? 'text-accent bg-accent/5' : 'text-fg hover:bg-surface active:bg-surface/80'
+      }`}
+      onClick={handleClick}
+    >
+      <span>{opt.label}</span>
+      {isActive && (
+        <button
+          type='button'
+          className='cursor-pointer p-0.5 rounded hover:bg-black/10 dark:hover:bg-white/10 transition-colors'
+          onClick={handleArrowClick}
+          title={order === 'asc' ? 'Switch to descending' : 'Switch to ascending'}
+        >
+          {showDownArrow ? (
+            <ArrowDownIcon size={14} weight='bold' />
+          ) : (
+            <ArrowUpIcon size={14} weight='bold' />
+          )}
+        </button>
+      )}
+    </button>
+  );
+});

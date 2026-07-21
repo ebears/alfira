@@ -2,13 +2,16 @@ import { DotsThreeOutlineVerticalIcon } from '@phosphor-icons/react';
 import {
   type ReactNode,
   type RefObject,
+  memo,
   useCallback,
   useEffect,
   useLayoutEffect,
+  useMemo,
   useRef,
   useState,
 } from 'react';
 import { createPortal } from 'react-dom';
+
 import { EditSubmenuPanel } from './ContextMenu/EditSubmenuPanel';
 import { MenuItemButton } from './ContextMenu/MenuItemButton';
 import { SubmenuPanel } from './ContextMenu/SubmenuPanel';
@@ -82,6 +85,14 @@ export function ContextMenuTrigger({
   variant?: 'inherit' | 'surface';
   onMouseDown?: (e: React.MouseEvent) => void;
 }) {
+  const handleClick = useCallback(
+    (e: React.MouseEvent) => {
+      e.stopPropagation();
+      onToggle();
+    },
+    [onToggle]
+  );
+
   return (
     <Button
       ref={ref}
@@ -93,10 +104,7 @@ export function ContextMenuTrigger({
       surface={surface ?? 'elevated'}
       style={style}
       onMouseDown={onMouseDown}
-      onClick={(e) => {
-        e.stopPropagation();
-        onToggle();
-      }}
+      onClick={handleClick}
       className={`${className ?? ''} ${isOpen ? 'pressed text-accent' : ''}`}
     >
       <DotsThreeOutlineVerticalIcon size={18} weight='duotone' />
@@ -137,23 +145,28 @@ export function ContextMenu({
         ? []
         : items
   ) as { id: string; label: string; icon?: ReactNode; disabled?: boolean }[];
-  // eslint-disable-next-line react-hooks/exhaustive-deps -- currentItems is derived from stable state, use via ref in callbacks
   const currentItemsRef = useRef(currentItems);
   currentItemsRef.current = currentItems;
 
   // Position calculation — useLayoutEffect runs before paint, preventing a (0,0) flash.
   useLayoutEffect(() => {
-    if (!isOpen || !triggerRef.current) return;
+    if (!isOpen || !triggerRef.current) {
+      return undefined;
+    }
 
     const lastUpdateRef = { current: 0 };
 
     const updatePosition = () => {
       const now = Date.now();
-      if (now - lastUpdateRef.current < 16) return; // ~60fps throttle
+      if (now - lastUpdateRef.current < 16) {
+        return;
+      } // ~60fps throttle
       lastUpdateRef.current = now;
 
       const trigger = triggerRef.current;
-      if (!trigger) return;
+      if (!trigger) {
+        return;
+      }
 
       const rect = trigger.getBoundingClientRect();
       const menuWidth = 192; // min-w-48 = 12rem = 192px
@@ -166,7 +179,9 @@ export function ContextMenu({
       if (top + menuHeight > window.innerHeight - 8) {
         top = rect.top - menuHeight - 4;
       }
-      if (left < 8) left = 8;
+      if (left < 8) {
+        left = 8;
+      }
       if (left + menuWidth > window.innerWidth - 8) {
         left = window.innerWidth - menuWidth - 8;
       }
@@ -194,7 +209,9 @@ export function ContextMenu({
 
   // Close on outside click
   useEffect(() => {
-    if (!isOpen) return;
+    if (!isOpen) {
+      return undefined;
+    }
 
     const handler = (e: MouseEvent | TouchEvent) => {
       const target = e.target as Node;
@@ -214,7 +231,9 @@ export function ContextMenu({
 
   // Close on Escape (or go back from submenu)
   useEffect(() => {
-    if (!isOpen) return;
+    if (!isOpen) {
+      return undefined;
+    }
 
     const handler = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
@@ -244,17 +263,54 @@ export function ContextMenu({
   ]);
 
   // Keyboard navigation
+  const handleBackFromSubmenu = useCallback(() => {
+    setActiveSubmenu(null);
+    setFocusedIndex(submenuParentIndex);
+  }, [submenuParentIndex]);
+
+  const handleSubmenuSelect = useCallback(
+    (id: string) => {
+      activeSubmenu?.onSelect(id);
+      onClose();
+    },
+    [activeSubmenu, onClose]
+  );
+
+  const handleBackFromEdit = useCallback(() => {
+    activeEditSubmenu?.onCancel();
+    setActiveEditItemId(null);
+    setFocusedIndex(submenuParentIndex);
+  }, [activeEditSubmenu, submenuParentIndex]);
+
+  const handleEditSave = useCallback(() => {
+    activeEditSubmenu?.onSave();
+    onClose();
+  }, [activeEditSubmenu, onClose]);
+
+  const menuStyle = useMemo(
+    () => ({ position: 'fixed' as const, top: position.top, left: position.left }),
+    [position]
+  );
+
+  const handleStopPropagation = useCallback((e: React.MouseEvent) => {
+    e.stopPropagation();
+  }, []);
+
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent) => {
       const items = currentItemsRef.current;
       const enabledIndices = items
         .map((item, i) => (!item.disabled ? i : -1))
         .filter((i) => i >= 0);
-      if (enabledIndices.length === 0) return;
+      if (enabledIndices.length === 0) {
+        return;
+      }
 
       const findNextEnabled = (current: number, direction: 1 | -1): number => {
         const pos = enabledIndices.indexOf(current);
-        if (pos === -1) return enabledIndices[0];
+        if (pos === -1) {
+          return enabledIndices[0];
+        }
         const nextPos = (pos + direction + enabledIndices.length) % enabledIndices.length;
         return enabledIndices[nextPos];
       };
@@ -273,7 +329,9 @@ export function ContextMenu({
     [onClose, triggerRef]
   );
 
-  if (!isOpen) return null;
+  if (!isOpen) {
+    return null;
+  }
 
   return createPortal(
     <div
@@ -281,36 +339,23 @@ export function ContextMenu({
       role='menu'
       tabIndex={-1}
       aria-label='Song actions'
-      style={{ position: 'fixed', top: position.top, left: position.left }}
+      style={menuStyle}
       className='z-9999 min-w-48'
       onKeyDown={activeEditItemId ? undefined : handleKeyDown}
-      onClick={(e) => e.stopPropagation()}
+      onClick={handleStopPropagation}
     >
       <div className='glass-popover outline-2 outline-accent/20'>
         {activeSubmenu ? (
           <SubmenuPanel
             config={activeSubmenu}
-            onBack={() => {
-              setActiveSubmenu(null);
-              setFocusedIndex(submenuParentIndex);
-            }}
-            onSelect={(id) => {
-              activeSubmenu.onSelect(id);
-              onClose();
-            }}
+            onBack={handleBackFromSubmenu}
+            onSelect={handleSubmenuSelect}
           />
         ) : activeEditSubmenu ? (
           <EditSubmenuPanel
             config={activeEditSubmenu}
-            onBack={() => {
-              activeEditSubmenu.onCancel();
-              setActiveEditItemId(null);
-              setFocusedIndex(submenuParentIndex);
-            }}
-            onSave={() => {
-              activeEditSubmenu.onSave();
-              onClose();
-            }}
+            onBack={handleBackFromEdit}
+            onSave={handleEditSave}
           />
         ) : (
           items.map((item, index) => {
@@ -327,22 +372,14 @@ export function ContextMenu({
             return (
               <div key={item.id}>
                 {index > 0 && <div className='border-b border-muted/50' />}
-                <MenuItemButton
+                <MenuItemRow
                   item={item}
-                  onClick={() => {
-                    if (item.submenu) {
-                      setActiveSubmenu(item.submenu);
-                      setSubmenuParentIndex(focusedIndex);
-                      setFocusedIndex(0);
-                    } else if (item.editSubmenu) {
-                      setActiveEditItemId(item.id);
-                      setSubmenuParentIndex(focusedIndex);
-                      setFocusedIndex(0);
-                    } else {
-                      item.onClick?.();
-                      onClose();
-                    }
-                  }}
+                  focusedIndex={focusedIndex}
+                  onClose={onClose}
+                  setActiveSubmenu={setActiveSubmenu}
+                  setActiveEditItemId={setActiveEditItemId}
+                  setSubmenuParentIndex={setSubmenuParentIndex}
+                  setFocusedIndex={setFocusedIndex}
                 />
               </div>
             );
@@ -355,6 +392,49 @@ export function ContextMenu({
 }
 
 // --- Sub-components ---
+
+const MenuItemRow = memo(function MenuItemRow({
+  item,
+  focusedIndex,
+  onClose,
+  setActiveSubmenu,
+  setActiveEditItemId,
+  setSubmenuParentIndex,
+  setFocusedIndex,
+}: {
+  item: MenuItem;
+  focusedIndex: number;
+  onClose: () => void;
+  setActiveSubmenu: (s: SubmenuConfig | null) => void;
+  setActiveEditItemId: (id: string | null) => void;
+  setSubmenuParentIndex: (i: number) => void;
+  setFocusedIndex: (i: number) => void;
+}) {
+  const handleClick = useCallback(() => {
+    if (item.submenu) {
+      setActiveSubmenu(item.submenu);
+      setSubmenuParentIndex(focusedIndex);
+      setFocusedIndex(0);
+    } else if (item.editSubmenu) {
+      setActiveEditItemId(item.id);
+      setSubmenuParentIndex(focusedIndex);
+      setFocusedIndex(0);
+    } else {
+      item.onClick?.();
+      onClose();
+    }
+  }, [
+    focusedIndex,
+    item,
+    onClose,
+    setActiveEditItemId,
+    setActiveSubmenu,
+    setFocusedIndex,
+    setSubmenuParentIndex,
+  ]);
+
+  return <MenuItemButton item={item} onClick={handleClick} />;
+});
 
 function InfoRow({ item }: { item: MenuItem }) {
   return (

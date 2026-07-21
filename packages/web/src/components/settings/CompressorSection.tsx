@@ -1,5 +1,8 @@
-import { ArrowCounterClockwise, FloppyDisk } from '@phosphor-icons/react';
-import { useEffect, useState } from 'react';
+import type React from 'react';
+
+import { ArrowCounterClockwiseIcon, FloppyDiskIcon } from '@phosphor-icons/react';
+import { memo, useCallback, useEffect, useMemo, useState } from 'react';
+
 import { useAdminView } from '../../context/AdminViewContext';
 import { usePermissions } from '../../context/PermissionsContext';
 import { Button } from '../ui/Button';
@@ -15,6 +18,56 @@ const SLIDERS = [
 ] as const;
 
 type SliderKey = (typeof SLIDERS)[number]['key'];
+
+// ---------------------------------------------------------------------------
+// Child component — extracted for stable onChange + style in the map loop
+// ---------------------------------------------------------------------------
+
+interface CompressorSliderProps {
+  config: (typeof SLIDERS)[number];
+  value: number;
+  onChange: (key: SliderKey, value: number) => void;
+}
+
+const CompressorSlider = memo(function CompressorSlider({
+  config: { key, label, min, max, step, unit },
+  value,
+  onChange,
+}: CompressorSliderProps) {
+  const handleChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => onChange(key, parseFloat(e.target.value)),
+    [onChange, key]
+  );
+
+  const rangePct = ((value - min) / (max - min)) * 100;
+  const sliderStyle = useMemo(
+    () => ({ '--range-pct': `${rangePct}%` }) as React.CSSProperties,
+    [rangePct]
+  );
+
+  return (
+    <div className='flex items-center gap-3'>
+      <span className='font-mono text-[11px] text-muted w-20 shrink-0'>{label}</span>
+      <span className='font-mono text-[11px] text-fg w-16 shrink-0'>
+        {key === 'ratio'
+          ? `${value.toFixed(1)}:1`
+          : key === 'gain'
+            ? `+${value} ${unit}`
+            : `${value} ${unit}`}
+      </span>
+      <input
+        type='range'
+        min={min}
+        max={max}
+        step={step}
+        value={value}
+        onChange={handleChange}
+        className='flex-1 range-input range-input-h'
+        style={sliderStyle}
+      />
+    </div>
+  );
+});
 
 interface CompressorValues {
   enabled: boolean;
@@ -50,13 +103,16 @@ export default function CompressorSection() {
         setLoaded(true);
       }
     }
-    if (canManage) load();
-    else setLoaded(true);
+    if (canManage) {
+      void load();
+    } else {
+      setLoaded(true);
+    }
   }, [canManage]);
 
   const hasChanges = JSON.stringify(values) !== JSON.stringify(savedValues);
 
-  async function handleSave() {
+  const handleSave = useCallback(async () => {
     setSaving(true);
     try {
       const res = await fetch('/api/settings/compressor', {
@@ -72,19 +128,23 @@ export default function CompressorSection() {
     } finally {
       setSaving(false);
     }
-  }
+  }, [values]);
 
-  function handleReset() {
+  const handleReset = useCallback(() => {
     setValues({ ...DEFAULTS, enabled: values.enabled });
-  }
+  }, [values.enabled]);
 
-  function updateValue(key: SliderKey, value: number) {
+  const updateValue = useCallback((key: SliderKey, value: number) => {
     setValues((v) => ({ ...v, [key]: value }));
-  }
+  }, []);
+
+  const handleToggle = useCallback(() => setValues((v) => ({ ...v, enabled: !v.enabled })), []);
 
   const dimmed = !canManage;
 
-  if (!loaded) return null;
+  if (!loaded) {
+    return null;
+  }
 
   return (
     <div className={`space-y-3 ${dimmed ? 'opacity-40 pointer-events-none' : ''}`}>
@@ -95,7 +155,7 @@ export default function CompressorSection() {
           role='switch'
           aria-checked={values.enabled}
           aria-label='Enable compressor'
-          onClick={() => setValues((v) => ({ ...v, enabled: !v.enabled }))}
+          onClick={handleToggle}
           className={`relative shrink-0 w-9 h-5 rounded-full transition-colors cursor-pointer focus:outline-none focus:ring-2 focus:ring-accent/50 focus:ring-offset-2 focus:ring-offset-surface ${
             values.enabled ? 'bg-accent' : 'bg-border'
           }`}
@@ -109,31 +169,13 @@ export default function CompressorSection() {
       </div>
 
       <div className={`space-y-2 ${!values.enabled ? 'opacity-40' : ''}`}>
-        {SLIDERS.map(({ key, label, min, max, step, unit }) => (
-          <div key={key} className='flex items-center gap-3'>
-            <span className='font-mono text-[11px] text-muted w-20 shrink-0'>{label}</span>
-            <span className='font-mono text-[11px] text-fg w-16 shrink-0'>
-              {key === 'ratio'
-                ? `${values[key].toFixed(1)}:1`
-                : key === 'gain'
-                  ? `+${values[key]} ${unit}`
-                  : `${values[key]} ${unit}`}
-            </span>
-            <input
-              type='range'
-              min={min}
-              max={max}
-              step={step}
-              value={values[key]}
-              onChange={(e) => updateValue(key, parseFloat(e.target.value))}
-              className='flex-1 range-input range-input-h'
-              style={
-                {
-                  ['--range-pct' as string]: `${((values[key] - min) / (max - min)) * 100}%`,
-                } as React.CSSProperties
-              }
-            />
-          </div>
+        {SLIDERS.map((config) => (
+          <CompressorSlider
+            key={config.key}
+            config={config}
+            value={values[config.key]}
+            onChange={updateValue}
+          />
         ))}
       </div>
 
@@ -145,7 +187,7 @@ export default function CompressorSection() {
           disabled={!hasChanges || saving}
           title={saving ? 'Saving…' : 'Save Changes'}
         >
-          <FloppyDisk size={16} weight='duotone' />
+          <FloppyDiskIcon size={16} weight='duotone' />
         </Button>
         <Button
           variant='inherit'
@@ -154,7 +196,7 @@ export default function CompressorSection() {
           onClick={handleReset}
           title='Reset to Defaults'
         >
-          <ArrowCounterClockwise size={16} weight='duotone' />
+          <ArrowCounterClockwiseIcon size={16} weight='duotone' />
         </Button>
       </div>
     </div>

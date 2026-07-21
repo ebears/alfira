@@ -1,8 +1,9 @@
 import { DiscordLogoIcon } from '@phosphor-icons/react';
-import { useEffect } from 'react';
+import { useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../context/AuthContext';
+
 import { SpringUp } from '../components/ui/SpringUp';
+import { useAuth } from '../context/AuthContext';
 
 export default function LoginPage() {
   const { user, loading } = useAuth();
@@ -10,18 +11,14 @@ export default function LoginPage() {
 
   // If already authenticated, go straight to songs.
   useEffect(() => {
-    if (!loading && user) navigate('/songs', { replace: true });
+    if (!loading && user) {
+      void navigate('/songs', { replace: true });
+    }
   }, [user, loading, navigate]);
 
-  if (loading) return null;
-
-  return (
-    <div className='min-h-screen bg-elevated flex items-center justify-center relative overflow-hidden'>
-      {/* Background texture */}
-      <div
-        className='absolute inset-0 opacity-[0.03]'
-        style={{
-          backgroundImage: `repeating-linear-gradient(
+  const bgStyle = useMemo(
+    () => ({
+      backgroundImage: `repeating-linear-gradient(
           0deg,
           transparent,
           transparent 40px,
@@ -35,8 +32,18 @@ export default function LoginPage() {
           #c8f135 40px,
           #c8f135 41px
         )`,
-        }}
-      />
+    }),
+    []
+  );
+
+  if (loading) {
+    return null;
+  }
+
+  return (
+    <div className='min-h-screen bg-elevated flex items-center justify-center relative overflow-hidden'>
+      {/* Background texture */}
+      <div className='absolute inset-0 opacity-[0.03]' style={bgStyle} />
 
       {/* Card */}
       <SpringUp className='relative z-10 w-full max-w-sm mx-4'>

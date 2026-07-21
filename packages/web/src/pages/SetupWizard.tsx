@@ -8,8 +8,9 @@ import {
   ShieldCheckIcon,
   TimerIcon,
 } from '@phosphor-icons/react';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Navigate, useNavigate } from 'react-router-dom';
+
 import {
   completeSetup,
   fetchSetupChannels,
@@ -48,6 +49,44 @@ const STEP_ORDER: Step[] = [
   'publicUrl',
   'confirm',
 ];
+
+function getRoleBgColor(color: number | null): string {
+  return color ? `#${color.toString(16).padStart(6, '0')}` : 'var(--color-muted)';
+}
+
+function RoleColorDot({ color }: { color: number | null }) {
+  const style = useMemo<React.CSSProperties>(
+    () => ({ backgroundColor: getRoleBgColor(color) }),
+    [color]
+  );
+  return <span className='w-3 h-3 rounded-full shrink-0' style={style} />;
+}
+
+function SourceCheckbox({
+  sourceKey,
+  checked,
+  onToggle,
+}: {
+  sourceKey: string;
+  checked: boolean;
+  onToggle: (key: string) => void;
+}) {
+  const handleChange = useCallback(() => onToggle(sourceKey), [sourceKey, onToggle]);
+  return <Checkbox checked={checked} onChange={handleChange} />;
+}
+
+function RoleCheckbox({
+  roleId,
+  checked,
+  onToggle,
+}: {
+  roleId: string;
+  checked: boolean;
+  onToggle: (id: string) => void;
+}) {
+  const handleChange = useCallback(() => onToggle(roleId), [roleId, onToggle]);
+  return <Checkbox checked={checked} onChange={handleChange} />;
+}
 
 const AVAILABLE_SOURCES = [
   { key: 'youtube', displayName: 'YouTube', requiresCredentials: false, helpText: undefined },
@@ -93,7 +132,7 @@ export default function SetupWizard() {
       try {
         const status = await fetchSetupStatus();
         if (status.setupCompleted) {
-          navigate('/', { replace: true });
+          void navigate('/', { replace: true });
           return;
         }
         setClientId(status.clientId);
@@ -102,12 +141,14 @@ export default function SetupWizard() {
       }
       setLoading(false);
     }
-    check();
+    void check();
   }, [navigate]);
 
   // Auto-refresh guild list when on the guild step and no guilds are found.
   useEffect(() => {
-    if (step !== 'guild' || guilds.length > 0) return;
+    if (step !== 'guild' || guilds.length > 0) {
+      return undefined;
+    }
 
     let cancelled = false;
     async function poll() {
@@ -123,32 +164,23 @@ export default function SetupWizard() {
       } catch {
         // Silently retry on next interval.
       } finally {
-        if (!cancelled) setRefreshingGuilds(false);
+        if (!cancelled) {
+          setRefreshingGuilds(false);
+        }
       }
     }
 
-    poll();
-    const interval = setInterval(poll, 3000);
+    void poll();
+    const interval = setInterval(() => {
+      void poll();
+    }, 3000);
     return () => {
       cancelled = true;
       clearInterval(interval);
     };
   }, [step, guilds.length]);
 
-  // Only the first user (setup admin) can access the wizard.
-  if (!user?.isSetupAdmin && !loading) {
-    return <Navigate to='/' replace />;
-  }
-
-  if (loading) {
-    return (
-      <div className='h-full flex items-center justify-center bg-elevated'>
-        <Spinner size='lg' />
-      </div>
-    );
-  }
-
-  async function loadGuilds() {
+  const loadGuilds = useCallback(async () => {
     setError(null);
     try {
       const { guilds: list } = await fetchSetupGuilds();
@@ -160,10 +192,12 @@ export default function SetupWizard() {
     } catch {
       setError('Could not fetch server list. Is the bot connected to Discord?');
     }
-  }
+  }, []);
 
-  async function loadRoles() {
-    if (!selectedGuildId) return;
+  const loadRoles = useCallback(async () => {
+    if (!selectedGuildId) {
+      return;
+    }
     setError(null);
     try {
       const { roles: list } = await fetchSetupRoles(selectedGuildId);
@@ -172,10 +206,12 @@ export default function SetupWizard() {
     } catch {
       setError('Could not fetch roles.');
     }
-  }
+  }, [selectedGuildId]);
 
-  async function loadChannels() {
-    if (!selectedGuildId) return;
+  const loadChannels = useCallback(async () => {
+    if (!selectedGuildId) {
+      return;
+    }
     setError(null);
     try {
       const { channels: list } = await fetchSetupChannels(selectedGuildId);
@@ -184,11 +220,15 @@ export default function SetupWizard() {
     } catch {
       setError('Could not fetch channels.');
     }
-  }
+  }, [selectedGuildId]);
 
-  async function handleSubmit() {
-    if (!selectedGuildId || selectedRoleIds.size === 0) return;
-    if (selectedSourceKeys.size === 0) return;
+  const handleSubmit = useCallback(async () => {
+    if (!selectedGuildId || selectedRoleIds.size === 0) {
+      return;
+    }
+    if (selectedSourceKeys.size === 0) {
+      return;
+    }
     setSaving(true);
     setError(null);
     try {
@@ -209,29 +249,95 @@ export default function SetupWizard() {
       setSaving(false);
       setStep('confirm');
     }
-  }
+  }, [
+    selectedGuildId,
+    selectedRoleIds,
+    selectedSourceKeys,
+    timeoutMinutes,
+    selectedChannelId,
+    publicUrl,
+  ]);
 
-  function toggleRole(id: string) {
+  const toggleRole = useCallback((id: string) => {
     setSelectedRoleIds((prev) => {
       const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
       return next;
     });
-  }
+  }, []);
 
-  function toggleSource(key: string) {
+  const toggleSource = useCallback((key: string) => {
     setSelectedSourceKeys((prev) => {
       const next = new Set(prev);
       // Prevent deselecting the last source.
-      if (next.size === 1 && next.has(key)) return prev;
-      if (next.has(key)) next.delete(key);
-      else next.add(key);
+      if (next.size === 1 && next.has(key)) {
+        return prev;
+      }
+      if (next.has(key)) {
+        next.delete(key);
+      } else {
+        next.add(key);
+      }
       return next;
     });
-  }
+  }, []);
+
+  const handleGoToStep = useCallback((e: React.MouseEvent<HTMLButtonElement>) => {
+    const target = e.currentTarget.dataset.step as Step | undefined;
+    if (target) {
+      setStep(target);
+    }
+  }, []);
+
+  const handleGuildSelect = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    setSelectedGuildId(e.currentTarget.dataset.guild ?? '');
+  }, []);
+
+  const handleChannelSelect = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    setSelectedChannelId(e.currentTarget.dataset.channel ?? '');
+  }, []);
+
+  const handleSkipChannel = useCallback(() => {
+    setSelectedChannelId('');
+    setStep('timeout');
+  }, []);
+
+  const handleTimeoutChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => setTimeoutMinutes(Number(e.target.value)),
+    []
+  );
+
+  const handlePublicUrlChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => setPublicUrl(e.target.value),
+    []
+  );
+
+  const timeoutRangeStyle = useMemo(
+    () =>
+      ({
+        '--range-pct': `${((timeoutMinutes - 1) / (120 - 1)) * 100}%`,
+      }) as React.CSSProperties,
+    [timeoutMinutes]
+  );
 
   const stepIndex = STEP_ORDER.indexOf(step);
+
+  // Only the first user (setup admin) can access the wizard.
+  if (!user?.isSetupAdmin && !loading) {
+    return <Navigate to='/' replace />;
+  }
+
+  if (loading) {
+    return (
+      <div className='h-full flex items-center justify-center bg-elevated'>
+        <Spinner size='lg' />
+      </div>
+    );
+  }
 
   return (
     <div className='min-h-full bg-surface flex items-center justify-center p-4'>
@@ -316,7 +422,8 @@ export default function SetupWizard() {
                         name='guild'
                         value={g.id}
                         checked={selectedGuildId === g.id}
-                        onChange={() => setSelectedGuildId(g.id)}
+                        onChange={handleGuildSelect}
+                        data-guild={g.id}
                         className='accent-accent'
                       />
                       <span className='text-sm text-fg'>{g.name}</span>
@@ -327,7 +434,8 @@ export default function SetupWizard() {
               <div className='flex justify-between pt-2'>
                 <button
                   type='button'
-                  onClick={() => setStep('welcome')}
+                  onClick={handleGoToStep}
+                  data-step='welcome'
                   className='flex items-center gap-1 text-sm text-muted hover:text-fg transition-colors cursor-pointer'
                 >
                   <CaretLeftIcon size={14} />
@@ -335,7 +443,8 @@ export default function SetupWizard() {
                 </button>
                 <Button
                   variant='primary'
-                  onClick={() => setStep('sources')}
+                  onClick={handleGoToStep}
+                  data-step='sources'
                   disabled={!selectedGuildId}
                 >
                   Next
@@ -365,9 +474,10 @@ export default function SetupWizard() {
                           : 'border-border hover:border-muted'
                       }`}
                     >
-                      <Checkbox
+                      <SourceCheckbox
+                        sourceKey={source.key}
                         checked={selectedSourceKeys.has(source.key)}
-                        onChange={() => toggleSource(source.key)}
+                        onToggle={toggleSource}
                       />
                       <SourceIcon sourceKey={source.key} className='shrink-0' />
                       <span className='text-sm text-fg'>{source.displayName}</span>
@@ -402,7 +512,8 @@ export default function SetupWizard() {
               <div className='flex justify-between pt-2'>
                 <button
                   type='button'
-                  onClick={() => setStep('guild')}
+                  onClick={handleGoToStep}
+                  data-step='guild'
                   className='flex items-center gap-1 text-sm text-muted hover:text-fg transition-colors cursor-pointer'
                 >
                   <CaretLeftIcon size={14} />
@@ -440,18 +551,12 @@ export default function SetupWizard() {
                           : 'border-border hover:border-muted'
                       }`}
                     >
-                      <Checkbox
+                      <RoleCheckbox
+                        roleId={r.id}
                         checked={selectedRoleIds.has(r.id)}
-                        onChange={() => toggleRole(r.id)}
+                        onToggle={toggleRole}
                       />
-                      <span
-                        className='w-3 h-3 rounded-full shrink-0'
-                        style={{
-                          backgroundColor: r.color
-                            ? `#${r.color.toString(16).padStart(6, '0')}`
-                            : 'var(--color-muted)',
-                        }}
-                      />
+                      <RoleColorDot color={r.color} />
                       <span className='text-sm text-fg'>{r.name}</span>
                     </label>
                   ))}
@@ -460,7 +565,8 @@ export default function SetupWizard() {
               <div className='flex justify-between pt-2'>
                 <button
                   type='button'
-                  onClick={() => setStep('sources')}
+                  onClick={handleGoToStep}
+                  data-step='sources'
                   className='flex items-center gap-1 text-sm text-muted hover:text-fg transition-colors cursor-pointer'
                 >
                   <CaretLeftIcon size={14} />
@@ -505,7 +611,8 @@ export default function SetupWizard() {
                         name='channel'
                         value={c.id}
                         checked={selectedChannelId === c.id}
-                        onChange={() => setSelectedChannelId(c.id)}
+                        onChange={handleChannelSelect}
+                        data-channel={c.id}
                         className='accent-accent'
                       />
                       <span className='text-sm text-fg'># {c.name}</span>
@@ -516,24 +623,18 @@ export default function SetupWizard() {
               <div className='flex justify-between pt-2'>
                 <button
                   type='button'
-                  onClick={() => setStep('roles')}
+                  onClick={handleGoToStep}
+                  data-step='roles'
                   className='flex items-center gap-1 text-sm text-muted hover:text-fg transition-colors cursor-pointer'
                 >
                   <CaretLeftIcon size={14} />
                   Back
                 </button>
                 <div className='flex gap-2'>
-                  <Button
-                    variant='inherit'
-                    onClick={() => {
-                      setSelectedChannelId('');
-                      setStep('timeout');
-                    }}
-                    surface='surface'
-                  >
+                  <Button variant='inherit' onClick={handleSkipChannel} surface='surface'>
                     Skip
                   </Button>
-                  <Button variant='primary' onClick={() => setStep('timeout')}>
+                  <Button variant='primary' onClick={handleGoToStep} data-step='timeout'>
                     Next
                   </Button>
                 </div>
@@ -556,13 +657,9 @@ export default function SetupWizard() {
                   min={1}
                   max={120}
                   value={timeoutMinutes}
-                  onChange={(e) => setTimeoutMinutes(Number(e.target.value))}
+                  onChange={handleTimeoutChange}
                   className='flex-1 range-input range-input-h'
-                  style={
-                    {
-                      ['--range-pct' as string]: `${((timeoutMinutes - 1) / (120 - 1)) * 100}%`,
-                    } as React.CSSProperties
-                  }
+                  style={timeoutRangeStyle}
                 />
                 <span className='font-mono text-lg text-fg w-20 text-right whitespace-nowrap'>
                   {timeoutMinutes} min
@@ -571,13 +668,14 @@ export default function SetupWizard() {
               <div className='flex justify-between pt-2'>
                 <button
                   type='button'
-                  onClick={() => setStep('channel')}
+                  onClick={handleGoToStep}
+                  data-step='channel'
                   className='flex items-center gap-1 text-sm text-muted hover:text-fg transition-colors cursor-pointer'
                 >
                   <CaretLeftIcon size={14} />
                   Back
                 </button>
-                <Button variant='primary' onClick={() => setStep('publicUrl')}>
+                <Button variant='primary' onClick={handleGoToStep} data-step='publicUrl'>
                   Next
                 </Button>
               </div>
@@ -597,20 +695,21 @@ export default function SetupWizard() {
               <input
                 type='text'
                 value={publicUrl}
-                onChange={(e) => setPublicUrl(e.target.value)}
+                onChange={handlePublicUrlChange}
                 placeholder='https://music.yourserver.com'
                 className='input font-mono'
               />
               <div className='flex justify-between pt-2'>
                 <button
                   type='button'
-                  onClick={() => setStep('timeout')}
+                  onClick={handleGoToStep}
+                  data-step='timeout'
                   className='flex items-center gap-1 text-sm text-muted hover:text-fg transition-colors cursor-pointer'
                 >
                   <CaretLeftIcon size={14} />
                   Back
                 </button>
-                <Button variant='primary' onClick={() => setStep('confirm')}>
+                <Button variant='primary' onClick={handleGoToStep} data-step='confirm'>
                   Review
                 </Button>
               </div>
@@ -670,7 +769,8 @@ export default function SetupWizard() {
               <div className='flex justify-between pt-2'>
                 <button
                   type='button'
-                  onClick={() => setStep('publicUrl')}
+                  onClick={handleGoToStep}
+                  data-step='publicUrl'
                   className='flex items-center gap-1 text-sm text-muted hover:text-fg transition-colors cursor-pointer'
                 >
                   <CaretLeftIcon size={14} />

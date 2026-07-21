@@ -16,8 +16,7 @@ const LABELS: Record<LogLevel, string> = {
   fatal: 'FATAL',
 };
 
-const currentLevel: number =
-  LEVELS[(process.env.LOG_LEVEL as LogLevel | undefined) ?? 'info'] ?? LEVELS.info;
+const currentLevel: number = LEVELS[(process.env.LOG_LEVEL as LogLevel | undefined) ?? 'info'];
 
 const useJson = process.env.LOG_FORMAT === 'json';
 const noColor = process.env.NO_COLOR !== undefined || process.env.NODE_ENV === 'production';
@@ -47,7 +46,9 @@ function formatMeta(meta: Record<string, unknown>): string {
 }
 
 function log(level: LogLevel, first: LogArg, second?: string): void {
-  if (LEVELS[level] < currentLevel) return;
+  if (LEVELS[level] < currentLevel) {
+    return;
+  }
 
   const msg: string = typeof first === 'string' ? first : (second ?? '');
   const meta: Record<string, unknown> | undefined =
@@ -76,7 +77,9 @@ function log(level: LogLevel, first: LogArg, second?: string): void {
   const parts = [`${color}${LABELS[level]}${C.reset}`, msg];
   if (meta) {
     const metaStr = formatMeta(meta);
-    if (metaStr) parts.push(metaStr);
+    if (metaStr) {
+      parts.push(metaStr);
+    }
   }
 
   if (level === 'error' || level === 'fatal') {

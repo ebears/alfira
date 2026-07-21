@@ -1,14 +1,17 @@
 import { eq } from 'drizzle-orm';
-import type { RouteContext } from '../index';
+
 import { db, tables } from '../shared/db';
 import { logger } from '../shared/logger';
-import type { SongRequest } from '../shared/types';
+import { type SongRequest } from '../shared/types';
+import { type RouteContext } from './context';
 
 const DISCORD_API = 'https://discord.com/api/v10';
 
 function botHeaders(): Record<string, string> {
   const token = process.env.DISCORD_BOT_TOKEN;
-  if (!token) throw new Error('DISCORD_BOT_TOKEN not set');
+  if (!token) {
+    throw new Error('DISCORD_BOT_TOKEN not set');
+  }
   return { Authorization: `Bot ${token}` };
 }
 
@@ -22,7 +25,7 @@ export async function sendRequestNotification(
   _ctx: RouteContext
 ): Promise<void> {
   try {
-    const row = await db
+    const row = db
       .select({
         channelId: tables.guildSettings.requestNotificationChannelId,
         notifyOnApproved: tables.guildSettings.notifyOnApproved,
@@ -32,11 +35,17 @@ export async function sendRequestNotification(
       .where(eq(tables.guildSettings.id, 1))
       .get();
 
-    if (!row?.channelId) return;
+    if (!row?.channelId) {
+      return;
+    }
 
     // Respect per-event toggles ("new" always sends if channel is set)
-    if (event === 'approved' && !row.notifyOnApproved) return;
-    if (event === 'denied' && !row.notifyOnDenied) return;
+    if (event === 'approved' && !row.notifyOnApproved) {
+      return;
+    }
+    if (event === 'denied' && !row.notifyOnDenied) {
+      return;
+    }
 
     const messages: Record<string, string> = {
       new: `🎵 **New song request** from **${user.username}**: **${req.title}**`,

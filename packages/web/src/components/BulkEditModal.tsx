@@ -1,6 +1,7 @@
 import { type BulkEditData, fetchTags, type TagItem } from '@alfira/server/shared/api';
 import { EraserIcon, XIcon } from '@phosphor-icons/react';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+
 import { useTagColors } from '../context/TagsContext';
 import { getTagColorClasses } from '../utils/tagColors';
 import { Backdrop } from './Backdrop';
@@ -14,9 +15,9 @@ interface BulkEditModalProps {
   isApplying?: boolean;
 }
 
-type EditableField = Extract<keyof BulkEditData, string>;
+type TextEditableField = 'nickname' | 'artist' | 'album' | 'artwork';
 
-const EDITABLE_FIELDS: { key: EditableField; label: string; placeholder: string }[] = [
+const EDITABLE_FIELDS: { key: TextEditableField; label: string; placeholder: string }[] = [
   { key: 'nickname', label: 'Nickname', placeholder: 'Custom display name' },
   { key: 'artist', label: 'Artist', placeholder: 'Artist name' },
   { key: 'album', label: 'Album', placeholder: 'Album name' },
@@ -44,7 +45,9 @@ export default function BulkEditModal({ count, onApply, onClose, isApplying }: B
 
   // Close tag dropdown when clicking outside
   useEffect(() => {
-    if (!showDropdown) return;
+    if (!showDropdown) {
+      return undefined;
+    }
     const handler = (e: MouseEvent) => {
       const target = e.target as Node;
       if (
@@ -68,11 +71,14 @@ export default function BulkEditModal({ count, onApply, onClose, isApplying }: B
 
   // Fetch available tags on mount
   useEffect(() => {
-    fetchTags()
-      .then(setAvailableTags)
-      .catch(() => {
+    void (async () => {
+      try {
+        const tags = await fetchTags();
+        setAvailableTags(tags);
+      } catch {
         // Non-critical
-      });
+      }
+    })();
   }, []);
 
   const filtered = availableTags.filter(
@@ -84,7 +90,9 @@ export default function BulkEditModal({ count, onApply, onClose, isApplying }: B
 
   const addTag = useCallback(() => {
     const trimmed = tagInput.trim().toLowerCase();
-    if (!trimmed || tags.includes(trimmed)) return;
+    if (!trimmed || tags.includes(trimmed)) {
+      return;
+    }
     setTags((prev) => [...prev, trimmed]);
     setTagInput('');
     setHighlightedIdx(0);
@@ -94,34 +102,37 @@ export default function BulkEditModal({ count, onApply, onClose, isApplying }: B
     setTags((prev) => prev.filter((t) => t !== tag));
   }, []);
 
-  const handleTagKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter') {
-      e.preventDefault();
-      if (showDropdown && highlightedIdx >= 0 && filtered[highlightedIdx]) {
-        const tag = filtered[highlightedIdx].nameLower;
-        if (!tags.includes(tag)) {
-          setTags((prev) => [...prev, tag]);
+  const handleTagKeyDown = useCallback(
+    (e: React.KeyboardEvent) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        if (showDropdown && highlightedIdx >= 0 && filtered[highlightedIdx]) {
+          const tag = filtered[highlightedIdx].nameLower;
+          if (!tags.includes(tag)) {
+            setTags((prev) => [...prev, tag]);
+          }
+          setTagInput('');
+          setHighlightedIdx(0);
+        } else {
+          addTag();
         }
-        setTagInput('');
-        setHighlightedIdx(0);
-      } else {
-        addTag();
+        return;
       }
-      return;
-    }
 
-    if (e.key === 'ArrowDown') {
-      e.preventDefault();
-      setHighlightedIdx((prev) => Math.min(prev + 1, filtered.length - 1));
-    } else if (e.key === 'ArrowUp') {
-      e.preventDefault();
-      setHighlightedIdx((prev) => Math.max(prev - 1, 0));
-    } else if (e.key === 'Escape') {
-      setShowDropdown(false);
-    }
-  };
+      if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        setHighlightedIdx((prev) => Math.min(prev + 1, filtered.length - 1));
+      } else if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        setHighlightedIdx((prev) => Math.max(prev - 1, 0));
+      } else if (e.key === 'Escape') {
+        setShowDropdown(false);
+      }
+    },
+    [showDropdown, highlightedIdx, filtered, tags, addTag]
+  );
 
-  const toggleClear = (field: string) => {
+  const toggleClear = useCallback((field: string) => {
     setClearFields((prev) => {
       const next = new Set(prev);
       if (next.has(field)) {
@@ -131,7 +142,7 @@ export default function BulkEditModal({ count, onApply, onClose, isApplying }: B
       }
       return next;
     });
-  };
+  }, []);
 
   // Volume boost slider derived values
   const volumeNumeric =
@@ -140,7 +151,111 @@ export default function BulkEditModal({ count, onApply, onClose, isApplying }: B
       : Math.min(200, Math.max(-100, Number.parseInt(volumeBoost, 10) || 0));
   const volumePct = `${((volumeNumeric - -100) / (200 - -100)) * 100}%`;
 
-  const handleApply = () => {
+  const fieldValues: Record<TextEditableField, string> = { nickname, artist, album, artwork };
+
+  const handleFieldChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const field = e.currentTarget.dataset.field as TextEditableField;
+    const value = e.target.value;
+    switch (field) {
+      case 'nickname':
+        setNickname(value);
+        break;
+      case 'artist':
+        setArtist(value);
+        break;
+      case 'album':
+        setAlbum(value);
+        break;
+      case 'artwork':
+        setArtwork(value);
+        break;
+    }
+  }, []);
+
+  const handleClearField = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      const field = e.currentTarget.dataset.field;
+      if (field) {
+        toggleClear(field);
+      }
+    },
+    [toggleClear]
+  );
+
+  const handleBackdropClick = useCallback((e: React.MouseEvent) => e.stopPropagation(), []);
+
+  const handleFocusTagInput = useCallback(() => {
+    tagInputRef.current?.focus();
+    setShowDropdown(true);
+  }, []);
+
+  const handleTagPillRemove = useCallback(
+    (e: React.MouseEvent<HTMLButtonElement>) => {
+      e.stopPropagation();
+      const tag = e.currentTarget.closest('[data-tag]')?.getAttribute('data-tag');
+      if (tag) {
+        removeTag(tag);
+      }
+    },
+    [removeTag]
+  );
+
+  const handleTagInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    setTagInput(e.target.value);
+    setShowDropdown(true);
+    setHighlightedIdx(0);
+  }, []);
+
+  const handleTagInputFocus = useCallback(() => setShowDropdown(true), []);
+
+  const handleClearTags = useCallback(() => toggleClear('tags'), [toggleClear]);
+
+  const handleDropdownSelect = useCallback(
+    (e: React.MouseEvent<HTMLButtonElement>) => {
+      e.preventDefault();
+      const tagNameLower = e.currentTarget.dataset.tag;
+      if (tagNameLower && !tags.includes(tagNameLower)) {
+        setTags((prev) => [...prev, tagNameLower]);
+      }
+      setTagInput('');
+      setHighlightedIdx(0);
+      setShowDropdown(false);
+      tagInputRef.current?.focus();
+    },
+    [tags]
+  );
+
+  const handleVolumeTextChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const v = e.target.value;
+    if (v === '' || /^-?\d*$/.test(v)) {
+      setVolumeBoost(v);
+    }
+  }, []);
+
+  const handleVolumeBlur = useCallback(() => {
+    if (volumeBoost.trim() === '' || volumeBoost.trim() === '-') {
+      setVolumeBoost('0');
+    } else {
+      const n = Number.parseInt(volumeBoost, 10);
+      if (!Number.isNaN(n)) {
+        setVolumeBoost(String(Math.min(200, Math.max(-100, n))));
+      }
+    }
+  }, [volumeBoost]);
+
+  const handleVolumeRangeChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => setVolumeBoost(e.target.value),
+    []
+  );
+
+  const handleClearVolumeBoost = useCallback(() => toggleClear('volumeBoost'), [toggleClear]);
+
+  const volumeRangeStyle = useMemo(
+    () => ({ '--volume-pct': volumePct }) as React.CSSProperties,
+    [volumePct]
+  );
+
+  const handleApply = useCallback(() => {
     const data: BulkEditData = {};
     let hasChanges = false;
 
@@ -183,7 +298,9 @@ export default function BulkEditModal({ count, onApply, onClose, isApplying }: B
       }
     }
 
-    if (!hasChanges) return;
+    if (!hasChanges) {
+      return;
+    }
 
     // Include clearFields for the backend
     if (clearFields.size > 0) {
@@ -191,14 +308,13 @@ export default function BulkEditModal({ count, onApply, onClose, isApplying }: B
     }
 
     onApply(data);
-  };
+  }, [nickname, artist, album, artwork, tags, volumeBoost, clearFields, onApply]);
 
   return (
     <Backdrop onClose={onClose}>
-      {/* eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-static-element-interactions -- modal container, keyboard not applicable */}
       <SpringUp
         className='w-full max-w-md mx-4 p-6 glass-modal max-h-[85vh] overflow-y-auto'
-        onClick={(e) => e.stopPropagation()}
+        onClick={handleBackdropClick}
       >
         <h2 className='font-display text-lg text-fg mb-1'>Edit {count} songs</h2>
         <p className='text-xs text-muted font-mono mb-4'>
@@ -220,36 +336,9 @@ export default function BulkEditModal({ count, onApply, onClose, isApplying }: B
                   id={`bulk-edit-${key}`}
                   className={`input text-sm w-full${clearFields.has(key) ? ' opacity-30 pointer-events-none' : ''}`}
                   placeholder={placeholder}
-                  value={(() => {
-                    switch (key) {
-                      case 'nickname':
-                        return nickname;
-                      case 'artist':
-                        return artist;
-                      case 'album':
-                        return album;
-                      case 'artwork':
-                        return artwork;
-                      default:
-                        return '';
-                    }
-                  })()}
-                  onChange={(e) => {
-                    switch (key) {
-                      case 'nickname':
-                        setNickname(e.target.value);
-                        break;
-                      case 'artist':
-                        setArtist(e.target.value);
-                        break;
-                      case 'album':
-                        setAlbum(e.target.value);
-                        break;
-                      case 'artwork':
-                        setArtwork(e.target.value);
-                        break;
-                    }
-                  }}
+                  value={fieldValues[key]}
+                  onChange={handleFieldChange}
+                  data-field={key}
                   disabled={clearFields.has(key)}
                 />
               </div>
@@ -258,7 +347,8 @@ export default function BulkEditModal({ count, onApply, onClose, isApplying }: B
                   type='checkbox'
                   className='sr-only peer'
                   checked={clearFields.has(key)}
-                  onChange={() => toggleClear(key)}
+                  onChange={handleClearField}
+                  data-field={key}
                 />
                 <span className='text-[9px] font-mono uppercase text-muted peer-checked:text-danger transition-colors'>
                   Clear
@@ -286,10 +376,7 @@ export default function BulkEditModal({ count, onApply, onClose, isApplying }: B
                 <div
                   ref={tagAreaRef}
                   className={`input text-sm flex flex-wrap gap-1.5 items-center min-h-9.5 cursor-text relative${clearFields.has('tags') ? ' opacity-30 pointer-events-none' : ''}`}
-                  onClick={() => {
-                    tagInputRef.current?.focus();
-                    setShowDropdown(true);
-                  }}
+                  onClick={handleFocusTagInput}
                 >
                   {tags.map((tag) => {
                     const c = getTagColorClasses(tag, tagColorMap[tag.toLowerCase()]);
@@ -302,10 +389,8 @@ export default function BulkEditModal({ count, onApply, onClose, isApplying }: B
                         <button
                           type='button'
                           className='cursor-pointer opacity-60 hover:opacity-100'
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            removeTag(tag);
-                          }}
+                          onClick={handleTagPillRemove}
+                          data-tag={tag}
                         >
                           <XIcon size={10} weight='bold' />
                         </button>
@@ -320,12 +405,8 @@ export default function BulkEditModal({ count, onApply, onClose, isApplying }: B
                       tags.length === 0 ? 'Type a tag and press Enter...' : 'Add another...'
                     }
                     value={tagInput}
-                    onChange={(e) => {
-                      setTagInput(e.target.value);
-                      setShowDropdown(true);
-                      setHighlightedIdx(0);
-                    }}
-                    onFocus={() => setShowDropdown(true)}
+                    onChange={handleTagInputChange}
+                    onFocus={handleTagInputFocus}
                     onKeyDown={handleTagKeyDown}
                     disabled={clearFields.has('tags')}
                   />
@@ -336,7 +417,7 @@ export default function BulkEditModal({ count, onApply, onClose, isApplying }: B
                   type='checkbox'
                   className='sr-only peer'
                   checked={clearFields.has('tags')}
-                  onChange={() => toggleClear('tags')}
+                  onChange={handleClearTags}
                 />
                 <span className='text-[9px] font-mono uppercase text-muted peer-checked:text-danger transition-colors'>
                   Clear
@@ -367,16 +448,8 @@ export default function BulkEditModal({ count, onApply, onClose, isApplying }: B
                             ? 'bg-accent/10 text-accent'
                             : 'text-fg hover:bg-surface'
                         }`}
-                        onMouseDown={(e) => {
-                          e.preventDefault();
-                          if (!tags.includes(t.nameLower)) {
-                            setTags((prev) => [...prev, t.nameLower]);
-                          }
-                          setTagInput('');
-                          setHighlightedIdx(0);
-                          setShowDropdown(false);
-                          tagInputRef.current?.focus();
-                        }}
+                        onMouseDown={handleDropdownSelect}
+                        data-tag={t.nameLower}
                       >
                         <span
                           className={`inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium ${c.bg} ${c.text}`}
@@ -407,20 +480,8 @@ export default function BulkEditModal({ count, onApply, onClose, isApplying }: B
                   placeholder='0'
                   type='text'
                   value={volumeBoost}
-                  onChange={(e) => {
-                    const v = e.target.value;
-                    if (v === '' || /^-?\d*$/.test(v)) setVolumeBoost(v);
-                  }}
-                  onBlur={() => {
-                    if (volumeBoost.trim() === '' || volumeBoost.trim() === '-') {
-                      setVolumeBoost('0');
-                    } else {
-                      const n = Number.parseInt(volumeBoost, 10);
-                      if (!Number.isNaN(n)) {
-                        setVolumeBoost(String(Math.min(200, Math.max(-100, n))));
-                      }
-                    }
-                  }}
+                  onChange={handleVolumeTextChange}
+                  onBlur={handleVolumeBlur}
                   disabled={clearFields.has('volumeBoost')}
                 />
                 <span className='text-xs text-muted font-mono w-8 text-left'>dB</span>
@@ -429,10 +490,10 @@ export default function BulkEditModal({ count, onApply, onClose, isApplying }: B
                   min={-100}
                   max={200}
                   value={volumeNumeric}
-                  onChange={(e) => setVolumeBoost(e.target.value)}
+                  onChange={handleVolumeRangeChange}
                   className={`volume-range-input${clearFields.has('volumeBoost') ? ' opacity-30 pointer-events-none' : ''}`}
                   disabled={clearFields.has('volumeBoost')}
-                  style={{ ['--volume-pct' as string]: volumePct } as React.CSSProperties}
+                  style={volumeRangeStyle}
                 />
               </div>
             </div>
@@ -441,7 +502,7 @@ export default function BulkEditModal({ count, onApply, onClose, isApplying }: B
                 type='checkbox'
                 className='sr-only peer'
                 checked={clearFields.has('volumeBoost')}
-                onChange={() => toggleClear('volumeBoost')}
+                onChange={handleClearVolumeBoost}
               />
               <span className='text-[9px] font-mono uppercase text-muted peer-checked:text-danger transition-colors'>
                 Clear

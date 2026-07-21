@@ -1,4 +1,6 @@
 {
+  "tab_size": 2,
+  "file_scan_exclusions": ["**/node_modules/**", "**/dist/**", ".pi/**", "**/*.sqlite"],
   "lsp": {
     "oxlint": {
       "initialization_options": {
@@ -11,7 +13,7 @@
     "oxfmt": {
       "initialization_options": {
         "settings": {
-          "configPath": "./oxfmt.config.ts"
+          "fmt.configPath": "./oxfmt.config.ts"
         }
       }
     }
@@ -29,7 +31,7 @@
       ]
     },
     "JavaScript": {
-      "language_servers": ["oxlint", "..."],
+      "language_servers": ["oxlint", "!eslint", "..."],
       "format_on_save": "on",
       "formatter": [
         {
@@ -44,8 +46,9 @@
     },
     "TypeScript": {
       "language_servers": [
-        "typescript-ls",
         "oxlint",
+        "!eslint",
+        "!typescript-ls",
         "!typescript-language-server",
         "!vtsls",
         "..."
@@ -69,10 +72,12 @@
     },
     "TSX": {
       "language_servers": [
-        "typescript-ls",
         "oxlint",
+        "!eslint",
+        "!typescript-ls",
         "!typescript-language-server",
         "!vtsls",
+        "tailwindcss-language-server",
         "..."
       ],
       "format_on_save": "on",
@@ -90,10 +95,11 @@
         "enabled": true,
         "show_parameter_hints": true,
         "show_type_hints": true
-      }
+      },
+      "use_autoclose": true
     },
     "JSON": {
-      "language_servers": ["oxlint", "..."],
+      "language_servers": ["oxlint", "!eslint", "..."],
       "format_on_save": "on",
       "formatter": [
         {
@@ -104,6 +110,11 @@
       ]
     },
     "Markdown": {
+      "language_servers": ["marksman", "..."],
+      "format_on_save": "on"
+    },
+    "Dockerfile": {
+      "language_servers": ["dockerfile-language-server", "..."],
       "format_on_save": "on"
     }
   },

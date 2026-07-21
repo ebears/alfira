@@ -11,16 +11,17 @@ The bot and API run in a **single Bun process**. For detailed architecture (star
 
 ## Tech Stack
 
-| Component | Technology                  |
-| --------- | --------------------------- |
-| Runtime   | Bun                         |
-| Language  | TypeScript                  |
-| Discord   | Custom gateway (WebSocket)  |
-| Audio     | NodeLink (Lavalink v4)      |
-| API       | Bun native HTTP + WebSocket |
-| Database  | SQLite + Drizzle ORM        |
-| Frontend  | React 19 + Tailwind CSS 4   |
-| Linting   | oxlint + oxfmt              |
+| Component    | Technology                                    |
+| ------------ | --------------------------------------------- |
+| Runtime      | Bun                                           |
+| Language     | TypeScript                                    |
+| Discord      | Custom gateway (WebSocket)                    |
+| Audio        | NodeLink (Lavalink v4)                        |
+| API          | Bun native HTTP + WebSocket                   |
+| Database     | SQLite + Drizzle ORM                          |
+| Frontend     | React 19 + Tailwind CSS 4                     |
+| Linting      | oxlint + oxfmt                                |
+| Typechecking | oxlint (--type-aware --type-check, uses tsgo) |
 
 ## Design Principles
 
@@ -30,6 +31,7 @@ The bot and API run in a **single Bun process**. For detailed architecture (star
 - **Web UI as primary interface** — The Discord bot is the playback engine; the web app is the control plane. This avoids Discord's rate limits and UX constraints.
 - **Audio is audio — no assumptions about content** — Works equally as a music bot or tabletop audio player. The data model (songs, playlists, tags) is content-type-agnostic: a pop song and an hour-long dungeon ambience are the same shape.
 - **Single source of truth** — Every concept, pattern, and piece of knowledge has one canonical home. Before creating something new, check if it already exists or can be extended. If nothing fits and your change would duplicate what already exists across files, extract the commonality into a shared location first. This applies as much to UI patterns (one toast, one button variant, one data-fetching hook) as it does to types and utilities. Copy-pasting is a last resort, not a first move.
+- **Strict linting — zero warnings, zero excuses** — The linter is configured for maximum correctness signal with minimal noise. Warnings are errors (`--deny-warnings`). Stale disable directives are errors (`reportUnusedDisableDirectives`). Type-aware rules run everywhere. Every PR must pass `bun run check` with zero diagnostics. This isn't pedantry — it's a quality ratchet that prevents drift and catches real bugs before they reach production.
 
 ## Development Commands
 
@@ -40,8 +42,11 @@ bun run dev
 # Build the web UI (needed after web/src changes before docker compose restart)
 bun run web:build
 
-# Lint + format with auto-fix (run before committing)
+# Lint + typecheck + format (run before committing)
 bun run check
+
+# Typecheck only
+bun run typecheck
 
 # Lint only, with auto-fix
 bun run lint:fix
@@ -60,9 +65,10 @@ See the `alfira-database` skill for full details.
 
 ## Code Style
 
-- oxlint + oxfmt for linting and formatting
+- oxlint + oxfmt for linting, typechecking, and formatting
+- Typechecking uses oxlint's `--type-aware --type-check` flags, which leverage tsgo (the Go-based TypeScript compiler) for full type resolution — no separate `typescript` dependency needed
 - Run `bun run check` before committing
-- CI runs `bun run lint` — code must pass before merging
+- CI runs `bun run check` — code must pass before merging
 
 ## Domain Knowledge
 
@@ -171,6 +177,12 @@ refactor(server): extract shared audio filter builders
 ### Before Committing
 
 Always run `bun run check` and resolve any lint/format issues before committing.
+
+## Agent Operating Mode
+
+**Escalate uncertainty, don't hide it.** There is no deadline — the user is never rushing you. If something is larger or more complex than expected, say so. If you're unsure about the right approach or need more clarity, ask. If you feel pressure to finish quickly, say so — that's a signal the problem needs breaking down further, not that you should work faster.
+
+**Never amend a commit without explicit permission.** Whether the commit is pushed or not, ask first. Amending destroys the paper trail — favor discrete commits during active work so we can revert individual changes and see what happened. If you want to clean up history, ask.
 
 ## Documentation
 

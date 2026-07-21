@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef } from 'react';
+
 import { useNotification } from './useNotification';
 import { useRateLimit } from './useRateLimit';
 
@@ -56,7 +57,9 @@ export function useCooldownGuard() {
 
   const handleCooldownClick = useCallback(() => {
     const now = Date.now();
-    if (now - lastToast < TOAST_INTERVAL_MS) return;
+    if (now - lastToast < TOAST_INTERVAL_MS) {
+      return;
+    }
     lastToast = now;
     notify(`${retryAfterSeconds}s remaining until controls are re-enabled.`, 'error', 5000);
   }, [retryAfterSeconds, notify]);

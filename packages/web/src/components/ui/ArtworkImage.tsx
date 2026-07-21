@@ -1,5 +1,5 @@
 import { DiscIcon } from '@phosphor-icons/react';
-import { useState } from 'react';
+import { useCallback, useState } from 'react';
 
 interface ArtworkImageProps {
   src?: string | null;
@@ -17,7 +17,11 @@ export function ArtworkImage({
 }: ArtworkImageProps) {
   const [loaded, setLoaded] = useState(false);
 
-  if (!src) return null;
+  const handleLoad = useCallback(() => setLoaded(true), []);
+
+  if (!src) {
+    return null;
+  }
 
   return (
     <div className={`relative ${className}`}>
@@ -35,7 +39,7 @@ export function ArtworkImage({
         alt={alt}
         loading='lazy'
         decoding='async'
-        onLoad={() => setLoaded(true)}
+        onLoad={handleLoad}
         className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-200 ${loaded ? 'opacity-100' : 'opacity-0'} ${imageClassName}`}
       />
     </div>

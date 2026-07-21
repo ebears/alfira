@@ -1,5 +1,8 @@
-import { ArrowCounterClockwise, FloppyDisk } from '@phosphor-icons/react';
-import { useEffect, useState } from 'react';
+import type React from 'react';
+
+import { ArrowCounterClockwiseIcon, FloppyDiskIcon } from '@phosphor-icons/react';
+import { memo, useCallback, useEffect, useMemo, useState } from 'react';
+
 import { useAdminView } from '../../context/AdminViewContext';
 import { usePermissions } from '../../context/PermissionsContext';
 import { Button } from '../ui/Button';
@@ -23,6 +26,64 @@ const FREQ_LABELS = [
 ];
 const DEFAULT_BANDS = Array(15).fill(50);
 
+// ---------------------------------------------------------------------------
+// Child component — extracted for stable onChange + style in the map loop
+// ---------------------------------------------------------------------------
+
+interface EqBandSliderProps {
+  index: number;
+  value: number;
+  label: string;
+  onChange: (index: number, value: number) => void;
+}
+
+const EqBandSlider = memo(function EqBandSlider({
+  index,
+  value,
+  label,
+  onChange,
+}: EqBandSliderProps) {
+  const handleChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => onChange(index, parseInt(e.target.value, 10)),
+    [onChange, index]
+  );
+
+  const gainOffset = value - 50;
+  const gainLabel = gainOffset === 0 ? '0' : `${gainOffset > 0 ? '+' : ''}${gainOffset}`;
+
+  const sliderStyle = useMemo(
+    () => ({
+      writingMode: 'vertical-lr' as const,
+      direction: 'rtl' as const,
+      width: '8px',
+      height: '120px',
+      borderRadius: '4px',
+      background: `linear-gradient(to top, var(--color-accent) 0%, var(--color-accent) ${(value / 100) * 100}%, var(--color-border) ${(value / 100) * 100}%, var(--color-border) 100%)`,
+    }),
+    [value]
+  );
+
+  return (
+    <div className='flex flex-col items-center gap-1 shrink-0'>
+      <span className='font-mono text-[10px] text-muted'>{label}</span>
+      <div className='relative h-[120px] w-2'>
+        <input
+          type='range'
+          min={0}
+          max={100}
+          step={1}
+          value={value}
+          onChange={handleChange}
+          className='range-input'
+          style={sliderStyle}
+        />
+        <div className='absolute inset-x-0 top-1/2 h-px bg-border/50 pointer-events-none' />
+      </div>
+      <span className='font-mono text-[10px] text-fg min-w-[2em] text-right'>{gainLabel}</span>
+    </div>
+  );
+});
+
 export default function EqualizerSection() {
   const { isAdminView } = useAdminView();
   const { hasPermission } = usePermissions();
@@ -43,7 +104,7 @@ export default function EqualizerSection() {
           const data = (await res.json()) as { bands: number[]; enabled: boolean };
           setBands(data.bands);
           setSavedBands(data.bands);
-          const enabled = data.enabled ?? true;
+          const enabled = data.enabled;
           setEqEnabled(enabled);
           setSavedEnabled(enabled);
         }
@@ -53,8 +114,11 @@ export default function EqualizerSection() {
         setLoaded(true);
       }
     }
-    if (canManage) load();
-    else setLoaded(true);
+    if (canManage) {
+      void load();
+    } else {
+      setLoaded(true);
+    }
   }, [canManage]);
 
   // When off, save sends flat bands; when on, save sends real bands
@@ -62,7 +126,7 @@ export default function EqualizerSection() {
   const hasChanges =
     JSON.stringify(effectiveBands) !== JSON.stringify(savedBands) || eqEnabled !== savedEnabled;
 
-  async function handleSave() {
+  const handleSave = useCallback(async () => {
     setSaving(true);
     try {
       const res = await fetch('/api/settings/equalizer', {
@@ -79,23 +143,21 @@ export default function EqualizerSection() {
     } finally {
       setSaving(false);
     }
-  }
+  }, [effectiveBands, eqEnabled]);
 
-  function handleReset() {
+  const handleReset = useCallback(() => {
     setBands(DEFAULT_BANDS);
-  }
+  }, []);
 
-  function updateBand(index: number, value: number) {
-    const next = [...bands];
-    next[index] = value;
-    setBands(next);
-  }
+  const updateBand = useCallback((index: number, value: number) => {
+    setBands((prev) => {
+      const next = [...prev];
+      next[index] = value;
+      return next;
+    });
+  }, []);
 
-  function gainDisplay(value: number): string {
-    const offset = value - 50;
-    if (offset === 0) return '0';
-    return `${offset > 0 ? '+' : ''}${offset}`;
-  }
+  const handleToggle = useCallback(() => setEqEnabled((v) => !v), []);
 
   // EQ curve SVG visualization
   const curvePath = (() => {
@@ -116,7 +178,9 @@ export default function EqualizerSection() {
   const dimmed = !canManage;
   const slidersDimmed = !eqEnabled;
 
-  if (!loaded) return null;
+  if (!loaded) {
+    return null;
+  }
 
   return (
     <div className={`space-y-4 ${dimmed ? 'opacity-40 pointer-events-none' : ''}`}>
@@ -128,7 +192,7 @@ export default function EqualizerSection() {
           role='switch'
           aria-checked={eqEnabled}
           aria-label='Enable equalizer'
-          onClick={() => setEqEnabled(!eqEnabled)}
+          onClick={handleToggle}
           className={`relative shrink-0 w-9 h-5 rounded-full transition-colors cursor-pointer focus:outline-none focus:ring-2 focus:ring-accent/50 focus:ring-offset-2 focus:ring-offset-surface ${
             eqEnabled ? 'bg-accent' : 'bg-border'
           }`}
@@ -169,35 +233,13 @@ export default function EqualizerSection() {
         className={`flex flex-wrap justify-center gap-2 md:flex-nowrap ${slidersDimmed ? 'opacity-40' : ''}`}
       >
         {bands.map((value, i) => (
-          // eslint-disable-next-line react/no-array-index-key -- static UI elements with stable order
-          <div key={i} className='flex flex-col items-center gap-1 shrink-0'>
-            <span className='font-mono text-[10px] text-muted'>{FREQ_LABELS[i]}</span>
-            <div className='relative h-[120px] w-2'>
-              <input
-                type='range'
-                min={0}
-                max={100}
-                step={1}
-                value={value}
-                onChange={(e) => updateBand(i, parseInt(e.target.value, 10))}
-                className='range-input'
-                style={
-                  {
-                    writingMode: 'vertical-lr',
-                    direction: 'rtl',
-                    width: '8px',
-                    height: '120px',
-                    borderRadius: '4px',
-                    background: `linear-gradient(to top, var(--color-accent) 0%, var(--color-accent) ${(value / 100) * 100}%, var(--color-border) ${(value / 100) * 100}%, var(--color-border) 100%)`,
-                  } as React.CSSProperties
-                }
-              />
-              <div className='absolute inset-x-0 top-1/2 h-px bg-border/50 pointer-events-none' />
-            </div>
-            <span className='font-mono text-[10px] text-fg min-w-[2em] text-right'>
-              {gainDisplay(value)}
-            </span>
-          </div>
+          <EqBandSlider
+            key={i}
+            index={i}
+            value={value}
+            label={FREQ_LABELS[i]}
+            onChange={updateBand}
+          />
         ))}
       </div>
 
@@ -210,7 +252,7 @@ export default function EqualizerSection() {
           disabled={!hasChanges || saving}
           title={saving ? 'Saving…' : 'Save Changes'}
         >
-          <FloppyDisk size={16} weight='duotone' />
+          <FloppyDiskIcon size={16} weight='duotone' />
         </Button>
         <Button
           variant='inherit'
@@ -219,7 +261,7 @@ export default function EqualizerSection() {
           onClick={handleReset}
           title='Reset to Defaults'
         >
-          <ArrowCounterClockwise size={16} weight='duotone' />
+          <ArrowCounterClockwiseIcon size={16} weight='duotone' />
         </Button>
       </div>
     </div>

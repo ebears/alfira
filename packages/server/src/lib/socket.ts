@@ -1,8 +1,8 @@
 import { eq } from 'drizzle-orm';
-import type { CompressorSettings, Playlist, QueueState, User } from '../shared';
+
+import { type CompressorSettings, type Playlist, type QueueState, type User } from '../shared';
 import { db, tables } from '../shared/db';
 import { logger } from '../shared/logger';
-
 import { formatSong, type SerializedSong } from './serialization';
 
 // Accept both Date and string createdAt — Drizzle uses Date at the DB level,
@@ -15,14 +15,14 @@ type SerializedPlaylist = Omit<Playlist, 'createdAt'> & { createdAt: string | Da
 
 export interface WsClient {
   readonly id: number;
-  send(data: string): void;
-  close(): void;
+  send: (data: string) => void;
+  close: () => void;
 }
 
 const clients = new Set<WsClient>();
 
-export async function getCompressorSettings(): Promise<CompressorSettings | null> {
-  const row = await db
+export function getCompressorSettings(): CompressorSettings | null {
+  const row = db
     .select({
       enabled: tables.guildSettings.compressorEnabled,
       threshold: tables.guildSettings.compressorThreshold,
@@ -34,7 +34,9 @@ export async function getCompressorSettings(): Promise<CompressorSettings | null
     .from(tables.guildSettings)
     .where(eq(tables.guildSettings.id, 1))
     .get();
-  if (!row) return null;
+  if (!row) {
+    return null;
+  }
   return {
     enabled: row.enabled,
     threshold: row.threshold,
@@ -68,8 +70,8 @@ export function unregisterClient(ws: WsClient): void {
 /**
  * Emit the full queue state to all connected clients.
  */
-export async function emitPlayerUpdate(state: QueueState): Promise<void> {
-  const compressor = await getCompressorSettings();
+export function emitPlayerUpdate(state: QueueState): void {
+  const compressor = getCompressorSettings();
   const message = JSON.stringify({
     event: 'player:update',
     data: { ...state, compressorSettings: compressor },

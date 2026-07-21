@@ -1,4 +1,4 @@
-import type { QueueState } from '@alfira/server/shared';
+import { type QueueState } from '@alfira/server/shared';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 /**
@@ -30,6 +30,14 @@ export function useProgressBar(
   const effectiveStartRef = useRef(0);
   // Track previous song ID to detect song change and reset accumulated time.
   const prevSongIdRef = useRef<string | null>(null);
+  // Tracks whether we've seeded the effective start for the current song.
+  // Prevents re-seeding (and the resulting time-text jump) when the effect
+  // re-runs due to timescale fields arriving mid-song.
+  const hasSeededRef = useRef(false);
+  // Tracks the last overrideElapsed value we've already applied, so periodic
+  // sync broadcasts (which re-run the effect) don't re-apply a stale override
+  // and flash the time text back to the seek target.
+  const lastOverrideRef = useRef<number | undefined>(undefined);
 
   const registerProgress = useCallback((ref: HTMLDivElement | null) => {
     if (ref) {
@@ -52,12 +60,18 @@ export function useProgressBar(
   const isPlaying = !!state.currentSong && state.isPlaying && !state.isPaused;
   const isPaused = state.isPaused;
   const trackStartedAt = state.trackStartedAt;
+  const speed = state.timescaleSpeed ?? 1.0;
+  const nodeLinkPosition = state.nodeLinkPosition ?? null;
+  const nodeLinkTime = state.nodeLinkTime ?? null;
 
   useEffect(() => {
     // When overrideElapsed is provided (after a seek), sync the React
     // elapsed state immediately so that any React re-render uses the correct
     // position and doesn't fight the rAF-driven thumb placement.
-    if (overrideElapsed !== undefined) {
+    // Guarded by lastOverrideRef so periodic sync re-runs don't re-apply
+    // a stale override and flash the time text back to the seek target.
+    if (overrideElapsed !== undefined && overrideElapsed !== lastOverrideRef.current) {
+      lastOverrideRef.current = overrideElapsed;
       accumulatedMsRef.current = overrideElapsed * 1000;
       effectiveStartRef.current = Date.now() - overrideElapsed * 1000;
       setElapsed(overrideElapsed);
@@ -80,6 +94,8 @@ export function useProgressBar(
     if (hasSong && currentSongId !== prevSongId) {
       accumulatedMsRef.current = 0;
       prevSongIdRef.current = currentSongId;
+      hasSeededRef.current = false;
+      lastOverrideRef.current = undefined;
     } else if (!hasSong) {
       prevSongIdRef.current = null;
     } else if (overrideElapsed !== undefined) {
@@ -91,14 +107,19 @@ export function useProgressBar(
       if (elapsedFromTrackStarted < overrideElapsed / 2) {
         accumulatedMsRef.current = 0;
         effectiveStartRef.current = 0;
+        hasSeededRef.current = false;
         setOverrideElapsed(undefined);
       }
     }
 
     if (!isPlaying) {
       // Cancel all loops
-      if (rafIdRef.current) cancelAnimationFrame(rafIdRef.current);
-      if (intervalIdRef.current) clearInterval(intervalIdRef.current);
+      if (rafIdRef.current) {
+        cancelAnimationFrame(rafIdRef.current);
+      }
+      if (intervalIdRef.current) {
+        clearInterval(intervalIdRef.current);
+      }
       rafIdRef.current = 0;
       intervalIdRef.current = 0;
 
@@ -106,8 +127,12 @@ export function useProgressBar(
       if (!hasSong && !isPaused) {
         accumulatedMsRef.current = 0;
         setElapsed(0);
-        for (const ref of progressBars.current) ref.style.width = '0%';
-        for (const ref of thumbs.current) ref.style.left = '0%';
+        for (const ref of progressBars.current) {
+          ref.style.width = '0%';
+        }
+        for (const ref of thumbs.current) {
+          ref.style.left = '0%';
+        }
       }
 
       // When pausing (song exists + paused), capture current elapsed
@@ -117,16 +142,24 @@ export function useProgressBar(
         const pausedSec = Math.min(Math.round(accumulatedMsRef.current / 1000), duration);
         setElapsed(pausedSec);
         const pct = (pausedSec / duration) * 100;
-        for (const ref of progressBars.current) ref.style.width = `${pct}%`;
-        for (const ref of thumbs.current) ref.style.left = `${pct}%`;
+        for (const ref of progressBars.current) {
+          ref.style.width = `${pct}%`;
+        }
+        for (const ref of thumbs.current) {
+          ref.style.left = `${pct}%`;
+        }
       }
 
-      return;
+      return undefined;
     }
 
     // ---- Starting loops ----
-    if (rafIdRef.current) cancelAnimationFrame(rafIdRef.current);
-    if (intervalIdRef.current) clearInterval(intervalIdRef.current);
+    if (rafIdRef.current) {
+      cancelAnimationFrame(rafIdRef.current);
+    }
+    if (intervalIdRef.current) {
+      clearInterval(intervalIdRef.current);
+    }
 
     // Compute effective start
     let effectiveStart: number;
@@ -134,27 +167,53 @@ export function useProgressBar(
       // Resume: continue from where we left off
       effectiveStart = Date.now() - accumulatedMsRef.current;
     } else if (trackStartedAt) {
-      // New song — seed from server timestamp
-      const seed = Math.max(
-        0,
-        Math.min(Math.floor((Date.now() - trackStartedAt) / 1000), duration)
-      );
-      setElapsed(seed);
-      effectiveStart = Date.now() - seed * 1000;
+      // Seed from server timestamp on first run for this song.
+      // Skip on re-runs (e.g. when timescale fields arrive) to avoid
+      // the time text jumping to a floored whole-second value.
+      if (hasSeededRef.current) {
+        effectiveStart = effectiveStartRef.current;
+      } else {
+        const seed = Math.max(
+          0,
+          Math.min(Math.floor((Date.now() - trackStartedAt) / 1000), duration)
+        );
+        setElapsed(seed);
+        effectiveStart = Date.now() - seed * 1000;
+        hasSeededRef.current = true;
+      }
     } else {
       // Fallback: start from 0
       setElapsed(0);
       effectiveStart = Date.now();
+      hasSeededRef.current = true;
     }
 
     effectiveStartRef.current = effectiveStart;
 
+    // Capture the NodeLink anchor at setup time so the rAF / interval
+    // closures don't read a value that changes mid-flight.
+    const nlPos = nodeLinkPosition;
+    const nlTime = nodeLinkTime;
+
+    // Compute elapsed ms.  Use the NodeLink ground-truth position whenever
+    // available — it's more accurate than wall-clock dead-reckoning at any
+    // speed. Fall back to wall-clock when position data isn't available yet
+    // (e.g. just after a seek, before the next periodic sync arrives).
+    const computeElapsedMs = (): number => {
+      if (nlPos !== null && nlTime !== null && nlTime > 0) {
+        return nlPos + (Date.now() - nlTime) * speed;
+      }
+      return (Date.now() - effectiveStart) * speed;
+    };
+
     // rAF loop — directly sets style.width on registered progress bars and
     // style.left on registered thumbs so both glide at display-native rate.
+    // Capped at 100% so the bar doesn't overflow, but the loop keeps running
+    // so it can recover when a periodic sync with fresh NodeLink position
+    // data arrives and corrects clock drift.
     const tick = () => {
-      const elapsedMs = Date.now() - effectiveStart;
+      const elapsedMs = computeElapsedMs();
       const pct = Math.min((elapsedMs / (duration * 1000)) * 100, 100);
-      if (pct >= 100) return;
       const pctStr = `${pct}%`;
       for (const ref of progressBars.current) {
         ref.style.width = pctStr;
@@ -168,13 +227,17 @@ export function useProgressBar(
 
     // 1-sec interval — updates elapsed React state for time text only
     intervalIdRef.current = setInterval(() => {
-      const sec = Math.floor((Date.now() - effectiveStart) / 1000);
+      const sec = Math.floor(computeElapsedMs() / 1000);
       setElapsed(Math.min(Math.max(sec, 0), duration));
     }, 1000);
 
     return () => {
-      if (rafIdRef.current) cancelAnimationFrame(rafIdRef.current);
-      if (intervalIdRef.current) clearInterval(intervalIdRef.current);
+      if (rafIdRef.current) {
+        cancelAnimationFrame(rafIdRef.current);
+      }
+      if (intervalIdRef.current) {
+        clearInterval(intervalIdRef.current);
+      }
       rafIdRef.current = 0;
       intervalIdRef.current = 0;
     };
@@ -184,6 +247,9 @@ export function useProgressBar(
     isPlaying,
     isPaused,
     trackStartedAt,
+    speed,
+    nodeLinkPosition,
+    nodeLinkTime,
     overrideElapsed,
     setOverrideElapsed,
   ]);

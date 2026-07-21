@@ -50,7 +50,9 @@ export function getTagColorClasses(
 ): (typeof TAG_COLORS)[number] {
   if (explicitColor) {
     const found = TAG_COLORS.find((c) => c.name === explicitColor);
-    if (found) return found;
+    if (found) {
+      return found;
+    }
   }
   return TAG_COLORS[djb2(tag.toLowerCase()) % TAG_COLORS.length];
 }

@@ -1,7 +1,9 @@
-import type { Playlist, Song } from '@alfira/server/shared';
-import { memo, useCallback, useEffect, useState } from 'react';
+import { type Playlist, type Song } from '@alfira/server/shared';
+import { memo, useCallback, useEffect, useMemo, useState } from 'react';
+
 import { useSongEdit } from '../context/SongEditContext';
 import SongCard from './SongCard';
+import { Skeleton } from './ui/Skeleton';
 import { VirtualList } from './VirtualList';
 
 /** Height allocated to an expanded row (card + edit panel + spacer). */
@@ -44,23 +46,75 @@ function SkeletonList() {
   return (
     <div className='flex flex-col gap-1.5'>
       {Array.from({ length: 8 }).map((_, i) => (
-        // eslint-disable-next-line react/no-array-index-key -- static skeleton placeholders
         <div
           key={`skeleton-${i}`}
           className='flex items-center gap-3 md:gap-4 px-4 py-4 rounded-lg bg-elevated clay-resting'
         >
-          <div className='skeleton w-16 h-16 rounded border border-border shrink-0' />
+          <Skeleton className='w-16 h-16 rounded border border-border shrink-0' />
           <div className='flex-1 min-w-0 flex flex-col gap-2'>
-            <div className='skeleton h-3.5 w-2/5' />
-            <div className='skeleton h-3 w-3/5' />
+            <Skeleton className='h-3.5 w-2/5' />
+            <Skeleton className='h-3 w-3/5' />
           </div>
-          <div className='skeleton h-6 w-6 shrink-0' />
-          <div className='skeleton h-4 w-4 shrink-0' />
+          <Skeleton className='h-6 w-6 shrink-0' />
+          <Skeleton className='h-4 w-4 shrink-0' />
         </div>
       ))}
     </div>
   );
 }
+
+// ---------------------------------------------------------------------------
+// Item wrapper — creates stable event callbacks per song
+// ---------------------------------------------------------------------------
+
+interface SongListItemProps {
+  song: Song;
+  isAdminView: boolean;
+  playlists: Playlist[];
+  playingId: string | null;
+  selectionMode: boolean;
+  isSelected: boolean;
+  onDelete?: (id: string) => void;
+  onPlay: (id: string) => void;
+  onAddToQueue: (id: string) => void;
+  onToggleSelect?: (id: string) => void;
+}
+
+const SongListItem = memo(function SongListItem({
+  song,
+  isAdminView,
+  playlists,
+  playingId,
+  selectionMode,
+  isSelected,
+  onDelete,
+  onPlay,
+  onAddToQueue,
+  onToggleSelect,
+}: SongListItemProps) {
+  const handlePlay = useCallback(() => onPlay(song.id), [onPlay, song.id]);
+  const handleAddToQueue = useCallback(() => onAddToQueue(song.id), [onAddToQueue, song.id]);
+  const handleToggleSelect = useCallback(
+    () => onToggleSelect?.(song.id),
+    [onToggleSelect, song.id]
+  );
+
+  return (
+    <SongCard
+      song={song}
+      variant='list'
+      isAdminView={isAdminView}
+      playlists={playlists}
+      onDelete={onDelete}
+      onPlay={handlePlay}
+      isPlaying={playingId === song.id}
+      onAddToQueue={handleAddToQueue}
+      selectionMode={selectionMode}
+      isSelected={isSelected}
+      onToggleSelect={onToggleSelect ? handleToggleSelect : undefined}
+    />
+  );
+});
 
 // ---------------------------------------------------------------------------
 // Component
@@ -99,6 +153,7 @@ export const VirtualSongList = memo(function VirtualSongList({
     if (openSongId) {
       // Expand immediately — allocate space before the transition starts.
       setEffectiveOpenId(openSongId);
+      return undefined;
     } else {
       // Collapse: wait for the CSS transition to finish before releasing space.
       const timeout = setTimeout(() => setEffectiveOpenId(null), 300);
@@ -109,30 +164,48 @@ export const VirtualSongList = memo(function VirtualSongList({
   const estimateSize = useCallback(
     (index: number) => {
       const song = items[index];
-      return song && song.id === effectiveOpenId ? EXPANDED_ROW_HEIGHT : COLLAPSED_ROW_HEIGHT;
+      return song?.id === effectiveOpenId ? EXPANDED_ROW_HEIGHT : COLLAPSED_ROW_HEIGHT;
     },
     [items, effectiveOpenId]
   );
 
+  const getItemKey = useCallback((song: Song) => song.id, []);
+
+  const renderItem = useCallback(
+    (song: Song) => (
+      <SongListItem
+        song={song}
+        isAdminView={isAdminView}
+        playlists={playlists}
+        playingId={playingId}
+        selectionMode={selectionMode}
+        isSelected={isSelected?.(song.id) ?? false}
+        onDelete={onDelete}
+        onPlay={onPlay}
+        onAddToQueue={onAddToQueue}
+        onToggleSelect={onToggleSelect}
+      />
+    ),
+    [
+      isAdminView,
+      playlists,
+      playingId,
+      selectionMode,
+      isSelected,
+      onDelete,
+      onPlay,
+      onAddToQueue,
+      onToggleSelect,
+    ]
+  );
+
+  const skeleton = useMemo(() => <SkeletonList />, []);
+
   return (
     <VirtualList
       items={items}
-      getItemKey={(song) => song.id}
-      renderItem={(song) => (
-        <SongCard
-          song={song}
-          variant='list'
-          isAdminView={isAdminView}
-          playlists={playlists}
-          onDelete={onDelete}
-          onPlay={() => onPlay(song.id)}
-          isPlaying={playingId === song.id}
-          onAddToQueue={() => onAddToQueue(song.id)}
-          selectionMode={selectionMode}
-          isSelected={isSelected?.(song.id) ?? false}
-          onToggleSelect={onToggleSelect ? () => onToggleSelect(song.id) : undefined}
-        />
-      )}
+      getItemKey={getItemKey}
+      renderItem={renderItem}
       estimateSize={estimateSize}
       itemClassName='pb-3'
       isLoading={isLoading}
@@ -142,7 +215,7 @@ export const VirtualSongList = memo(function VirtualSongList({
       hasMore={hasMore}
       onRetry={onRetry}
       onFetchMore={onFetchMore}
-      skeleton={<SkeletonList />}
+      skeleton={skeleton}
       emptyTitle={emptyTitle}
       emptyMessage={emptyMessage}
     />

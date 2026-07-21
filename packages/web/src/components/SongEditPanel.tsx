@@ -1,8 +1,9 @@
-import type { Song } from '@alfira/server/shared';
-import type { SongUpdateData, TagItem } from '@alfira/server/shared/api';
+import { type Song } from '@alfira/server/shared';
+import { type SongUpdateData, type TagItem } from '@alfira/server/shared/api';
 import { fetchTags, updateSong } from '@alfira/server/shared/api';
-import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { createPortal, flushSync } from 'react-dom';
+
 import { useTagColors } from '../context/TagsContext';
 import { getTagColorClasses } from '../utils/tagColors';
 
@@ -84,7 +85,9 @@ export default function SongEditPanel({ song, isOpen, onClose }: SongEditPanelPr
 
   const addTag = useCallback(() => {
     const trimmed = tagInput.trim();
-    if (!trimmed || tags.includes(trimmed)) return;
+    if (!trimmed || tags.includes(trimmed)) {
+      return;
+    }
     setTags((prev) => [...prev, trimmed]);
     setTagInput('');
   }, [tagInput, tags]);
@@ -105,8 +108,11 @@ export default function SongEditPanel({ song, isOpen, onClose }: SongEditPanelPr
         e.preventDefault();
         if (showTagDropdown && highlightedIndex >= 0 && filteredTags[highlightedIndex]) {
           const tag = filteredTags[highlightedIndex];
-          if (tags.includes(tag.canonicalName)) removeTag(tag.canonicalName);
-          else setTags((prev) => [...prev, tag.canonicalName]);
+          if (tags.includes(tag.canonicalName)) {
+            removeTag(tag.canonicalName);
+          } else {
+            setTags((prev) => [...prev, tag.canonicalName]);
+          }
           setTagInput('');
           setHighlightedIndex(-1);
         } else {
@@ -133,7 +139,9 @@ export default function SongEditPanel({ song, isOpen, onClose }: SongEditPanelPr
   );
 
   const doSave = useCallback(async () => {
-    if (savingRef.current) return;
+    if (savingRef.current) {
+      return;
+    }
     savingRef.current = true;
     try {
       const {
@@ -151,12 +159,24 @@ export default function SongEditPanel({ song, isOpen, onClose }: SongEditPanelPr
       // Build a partial update — only include fields that actually changed.
       // This prevents concurrent edits from clobbering each other (last-write-wins).
       const data: SongUpdateData = {};
-      if (nk !== (originalNicknameRef.current ?? '')) data.nickname = nk.trim() || null;
-      if (ar !== (originalArtistRef.current ?? '')) data.artist = ar.trim() || null;
-      if (al !== (originalAlbumRef.current ?? '')) data.album = al.trim() || null;
-      if (aw !== (originalArtworkRef.current ?? '')) data.artwork = aw.trim() || null;
-      if (JSON.stringify(t) !== JSON.stringify(originalTagsRef.current)) data.tags = t;
-      if (parsedBoost !== originalVolumeBoostRef.current) data.volumeBoost = parsedBoost;
+      if (nk !== (originalNicknameRef.current ?? '')) {
+        data.nickname = nk.trim() || null;
+      }
+      if (ar !== (originalArtistRef.current ?? '')) {
+        data.artist = ar.trim() || null;
+      }
+      if (al !== (originalAlbumRef.current ?? '')) {
+        data.album = al.trim() || null;
+      }
+      if (aw !== (originalArtworkRef.current ?? '')) {
+        data.artwork = aw.trim() || null;
+      }
+      if (JSON.stringify(t) !== JSON.stringify(originalTagsRef.current)) {
+        data.tags = t;
+      }
+      if (parsedBoost !== originalVolumeBoostRef.current) {
+        data.volumeBoost = parsedBoost;
+      }
 
       // Skip if nothing changed
       if (Object.keys(data).length === 0) {
@@ -187,12 +207,24 @@ export default function SongEditPanel({ song, isOpen, onClose }: SongEditPanelPr
         parsedRaw != null && !Number.isNaN(parsedRaw) && parsedRaw !== 0 ? parsedRaw : null;
 
       const data: SongUpdateData = {};
-      if (nk !== (originalNicknameRef.current ?? '')) data.nickname = nk.trim() || null;
-      if (ar !== (originalArtistRef.current ?? '')) data.artist = ar.trim() || null;
-      if (al !== (originalAlbumRef.current ?? '')) data.album = al.trim() || null;
-      if (aw !== (originalArtworkRef.current ?? '')) data.artwork = aw.trim() || null;
-      if (JSON.stringify(t) !== JSON.stringify(originalTagsRef.current)) data.tags = t;
-      if (parsedBoost !== originalVolumeBoostRef.current) data.volumeBoost = parsedBoost;
+      if (nk !== (originalNicknameRef.current ?? '')) {
+        data.nickname = nk.trim() || null;
+      }
+      if (ar !== (originalArtistRef.current ?? '')) {
+        data.artist = ar.trim() || null;
+      }
+      if (al !== (originalAlbumRef.current ?? '')) {
+        data.album = al.trim() || null;
+      }
+      if (aw !== (originalArtworkRef.current ?? '')) {
+        data.artwork = aw.trim() || null;
+      }
+      if (JSON.stringify(t) !== JSON.stringify(originalTagsRef.current)) {
+        data.tags = t;
+      }
+      if (parsedBoost !== originalVolumeBoostRef.current) {
+        data.volumeBoost = parsedBoost;
+      }
 
       if (Object.keys(data).length > 0) {
         void doSave();
@@ -200,14 +232,75 @@ export default function SongEditPanel({ song, isOpen, onClose }: SongEditPanelPr
     }
   }, [isOpen, doSave]);
 
-  if (!isOpen && !closing) return null;
+  const handleEnterSave = useCallback(
+    (e: React.KeyboardEvent) => {
+      if (e.key === 'Enter') {
+        void doSave();
+      }
+    },
+    [doSave]
+  );
+
+  const handlePanelClick = useCallback((e: React.MouseEvent) => e.stopPropagation(), []);
+
+  const panelStyle = useMemo(
+    () => (closing ? ({ pointerEvents: 'none' } as const) : undefined),
+    [closing]
+  );
+
+  const handleFocusTagInput = useCallback(() => {
+    tagInputRef.current?.focus();
+    if (!fetchedTags) {
+      void (async () => {
+        const t = await fetchTags();
+        setAvailableTags(t);
+        setFetchedTags(true);
+      })();
+    }
+    setShowTagDropdown(true);
+  }, [fetchedTags]);
+
+  const handleTagPillRemove = useCallback(
+    (e: React.MouseEvent<HTMLButtonElement>) => {
+      const tag = e.currentTarget.closest('[data-tag]')?.getAttribute('data-tag');
+      if (tag) {
+        removeTag(tag);
+      }
+    },
+    [removeTag]
+  );
+
+  const handleTagInputChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => setTagInput(e.target.value),
+    []
+  );
+
+  const handleTagToggle = useCallback(
+    (tag: string) => {
+      if (tags.includes(tag)) {
+        removeTag(tag);
+      } else {
+        flushSync(() => setTags((prev) => [...prev, tag]));
+      }
+    },
+    [tags, removeTag]
+  );
+
+  const handleTagDropdownClose = useCallback(() => {
+    setShowTagDropdown(false);
+    setHighlightedIndex(-1);
+  }, []);
+
+  if (!isOpen && !closing) {
+    return null;
+  }
 
   return (
     <div
       className='expand-panel-content'
       data-closing={closing ? 'true' : undefined}
-      style={closing ? { pointerEvents: 'none' } : undefined}
-      onClick={(e) => e.stopPropagation()}
+      style={panelStyle}
+      onClick={handlePanelClick}
     >
       <div className='px-3 md:px-4 pt-4 pb-4 border-t border-border'>
         <div className='flex flex-col gap-3'>
@@ -218,9 +311,7 @@ export default function SongEditPanel({ song, isOpen, onClose }: SongEditPanelPr
             onChange={setNickname}
             inputRef={inputRef}
             placeholder={song.title}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') void doSave();
-            }}
+            onKeyDown={handleEnterSave}
           />
           <Field
             id='panel-artist'
@@ -228,9 +319,7 @@ export default function SongEditPanel({ song, isOpen, onClose }: SongEditPanelPr
             value={artist}
             onChange={setArtist}
             placeholder='Artist name'
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') void doSave();
-            }}
+            onKeyDown={handleEnterSave}
           />
           <Field
             id='panel-album'
@@ -238,9 +327,7 @@ export default function SongEditPanel({ song, isOpen, onClose }: SongEditPanelPr
             value={album}
             onChange={setAlbum}
             placeholder='Album name'
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') void doSave();
-            }}
+            onKeyDown={handleEnterSave}
           />
           <Field
             id='panel-artwork'
@@ -248,9 +335,7 @@ export default function SongEditPanel({ song, isOpen, onClose }: SongEditPanelPr
             value={artwork}
             onChange={setArtwork}
             placeholder={song.thumbnailUrl}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') void doSave();
-            }}
+            onKeyDown={handleEnterSave}
           />
 
           {/* Tags */}
@@ -263,16 +348,7 @@ export default function SongEditPanel({ song, isOpen, onClose }: SongEditPanelPr
             </label>
             <div
               className='input text-sm flex flex-wrap gap-1.5 items-center min-h-9.5 cursor-text relative'
-              onClick={() => {
-                tagInputRef.current?.focus();
-                if (!fetchedTags) {
-                  void fetchTags().then((t) => {
-                    setAvailableTags(t);
-                    setFetchedTags(true);
-                  });
-                }
-                setShowTagDropdown(true);
-              }}
+              onClick={handleFocusTagInput}
             >
               {tags.map((tag) => {
                 const c = getTagColorClasses(tag, tagColorMap[tag.toLowerCase()]);
@@ -285,7 +361,8 @@ export default function SongEditPanel({ song, isOpen, onClose }: SongEditPanelPr
                     <button
                       type='button'
                       className='ml-0.5 opacity-70 hover:opacity-100'
-                      onClick={() => removeTag(tag)}
+                      onClick={handleTagPillRemove}
+                      data-tag={tag}
                     >
                       &times;
                     </button>
@@ -298,7 +375,7 @@ export default function SongEditPanel({ song, isOpen, onClose }: SongEditPanelPr
                 className='flex-1 min-w-20 bg-transparent outline-none text-sm text-fg placeholder:text-faint'
                 placeholder={tags.length === 0 ? 'Custom grouping (enter to confirm)' : ''}
                 value={tagInput}
-                onChange={(e) => setTagInput(e.target.value)}
+                onChange={handleTagInputChange}
                 onKeyDown={handleTagKeyDown}
               />
               {showTagDropdown && (
@@ -307,17 +384,9 @@ export default function SongEditPanel({ song, isOpen, onClose }: SongEditPanelPr
                   tagInput={tagInput}
                   tags={tags}
                   highlightedIndex={highlightedIndex}
-                  onToggle={(tag) => {
-                    if (tags.includes(tag)) removeTag(tag);
-                    else {
-                      flushSync(() => setTags((prev) => [...prev, tag]));
-                    }
-                  }}
+                  onToggle={handleTagToggle}
                   onHighlight={setHighlightedIndex}
-                  onClose={() => {
-                    setShowTagDropdown(false);
-                    setHighlightedIndex(-1);
-                  }}
+                  onClose={handleTagDropdownClose}
                   tagInputRef={tagInputRef}
                   onTagInputChange={setTagInput}
                 />
@@ -330,9 +399,7 @@ export default function SongEditPanel({ song, isOpen, onClose }: SongEditPanelPr
             onChange={setVolumeBoost}
             min={-100}
             max={200}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') void doSave();
-            }}
+            onKeyDown={handleEnterSave}
           />
         </div>
       </div>
@@ -356,6 +423,40 @@ function VolumeSlider({
   const numeric = value.trim() === '' ? 0 : Math.min(max, Math.max(min, parseInt(value, 10) || 0));
   const pct = `${((numeric - min) / (max - min)) * 100}%`;
 
+  const handleChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      const v = e.target.value;
+      if (v === '' || /^\d*$/.test(v)) {
+        onChange(v);
+      }
+    },
+    [onChange]
+  );
+
+  const handleBlur = useCallback(() => {
+    if (value.trim() === '') {
+      onChange('0');
+    } else {
+      const n = parseInt(value, 10);
+      if (!Number.isNaN(n)) {
+        onChange(String(Math.min(max, Math.max(min, n))));
+      }
+    }
+  }, [value, onChange, min, max]);
+
+  const handleRangeChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => onChange(e.target.value),
+    [onChange]
+  );
+
+  const rangeStyle = useMemo(
+    () =>
+      ({
+        '--volume-pct': pct,
+      }) as React.CSSProperties,
+    [pct]
+  );
+
   return (
     <div>
       <span className='block font-mono text-[10px] text-muted uppercase mb-1'>Volume Boost</span>
@@ -365,21 +466,9 @@ function VolumeSlider({
           className='input text-sm w-16 text-center'
           type='text'
           value={value}
-          onChange={(e) => {
-            const v = e.target.value;
-            if (v === '' || /^\d*$/.test(v)) onChange(v);
-          }}
+          onChange={handleChange}
           onKeyDown={onKeyDown}
-          onBlur={() => {
-            if (value.trim() === '') {
-              onChange('0');
-            } else {
-              const n = parseInt(value, 10);
-              if (!Number.isNaN(n)) {
-                onChange(String(Math.min(max, Math.max(min, n))));
-              }
-            }
-          }}
+          onBlur={handleBlur}
         />
         <span className='text-xs text-muted font-mono w-8 text-left'>%</span>
         <input
@@ -387,13 +476,9 @@ function VolumeSlider({
           min={min}
           max={max}
           value={numeric}
-          onChange={(e) => onChange(e.target.value)}
+          onChange={handleRangeChange}
           className='volume-range-input min-w-0'
-          style={
-            {
-              ['--volume-pct' as string]: pct,
-            } as React.CSSProperties
-          }
+          style={rangeStyle}
         />
       </div>
     </div>
@@ -423,6 +508,10 @@ function Field({
   min?: number;
   max?: number;
 }) {
+  const handleChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => onChange(e.target.value),
+    [onChange]
+  );
   return (
     <div>
       <label htmlFor={id} className='block font-mono text-[10px] text-muted uppercase mb-1'>
@@ -436,7 +525,7 @@ function Field({
         min={type === 'number' ? min : undefined}
         max={type === 'number' ? max : undefined}
         value={value}
-        onChange={(e) => onChange(e.target.value)}
+        onChange={handleChange}
         onKeyDown={onKeyDown}
         placeholder={placeholder}
       />
@@ -485,6 +574,8 @@ function CrossIcon() {
   );
 }
 
+const TAG_DROPDOWN_PLACEHOLDER_STYLE: React.CSSProperties = { top: 0, left: 0 };
+
 interface TagDropdownProps {
   availableTags: TagItem[];
   tagInput: string;
@@ -511,9 +602,13 @@ function TagDropdown({
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   useLayoutEffect(() => {
-    if (!dropdownRef.current) return;
+    if (!dropdownRef.current) {
+      return;
+    }
     const input = tagInputRef.current;
-    if (!input) return;
+    if (!input) {
+      return;
+    }
     const rect = input.getBoundingClientRect();
     dropdownRef.current.style.top = `${rect.bottom + window.scrollY + 4}px`;
     dropdownRef.current.style.left = `${rect.left + window.scrollX}px`;
@@ -543,11 +638,33 @@ function TagDropdown({
       t.nameLower.includes(tagInput.toLowerCase())
   );
 
+  const handleItemMouseDown = useCallback(
+    (e: React.MouseEvent<HTMLDivElement>) => {
+      e.preventDefault();
+      e.stopPropagation();
+      const tag = e.currentTarget.dataset.tag;
+      if (tag) {
+        onToggle(tag);
+      }
+      onTagInputChange('');
+      tagInputRef.current?.focus();
+    },
+    [onToggle, onTagInputChange, tagInputRef]
+  );
+
+  const handleItemMouseEnter = useCallback(
+    (e: React.MouseEvent<HTMLDivElement>) => {
+      const idx = parseInt(e.currentTarget.dataset.index ?? '0', 10);
+      onHighlight(idx);
+    },
+    [onHighlight]
+  );
+
   const dropdown = (
     <div
       ref={dropdownRef}
       className='fixed z-50 min-w-45 glass-popover max-h-48'
-      style={{ top: 0, left: 0 }}
+      style={TAG_DROPDOWN_PLACEHOLDER_STYLE}
     >
       {filtered.length === 0 ? (
         <div className='px-3 py-2 text-xs text-muted cursor-default'>
@@ -563,14 +680,10 @@ function TagDropdown({
               className={`flex items-center gap-2 px-3 py-2 text-sm cursor-pointer ${
                 i === highlightedIndex ? 'bg-elevated' : 'hover:bg-elevated/70'
               }`}
-              onMouseDown={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                onToggle(tag.canonicalName);
-                onTagInputChange('');
-                tagInputRef.current?.focus();
-              }}
-              onMouseEnter={() => onHighlight(i)}
+              onMouseDown={handleItemMouseDown}
+              data-tag={tag.canonicalName}
+              onMouseEnter={handleItemMouseEnter}
+              data-index={i}
             >
               <span className={`font-mono text-xs ${c.text}`}>{tag.canonicalName}</span>
               <span className='ml-auto text-muted text-xs'>

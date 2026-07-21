@@ -1,5 +1,8 @@
+import type React from 'react';
+
 import { WarningIcon } from '@phosphor-icons/react';
-import { useState } from 'react';
+import { useCallback, useState } from 'react';
+
 import { overridePlay } from '../../api/api';
 import { apiErrorMessage, isRateLimitError } from '../../utils/api';
 import { Backdrop } from '../Backdrop';
@@ -18,8 +21,10 @@ export default function OverrideModal({
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
 
-  const handleSubmit = async () => {
-    if (!sourceUrl.trim()) return;
+  const handleSubmit = useCallback(async () => {
+    if (!sourceUrl.trim()) {
+      return;
+    }
     setSubmitting(true);
     setError('');
     try {
@@ -33,7 +38,21 @@ export default function OverrideModal({
       }
       setSubmitting(false);
     }
-  };
+  }, [sourceUrl, onOverride]);
+
+  const handleChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    setSourceUrl(e.target.value);
+    setError('');
+  }, []);
+
+  const handleKeyDown = useCallback(
+    (e: React.KeyboardEvent) => {
+      if (e.key === 'Enter' && sourceUrl.trim()) {
+        void handleSubmit();
+      }
+    },
+    [sourceUrl, handleSubmit]
+  );
 
   return (
     <Backdrop onClose={onClose}>
@@ -52,18 +71,11 @@ export default function OverrideModal({
             <input
               type='text'
               value={sourceUrl}
-              onChange={(e) => {
-                setSourceUrl(e.target.value);
-                setError('');
-              }}
+              onChange={handleChange}
               placeholder='https://...'
               className='input w-full'
               disabled={submitting}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' && sourceUrl.trim()) {
-                  handleSubmit();
-                }
-              }}
+              onKeyDown={handleKeyDown}
             />
           </div>
         </div>

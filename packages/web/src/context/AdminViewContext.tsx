@@ -1,5 +1,7 @@
 import type React from 'react';
+
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
+
 import { useAuth } from './AuthContext';
 
 const STORAGE_KEY = 'alfira-admin-view';
@@ -49,9 +51,10 @@ export function AdminViewProvider({ children }: { children: React.ReactNode }) {
   );
 }
 
-// eslint-disable-next-line react-refresh/only-export-components
 export function useAdminView(): AdminViewContextValue {
   const ctx = useContext(AdminViewContext);
-  if (!ctx) throw new Error('useAdminView must be used inside AdminViewProvider');
+  if (!ctx) {
+    throw new Error('useAdminView must be used inside AdminViewProvider');
+  }
   return ctx;
 }

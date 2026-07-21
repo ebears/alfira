@@ -1,5 +1,6 @@
-import type { User } from '@alfira/server/shared';
 import type React from 'react';
+
+import { type User } from '@alfira/server/shared';
 import {
   createContext,
   useCallback,
@@ -9,6 +10,7 @@ import {
   useRef,
   useState,
 } from 'react';
+
 import { getMe, logout as logoutApi } from '../api/api';
 import { trySilentRefresh } from '../api/client';
 
@@ -27,7 +29,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const isAuthChecking = useRef(false);
 
   const refetch = useCallback(async () => {
-    if (isAuthChecking.current) return;
+    if (isAuthChecking.current) {
+      return;
+    }
     isAuthChecking.current = true;
 
     try {
@@ -61,7 +65,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   useEffect(() => {
-    refetch();
+    void refetch();
   }, [refetch]);
 
   const logout = useCallback(async () => {
@@ -78,9 +82,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   );
 }
 
-// eslint-disable-next-line react-refresh/only-export-components
 export function useAuth(): AuthContextValue {
   const ctx = useContext(AuthContext);
-  if (!ctx) throw new Error('useAuth must be used inside AuthProvider');
+  if (!ctx) {
+    throw new Error('useAuth must be used inside AuthProvider');
+  }
   return ctx;
 }

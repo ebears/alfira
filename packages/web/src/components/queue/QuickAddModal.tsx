@@ -1,4 +1,7 @@
-import { useState } from 'react';
+import type React from 'react';
+
+import { useCallback, useState } from 'react';
+
 import { quickAddPlaylistToQueue, quickAddToQueue } from '../../api/api';
 import { apiErrorMessage, isRateLimitError } from '../../utils/api';
 import { Backdrop } from '../Backdrop';
@@ -21,8 +24,10 @@ export default function QuickAddModal({
   const isPlaylist = sourceUrl.includes('list=');
   const [importFullPlaylist, setImportFullPlaylist] = useState(false);
 
-  const handleSubmit = async () => {
-    if (!sourceUrl.trim()) return;
+  const handleSubmit = useCallback(async () => {
+    if (!sourceUrl.trim()) {
+      return;
+    }
     setSubmitting(true);
     setError('');
     setSuccessMsg('');
@@ -45,7 +50,22 @@ export default function QuickAddModal({
       }
       setSubmitting(false);
     }
-  };
+  }, [sourceUrl, importFullPlaylist, onAdded]);
+
+  const handleChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    setSourceUrl(e.target.value);
+    setError('');
+    setSuccessMsg('');
+  }, []);
+
+  const handleKeyDown = useCallback(
+    (e: React.KeyboardEvent) => {
+      if (e.key === 'Enter' && sourceUrl.trim()) {
+        void handleSubmit();
+      }
+    },
+    [sourceUrl, handleSubmit]
+  );
 
   return (
     <Backdrop onClose={onClose}>
@@ -63,19 +83,11 @@ export default function QuickAddModal({
             <input
               type='text'
               value={sourceUrl}
-              onChange={(e) => {
-                setSourceUrl(e.target.value);
-                setError('');
-                setSuccessMsg('');
-              }}
+              onChange={handleChange}
               placeholder='https://...'
               className='input w-full'
               disabled={submitting}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' && sourceUrl.trim()) {
-                  handleSubmit();
-                }
-              }}
+              onKeyDown={handleKeyDown}
             />
             {isPlaylist && (
               <label className='flex items-center gap-2 cursor-pointer mt-2'>

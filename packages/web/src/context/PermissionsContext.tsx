@@ -1,6 +1,8 @@
-import type { PermissionAction } from '@alfira/server/shared';
 import type React from 'react';
+
+import { type PermissionAction } from '@alfira/server/shared';
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
+
 import { fetchMyPermissions } from '../api/api';
 import { useAuth } from './AuthContext';
 
@@ -33,12 +35,14 @@ export function PermissionsProvider({ children }: { children: React.ReactNode })
 
   // Fetch on mount and when user changes
   useEffect(() => {
-    refresh();
+    void refresh();
   }, [refresh]);
 
   // Re-fetch on tab focus so permission changes take effect without re-login
   useEffect(() => {
-    const onFocus = () => refresh();
+    const onFocus = () => {
+      void refresh();
+    };
     window.addEventListener('focus', onFocus);
     return () => window.removeEventListener('focus', onFocus);
   }, [refresh]);
@@ -62,9 +66,10 @@ export function PermissionsProvider({ children }: { children: React.ReactNode })
   );
 }
 
-// eslint-disable-next-line react-refresh/only-export-components
 export function usePermissions(): PermissionsContextValue {
   const ctx = useContext(PermissionsContext);
-  if (!ctx) throw new Error('usePermissions must be used inside PermissionsProvider');
+  if (!ctx) {
+    throw new Error('usePermissions must be used inside PermissionsProvider');
+  }
   return ctx;
 }

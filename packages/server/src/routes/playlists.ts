@@ -1,5 +1,6 @@
 import { and, count, desc, eq, inArray, sql } from 'drizzle-orm';
-import type { RouteContext } from '../index';
+
+import { type RouteContext } from '../lib/context';
 import { getUserDisplayName, resolveDisplayNames } from '../lib/displayName';
 import { json } from '../lib/json';
 import { parsePagination } from '../lib/pagination';
@@ -47,8 +48,10 @@ function formatPlaylistSongWithSong(
 // GET /api/playlists — paginated list of playlists
 // ---------------------------------------------------------------------------
 async function handleGetPlaylists(ctx: RouteContext, request: Request): Promise<Response> {
-  const guards = await checkGuards(ctx);
-  if (guards instanceof Response) return guards;
+  const guards = checkGuards(ctx);
+  if (guards instanceof Response) {
+    return guards;
+  }
   const { user } = guards;
 
   const url = new URL(request.url);
@@ -123,8 +126,10 @@ async function handleGetPlaylists(ctx: RouteContext, request: Request): Promise<
 // POST /api/playlists — create a new empty playlist
 // ---------------------------------------------------------------------------
 async function handlePostPlaylist(ctx: RouteContext, request: Request): Promise<Response> {
-  const guards = await checkGuards(ctx);
-  if (guards instanceof Response) return guards;
+  const guards = checkGuards(ctx);
+  if (guards instanceof Response) {
+    return guards;
+  }
   const { user } = guards;
 
   let body: { name?: unknown; tagNameLower?: unknown };
@@ -135,7 +140,9 @@ async function handlePostPlaylist(ctx: RouteContext, request: Request): Promise<
   }
 
   const nameResult = validatePlaylistName(body.name);
-  if (!nameResult.ok) return nameResult.response;
+  if (!nameResult.ok) {
+    return nameResult.response;
+  }
   const trimmedName = nameResult.value;
 
   const tagNameLower =
@@ -175,8 +182,10 @@ async function handleGetPlaylist(
   params: Record<string, string>
 ): Promise<Response> {
   const { id } = params;
-  const guards = await checkGuards(ctx);
-  if (guards instanceof Response) return guards;
+  const guards = checkGuards(ctx);
+  if (guards instanceof Response) {
+    return guards;
+  }
   const { user } = guards;
 
   const url = new URL(request.url);
@@ -211,7 +220,9 @@ async function handleGetPlaylist(
   const wantsCustomSort = sortField !== 'position';
 
   const playlist = await requirePlaylist(id, user, adminView, true);
-  if (playlist instanceof Response) return playlist;
+  if (playlist instanceof Response) {
+    return playlist;
+  }
 
   // ── Custom sort path: join playlistSong ↔ song, sort + filter in one query ──
   if (wantsCustomSort || filterTags.length > 0 || filterSources.length > 0) {
@@ -220,14 +231,18 @@ async function handleGetPlaylist(
 
     if (search) {
       const searchClause = buildSongSearchClause(search);
-      if (searchClause) songFilterClauses.push(searchClause);
+      if (searchClause) {
+        songFilterClauses.push(searchClause);
+      }
     }
 
     const tagSourceFilter = buildSongFilterClause(filterTags, filterSources, {
       tags: tables.song.tags,
       sourceUrl: tables.song.sourceUrl,
     });
-    if (tagSourceFilter) songFilterClauses.push(tagSourceFilter);
+    if (tagSourceFilter) {
+      songFilterClauses.push(tagSourceFilter);
+    }
 
     const joinWhere = and(
       eq(playlistSongTable.playlistId, id),
@@ -352,7 +367,9 @@ async function handleGetPlaylist(
     songs: playlistSongs
       .map((ps) => {
         const song = songMap.get(ps.songId);
-        if (!song) return null;
+        if (!song) {
+          return null;
+        }
         return formatPlaylistSongWithSong(ps, song, nameMap.get(song.addedBy) ?? song.addedBy);
       })
       .filter((x): x is NonNullable<typeof x> => x !== null),
@@ -375,8 +392,10 @@ async function handlePatchVisibility(
   params: Record<string, string>
 ): Promise<Response> {
   const { id } = params;
-  const guards = await checkGuards(ctx);
-  if (guards instanceof Response) return guards;
+  const guards = checkGuards(ctx);
+  if (guards instanceof Response) {
+    return guards;
+  }
   const { user } = guards;
 
   let body: { isPrivate?: unknown; adminView?: unknown };
@@ -392,7 +411,9 @@ async function handlePatchVisibility(
 
   const adminView = body.adminView === true;
   const existing = await requirePlaylist(id, user, adminView);
-  if (existing instanceof Response) return existing;
+  if (existing instanceof Response) {
+    return existing;
+  }
 
   const [updatedPlaylist] = await db
     .update(playlistTable)
@@ -419,8 +440,10 @@ async function handlePatchPlaylist(
   params: Record<string, string>
 ): Promise<Response> {
   const { id } = params;
-  const guards = await checkGuards(ctx);
-  if (guards instanceof Response) return guards;
+  const guards = checkGuards(ctx);
+  if (guards instanceof Response) {
+    return guards;
+  }
   const { user } = guards;
 
   let body: { name?: unknown; tagNameLower?: unknown };
@@ -431,13 +454,17 @@ async function handlePatchPlaylist(
   }
 
   const existing = await requirePlaylist(id, user);
-  if (existing instanceof Response) return existing;
+  if (existing instanceof Response) {
+    return existing;
+  }
 
   const data: Record<string, unknown> = {};
 
   if (body.name !== undefined) {
     const nameResult = validatePlaylistName(body.name);
-    if (!nameResult.ok) return nameResult.response;
+    if (!nameResult.ok) {
+      return nameResult.response;
+    }
     data.name = nameResult.value;
   }
 
@@ -483,12 +510,16 @@ async function handleDeletePlaylist(
   params: Record<string, string>
 ): Promise<Response> {
   const { id } = params;
-  const guards = await checkGuards(ctx);
-  if (guards instanceof Response) return guards;
+  const guards = checkGuards(ctx);
+  if (guards instanceof Response) {
+    return guards;
+  }
   const { user } = guards;
 
   const existing = await requirePlaylist(id, user);
-  if (existing instanceof Response) return existing;
+  if (existing instanceof Response) {
+    return existing;
+  }
 
   await db.delete(playlistTable).where(eq(playlistTable.id, id));
 
@@ -504,8 +535,10 @@ async function handleAddSong(
   params: Record<string, string>
 ): Promise<Response> {
   const { id } = params;
-  const guards = await checkGuards(ctx);
-  if (guards instanceof Response) return guards;
+  const guards = checkGuards(ctx);
+  if (guards instanceof Response) {
+    return guards;
+  }
   const { user } = guards;
 
   let body: { songId?: unknown };
@@ -520,7 +553,9 @@ async function handleAddSong(
   }
 
   const playlist = await requirePlaylist(id, user);
-  if (playlist instanceof Response) return playlist;
+  if (playlist instanceof Response) {
+    return playlist;
+  }
 
   // Smart playlists are auto-managed — reject manual adds
   if (playlist.tagNameLower) {
@@ -596,12 +631,16 @@ async function handleRemoveSong(
   params: Record<string, string>
 ): Promise<Response> {
   const { id: playlistId, songId } = params;
-  const guards = await checkGuards(ctx);
-  if (guards instanceof Response) return guards;
+  const guards = checkGuards(ctx);
+  if (guards instanceof Response) {
+    return guards;
+  }
   const { user } = guards;
 
   const playlist = await requirePlaylist(playlistId, user);
-  if (playlist instanceof Response) return playlist;
+  if (playlist instanceof Response) {
+    return playlist;
+  }
 
   const [entry] = await db
     .select()
@@ -652,12 +691,16 @@ async function handleBulkRemoveSongs(
   params: Record<string, string>
 ): Promise<Response> {
   const { id: playlistId } = params;
-  const guards = await checkGuards(ctx);
-  if (guards instanceof Response) return guards;
+  const guards = checkGuards(ctx);
+  if (guards instanceof Response) {
+    return guards;
+  }
   const { user } = guards;
 
   const playlist = await requirePlaylist(playlistId, user);
-  if (playlist instanceof Response) return playlist;
+  if (playlist instanceof Response) {
+    return playlist;
+  }
 
   let body: { songIds?: unknown };
   try {

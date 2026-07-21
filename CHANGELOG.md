@@ -7,6 +7,45 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-07-20
+
+### Added
+
+- **Expanded audio filters** — All NodeLink filter types are now exposed on the Audio page: karaoke, timescale (speed/pitch/rate), tremolo, vibrato, rotation, distortion, channel mix, low pass, and rate. Previously only the 15-band equalizer and compressor were available (#717).
+- **Clay press animation system** — Interactive elements (buttons, cards, list items) now have tactile click/tap press animations powered by motion, replacing the previous CSS-only approach (#714).
+- **Requester on song cards** — The user who requested a song is now shown directly on song cards instead of buried in the context menu (#725).
+- **Admin toggle hint animation** — The admin settings toggle button in the sidebar now has a subtle hint animation to improve discoverability (#728).
+
+### Changed
+
+- **CSS animations → motion** — All CSS keyframe animations have been replaced with motion (Framer Motion v12), giving smoother, interruptible transitions across the UI (#715).
+- **Linting overhaul** — oxlint configuration has been significantly strengthened:
+  - 53 new rules covering security, correctness, and modern JS/TS patterns (#707)
+  - React performance lint rules enabled, with fixes across 33 components (#709, #710, #711, #712)
+  - Type-aware lint rules via tsgolint (#713)
+  - Strict mode enabled with zero tolerated violations (#705, #706, #708)
+- **Typechecking via oxlint** — `bun run check` now includes type-aware type checking via oxlint's `--type-aware --type-check` flag (backed by tsgo). No separate `typescript` dependency needed (#700).
+
+### Fixed
+
+- **Progress bar timing** — Progress bar now correctly syncs with the audio server position, including when timescale speed filters are active (#719, #722).
+- **Voice state seeding** — Voice channel states are now seeded from Discord's `READY` and `GUILD_CREATE` gateway events on connect, fixing stale voice state after reconnection (#721).
+- **Grid view selection mode** — Selection checkboxes now work correctly in grid/masonry view (#716).
+- **Request page race conditions** — Fixed a tab flash and empty-state flicker when navigating to the Requests page (#727).
+- **React performance warnings** — Resolved missing `useCallback`/`useMemo` warnings across the codebase: NowPlayingBar, QueuePanel, and 45+ other components (#709, #710, #711, #712).
+- **oxfmt config** — Corrected the oxfmt configuration key and disabled a conflicting TypeScript language server setting (#703).
+- **Release tag timing** — Release tags are now pushed after the PR merge completes, not before (#701).
+- **All oxlint warnings resolved** — Zero warnings, zero stale disable directives (#702).
+
+### Dependencies
+
+- Bumped `tailwindcss` from 4.3.2 to 4.3.3 (#726)
+- Bumped `@tailwindcss/cli` from 4.3.2 to 4.3.3 (#726)
+
+### Docs
+
+- Added agent operating mode guidelines to AGENTS.md (#720)
+
 ## [0.2.2] - 2026-07-22
 
 ### Fixed
@@ -26,6 +65,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Bumped `tailwindcss` from 4.3.2 to 4.3.3
 - Bumped `@tailwindcss/cli` from 4.3.2 to 4.3.3
+
+## [0.2.1] - 2026-07-19
+
+### Added
+
+- **Grid view** — Song library grid view re-added with a responsive masonic masonry layout (#689).
+
+### Changed
+
+- **Proper virtual lists** — Replaced the homegrown fake virtualization with `@tanstack/react-virtual` for all song, playlist, and tag lists, with spring animation on mount (#687).
+- **Hover-only actions** — Play and more-actions buttons on song cards are now hidden until hover, reducing visual noise (#688).
+
+### Fixed
+
+- **Gapless playback silence** — Fixed an audio desync that caused a brief silence between gaplessly preloaded tracks (#690).
+- **Song edit panel overlap** — The expanded inline song editor no longer overlaps adjacent cards in virtualized lists (#687).
+- **Missing `hasMore` on PlaylistsPage** — Fixed the playlists page not detecting when more playlists were available to load (#687).
 
 ## [0.2.0] - 2026-07-22
 
@@ -178,8 +234,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - UI actions now properly gated by granular permissions rather than a simple admin check.
 - Inherited pointer cursor on modal cards.
 
-[Unreleased]: https://github.com/ebears/alfira/compare/v0.2.2...dev
-[0.2.2]: https://github.com/ebears/alfira/compare/v0.2.0...v0.2.2
+[Unreleased]: https://github.com/ebears/alfira/compare/v0.3.0...dev
+[0.3.0]: https://github.com/ebears/alfira/compare/v0.2.2...v0.3.0
+[0.2.2]: https://github.com/ebears/alfira/compare/v0.2.1...v0.2.2
+[0.2.1]: https://github.com/ebears/alfira/compare/v0.2.0...v0.2.1
 [0.2.0]: https://github.com/ebears/alfira/compare/v0.1.1...v0.2.0
 [0.1.1]: https://github.com/ebears/alfira/releases/tag/v0.1.1
 [0.1.0]: https://github.com/ebears/alfira/releases/tag/v0.1.0

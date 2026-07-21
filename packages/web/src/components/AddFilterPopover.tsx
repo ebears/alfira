@@ -1,5 +1,8 @@
+import type React from 'react';
+
 import { MagnifyingGlassIcon, XIcon } from '@phosphor-icons/react';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { memo, useCallback, useEffect, useRef, useState } from 'react';
+
 import { type TagItem, useTagColors } from '../context/TagsContext';
 import { getTagColorClasses } from '../utils/tagColors';
 import { Backdrop } from './Backdrop';
@@ -18,6 +21,74 @@ const SOURCES: { key: string; label: string }[] = [
   { key: 'tidal', label: 'Tidal' },
   { key: 'googledrive', label: 'Google Drive' },
 ];
+
+// ---------------------------------------------------------------------------
+// Child components — extracted so useCallback closures are stable per item
+// ---------------------------------------------------------------------------
+
+interface FilterTagButtonProps {
+  tag: TagItem;
+  isActive: boolean;
+  onClick: (tag: TagItem) => void;
+}
+
+const FilterTagButton = memo(function FilterTagButton({
+  tag,
+  isActive,
+  onClick,
+}: FilterTagButtonProps) {
+  const explicitColor = tag.color ?? null;
+  const colors = getTagColorClasses(tag.canonicalName, explicitColor);
+  const handleClick = useCallback(() => onClick(tag), [onClick, tag]);
+
+  return (
+    <button
+      type='button'
+      className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-medium whitespace-nowrap cursor-pointer transition-opacity hover:opacity-80 active:opacity-70 ${
+        isActive
+          ? `${colors.bg} ${colors.text} ring-1 ring-inset ring-current/30`
+          : `${colors.bg} ${colors.text} opacity-60 hover:opacity-90`
+      }`}
+      onClick={handleClick}
+    >
+      {isActive && <XIcon size={10} weight='bold' />}
+      {tag.canonicalName}
+    </button>
+  );
+});
+
+interface FilterSourceRowProps {
+  source: { key: string; label: string };
+  isActive: boolean;
+  onToggle: (sourceKey: string) => void;
+}
+
+const FilterSourceRow = memo(function FilterSourceRow({
+  source,
+  isActive,
+  onToggle,
+}: FilterSourceRowProps) {
+  const handleChange = useCallback(() => onToggle(source.key), [onToggle, source.key]);
+
+  return (
+    <label
+      className={`flex items-center gap-3 px-3 py-2 rounded-lg cursor-pointer transition-colors select-none ${
+        isActive ? 'bg-accent/5 text-accent' : 'hover:bg-elevated active:bg-elevated/80 text-muted'
+      }`}
+    >
+      <input type='checkbox' checked={isActive} onChange={handleChange} className='sr-only' />
+      <span className='flex items-center gap-2 flex-1'>
+        <SourceIcon sourceKey={source.key} />
+        <span className='font-body text-sm'>{source.label}</span>
+      </span>
+      {isActive && <span className='text-[11px] font-mono text-accent'>active</span>}
+    </label>
+  );
+});
+
+// ---------------------------------------------------------------------------
+// Main component
+// ---------------------------------------------------------------------------
 
 interface AddFilterPopoverProps {
   activeTags: string[];
@@ -51,8 +122,12 @@ export default function AddFilterPopover({
   const sortedTags = [...allTags].sort((a, b) => {
     const aActive = activeTags.includes(a.nameLower);
     const bActive = activeTags.includes(b.nameLower);
-    if (aActive && !bActive) return -1;
-    if (!aActive && bActive) return 1;
+    if (aActive && !bActive) {
+      return -1;
+    }
+    if (!aActive && bActive) {
+      return 1;
+    }
     return a.canonicalName.localeCompare(b.canonicalName);
   });
 
@@ -70,6 +145,10 @@ export default function AddFilterPopover({
     },
     [activeTags, onAddTag, onRemoveTag]
   );
+
+  const handleSearchChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    setTagSearch(e.target.value);
+  }, []);
 
   const handleSourceToggle = useCallback(
     (sourceKey: string) => {
@@ -112,7 +191,7 @@ export default function AddFilterPopover({
                 className='input pl-8 py-1.5 text-xs'
                 placeholder='Search tags...'
                 value={tagSearch}
-                onChange={(e) => setTagSearch(e.target.value)}
+                onChange={handleSearchChange}
               />
             </div>
 
@@ -124,22 +203,13 @@ export default function AddFilterPopover({
               <div className='flex flex-wrap gap-1.5 max-h-40 overflow-y-auto'>
                 {filteredTags.map((tag) => {
                   const isActive = activeTags.includes(tag.nameLower);
-                  const explicitColor = tag.color ?? null;
-                  const colors = getTagColorClasses(tag.canonicalName, explicitColor);
                   return (
-                    <button
+                    <FilterTagButton
                       key={tag.nameLower}
-                      type='button'
-                      className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-medium whitespace-nowrap cursor-pointer transition-opacity hover:opacity-80 active:opacity-70 ${
-                        isActive
-                          ? `${colors.bg} ${colors.text} ring-1 ring-inset ring-current/30`
-                          : `${colors.bg} ${colors.text} opacity-60 hover:opacity-90`
-                      }`}
-                      onClick={() => handleTagClick(tag)}
-                    >
-                      {isActive && <XIcon size={10} weight='bold' />}
-                      {tag.canonicalName}
-                    </button>
+                      tag={tag}
+                      isActive={isActive}
+                      onClick={handleTagClick}
+                    />
                   );
                 })}
               </div>
@@ -153,31 +223,14 @@ export default function AddFilterPopover({
             </p>
 
             <div className='space-y-1'>
-              {SOURCES.map((source) => {
-                const isActive = activeSources.includes(source.key);
-                return (
-                  <label
-                    key={source.key}
-                    className={`flex items-center gap-3 px-3 py-2 rounded-lg cursor-pointer transition-colors select-none ${
-                      isActive
-                        ? 'bg-accent/5 text-accent'
-                        : 'hover:bg-elevated active:bg-elevated/80 text-muted'
-                    }`}
-                  >
-                    <input
-                      type='checkbox'
-                      checked={isActive}
-                      onChange={() => handleSourceToggle(source.key)}
-                      className='sr-only'
-                    />
-                    <span className='flex items-center gap-2 flex-1'>
-                      <SourceIcon sourceKey={source.key} />
-                      <span className='font-body text-sm'>{source.label}</span>
-                    </span>
-                    {isActive && <span className='text-[11px] font-mono text-accent'>active</span>}
-                  </label>
-                );
-              })}
+              {SOURCES.map((source) => (
+                <FilterSourceRow
+                  key={source.key}
+                  source={source}
+                  isActive={activeSources.includes(source.key)}
+                  onToggle={handleSourceToggle}
+                />
+              ))}
             </div>
           </div>
         </div>

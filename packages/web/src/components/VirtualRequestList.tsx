@@ -1,6 +1,8 @@
-import type { SongRequest } from '@alfira/server/shared';
-import { memo } from 'react';
+import { type SongRequest } from '@alfira/server/shared';
+import { memo, useCallback, useMemo } from 'react';
+
 import RequestCard from './RequestCard';
+import { Skeleton } from './ui/Skeleton';
 import { VirtualList } from './VirtualList';
 
 // ---------------------------------------------------------------------------
@@ -33,17 +35,16 @@ function SkeletonList() {
   return (
     <div className='space-y-3'>
       {Array.from({ length: 4 }).map((_, i) => (
-        // eslint-disable-next-line react/no-array-index-key -- static skeleton placeholders
         <div
           key={`skel-${i}`}
           className='flex items-center gap-4 p-4 rounded-xl bg-elevated clay-resting'
         >
-          <div className='skeleton w-14 h-14 rounded-lg shrink-0' />
+          <Skeleton className='w-14 h-14 rounded-lg shrink-0' />
           <div className='flex-1 min-w-0 space-y-2'>
-            <div className='skeleton h-3 w-3/4' />
-            <div className='skeleton h-2 w-1/2' />
+            <Skeleton className='h-3 w-3/4' />
+            <Skeleton className='h-2 w-1/2' />
           </div>
-          <div className='skeleton h-4 w-16 rounded-full shrink-0' />
+          <Skeleton className='h-4 w-16 rounded-full shrink-0' />
         </div>
       ))}
     </div>
@@ -71,20 +72,29 @@ export const VirtualRequestList = memo(function VirtualRequestList({
   emptyTitle,
   emptyMessage,
 }: VirtualRequestListProps) {
+  const getItemKey = useCallback((req: SongRequest) => req.id, []);
+
+  const renderItem = useCallback(
+    (req: SongRequest) => (
+      <RequestCard
+        req={req}
+        isOwn={isOwnFn(req.requestedBy)}
+        isAdmin={isAdmin}
+        onApprove={onApprove}
+        onDeny={onDeny}
+        onCancel={onCancel}
+      />
+    ),
+    [isOwnFn, isAdmin, onApprove, onDeny, onCancel]
+  );
+
+  const skeleton = useMemo(() => <SkeletonList />, []);
+
   return (
     <VirtualList
       items={items}
-      getItemKey={(req) => req.id}
-      renderItem={(req) => (
-        <RequestCard
-          req={req}
-          isOwn={isOwnFn(req.requestedBy)}
-          isAdmin={isAdmin}
-          onApprove={onApprove}
-          onDeny={onDeny}
-          onCancel={onCancel}
-        />
-      )}
+      getItemKey={getItemKey}
+      renderItem={renderItem}
       estimateSize={95}
       itemClassName='pb-4'
       isLoading={isLoading}
@@ -94,7 +104,7 @@ export const VirtualRequestList = memo(function VirtualRequestList({
       hasMore={hasMore}
       onRetry={onRetry}
       onFetchMore={onFetchMore}
-      skeleton={<SkeletonList />}
+      skeleton={skeleton}
       emptyTitle={emptyTitle}
       emptyMessage={emptyMessage}
     />
