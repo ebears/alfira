@@ -39,10 +39,16 @@ Every decision in this project traces back to one of these. The agent should fol
 ## Development Commands
 
 ```bash
-# Build server dist/, then start all services with Docker
-bun run dev
+# Fast local dev: check → web build → server with --watch (auto-restart on changes)
+bun dev
 
-# Build the web UI (needed after web/src changes before docker compose restart)
+# Full Docker integration test (check → build → docker compose up --build)
+bun dev:docker
+
+# One-time setup: clone and build NodeLink locally (prerequisite for bun dev)
+bun setup:nodelink
+
+# Build the web UI (also run after web/src changes during a bun dev session)
 bun run web:build
 
 # Lint + typecheck + format + tests (run before committing)

@@ -5,6 +5,8 @@ node_modules/
 .env*
 dist/
 build/
+data/
+.nodelink/
 .vscode/
 .idea/
 **/*.test.ts

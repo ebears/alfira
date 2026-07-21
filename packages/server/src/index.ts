@@ -61,7 +61,6 @@ const requiredVars = [
   'DISCORD_CLIENT_ID',
   'DISCORD_CLIENT_SECRET',
   'DISCORD_REDIRECT_URI',
-  'DATABASE_URL',
   'JWT_SECRET',
 ];
 const missing = requiredVars.filter((v) => !process.env[v]);
@@ -73,6 +72,8 @@ if (missing.length > 0) {
 }
 
 const PORT = 3001;
+const NODELINK_HOME = process.env.NODELINK_HOME ?? '/usr/local/nodelink';
+const WEB_DIST = join(import.meta.dir, '../../web/dist');
 
 // Re-export RouteContext for consumers that import from '../index'
 export type { RouteContext } from './lib/context';
@@ -277,7 +278,7 @@ function startServer(): void {
         url.pathname === '/registerSW.js';
 
       if (isAsset || url.pathname === '/') {
-        const filePath = `/app/packages/web/dist${url.pathname === '/' ? '/index.html' : url.pathname}`;
+        const filePath = `${WEB_DIST}${url.pathname === '/' ? '/index.html' : url.pathname}`;
         const response = serveStatic(filePath, url.pathname);
         if (response) {
           return response;
@@ -285,7 +286,7 @@ function startServer(): void {
       }
 
       return (
-        serveStatic('/app/packages/web/dist/index.html', '/index.html') ??
+        serveStatic(join(WEB_DIST, 'index.html'), '/index.html') ??
         setSecurityHeaders(json({ error: 'Not Found' }, 404))
       );
     },
@@ -387,8 +388,8 @@ function runMigrations(): void {
 // ---------------------------------------------------------------------------
 function startNodeLink(): Promise<void> {
   return new Promise((resolve) => {
-    nodelinkProcess = Bun.spawn(['/usr/local/bin/bun', 'src/index.ts'], {
-      cwd: '/usr/local/nodelink',
+    nodelinkProcess = Bun.spawn(['bun', 'src/index.ts'], {
+      cwd: NODELINK_HOME,
       stdout: 'pipe',
       stderr: 'pipe',
       env: { ...process.env, NODELINK_AUTHORIZATION: 'nodelink-internal' },

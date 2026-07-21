@@ -1,6 +1,8 @@
 import { Database } from 'bun:sqlite';
 import { eq, sql } from 'drizzle-orm';
 import { drizzle } from 'drizzle-orm/bun-sqlite';
+import { mkdirSync } from 'node:fs';
+import { dirname } from 'node:path';
 
 import * as schema from './schema';
 
@@ -11,10 +13,10 @@ import * as schema from './schema';
 // process, so this does not open a second physical socket.
 // ---------------------------------------------------------------------------
 
-const DATABASE_URL = process.env.DATABASE_URL;
-if (!DATABASE_URL) {
-  throw new Error('DATABASE_URL environment variable is not set');
-}
+const DATABASE_URL = process.env.DATABASE_URL ?? 'data/alfira.db';
+
+// Ensure the parent directory exists (e.g., data/ for local dev).
+mkdirSync(dirname(DATABASE_URL), { recursive: true });
 
 const sqliteDb = new Database(DATABASE_URL, { create: true, strict: true });
 sqliteDb.run('PRAGMA journal_mode=WAL;');
