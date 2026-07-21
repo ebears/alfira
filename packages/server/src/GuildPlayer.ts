@@ -634,25 +634,29 @@ export class GuildPlayer {
   }
 
   getQueueState(): QueueState {
-    // Fetch the latest NodeLink ground-truth position (accounts for
-    // timescale speed changes).  Reset after seek / track change so
-    // stale positions from the previous track don't bleed through.
-    const nodePos = lavalink.getPlayerPosition(this.guildId);
-
-    // Read timescale speed from DB so both REST and WebSocket paths
-    // include it — the client needs it for progress bar interpolation.
-    let timescaleSpeed = 1.0;
+    // Only expose timescale fields when the filter is actually active on
+    // NodeLink — avoids the client activating its speed-aware path when
+    // the filter is off but a non-1.0 speed is still stored in the DB.
+    let timescaleSpeed: number | undefined;
+    let nodeLinkPosition: number | null = null;
+    let nodeLinkTime: number | null = null;
     try {
       const row = db
-        .select({ speed: tables.guildSettings.timescaleSpeed })
+        .select({
+          enabled: tables.guildSettings.timescaleEnabled,
+          speed: tables.guildSettings.timescaleSpeed,
+        })
         .from(tables.guildSettings)
         .where(eq(tables.guildSettings.id, 1))
         .get();
-      if (row) {
+      if (row?.enabled) {
         timescaleSpeed = row.speed;
+        const nodePos = lavalink.getPlayerPosition(this.guildId);
+        nodeLinkPosition = nodePos?.position ?? null;
+        nodeLinkTime = nodePos?.time ?? null;
       }
     } catch {
-      // DB not available — fall through to default 1.0.
+      // DB not available — leave timescale fields absent.
     }
 
     return {
@@ -667,8 +671,8 @@ export class GuildPlayer {
       trackStartedAt: this.trackStartedAt,
       nextTrack: this.peekNextTrack(),
       timescaleSpeed,
-      nodeLinkPosition: nodePos?.position ?? null,
-      nodeLinkTime: nodePos?.time ?? null,
+      nodeLinkPosition,
+      nodeLinkTime,
     };
   }
 
