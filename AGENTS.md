@@ -25,8 +25,10 @@ The bot and API run in a **single Bun process**. For detailed architecture (star
 
 ## Design Principles
 
+Every decision in this project traces back to one of these. The agent should follow them when making changes.
+
 - **Self-hosting without operational burden** — Docker + Bun + SQLite means no external managed services. One `docker compose up` gets you running. Networking (domain/reverse proxy) is the only unavoidable external dependency.
-- **Fewer, better dependencies** — Prefer Bun's built-in HTTP, WebSocket, test runner, and SQLite driver over npm packages. Drizzle gives type-safe SQL without ORM bloat.
+- **Fewer, better dependencies** — Prefer Bun's built-in HTTP, WebSocket, test runner, and SQLite driver over npm packages. Drizzle gives type-safe SQL without ORM bloat. A few hundred lines of custom code is better than importing a library for 10% of its features.
 - **Single-process by design** — Bot, API, and WebSocket run in one Bun process. Shared memory gives real-time updates without Redis or message queues. This is a deliberate tradeoff: the scope is a single self-hosted community, not multi-tenant SaaS.
 - **Web UI as primary interface** — The Discord bot is the playback engine; the web app is the control plane. This avoids Discord's rate limits and UX constraints.
 - **Audio is audio — no assumptions about content** — Works equally as a music bot or tabletop audio player. The data model (songs, playlists, tags) is content-type-agnostic: a pop song and an hour-long dungeon ambience are the same shape.
@@ -188,4 +190,5 @@ Always run `bun run check` and resolve any lint/format issues before committing.
 
 - [Installation Guide](docs/installation.md) — Setup, environment variables, Docker commands
 - [Tech Stack](docs/tech-stack.md) — Detailed architecture
+- [Development Choices](docs/development-choices.md) — Tools, architecture decisions, and the reasoning behind each choice
 - [Troubleshooting](docs/troubleshooting.md) — Common issues and solutions (also available as the `alfira-troubleshooting` skill)

@@ -114,6 +114,16 @@
 - **Setup wizard** — Guided first-run setup picks your server, admin roles, and sources so you're ready to go.
 - **Web UI** — Real-time player and queue updates over WebSocket, custom themes, responsive layout, motion-powered animations with tactile clay press effects, and Discord avatar menu.
 
+## Philosophy
+
+Alfira is built to be **simple to own and operate**. One container, one config file, one database file. No external services, no cloud dependencies — just Docker and a reverse proxy. It runs on a home NAS as comfortably as on a VPS.
+
+The **web UI is the primary interface** — the Discord bot handles playback, but the web app is where you browse your library, manage playlists, tweak your equalizer, and review song requests. This keeps the feature set rich without fighting Discord's UX limitations.
+
+Alfira also makes **no assumptions about what you're listening to**. A pop song, an hour-long dungeon ambience, a sound effect for your TTRPG session — they're all the same shape. Use it as a music bot, a tabletop audio player, or both.
+
+See [Development Choices](docs/development-choices.md) for the full story behind the tools and architectural decisions.
+
 ## Quick Start
 
 Alfira only needs Docker.
@@ -135,11 +145,12 @@ See the **[Installation Guide](docs/installation.md)** for full details.
 
 ## Documentation
 
-| Document                                       | Description                                   |
-| ---------------------------------------------- | --------------------------------------------- |
-| **[Installation Guide](docs/installation.md)** | Setup, environment variables, Docker commands |
-| **[Tech Stack](docs/tech-stack.md)**           | Technology stack and project structure        |
-| **[Troubleshooting](docs/troubleshooting.md)** | Common issues and solutions                   |
+| Document                                               | Description                                   |
+| ------------------------------------------------------ | --------------------------------------------- |
+| **[Installation Guide](docs/installation.md)**         | Setup, environment variables, Docker commands |
+| **[Tech Stack](docs/tech-stack.md)**                   | Technology stack and project structure        |
+| **[Development Choices](docs/development-choices.md)** | Tools, architecture decisions, and their why  |
+| **[Troubleshooting](docs/troubleshooting.md)**         | Common issues and solutions                   |
 
 ## License
 
