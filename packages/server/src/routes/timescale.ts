@@ -1,4 +1,5 @@
 import { eq } from 'drizzle-orm';
+import * as v from 'valibot';
 
 import { getGuildId } from '../lib/config';
 import { type RouteContext } from '../lib/context';
@@ -10,12 +11,12 @@ import { syncAllFilters } from '../lib/syncAllFilters';
 import { db, tables } from '../shared/db';
 import { getPlayer } from '../startDiscord';
 
-interface TimescalePayload {
-  enabled: boolean;
-  speed: number;
-  pitch: number;
-  rate: number;
-}
+const TimescaleSchema = v.object({
+  enabled: v.boolean(),
+  speed: v.pipe(v.number(), v.minValue(0.5), v.maxValue(2.0)),
+  pitch: v.pipe(v.number(), v.minValue(0.5), v.maxValue(2.0)),
+  rate: v.pipe(v.number(), v.minValue(0.5), v.maxValue(2.0)),
+});
 
 function handleTimescaleGet(
   ctx: RouteContext,
@@ -47,27 +48,19 @@ async function handleTimescalePatch(
     return guards;
   }
 
-  let body: TimescalePayload;
+  let raw: unknown;
   try {
-    body = (await request.json()) as TimescalePayload;
+    raw = await request.json();
   } catch {
     return json({ error: 'Invalid JSON' }, 400);
   }
 
-  const { enabled, speed, pitch, rate } = body;
+  const parsed = v.safeParse(TimescaleSchema, raw);
+  if (!parsed.success) {
+    return json({ error: 'Invalid request body.', details: v.flatten(parsed.issues) }, 400);
+  }
 
-  if (typeof enabled !== 'boolean') {
-    return json({ error: 'enabled must be boolean' }, 400);
-  }
-  if (typeof speed !== 'number' || speed < 0.5 || speed > 2.0) {
-    return json({ error: 'speed must be number 0.5 to 2.0' }, 400);
-  }
-  if (typeof pitch !== 'number' || pitch < 0.5 || pitch > 2.0) {
-    return json({ error: 'pitch must be number 0.5 to 2.0' }, 400);
-  }
-  if (typeof rate !== 'number' || rate < 0.5 || rate > 2.0) {
-    return json({ error: 'rate must be number 0.5 to 2.0' }, 400);
-  }
+  const { enabled, speed, pitch, rate } = parsed.output;
 
   db.insert(tables.guildSettings)
     .values({

@@ -12,7 +12,10 @@
     "dev": "bun run src/index.ts",
     "build": "bun build ./src/index.ts --outdir=./dist --target bun --format esm"
   },
-  "dependencies": {},
+  "dependencies": {
+    "drizzle-valibot": "^0.4.2",
+    "valibot": "^1.4.2"
+  },
   "devDependencies": {
     "drizzle-orm": "0.45.2"
   }

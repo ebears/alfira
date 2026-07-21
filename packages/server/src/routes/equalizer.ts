@@ -1,4 +1,5 @@
 import { eq } from 'drizzle-orm';
+import * as v from 'valibot';
 
 import { type RouteContext } from '../lib/context';
 import { EQ_BAND_COLUMNS, eqBandsFromRow, eqBandValues } from '../lib/eqBands';
@@ -8,10 +9,13 @@ import { routeTable } from '../lib/routeTable';
 import { syncAllFilters } from '../lib/syncAllFilters';
 import { db, tables } from '../shared/db';
 
-interface EqualizerPayload {
-  bands: number[]; // length 15, each 0-100
-  enabled: boolean;
-}
+const EqualizerSchema = v.object({
+  bands: v.pipe(
+    v.array(v.pipe(v.number(), v.integer(), v.minValue(0), v.maxValue(100))),
+    v.length(15)
+  ),
+  enabled: v.boolean(),
+});
 
 function handleEqualizerGet(
   ctx: RouteContext,
@@ -48,30 +52,19 @@ async function handleEqualizerPatch(
     return guards;
   }
 
-  let body: EqualizerPayload;
+  let raw: unknown;
   try {
-    body = (await request.json()) as EqualizerPayload;
+    raw = await request.json();
   } catch {
     return json({ error: 'Invalid JSON' }, 400);
   }
 
-  const { bands, enabled } = body;
-
-  // Validate: enabled must be boolean
-  if (typeof enabled !== 'boolean') {
-    return json({ error: 'enabled must be boolean' }, 400);
+  const parsed = v.safeParse(EqualizerSchema, raw);
+  if (!parsed.success) {
+    return json({ error: 'Invalid request body.', details: v.flatten(parsed.issues) }, 400);
   }
 
-  // Validate: must be array of 15 integers, each 0-100
-  if (!Array.isArray(bands) || bands.length !== 15) {
-    return json({ error: 'bands must be array of 15 integers' }, 400);
-  }
-  for (let i = 0; i < 15; i++) {
-    const v = bands[i];
-    if (v === undefined || !Number.isInteger(v) || v < 0 || v > 100) {
-      return json({ error: `band[${i}] must be integer 0-100` }, 400);
-    }
-  }
+  const { bands, enabled } = parsed.output;
 
   // Upsert into DB
   db.insert(tables.guildSettings)

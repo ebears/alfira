@@ -1,4 +1,5 @@
 import { eq } from 'drizzle-orm';
+import * as v from 'valibot';
 
 import { type RouteContext } from '../lib/context';
 import { json } from '../lib/json';
@@ -7,10 +8,10 @@ import { routeTable } from '../lib/routeTable';
 import { syncAllFilters } from '../lib/syncAllFilters';
 import { db, tables } from '../shared/db';
 
-interface RotationPayload {
-  enabled: boolean;
-  rotationHz: number;
-}
+const RotationSchema = v.object({
+  enabled: v.boolean(),
+  rotationHz: v.pipe(v.number(), v.minValue(0), v.maxValue(1)),
+});
 
 function handleRotationGet(
   ctx: RouteContext,
@@ -40,21 +41,19 @@ async function handleRotationPatch(
     return guards;
   }
 
-  let body: RotationPayload;
+  let raw: unknown;
   try {
-    body = (await request.json()) as RotationPayload;
+    raw = await request.json();
   } catch {
     return json({ error: 'Invalid JSON' }, 400);
   }
 
-  const { enabled, rotationHz } = body;
+  const parsed = v.safeParse(RotationSchema, raw);
+  if (!parsed.success) {
+    return json({ error: 'Invalid request body.', details: v.flatten(parsed.issues) }, 400);
+  }
 
-  if (typeof enabled !== 'boolean') {
-    return json({ error: 'enabled must be boolean' }, 400);
-  }
-  if (typeof rotationHz !== 'number' || rotationHz < 0 || rotationHz > 1) {
-    return json({ error: 'rotationHz must be number 0.0 to 1.0' }, 400);
-  }
+  const { enabled, rotationHz } = parsed.output;
 
   db.insert(tables.guildSettings)
     .values({
