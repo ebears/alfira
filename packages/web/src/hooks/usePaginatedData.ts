@@ -66,6 +66,19 @@ export function usePaginatedData<T, A extends unknown[], M = undefined>({
   const depsRef = useRef(deps);
   depsRef.current = deps;
 
+  // Detect dep changes synchronously during render so we can suppress
+  // stale empty states before the effect fires. Without this, there's a
+  // one-frame gap where the new tab's emptyTitle renders against the old
+  // (empty) items before isFetching is set to true in the effect.
+  const prevDepsRef = useRef<A>(deps);
+  const depsChanged =
+    hasEverLoadedRef.current &&
+    (prevDepsRef.current.length !== deps.length ||
+      prevDepsRef.current.some((d, i) => d !== deps[i]));
+  prevDepsRef.current = deps;
+
+  const effectiveIsFetching = isFetching || depsChanged;
+
   const compareFnRef = useRef(compareFn);
   compareFnRef.current = compareFn;
 
@@ -82,12 +95,18 @@ export function usePaginatedData<T, A extends unknown[], M = undefined>({
         resetInProgressRef.current = true;
         // Delay the skeleton by 200ms — if the fetch completes faster,
         // the skeleton is never rendered, avoiding a flash.
-        if (!hasEverLoadedRef.current) {
-          loadingTimerRef.current = setTimeout(() => {
-            if (isMountedRef.current) {
-              setIsLoading(true);
-            }
-          }, 200);
+        loadingTimerRef.current = setTimeout(() => {
+          if (isMountedRef.current) {
+            setIsLoading(true);
+          }
+        }, 200);
+        // On dep-change re-fetches, signal immediately that we're fetching
+        // so the empty-state guard can suppress stale empty messages from
+        // the previous deps (e.g. "No Pending Requests" when switching to
+        // History). First-ever loads don't need this — hasLoaded is still
+        // false, so the empty state is already suppressed.
+        if (hasEverLoadedRef.current) {
+          setIsFetching(true);
         }
       } else {
         setIsFetching(true);
@@ -253,7 +272,7 @@ export function usePaginatedData<T, A extends unknown[], M = undefined>({
     items,
     metadata,
     isLoading,
-    isFetching,
+    isFetching: effectiveIsFetching,
     isError,
     hasMore,
     total,
