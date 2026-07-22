@@ -90,8 +90,13 @@ function computeDestination(
 // Module-level callbacks + edge map
 // ---------------------------------------------------------------------------
 
-let gSetDropTarget: ((index: number) => void) | null = null;
-let gClearDropTarget: (() => void) | null = null;
+const gDropTargetCallbacks = new Map<
+  symbol,
+  {
+    setDropTarget: (index: number) => void;
+    clearDropTarget: () => void;
+  }
+>();
 const gEdgeMap = new Map<symbol, { index: number; edge: Edge }>();
 
 // ---------------------------------------------------------------------------
@@ -139,8 +144,10 @@ export function SortableListProvider({
 
   // ── Global drag monitor ─────────────────────────────────────────────
   useEffect(() => {
-    gSetDropTarget = handleSetDropTarget;
-    gClearDropTarget = handleClearDropTarget;
+    gDropTargetCallbacks.set(instanceId, {
+      setDropTarget: handleSetDropTarget,
+      clearDropTarget: handleClearDropTarget,
+    });
 
     return monitorForElements({
       canMonitor({ source }) {
@@ -188,10 +195,9 @@ export function SortableListProvider({
   // Clean up
   useEffect(() => {
     return () => {
-      gSetDropTarget = null;
-      gClearDropTarget = null;
+      gDropTargetCallbacks.delete(instanceId);
     };
-  }, []);
+  }, [instanceId]);
 
   const value: SortableListContextValue = useMemo(
     () => ({ instanceId, dragState }),
@@ -235,16 +241,16 @@ export function useSortableItem(id: string, index: number) {
         return { index, edge };
       },
       onDragEnter() {
-        gSetDropTarget?.(index);
+        gDropTargetCallbacks.get(instanceId)?.setDropTarget(index);
       },
       onDrag({ self }) {
         const data = self.data as Record<string, unknown>;
         const edge = (data.edge as Edge | undefined) ?? 'bottom';
         gEdgeMap.set(instanceId, { index, edge });
-        gSetDropTarget?.(index);
+        gDropTargetCallbacks.get(instanceId)?.setDropTarget(index);
       },
       onDragLeave() {
-        gClearDropTarget?.();
+        gDropTargetCallbacks.get(instanceId)?.clearDropTarget();
         gEdgeMap.delete(instanceId);
       },
     });
