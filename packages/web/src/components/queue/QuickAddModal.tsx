@@ -42,10 +42,10 @@ export default function QuickAddModal({
         await quickAddToQueue(sourceUrl.trim());
         onAdded();
       }
-    } catch (err: unknown) {
-      if (!isRateLimitError(err)) {
+    } catch (error: unknown) {
+      if (!isRateLimitError(error)) {
         setError(
-          apiErrorMessage(err, 'Could not add song to queue. Is the bot in a voice channel?')
+          apiErrorMessage(error, 'Could not add song to queue. Is the bot in a voice channel?')
         );
       }
       setSubmitting(false);
@@ -69,15 +69,15 @@ export default function QuickAddModal({
 
   return (
     <Backdrop onClose={onClose}>
-      <SpringUp className='p-5 md:p-6 w-full max-w-sm mx-4 glass-modal'>
-        <h2 className='font-display text-2xl md:text-3xl text-fg tracking-wider mb-1'>Quick Add</h2>
-        <p className='font-mono text-xs text-muted mb-4 md:mb-6'>
+      <SpringUp className='glass-modal mx-4 w-full max-w-sm p-5 md:p-6'>
+        <h2 className='font-display text-fg mb-1 text-2xl tracking-wider md:text-3xl'>Quick Add</h2>
+        <p className='text-muted mb-4 font-mono text-xs md:mb-6'>
           add a url to Up Next without saving to library
         </p>
 
-        <div className='space-y-4 mb-6'>
+        <div className='mb-6 space-y-4'>
           <div>
-            <p className='font-mono text-xs text-muted mb-2 uppercase tracking-widest'>
+            <p className='text-muted mb-2 font-mono text-xs tracking-widest uppercase'>
               Source URL
             </p>
             <input
@@ -90,29 +90,29 @@ export default function QuickAddModal({
               onKeyDown={handleKeyDown}
             />
             {isPlaylist && (
-              <label className='flex items-center gap-2 cursor-pointer mt-2'>
+              <label className='mt-2 flex cursor-pointer items-center gap-2'>
                 <Checkbox
                   checked={importFullPlaylist}
                   onChange={setImportFullPlaylist}
                   disabled={submitting}
                 />
-                <span className='font-mono text-xs text-fg'>Add all songs from playlist</span>
+                <span className='text-fg font-mono text-xs'>Add all songs from playlist</span>
               </label>
             )}
           </div>
         </div>
 
-        {successMsg && <p className='font-mono text-xs text-success mb-4'>{successMsg}</p>}
-        {error && <p className='font-mono text-xs text-danger mb-4'>{error}</p>}
+        {successMsg && <p className='text-success mb-4 font-mono text-xs'>{successMsg}</p>}
+        {error && <p className='text-danger mb-4 font-mono text-xs'>{error}</p>}
 
         {submitting && (
-          <p className='font-mono text-xs text-muted mb-4 flex items-center gap-2'>
+          <p className='text-muted mb-4 flex items-center gap-2 font-mono text-xs'>
             <Spinner />
             {importFullPlaylist ? 'Adding playlist...' : 'Adding...'}
           </p>
         )}
 
-        <div className='flex gap-2 justify-end'>
+        <div className='flex justify-end gap-2'>
           <Button
             variant='inherit'
             type='button'

@@ -68,19 +68,19 @@ export default function EmptyState({
   return (
     <div className={`text-center ${compact ? 'py-8' : 'py-24'}`}>
       <div
-        className={`rounded-full bg-elevated border border-border flex items-center justify-center mx-auto ${compact ? 'w-10 h-10 mb-2' : 'w-12 h-12 mb-3'}`}
+        className={`bg-elevated border-border mx-auto flex items-center justify-center rounded-full border ${compact ? 'mb-2 h-10 w-10' : 'mb-3 h-12 w-12'}`}
       >
         <Icon size={compact ? 16 : 20} weight='duotone' className='text-faint' />
       </div>
       <p
-        className={`font-display text-faint tracking-wider ${compact ? 'text-xl mb-1' : 'text-4xl mb-2'}`}
+        className={`font-display text-faint tracking-wider ${compact ? 'mb-1 text-xl' : 'mb-2 text-4xl'}`}
       >
         {title}
       </p>
       {message ? (
-        <p className='font-mono text-xs text-faint'>{message}</p>
+        <p className='text-faint font-mono text-xs'>{message}</p>
       ) : isAdmin ? (
-        <p className='font-mono text-xs text-faint'>
+        <p className='text-faint font-mono text-xs'>
           <button type='button' className='text-accent hover:underline' onClick={onAdd}>
             {addLabel}
           </button>{' '}

@@ -49,6 +49,7 @@ export async function fetchGuildRoles(guildId: string): Promise<SetupRole[]> {
       return [];
     }
 
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion
     const roles = (await res.json()) as {
       id: string;
       name: string;
@@ -66,8 +67,8 @@ export async function fetchGuildRoles(guildId: string): Promise<SetupRole[]> {
 
     rolesCache.set(guildId, { data: result, expiresAt: Date.now() + CACHE_TTL_MS });
     return result;
-  } catch (err) {
-    logger.error({ err }, 'Error fetching guild roles');
+  } catch (error) {
+    logger.error({ error }, 'Error fetching guild roles');
     return [];
   }
 }

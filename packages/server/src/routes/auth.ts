@@ -1,5 +1,6 @@
 import { and, eq, lt } from 'drizzle-orm';
 import crypto from 'node:crypto';
+import * as v from 'valibot';
 
 import { getGuildId, refreshGuildId } from '../lib/config';
 import { type RouteContext } from '../lib/context';
@@ -97,7 +98,7 @@ const REFRESH_TOKEN_MAX_AGE = (() => {
   }
   const multipliers: Record<string, number> = { d: 86400000, h: 3600000, m: 60000, s: 1000 };
   const unit = match[2] ?? 'd';
-  const num = match[1] ? parseInt(match[1], 10) : 30;
+  const num = match[1] ? Number.parseInt(match[1], 10) : 30;
   return num * (multipliers[unit] ?? 86400000);
 })();
 
@@ -171,6 +172,21 @@ function authRateLimit(ip: string): boolean {
 }
 
 // ---------------------------------------------------------------------------
+// Discord API response schemas
+// ---------------------------------------------------------------------------
+const DiscordMemberSchema = v.object({ roles: v.optional(v.array(v.string())) });
+const DiscordUserSchema = v.object({
+  username: v.string(),
+  avatar: v.nullable(v.string()),
+});
+const DiscordTokenSchema = v.object({ access_token: v.optional(v.string()) });
+const DiscordIdentitySchema = v.object({
+  id: v.string(),
+  username: v.string(),
+  avatar: v.nullable(v.string()),
+});
+
+// ---------------------------------------------------------------------------
 // Helper functions
 // ---------------------------------------------------------------------------
 
@@ -192,11 +208,12 @@ async function fetchGuildMemberRoles(discordId: string): Promise<string[] | null
     if (!memberRes.ok) {
       throw new Error(`Discord API error: ${memberRes.status}`);
     }
-    const data = (await memberRes.json()) as { roles?: string[] };
-    return data.roles ?? [];
-  } catch (err: unknown) {
+    const raw: unknown = await memberRes.json();
+    const parsed = v.parse(DiscordMemberSchema, raw);
+    return parsed.roles ?? [];
+  } catch (error: unknown) {
     logger.error(
-      { err: err instanceof Error ? err.message : String(err) },
+      { err: error instanceof Error ? error.message : String(error) },
       'Failed to fetch guild member roles'
     );
     return null;
@@ -217,11 +234,12 @@ async function fetchDiscordUserProfile(
     if (!res.ok) {
       return null;
     }
-    const data = (await res.json()) as { username: string; avatar: string | null };
+    const raw: unknown = await res.json();
+    const parsed = v.parse(DiscordUserSchema, raw);
     return {
-      username: data.username,
-      avatar: data.avatar
-        ? `https://cdn.discordapp.com/avatars/${discordId}/${data.avatar}.png`
+      username: parsed.username,
+      avatar: parsed.avatar
+        ? `https://cdn.discordapp.com/avatars/${discordId}/${parsed.avatar}.png`
         : null,
     };
   } catch {
@@ -240,7 +258,8 @@ async function fetchUserAdminStatus(
     if (!userRes.ok) {
       throw new Error(`Discord API error: ${userRes.status}`);
     }
-    const userData = (await userRes.json()) as { username: string; avatar: string | null };
+    const raw: unknown = await userRes.json();
+    const userData = v.parse(DiscordUserSchema, raw);
     const { username, avatar } = userData;
 
     const roles = await fetchGuildMemberRoles(discordId);
@@ -254,9 +273,9 @@ async function fetchUserAdminStatus(
       avatar: avatar ? `https://cdn.discordapp.com/avatars/${discordId}/${avatar}.png` : null,
       roles,
     };
-  } catch (err: unknown) {
+  } catch (error: unknown) {
     logger.error(
-      { err: err instanceof Error ? err.message : String(err) },
+      { err: error instanceof Error ? error.message : String(error) },
       'Failed to fetch user info from Discord'
     );
     return null;
@@ -283,7 +302,8 @@ async function exchangeAuthorizationCode(code: string): Promise<string | null> {
     if (!tokenRes.ok) {
       return null;
     }
-    const data = (await tokenRes.json()) as { access_token?: string };
+    const raw: unknown = await tokenRes.json();
+    const data = v.parse(DiscordTokenSchema, raw);
     return data.access_token ?? null;
   } catch {
     return null;
@@ -304,7 +324,8 @@ async function fetchDiscordIdentity(
     if (!userRes.ok) {
       return null;
     }
-    return (await userRes.json()) as { id: string; username: string; avatar: string | null };
+    const raw: unknown = await userRes.json();
+    return v.parse(DiscordIdentitySchema, raw);
   } catch {
     return null;
   }
@@ -503,8 +524,8 @@ async function withRetry<T>(fn: () => Promise<T>, attempts = 3, baseDelayMs = 50
   for (let i = 0; i < attempts; i++) {
     try {
       return await fn();
-    } catch (err) {
-      lastErr = err;
+    } catch (error) {
+      lastErr = error;
       if (i < attempts - 1) {
         await new Promise((resolve) => setTimeout(resolve, baseDelayMs * 2 ** i));
       }
@@ -596,9 +617,12 @@ async function handleRefresh(
       avatar = profile.avatar;
       isAdmin = true;
       isSetupAdmin = true;
-    } catch (err) {
+    } catch (error) {
       logger.warn(
-        { discordId: decoded.discordId, err: (err as Error).message },
+        {
+          discordId: decoded.discordId,
+          err: error instanceof Error ? error.message : String(error),
+        },
         'Auth refresh failed: Discord unreachable (setup mode)'
       );
       return json({ error: 'Discord is temporarily unreachable. Please try again.' }, 503);
@@ -618,9 +642,12 @@ async function handleRefresh(
       avatar = userInfo.avatar;
       isAdmin = userInfo.isAdmin;
       roles = userInfo.roles;
-    } catch (err) {
+    } catch (error) {
       logger.warn(
-        { discordId: decoded.discordId, err: (err as Error).message },
+        {
+          discordId: decoded.discordId,
+          err: error instanceof Error ? error.message : String(error),
+        },
         'Auth refresh failed: Discord unreachable'
       );
       return json({ error: 'Discord is temporarily unreachable. Please try again.' }, 503);

@@ -65,7 +65,9 @@ export async function syncAllFilters(): Promise<void> {
   // When the UI toggle is off, send flat bands (all 50 → gain 0.0).
   {
     const bands = Array.from({ length: 15 }, (_, i) => {
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion
       const key = `eqBand${i}` as keyof typeof row;
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion
       return row.eqEnabled ? (row[key] as number) : 50;
     });
     filters.equalizer = buildEqualizerFilter(bands);
@@ -146,7 +148,7 @@ export async function syncAllFilters(): Promise<void> {
 
   try {
     await updateNodeLinkPlayer(guildId, sessionId, { filters });
-  } catch (err) {
-    logger.error({ err }, 'Failed to sync audio filters to NodeLink');
+  } catch (error) {
+    logger.error({ error }, 'Failed to sync audio filters to NodeLink');
   }
 }

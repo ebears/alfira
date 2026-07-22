@@ -9,7 +9,17 @@ export default defineConfig({
 
   ignorePatterns: ['.pi/**', '.zed/**'],
 
-  plugins: ['react', 'react-perf', 'jsx-a11y', 'typescript', 'promise', 'import'],
+  plugins: [
+    'react',
+    'react-perf',
+    'jsx-a11y',
+    'typescript',
+    'promise',
+    'import',
+    'unicorn',
+    'oxc',
+    'eslint',
+  ],
 
   rules: {
     // -----------------------------------------------------------------------
@@ -34,6 +44,18 @@ export default defineConfig({
     '@typescript-eslint/no-unnecessary-type-constraint': 'error',
 
     // -----------------------------------------------------------------------
+    // oxc — Oxc-specific correctness rules that catch subtle bugs
+    // -----------------------------------------------------------------------
+    // Math.min(Math.max(x, min), max) — wrong clamping direction
+    'oxc/bad-min-max-func': 'error',
+    // a < b < c evaluates as (a < b) < c — a boolean-number comparison
+    'oxc/bad-comparison-sequence': 'error',
+    // 3.14159 instead of Math.PI, 2.718 instead of Math.E, etc.
+    'oxc/approx-constant': 'error',
+    // new Error('msg') as a statement without throw — silently does nothing
+    'oxc/missing-throw': 'error',
+
+    // -----------------------------------------------------------------------
     // correctness
     // -----------------------------------------------------------------------
     'no-const-assign': 'error',
@@ -49,7 +71,7 @@ export default defineConfig({
     'no-unsafe-finally': 'error',
     'no-unsafe-optional-chaining': 'error',
     'no-unused-labels': 'error',
-    'no-unused-vars': 'warn',
+    '@typescript-eslint/no-unused-vars': 'warn',
     'use-isnan': 'error',
     'for-direction': 'error',
     'require-yield': 'error',
@@ -59,7 +81,7 @@ export default defineConfig({
     'unicorn/throw-new-error': 'error',
     'unicorn/error-message': 'error',
     // Reassigning parameters is confusing — mutate properties instead
-    'no-param-reassign': 'warn',
+    'no-param-reassign': 'error',
     // Comma operator outside for-loops is almost always a mistake
     'no-sequences': 'error',
     // Assignment in return (e.g. return x = 5) is never intentional
@@ -90,6 +112,20 @@ export default defineConfig({
     'react/jsx-no-target-blank': 'error',
 
     // -----------------------------------------------------------------------
+    // type safety — catch TypeScript type-level mistakes
+    // -----------------------------------------------------------------------
+    // {} means "any non-nullish value", not "empty object" — use Record<string, never>
+    '@typescript-eslint/no-empty-object-type': 'error',
+    // Function type is unsafe — use (...args: unknown[]) => unknown
+    '@typescript-eslint/no-unsafe-function-type': 'error',
+    // String / Number / Boolean as types (uppercase wrappers) — use primitives
+    '@typescript-eslint/no-wrapper-object-types': 'error',
+    // Duplicate enum members are ambiguous and confusing
+    '@typescript-eslint/no-duplicate-enum-values': 'error',
+    // void in unions or intersections is a type-level mistake
+    '@typescript-eslint/no-invalid-void-type': 'error',
+
+    // -----------------------------------------------------------------------
     // suspicious
     // -----------------------------------------------------------------------
     'no-async-promise-executor': 'error',
@@ -102,7 +138,7 @@ export default defineConfig({
     'no-dupe-class-members': 'error',
     'no-dupe-keys': 'error',
     'no-empty': 'warn',
-    '@typescript-eslint/no-explicit-any': 'warn',
+    '@typescript-eslint/no-explicit-any': 'error',
     'no-fallthrough': 'error',
     'no-func-assign': 'error',
     'no-global-assign': 'error',
@@ -150,7 +186,8 @@ export default defineConfig({
     // imports
     // -----------------------------------------------------------------------
     'import/first': 'warn',
-    'import/no-cycle': 'warn',
+    // Circular imports cause subtle ordering bugs — always a problem
+    'import/no-cycle': 'error',
     'unicorn/prefer-node-protocol': 'warn',
     // export let can cause cross-module side-channel bugs
     'import/no-mutable-exports': 'warn',
@@ -171,11 +208,16 @@ export default defineConfig({
     'promise/always-return': 'warn',
     // Enforce resolve/reject naming in new Promise() callbacks
     'promise/param-names': 'warn',
+    // Promise created in a callback but never returned or awaited — dangling promise
+    'promise/no-promise-in-callback': 'error',
 
     // -----------------------------------------------------------------------
     // style
     // -----------------------------------------------------------------------
     curly: 'error',
+    // a ? b : c ? d : e — unreadable; use if/else or extract.
+    // NOTE: oxfmt strips parens from nested ternaries, so this rule is off.
+    'unicorn/no-nested-ternary': 'off',
     'no-useless-concat': 'warn',
     'object-shorthand': 'warn',
     '@typescript-eslint/array-type': 'warn',
@@ -238,13 +280,14 @@ export default defineConfig({
     '@typescript-eslint/no-unsafe-return': 'warn',
     // Conditions that are always truthy/falsy — dead code detector
     '@typescript-eslint/no-unnecessary-condition': 'warn',
+    // void expressions (arr.push, el.remove) used where a value is expected
+    '@typescript-eslint/no-confusing-void-expression': 'warn',
 
     // -----------------------------------------------------------------------
     // type-aware safety — tsgolint rules that catch runtime bugs
     // -----------------------------------------------------------------------
     // `x as Type` assertion that contradicts known types — silent type lie
-    // TODO: fix 148 violations, then change to 'warn'
-    '@typescript-eslint/no-unsafe-type-assertion': 'off',
+    '@typescript-eslint/no-unsafe-type-assertion': 'warn',
     // String coercion of an object without .toString() — produces "[object Object]"
     '@typescript-eslint/no-base-to-string': 'warn',
     // `for (const k in arr)` — iterates string indices, a classic footgun
@@ -287,6 +330,8 @@ export default defineConfig({
     '@typescript-eslint/no-meaningless-void-operator': 'warn',
     // Unnecessary namespace qualifier on a type that's already in scope
     '@typescript-eslint/no-unnecessary-qualifier': 'warn',
+    // Type parameters that can be inferred — dead weight
+    '@typescript-eslint/no-unnecessary-type-parameters': 'warn',
     // `Promise.reject(nonError)` — loses stack trace info
     '@typescript-eslint/prefer-promise-reject-errors': 'warn',
     // `arr.filter(fn)[0]` → `arr.find(fn)` — O(n) vs early-exit
@@ -327,6 +372,8 @@ export default defineConfig({
     'no-console': 'warn',
     // Set.has(x) over arr.includes(x) — O(1) vs O(n), better signaling
     'unicorn/prefer-set-has': 'warn',
+    // Set.size / Map.size over .length — correctness
+    'unicorn/prefer-set-size': 'warn',
 
     // -----------------------------------------------------------------------
     // modern JS/TS — prefer modern, idiomatic APIs
@@ -349,6 +396,8 @@ export default defineConfig({
     'unicorn/prefer-array-flat-map': 'warn',
     // Date.now() over new Date().getTime()
     'unicorn/prefer-date-now': 'warn',
+    // str.slice() over str.substr() / str.substring() — consistent, modern
+    'unicorn/prefer-string-slice': 'warn',
     // arr.at(-1) over arr[arr.length - 1]
     'unicorn/prefer-negative-index': 'warn',
     // throw new TypeError(...) for type errors
@@ -361,6 +410,17 @@ export default defineConfig({
     'unicorn/prefer-keyboard-event-key': 'warn',
     // DOM: el.replaceWith() over parent.replaceChild()
     'unicorn/prefer-modern-dom-apis': 'warn',
+    // Number.isNaN() over isNaN(), Number.isFinite() over isFinite(), etc.
+    'unicorn/prefer-number-properties': 'warn',
+    // structuredClone(x) over JSON.parse(JSON.stringify(x))
+    'unicorn/prefer-structured-clone': 'warn',
+    // String.raw over escaping backslashes in regex / path strings
+    'unicorn/prefer-string-raw': 'warn',
+    // Enforce kebab-case, PascalCase, or camelCase filenames
+    'unicorn/filename-case': [
+      'warn',
+      { cases: { kebabCase: true, pascalCase: true, camelCase: true } },
+    ],
   },
 
   overrides: [
@@ -381,6 +441,14 @@ export default defineConfig({
         'unicorn/prefer-dom-node-dataset': 'off',
         'unicorn/prefer-keyboard-event-key': 'off',
         'unicorn/prefer-modern-dom-apis': 'off',
+      },
+    },
+
+    // Web: no-unsafe-type-assertion deferred to a follow-up PR
+    {
+      files: ['packages/web/**'],
+      rules: {
+        '@typescript-eslint/no-unsafe-type-assertion': 'off',
       },
     },
 
@@ -573,6 +641,22 @@ export default defineConfig({
       },
     },
 
+    // API wrappers + generic utilities: T used only in return type is necessary
+    // for caller-side type inference. no-unnecessary-type-parameters fires on
+    // single-use type params even when they're essential (e.g. get<T>(url): Promise<T>).
+    {
+      files: [
+        'packages/server/src/shared/api.ts',
+        'packages/server/src/shared/shuffle.ts',
+        'packages/server/src/lib/jwt.ts',
+        'packages/web/src/api/client.ts',
+        'packages/web/src/hooks/useSocket.ts',
+      ],
+      rules: {
+        '@typescript-eslint/no-unnecessary-type-parameters': 'off',
+      },
+    },
+
     // nodelink.ts: intentional || undefined to normalize empty strings to undefined
     {
       files: ['packages/server/src/utils/nodelink.ts'],
@@ -594,6 +678,24 @@ export default defineConfig({
       files: ['packages/web/src/hooks/useSocket.ts'],
       rules: {
         'non-nullable-type-assertion-style': 'off',
+      },
+    },
+
+    // React useEffect callbacks legitimately return cleanup functions.
+    // consistent-return can't distinguish React's void | Destructor contract.
+    {
+      files: ['packages/web/**'],
+      rules: {
+        '@typescript-eslint/consistent-return': 'off',
+      },
+    },
+
+    // Bun WebSocket upgrade: return; after server.upgrade() exits the fetch handler
+    // without producing a Response — correct Bun pattern, not a missing return.
+    {
+      files: ['packages/server/src/index.ts'],
+      rules: {
+        '@typescript-eslint/consistent-return': 'off',
       },
     },
   ],

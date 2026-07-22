@@ -1,4 +1,5 @@
 import { eq } from 'drizzle-orm';
+import * as v from 'valibot';
 
 import { type RouteContext } from '../lib/context';
 import { json } from '../lib/json';
@@ -7,10 +8,10 @@ import { routeTable } from '../lib/routeTable';
 import { syncAllFilters } from '../lib/syncAllFilters';
 import { db, tables } from '../shared/db';
 
-interface LowPassPayload {
-  enabled: boolean;
-  smoothing: number;
-}
+const LowPassSchema = v.object({
+  enabled: v.boolean(),
+  smoothing: v.pipe(v.number(), v.minValue(0), v.maxValue(60)),
+});
 
 function handleLowPassGet(
   ctx: RouteContext,
@@ -26,7 +27,7 @@ function handleLowPassGet(
 
   return json({
     enabled: row?.lowPassEnabled ?? false,
-    smoothing: row?.lowPassSmoothing ?? 20.0,
+    smoothing: row?.lowPassSmoothing ?? 20,
   });
 }
 
@@ -40,21 +41,19 @@ async function handleLowPassPatch(
     return guards;
   }
 
-  let body: LowPassPayload;
+  let raw: unknown;
   try {
-    body = (await request.json()) as LowPassPayload;
+    raw = await request.json();
   } catch {
     return json({ error: 'Invalid JSON' }, 400);
   }
 
-  const { enabled, smoothing } = body;
+  const parsed = v.safeParse(LowPassSchema, raw);
+  if (!parsed.success) {
+    return json({ error: 'Invalid request body.', details: v.flatten(parsed.issues) }, 400);
+  }
 
-  if (typeof enabled !== 'boolean') {
-    return json({ error: 'enabled must be boolean' }, 400);
-  }
-  if (typeof smoothing !== 'number' || smoothing < 0 || smoothing > 60) {
-    return json({ error: 'smoothing must be number 0.0 to 60.0' }, 400);
-  }
+  const { enabled, smoothing } = parsed.output;
 
   db.insert(tables.guildSettings)
     .values({

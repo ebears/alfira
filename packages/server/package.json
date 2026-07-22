@@ -1,6 +1,6 @@
 {
   "name": "@alfira/server",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "private": true,
   "main": "./src/index.ts",
   "exports": {
@@ -10,9 +10,13 @@
   },
   "scripts": {
     "dev": "bun run src/index.ts",
-    "build": "bun build ./src/index.ts --outdir=./dist --target bun --format esm"
+    "build": "bun build ./src/index.ts --outdir=./dist --target bun --format esm",
+    "test": "bun test"
   },
-  "dependencies": {},
+  "dependencies": {
+    "drizzle-valibot": "^0.4.2",
+    "valibot": "^1.4.2"
+  },
   "devDependencies": {
     "drizzle-orm": "0.45.2"
   }

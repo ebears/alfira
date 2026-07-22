@@ -44,7 +44,9 @@ export function PermissionsProvider({ children }: { children: React.ReactNode })
       void refresh();
     };
     window.addEventListener('focus', onFocus);
-    return () => window.removeEventListener('focus', onFocus);
+    return () => {
+      window.removeEventListener('focus', onFocus);
+    };
   }, [refresh]);
 
   const hasPermission = useCallback(

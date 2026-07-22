@@ -39,6 +39,9 @@ export interface VirtualListProps<T> {
   skeleton: React.ReactNode;
   emptyTitle: string;
   emptyMessage?: string;
+  /** Optional external scroll container ref. When provided, the component
+   *  uses it instead of creating its own. Useful for DnD auto-scroll. */
+  scrollRef?: React.RefObject<HTMLDivElement | null>;
 }
 
 // ---------------------------------------------------------------------------
@@ -62,8 +65,10 @@ function VirtualListInner<T>({
   skeleton,
   emptyTitle,
   emptyMessage,
+  scrollRef: externalScrollRef,
 }: VirtualListProps<T>) {
-  const scrollRef = useRef<HTMLDivElement>(null);
+  const internalScrollRef = useRef<HTMLDivElement>(null);
+  const scrollRef = externalScrollRef ?? internalScrollRef;
   const containerRef = useRef<HTMLDivElement>(null);
 
   // Keep the user-provided getItemKey in a ref so the virtualizer's
@@ -145,7 +150,7 @@ function VirtualListInner<T>({
   return (
     <div
       ref={containerRef}
-      className='relative flex-1 min-h-0 flex flex-col overflow-x-hidden'
+      className='relative flex min-h-0 flex-1 flex-col overflow-x-hidden'
       style={containerStyle}
     >
       {showSkeleton && skeleton}
@@ -155,7 +160,7 @@ function VirtualListInner<T>({
       {showContent && (
         <div
           ref={scrollRef}
-          className='overflow-y-auto overflow-x-hidden px-2 pt-3 min-h-0 flex-1 bg-surface'
+          className='bg-surface min-h-0 flex-1 overflow-x-hidden overflow-y-auto px-2 pt-3'
           style={scrollMaskStyle}
         >
           <div
@@ -187,23 +192,23 @@ function VirtualListInner<T>({
                         <button
                           type='button'
                           onClick={onRetry}
-                          className='font-mono text-xs text-muted hover:text-fg transition-colors underline'
+                          className='text-muted hover:text-fg font-mono text-xs underline transition-colors'
                         >
                           Failed to load more. Retry
                         </button>
                       </div>
                     ) : isFetching ? (
-                      <div className='flex justify-center py-4 gap-2'>
+                      <div className='flex justify-center gap-2 py-4'>
                         {Array.from({ length: 3 }).map((_, i) => (
                           <div
                             key={`loading-dot-${i}`}
-                            className='h-3 w-3 rounded-full bg-border animate-pulse'
+                            className='bg-border h-3 w-3 animate-pulse rounded-full'
                           />
                         ))}
                       </div>
                     ) : (
                       <div className='flex justify-center py-4'>
-                        <span className='font-mono text-[11px] text-faint'>
+                        <span className='text-faint font-mono text-[11px]'>
                           Nothing more to load
                         </span>
                       </div>

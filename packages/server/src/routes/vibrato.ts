@@ -1,4 +1,5 @@
 import { eq } from 'drizzle-orm';
+import * as v from 'valibot';
 
 import { type RouteContext } from '../lib/context';
 import { json } from '../lib/json';
@@ -7,11 +8,11 @@ import { routeTable } from '../lib/routeTable';
 import { syncAllFilters } from '../lib/syncAllFilters';
 import { db, tables } from '../shared/db';
 
-interface VibratoPayload {
-  enabled: boolean;
-  frequency: number;
-  depth: number;
-}
+const VibratoSchema = v.object({
+  enabled: v.boolean(),
+  frequency: v.pipe(v.number(), v.minValue(0.1), v.maxValue(14)),
+  depth: v.pipe(v.number(), v.minValue(0), v.maxValue(1)),
+});
 
 function handleVibratoGet(
   ctx: RouteContext,
@@ -27,7 +28,7 @@ function handleVibratoGet(
 
   return json({
     enabled: row?.vibratoEnabled ?? false,
-    frequency: row?.vibratoFrequency ?? 2.0,
+    frequency: row?.vibratoFrequency ?? 2,
     depth: row?.vibratoDepth ?? 0.5,
   });
 }
@@ -42,24 +43,19 @@ async function handleVibratoPatch(
     return guards;
   }
 
-  let body: VibratoPayload;
+  let raw: unknown;
   try {
-    body = (await request.json()) as VibratoPayload;
+    raw = await request.json();
   } catch {
     return json({ error: 'Invalid JSON' }, 400);
   }
 
-  const { enabled, frequency, depth } = body;
+  const parsed = v.safeParse(VibratoSchema, raw);
+  if (!parsed.success) {
+    return json({ error: 'Invalid request body.', details: v.flatten(parsed.issues) }, 400);
+  }
 
-  if (typeof enabled !== 'boolean') {
-    return json({ error: 'enabled must be boolean' }, 400);
-  }
-  if (typeof frequency !== 'number' || frequency < 0.1 || frequency > 14.0) {
-    return json({ error: 'frequency must be number 0.1 to 14.0' }, 400);
-  }
-  if (typeof depth !== 'number' || depth < 0 || depth > 1) {
-    return json({ error: 'depth must be number 0.0 to 1.0' }, 400);
-  }
+  const { enabled, frequency, depth } = parsed.output;
 
   db.insert(tables.guildSettings)
     .values({

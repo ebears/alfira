@@ -38,13 +38,15 @@ export default function Checkbox({
   const s = sizeConfig[size];
 
   const handleChange = useCallback(
-    (e: React.ChangeEvent<HTMLInputElement>) => onChange(e.target.checked),
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      onChange(e.target.checked);
+    },
     [onChange]
   );
 
   return (
     <span
-      className={`group relative inline-flex shrink-0 ${disabled ? 'opacity-50 pointer-events-none' : ''}`}
+      className={`group relative inline-flex shrink-0 ${disabled ? 'pointer-events-none opacity-50' : ''}`}
     >
       {/* Hidden native input fills the entire box, capturing clicks even inside parent labels */}
       <input
@@ -52,17 +54,11 @@ export default function Checkbox({
         checked={checked}
         disabled={disabled}
         onChange={handleChange}
-        className={`opacity-0 absolute inset-0 z-10 ${disabled ? 'cursor-not-allowed' : 'cursor-pointer'}`}
+        className={`absolute inset-0 z-10 opacity-0 ${disabled ? 'cursor-not-allowed' : 'cursor-pointer'}`}
       />
       <span
         aria-hidden
-        className={`
-          ${s.box} ${s.rounded} ${s.border}
-          flex items-center justify-center shrink-0
-          transition-colors duration-150
-          group-focus-within:ring-2 group-focus-within:ring-accent/50 group-focus-within:ring-offset-2 group-focus-within:ring-offset-surface
-          ${checked ? variantChecked[variant] : 'border-border bg-surface'}
-        `}
+        className={` ${s.box} ${s.rounded} ${s.border} group-focus-within:ring-accent/50 group-focus-within:ring-offset-surface flex shrink-0 items-center justify-center transition-colors duration-150 group-focus-within:ring-2 group-focus-within:ring-offset-2 ${checked ? variantChecked[variant] : 'border-border bg-surface'} `}
       >
         <CheckIcon
           size={s.icon}

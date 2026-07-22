@@ -1,6 +1,5 @@
 import { type PlaylistDetail, type Song } from '@alfira/server/shared';
 import { formatDuration } from '@alfira/server/shared';
-import { useVirtualizer } from '@tanstack/react-virtual';
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { addSongToPlaylist, getSongsPage } from '../api/api';
@@ -9,6 +8,7 @@ import { ArtworkImage } from './ui/ArtworkImage';
 import { Button } from './ui/Button';
 import { Skeleton } from './ui/Skeleton';
 import { SpringUp } from './ui/SpringUp';
+import { VirtualList } from './VirtualList';
 
 const PAGE_SIZE = 30;
 
@@ -24,48 +24,77 @@ export default function AddSongsModal({
   const [songs, setSongs] = useState<Song[]>([]);
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
-  const [loading, setLoading] = useState(true);
-  const [loadingMore, setLoadingMore] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [hasLoaded, setHasLoaded] = useState(false);
+  const [isFetching, setIsFetching] = useState(false);
+  const [isError, setIsError] = useState(false);
   const [adding, setAdding] = useState<Set<string>>(new Set());
   const [added, setAdded] = useState<Set<string>>(new Set(playlist.songs.map((ps) => ps.songId)));
   const [search, setSearch] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
+  // eslint-disable-next-line unicorn/no-useless-undefined
   const timerRef = useRef<ReturnType<typeof setTimeout>>(undefined);
-  const scrollRef = useRef<HTMLDivElement>(null);
 
-  // Stable refs to avoid recreating callbacks on every render
+  // Stable refs so callbacks don't trigger virtualizer re-indexing.
   const hasMoreRef = useRef(true);
-  const loadingMoreRef = useRef(false);
-  const debouncedSearchRef = useRef('');
+  const isFetchingRef = useRef(false);
   const pageRef = useRef(1);
+  const debouncedSearchRef = useRef('');
+  const mountedRef = useRef(true);
   hasMoreRef.current = hasMore;
-  loadingMoreRef.current = loadingMore;
-  debouncedSearchRef.current = debouncedSearch;
+  isFetchingRef.current = isFetching;
   pageRef.current = page;
+  debouncedSearchRef.current = debouncedSearch;
 
-  // Reset and fetch page 1 on search change
+  // Reset and fetch page 1 when debounced search changes.
   useEffect(() => {
+    mountedRef.current = true;
     setSongs([]);
     setPage(1);
     pageRef.current = 1;
     setHasMore(true);
-    setLoading(true);
-    debouncedSearchRef.current = debouncedSearch;
+    hasMoreRef.current = true;
+    setIsLoading(true);
+    setHasLoaded(false);
+    setIsError(false);
+
     void (async () => {
-      const result = await getSongsPage(1, PAGE_SIZE, { search: debouncedSearch || undefined });
-      setSongs(result.items);
-      setHasMore(result.items.length >= PAGE_SIZE);
-      hasMoreRef.current = result.items.length >= PAGE_SIZE;
-      setLoading(false);
+      try {
+        const result = await getSongsPage(1, PAGE_SIZE, {
+          search: debouncedSearch || undefined,
+        });
+        if (!mountedRef.current) {
+          return;
+        }
+        setSongs(result.items);
+        setHasMore(result.items.length >= PAGE_SIZE);
+        hasMoreRef.current = result.items.length >= PAGE_SIZE;
+      } catch {
+        if (!mountedRef.current) {
+          return;
+        }
+        setIsError(true);
+      } finally {
+        if (mountedRef.current) {
+          setIsLoading(false);
+          setHasLoaded(true);
+        }
+      }
     })();
+
+    return () => {
+      mountedRef.current = false;
+    };
   }, [debouncedSearch]);
 
-  // Debounce search input
+  // Debounce search input.
   useEffect(() => {
     if (timerRef.current) {
       clearTimeout(timerRef.current);
     }
-    timerRef.current = setTimeout(() => setDebouncedSearch(search), 200);
+    timerRef.current = setTimeout(() => {
+      setDebouncedSearch(search);
+    }, 200);
     return () => {
       if (timerRef.current) {
         clearTimeout(timerRef.current);
@@ -73,48 +102,44 @@ export default function AddSongsModal({
     };
   }, [search]);
 
-  const loadMore = useCallback(() => {
-    if (!hasMoreRef.current || loadingMoreRef.current) {
+  const fetchMore = useCallback(() => {
+    if (!hasMoreRef.current || isFetchingRef.current) {
       return;
     }
-    loadingMoreRef.current = true;
-    setLoadingMore(true);
+    isFetchingRef.current = true;
+    setIsFetching(true);
     const nextPage = pageRef.current + 1;
     void (async () => {
-      const result = await getSongsPage(nextPage, PAGE_SIZE, {
-        search: debouncedSearchRef.current || undefined,
-      });
-      setSongs((prev) => [...prev, ...result.items]);
-      setPage(nextPage);
-      pageRef.current = nextPage;
-      setHasMore(result.items.length >= PAGE_SIZE);
-      hasMoreRef.current = result.items.length >= PAGE_SIZE;
-      loadingMoreRef.current = false;
-      setLoadingMore(false);
+      try {
+        const result = await getSongsPage(nextPage, PAGE_SIZE, {
+          search: debouncedSearchRef.current || undefined,
+        });
+        if (!mountedRef.current) {
+          return;
+        }
+        setSongs((prev) => [...prev, ...result.items]);
+        setPage(nextPage);
+        pageRef.current = nextPage;
+        setHasMore(result.items.length >= PAGE_SIZE);
+        hasMoreRef.current = result.items.length >= PAGE_SIZE;
+      } catch {
+        if (!mountedRef.current) {
+          return;
+        }
+        setIsError(true);
+      } finally {
+        if (mountedRef.current) {
+          setIsFetching(false);
+          isFetchingRef.current = false;
+        }
+      }
     })();
   }, []);
 
-  // Check near-bottom on scroll
-  useEffect(() => {
-    const el = scrollRef.current;
-    if (!el) {
-      return undefined;
-    }
-    const check = () => {
-      if (el.scrollHeight - el.scrollTop - el.clientHeight < 300) {
-        loadMore();
-      }
-    };
-    el.addEventListener('scroll', check, { passive: true });
-    return () => el.removeEventListener('scroll', check);
-  }, [loadMore]);
-
-  const virtualizer = useVirtualizer({
-    count: songs.length,
-    getScrollElement: () => scrollRef.current,
-    estimateSize: () => 60,
-    overscan: 5,
-  });
+  const retry = useCallback(() => {
+    setIsError(false);
+    fetchMore();
+  }, [fetchMore]);
 
   const handleAdd = useCallback(
     async (song: Song) => {
@@ -123,7 +148,7 @@ export default function AddSongsModal({
         await addSongToPlaylist(playlist.id, song.id);
         setAdded((prev) => new Set([...prev, song.id]));
       } catch {
-        /* already added — mark as added */
+        // Already in playlist — mark as added regardless.
         setAdded((prev) => new Set([...prev, song.id]));
       } finally {
         setAdding((prev) => {
@@ -142,20 +167,42 @@ export default function AddSongsModal({
     setSearch(e.target.value);
   }, []);
 
-  const virtualContainerStyle = useMemo(
-    () => ({
-      height: `${virtualizer.getTotalSize()}px`,
-      position: 'relative' as const,
-    }),
-    [virtualizer]
+  // Stable callbacks for VirtualList.
+  const estimateSize = useCallback(() => 60, []);
+  const getItemKey = useCallback((song: Song) => song.id, []);
+
+  const renderItem = useCallback(
+    (song: Song) => (
+      <SongRow
+        song={song}
+        isAdded={added.has(song.id)}
+        isAdding={adding.has(song.id)}
+        onAdd={handleAdd}
+      />
+    ),
+    [added, adding, handleAdd]
+  );
+
+  const skeleton = useMemo(
+    () => (
+      <div className='space-y-2 p-4 md:p-6'>
+        {[1, 2, 3, 4, 5].map((n) => (
+          <div key={`skeleton-${n}`} className='flex items-center gap-3'>
+            <Skeleton className='h-8 w-12 rounded md:h-7 md:w-10' />
+            <Skeleton className='h-3 flex-1' />
+          </div>
+        ))}
+      </div>
+    ),
+    []
   );
 
   return (
     <Backdrop onClose={onClose}>
-      <SpringUp className='w-full max-w-lg glass-modal flex flex-col max-h-[80vh]'>
-        <div className='p-4 md:p-5 border-b border-border'>
-          <h2 className='font-display text-2xl md:text-3xl text-fg tracking-wider'>Add Songs</h2>
-          <p className='font-mono text-xs text-muted mt-0.5'>to "{playlist.name}"</p>
+      <SpringUp className='glass-modal flex max-h-[80vh] w-full max-w-lg flex-col'>
+        <div className='border-border border-b p-4 md:p-5'>
+          <h2 className='font-display text-fg text-2xl tracking-wider md:text-3xl'>Add Songs</h2>
+          <p className='text-muted mt-0.5 font-mono text-xs'>to &quot;{playlist.name}&quot;</p>
           <input
             className='input mt-3 md:mt-4'
             placeholder='Search...'
@@ -163,53 +210,25 @@ export default function AddSongsModal({
             onChange={handleSearchChange}
           />
         </div>
-        <div ref={scrollRef} className='flex-1 overflow-y-auto'>
-          {loading ? (
-            <div className='p-4 md:p-6 space-y-2'>
-              {[1, 2, 3, 4, 5].map((n) => (
-                <div key={`skeleton-${n}`} className='flex items-center gap-3'>
-                  <Skeleton className='w-12 h-8 md:w-10 md:h-7 rounded' />
-                  <Skeleton className='h-3 flex-1' />
-                </div>
-              ))}
-            </div>
-          ) : songs.length === 0 ? (
-            <p className='p-4 md:p-6 font-mono text-xs text-muted text-center'>no songs found</p>
-          ) : (
-            <div style={virtualContainerStyle}>
-              {virtualizer.getVirtualItems().map((virtualRow) => {
-                const song = songs[virtualRow.index];
-                if (song == null) {
-                  return null;
-                }
-                const isAdded = added.has(song.id);
-                const isAdding = adding.has(song.id);
-                return (
-                  <div
-                    key={song.id}
-                    data-index={virtualRow.index}
-                    ref={virtualizer.measureElement}
-                    /* eslint-disable-next-line react-perf/jsx-no-new-object-as-prop -- per-row dynamic transform from virtualizer */
-                    style={{
-                      position: 'absolute',
-                      top: 0,
-                      left: 0,
-                      width: '100%',
-                      transform: `translateY(${virtualRow.start}px)`,
-                    }}
-                  >
-                    <SongRow song={song} isAdded={isAdded} isAdding={isAdding} onAdd={handleAdd} />
-                  </div>
-                );
-              })}
-            </div>
-          )}
-          {loadingMore && (
-            <p className='p-3 font-mono text-xs text-muted text-center'>loading...</p>
-          )}
-        </div>
 
-        <div className='p-4 border-t border-border flex justify-end'>
+        <VirtualList
+          items={songs}
+          getItemKey={getItemKey}
+          renderItem={renderItem}
+          estimateSize={estimateSize}
+          isLoading={isLoading}
+          hasLoaded={hasLoaded}
+          isFetching={isFetching}
+          isError={isError}
+          hasMore={hasMore}
+          onRetry={retry}
+          onFetchMore={fetchMore}
+          skeleton={skeleton}
+          emptyTitle='No Songs'
+          emptyMessage='No songs found matching your search.'
+        />
+
+        <div className='border-border flex justify-end border-t p-4'>
           <Button variant='primary' onClick={hasAddedNew ? onAdded : onClose}>
             {hasAddedNew ? 'Done' : 'Close'}
           </Button>
@@ -218,6 +237,10 @@ export default function AddSongsModal({
     </Backdrop>
   );
 }
+
+// ---------------------------------------------------------------------------
+// Row
+// ---------------------------------------------------------------------------
 
 const SongRow = memo(function SongRow({
   song,
@@ -235,19 +258,19 @@ const SongRow = memo(function SongRow({
   }, [onAdd, song]);
 
   return (
-    <div className='flex items-center gap-2 md:gap-3 px-4 md:px-5 py-3 hover:bg-elevated active:bg-elevated/80 transition-colors duration-100'>
-      <div className='overflow-hidden w-10 h-10 md:w-8 md:h-8 rounded border border-border shrink-0 bg-elevated'>
+    <div className='hover:bg-elevated active:bg-elevated/80 flex items-center gap-2 px-4 py-3 transition-colors duration-100 md:gap-3 md:px-5'>
+      <div className='border-border bg-elevated h-10 w-10 shrink-0 overflow-hidden rounded border md:h-8 md:w-8'>
         <ArtworkImage
           src={song.artwork ?? song.thumbnailUrl}
           alt={song.nickname ?? song.title}
-          className='w-full h-full'
+          className='h-full w-full'
           imageClassName='scale-[1.33]'
         />
       </div>
-      <span className='flex-1 font-body text-sm text-fg truncate'>
+      <span className='font-body text-fg flex-1 truncate text-sm'>
         {song.nickname ?? song.title}
       </span>
-      <span className='font-mono text-xs text-muted hidden sm:block'>
+      <span className='text-muted hidden font-mono text-xs sm:block'>
         {formatDuration(song.duration)}
       </span>
       <Button
@@ -255,7 +278,7 @@ const SongRow = memo(function SongRow({
         surface='surface'
         disabled={isAdded || isAdding}
         onClick={handleClick}
-        className={`font-mono text-xs px-3 py-2 md:py-1 min-h-11 md:min-h-0 ${
+        className={`min-h-11 px-3 py-2 font-mono text-xs md:min-h-0 md:py-1 ${
           isAdded ? 'border-accent/30 text-accent bg-accent/5 cursor-default' : ''
         }`}
       >

@@ -91,13 +91,13 @@ async function wrapBotCall<T>(
   try {
     return { ok: true, value: await fn() };
   } catch (error) {
-    logger.error({ err: error as Error }, 'NodeLink call failed');
+    logger.error({ err: error instanceof Error ? error : String(error) }, 'NodeLink call failed');
 
     // If it's a fetch error with response status, propagate the actual status
     if (error instanceof Error && error.message.startsWith('NodeLink REST')) {
       const match = /NodeLink REST (\d+):/.exec(error.message);
       if (match?.[1]) {
-        const status = parseInt(match[1], 10);
+        const status = Number.parseInt(match[1], 10);
         return { ok: false, response: json({ error: error.message }, status) };
       }
       // If regex didn't match but it's a NodeLink REST error, use 502

@@ -18,11 +18,15 @@ export function EditSubmenuPanel({ config, onBack, onSave }: EditSubmenuPanelPro
   useEffect(() => {
     // Delay focus to let the spring-up animation start.
     const timer = setTimeout(() => inputRef.current?.focus(), 50);
-    return () => clearTimeout(timer);
+    return () => {
+      clearTimeout(timer);
+    };
   }, []);
 
   const handleChange = useCallback(
-    (e: React.ChangeEvent<HTMLInputElement>) => config.onChange(e.target.value),
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      config.onChange(e.target.value);
+    },
     [config]
   );
 
@@ -41,32 +45,32 @@ export function EditSubmenuPanel({ config, onBack, onSave }: EditSubmenuPanelPro
 
   return (
     <SpringUp>
-      <div className='flex items-center gap-2 px-3 py-2 border-b border-border'>
+      <div className='border-border flex items-center gap-2 border-b px-3 py-2'>
         <button
           type='button'
           aria-label='Back to main menu'
           onClick={onBack}
-          className='text-muted hover:text-fg p-1 rounded transition-colors'
+          className='text-muted hover:text-fg rounded p-1 transition-colors'
         >
           <CaretLeftIcon size={14} weight='duotone' />
         </button>
-        <span className='font-mono text-xs text-muted truncate'>{config.title}</span>
+        <span className='text-muted truncate font-mono text-xs'>{config.title}</span>
       </div>
       <div className='px-2 py-2'>
         <input
           ref={inputRef}
-          className='input text-xs py-1.5 px-2 w-full mb-2'
+          className='input mb-2 w-full px-2 py-1.5 text-xs'
           value={config.value}
           onChange={handleChange}
           onKeyDown={handleKeyDown}
           disabled={config.saving}
           placeholder={config.placeholder ?? 'Enter value...'}
         />
-        <div className='flex gap-1 justify-end'>
+        <div className='flex justify-end gap-1'>
           <button
             type='button'
             onClick={onBack}
-            className='text-xs text-muted hover:text-fg px-2 py-1 rounded transition-colors'
+            className='text-muted hover:text-fg rounded px-2 py-1 text-xs transition-colors'
           >
             Cancel
           </button>
@@ -74,7 +78,7 @@ export function EditSubmenuPanel({ config, onBack, onSave }: EditSubmenuPanelPro
             type='button'
             onClick={onSave}
             disabled={config.saving}
-            className='text-xs text-accent hover:text-accent/80 px-2 py-1 rounded transition-colors disabled:opacity-50'
+            className='text-accent hover:text-accent/80 rounded px-2 py-1 text-xs transition-colors disabled:opacity-50'
           >
             {config.saving ? '...' : 'Save'}
           </button>

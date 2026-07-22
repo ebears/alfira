@@ -63,8 +63,8 @@ export async function sendRequestNotification(
       },
       body: JSON.stringify({ content }),
     });
-  } catch (err) {
-    logger.warn({ err }, 'Failed to send request notification');
+  } catch (error) {
+    logger.warn({ error }, 'Failed to send request notification');
   }
 }
 
@@ -92,6 +92,7 @@ export async function sendRequestDm(
       return;
     }
 
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion
     const dmChannel = (await dmRes.json()) as { id: string };
     const messages: Record<string, string> = {
       approved: `✅ Your song request for **${title}** has been approved and added to the library!`,
@@ -106,7 +107,7 @@ export async function sendRequestDm(
       },
       body: JSON.stringify({ content: messages[status] }),
     });
-  } catch (err) {
-    logger.warn({ err, discordId }, 'Failed to send request DM');
+  } catch (error) {
+    logger.warn({ error, discordId }, 'Failed to send request DM');
   }
 }

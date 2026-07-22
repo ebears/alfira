@@ -22,28 +22,40 @@ The bot and API run in a **single Bun process**. For detailed architecture (star
 | Frontend     | React 19 + Tailwind CSS 4                     |
 | Linting      | oxlint + oxfmt                                |
 | Typechecking | oxlint (--type-aware --type-check, uses tsgo) |
+| Testing      | Bun's built-in test runner                    |
 
 ## Design Principles
 
+Every decision in this project traces back to one of these. The agent should follow them when making changes.
+
 - **Self-hosting without operational burden** — Docker + Bun + SQLite means no external managed services. One `docker compose up` gets you running. Networking (domain/reverse proxy) is the only unavoidable external dependency.
-- **Fewer, better dependencies** — Prefer Bun's built-in HTTP, WebSocket, test runner, and SQLite driver over npm packages. Drizzle gives type-safe SQL without ORM bloat.
+- **Fewer, better dependencies** — Prefer Bun's built-in HTTP, WebSocket, test runner, and SQLite driver over npm packages. Drizzle gives type-safe SQL without ORM bloat. A few hundred lines of custom code is better than importing a library for 10% of its features.
 - **Single-process by design** — Bot, API, and WebSocket run in one Bun process. Shared memory gives real-time updates without Redis or message queues. This is a deliberate tradeoff: the scope is a single self-hosted community, not multi-tenant SaaS.
 - **Web UI as primary interface** — The Discord bot is the playback engine; the web app is the control plane. This avoids Discord's rate limits and UX constraints.
 - **Audio is audio — no assumptions about content** — Works equally as a music bot or tabletop audio player. The data model (songs, playlists, tags) is content-type-agnostic: a pop song and an hour-long dungeon ambience are the same shape.
 - **Single source of truth** — Every concept, pattern, and piece of knowledge has one canonical home. Before creating something new, check if it already exists or can be extended. If nothing fits and your change would duplicate what already exists across files, extract the commonality into a shared location first. This applies as much to UI patterns (one toast, one button variant, one data-fetching hook) as it does to types and utilities. Copy-pasting is a last resort, not a first move.
-- **Strict linting — zero warnings, zero excuses** — The linter is configured for maximum correctness signal with minimal noise. Warnings are errors (`--deny-warnings`). Stale disable directives are errors (`reportUnusedDisableDirectives`). Type-aware rules run everywhere. Every PR must pass `bun run check` with zero diagnostics. This isn't pedantry — it's a quality ratchet that prevents drift and catches real bugs before they reach production.
+- **Strict linting — zero warnings, zero excuses** — The linter is configured for maximum correctness signal with minimal noise. Warnings are errors (`--deny-warnings`). Stale disable directives are errors (`reportUnusedDisableDirectives`). Type-aware rules run everywhere. Every PR must pass `bun run check` (lint, format, typecheck, and tests) with zero diagnostics. This isn't pedantry — it's a quality ratchet that prevents drift and catches real bugs before they reach production.
 
 ## Development Commands
 
 ```bash
-# Build server dist/, then start all services with Docker
-bun run dev
+# Fast local dev: check → web build → server with --watch (auto-restart on changes)
+bun dev
 
-# Build the web UI (needed after web/src changes before docker compose restart)
+# Full Docker integration test (check → build → docker compose up --build)
+bun dev:docker
+
+# One-time setup: clone and build NodeLink locally (prerequisite for bun dev)
+bun setup:nodelink
+
+# Build the web UI (also run after web/src changes during a bun dev session)
 bun run web:build
 
-# Lint + typecheck + format (run before committing)
+# Lint + typecheck + format + tests (run before committing)
 bun run check
+
+# Run tests only
+bun test
 
 # Typecheck only
 bun run typecheck
@@ -176,7 +188,7 @@ refactor(server): extract shared audio filter builders
 
 ### Before Committing
 
-Always run `bun run check` and resolve any lint/format issues before committing.
+Always run `bun run check` and resolve any lint, format, or test failures before committing.
 
 ## Agent Operating Mode
 
@@ -188,4 +200,5 @@ Always run `bun run check` and resolve any lint/format issues before committing.
 
 - [Installation Guide](docs/installation.md) — Setup, environment variables, Docker commands
 - [Tech Stack](docs/tech-stack.md) — Detailed architecture
+- [Development Choices](docs/development-choices.md) — Tools, architecture decisions, and the reasoning behind each choice
 - [Troubleshooting](docs/troubleshooting.md) — Common issues and solutions (also available as the `alfira-troubleshooting` skill)

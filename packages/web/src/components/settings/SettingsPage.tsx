@@ -22,19 +22,19 @@ export default function SettingsPage() {
   }, []);
 
   return (
-    <div className='p-4 md:p-8 h-full overflow-y-auto'>
+    <div className='h-full overflow-y-auto p-4 md:p-8'>
       {/* Page header */}
-      <div className='mb-6 md:mb-8 flex items-end justify-between'>
-        <h1 className='font-display text-3xl md:text-4xl text-accent tracking-wider flex items-center gap-2'>
-          <WrenchIcon size={28} weight='duotone' className='shrink-0 relative top-1' />
+      <div className='mb-6 flex items-end justify-between md:mb-8'>
+        <h1 className='font-display text-accent flex items-center gap-2 text-3xl tracking-wider md:text-4xl'>
+          <WrenchIcon size={28} weight='duotone' className='relative top-1 shrink-0' />
           Settings
         </h1>
-        {version !== null && <p className='font-mono text-xs text-faint pb-1'>{version}</p>}
+        {version !== null && <p className='text-faint pb-1 font-mono text-xs'>{version}</p>}
       </div>
 
       {/* User settings */}
       <section className='mb-8'>
-        <h2 className='font-mono text-xs text-muted uppercase tracking-wider mb-4'>User</h2>
+        <h2 className='text-muted mb-4 font-mono text-xs tracking-wider uppercase'>User</h2>
         <div className='bg-elevated clay-resting rounded-lg p-5'>
           <UserSection />
         </div>
@@ -43,7 +43,7 @@ export default function SettingsPage() {
       {/* Admin settings */}
       {user?.isAdmin && (
         <section>
-          <h2 className='font-mono text-xs text-muted uppercase tracking-wider mb-4'>Admin</h2>
+          <h2 className='text-muted mb-4 font-mono text-xs tracking-wider uppercase'>Admin</h2>
           <div className='bg-elevated clay-resting rounded-lg p-5'>
             <AdminSection />
           </div>

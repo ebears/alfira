@@ -9,18 +9,18 @@ interface PageHeaderProps {
 
 export function PageHeader({ icon: Icon, title, subtitle, children }: PageHeaderProps) {
   const heading = (
-    <h1 className='font-display text-3xl md:text-4xl text-accent tracking-wider flex items-center gap-2'>
-      <Icon size={28} weight='duotone' className='shrink-0 relative top-1' />
+    <h1 className='font-display text-accent flex items-center gap-2 text-3xl tracking-wider md:text-4xl'>
+      <Icon size={28} weight='duotone' className='relative top-1 shrink-0' />
       {title}
     </h1>
   );
 
   if (children) {
     return (
-      <div className='flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6 md:mb-8 shrink-0'>
+      <div className='mb-6 flex shrink-0 flex-col justify-between gap-3 sm:flex-row sm:items-center md:mb-8'>
         <div>
           {heading}
-          {subtitle && <p className='font-mono text-xs text-muted mt-2'>{subtitle}</p>}
+          {subtitle && <p className='text-muted mt-2 font-mono text-xs'>{subtitle}</p>}
         </div>
         {children}
       </div>
@@ -28,9 +28,9 @@ export function PageHeader({ icon: Icon, title, subtitle, children }: PageHeader
   }
 
   return (
-    <div className='mb-6 md:mb-8 shrink-0'>
+    <div className='mb-6 shrink-0 md:mb-8'>
       {heading}
-      {subtitle && <p className='font-mono text-xs text-muted mt-2'>{subtitle}</p>}
+      {subtitle && <p className='text-muted mt-2 font-mono text-xs'>{subtitle}</p>}
     </div>
   );
 }

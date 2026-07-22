@@ -41,37 +41,37 @@ export default function LoginPage() {
   }
 
   return (
-    <div className='min-h-screen bg-elevated flex items-center justify-center relative overflow-hidden'>
+    <div className='bg-elevated relative flex min-h-screen items-center justify-center overflow-hidden'>
       {/* Background texture */}
       <div className='absolute inset-0 opacity-[0.03]' style={bgStyle} />
 
       {/* Card */}
-      <SpringUp className='relative z-10 w-full max-w-sm mx-4'>
-        <div className='p-6 md:p-8 glass-modal'>
+      <SpringUp className='relative z-10 mx-4 w-full max-w-sm'>
+        <div className='glass-modal p-6 md:p-8'>
           {/* Logo */}
-          <div className='mb-6 md:mb-8 text-center'>
-            <h1 className='font-display text-5xl md:text-6xl text-accent tracking-widest'>
+          <div className='mb-6 text-center md:mb-8'>
+            <h1 className='font-display text-accent text-5xl tracking-widest md:text-6xl'>
               alfira
             </h1>
-            <p className='font-mono text-xs text-muted mt-2 tracking-widest uppercase'>music bot</p>
+            <p className='text-muted mt-2 font-mono text-xs tracking-widest uppercase'>music bot</p>
           </div>
 
           {/* Description */}
-          <p className='font-body text-sm text-muted text-center mb-6 md:mb-8 leading-relaxed'>
+          <p className='font-body text-muted mb-6 text-center text-sm leading-relaxed md:mb-8'>
             Log in with your Discord account to access the music library and controls.
           </p>
 
           {/* Login button */}
           <a
             href='/auth/login'
-            className='btn-discord flex items-center justify-center gap-3 w-full'
+            className='btn-discord flex w-full items-center justify-center gap-3'
           >
             <DiscordLogoIcon size={18} weight='duotone' />
             Login with Discord
           </a>
         </div>
 
-        <p className='text-center font-mono text-[10px] text-faint mt-6 tracking-widest uppercase'>
+        <p className='text-faint mt-6 text-center font-mono text-[10px] tracking-widest uppercase'>
           access is restricted to server members
         </p>
       </SpringUp>

@@ -61,6 +61,7 @@ async function handleGetStatus(
           headers: botHeaders(),
         });
         if (res.ok) {
+          // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion
           const guild = (await res.json()) as { name: string };
           guildName = guild.name;
         }
@@ -107,6 +108,7 @@ async function handleGetGuilds(
       return json({ error: 'Could not fetch guild list from Discord.' }, 502);
     }
 
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion
     const guilds = (await res.json()) as {
       id: string;
       name: string;
@@ -120,8 +122,8 @@ async function handleGetGuilds(
     }));
 
     return json({ guilds: result });
-  } catch (err) {
-    logger.error({ err }, 'Error fetching bot guilds');
+  } catch (error) {
+    logger.error({ error }, 'Error fetching bot guilds');
     return json({ error: 'Could not fetch guild list.' }, 502);
   }
 }
@@ -186,6 +188,7 @@ async function handleGetChannels(
       return json({ error: 'Could not fetch channels from Discord.' }, 502);
     }
 
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion
     const channels = (await res.json()) as {
       id: string;
       name: string;
@@ -202,8 +205,8 @@ async function handleGetChannels(
 
     channelsCache.set(guildId, { data: result, expiresAt: Date.now() + CACHE_TTL_MS });
     return json({ channels: result });
-  } catch (err) {
-    logger.error({ err }, 'Error fetching guild channels');
+  } catch (error) {
+    logger.error({ error }, 'Error fetching guild channels');
     return json({ error: 'Could not fetch channels.' }, 502);
   }
 }
@@ -233,6 +236,7 @@ async function handlePostComplete(
   };
 
   try {
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion
     body = (await request.json()) as typeof body;
   } catch {
     return json({ error: 'Invalid JSON body.' }, 400);
@@ -316,8 +320,8 @@ async function handlePostComplete(
     refreshEnabledSources(enabledSources);
 
     return json({ success: true });
-  } catch (err) {
-    logger.error({ err }, 'Failed to save setup configuration');
+  } catch (error) {
+    logger.error({ error }, 'Failed to save setup configuration');
     return json({ error: 'Could not save configuration.' }, 500);
   }
 }

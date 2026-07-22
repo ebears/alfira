@@ -90,7 +90,7 @@ export const guildSettings = sqliteTable('guildSettings', {
   id: integer('id').primaryKey(), // always 1 — single guild row
   compressorEnabled: integer('compressorEnabled', { mode: 'boolean' }).notNull().default(false),
   compressorThreshold: integer('compressorThreshold').notNull().default(-6), // dB, -60 to 0
-  compressorRatio: real('compressorRatio').notNull().default(4.0), // 1.0 to 20.0
+  compressorRatio: real('compressorRatio').notNull().default(4), // 1.0 to 20.0
   compressorAttack: integer('compressorAttack').notNull().default(5), // ms, 0 to 100
   compressorRelease: integer('compressorRelease').notNull().default(50), // ms, 10 to 1000
   compressorGain: integer('compressorGain').notNull().default(3), // dB, 0 to 24
@@ -113,52 +113,52 @@ export const guildSettings = sqliteTable('guildSettings', {
 
   // Karaoke filter
   karaokeEnabled: integer('karaokeEnabled', { mode: 'boolean' }).notNull().default(false),
-  karaokeLevel: real('karaokeLevel').notNull().default(1.0),
-  karaokeMonoLevel: real('karaokeMonoLevel').notNull().default(1.0),
-  karaokeFilterBand: real('karaokeFilterBand').notNull().default(220.0),
-  karaokeFilterWidth: real('karaokeFilterWidth').notNull().default(100.0),
+  karaokeLevel: real('karaokeLevel').notNull().default(1),
+  karaokeMonoLevel: real('karaokeMonoLevel').notNull().default(1),
+  karaokeFilterBand: real('karaokeFilterBand').notNull().default(220),
+  karaokeFilterWidth: real('karaokeFilterWidth').notNull().default(100),
 
   // Timescale filter
   timescaleEnabled: integer('timescaleEnabled', { mode: 'boolean' }).notNull().default(false),
-  timescaleSpeed: real('timescaleSpeed').notNull().default(1.0),
-  timescalePitch: real('timescalePitch').notNull().default(1.0),
-  timescaleRate: real('timescaleRate').notNull().default(1.0),
+  timescaleSpeed: real('timescaleSpeed').notNull().default(1),
+  timescalePitch: real('timescalePitch').notNull().default(1),
+  timescaleRate: real('timescaleRate').notNull().default(1),
 
   // Tremolo filter
   tremoloEnabled: integer('tremoloEnabled', { mode: 'boolean' }).notNull().default(false),
-  tremoloFrequency: real('tremoloFrequency').notNull().default(2.0),
+  tremoloFrequency: real('tremoloFrequency').notNull().default(2),
   tremoloDepth: real('tremoloDepth').notNull().default(0.5),
 
   // Vibrato filter
   vibratoEnabled: integer('vibratoEnabled', { mode: 'boolean' }).notNull().default(false),
-  vibratoFrequency: real('vibratoFrequency').notNull().default(2.0),
+  vibratoFrequency: real('vibratoFrequency').notNull().default(2),
   vibratoDepth: real('vibratoDepth').notNull().default(0.5),
 
   // Rotation filter
   rotationEnabled: integer('rotationEnabled', { mode: 'boolean' }).notNull().default(false),
-  rotationHz: real('rotationHz').notNull().default(0.0),
+  rotationHz: real('rotationHz').notNull().default(0),
 
   // Distortion filter
   distortionEnabled: integer('distortionEnabled', { mode: 'boolean' }).notNull().default(false),
-  distortionSinOffset: real('distortionSinOffset').notNull().default(0.0),
-  distortionSinScale: real('distortionSinScale').notNull().default(1.0),
-  distortionCosOffset: real('distortionCosOffset').notNull().default(0.0),
-  distortionCosScale: real('distortionCosScale').notNull().default(1.0),
-  distortionTanOffset: real('distortionTanOffset').notNull().default(0.0),
-  distortionTanScale: real('distortionTanScale').notNull().default(1.0),
-  distortionOffset: real('distortionOffset').notNull().default(0.0),
-  distortionScale: real('distortionScale').notNull().default(1.0),
+  distortionSinOffset: real('distortionSinOffset').notNull().default(0),
+  distortionSinScale: real('distortionSinScale').notNull().default(1),
+  distortionCosOffset: real('distortionCosOffset').notNull().default(0),
+  distortionCosScale: real('distortionCosScale').notNull().default(1),
+  distortionTanOffset: real('distortionTanOffset').notNull().default(0),
+  distortionTanScale: real('distortionTanScale').notNull().default(1),
+  distortionOffset: real('distortionOffset').notNull().default(0),
+  distortionScale: real('distortionScale').notNull().default(1),
 
   // Channel mix filter
   channelMixEnabled: integer('channelMixEnabled', { mode: 'boolean' }).notNull().default(false),
-  channelMixLeftToLeft: real('channelMixLeftToLeft').notNull().default(1.0),
-  channelMixLeftToRight: real('channelMixLeftToRight').notNull().default(0.0),
-  channelMixRightToLeft: real('channelMixRightToLeft').notNull().default(0.0),
-  channelMixRightToRight: real('channelMixRightToRight').notNull().default(1.0),
+  channelMixLeftToLeft: real('channelMixLeftToLeft').notNull().default(1),
+  channelMixLeftToRight: real('channelMixLeftToRight').notNull().default(0),
+  channelMixRightToLeft: real('channelMixRightToLeft').notNull().default(0),
+  channelMixRightToRight: real('channelMixRightToRight').notNull().default(1),
 
   // Low pass filter
   lowPassEnabled: integer('lowPassEnabled', { mode: 'boolean' }).notNull().default(false),
-  lowPassSmoothing: real('lowPassSmoothing').notNull().default(20.0),
+  lowPassSmoothing: real('lowPassSmoothing').notNull().default(20),
 
   // General setup / admin settings
   guildId: text('guildId'),

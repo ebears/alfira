@@ -37,20 +37,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       const me = await getMe();
       setUser(me);
-    } catch (err) {
+    } catch (error) {
       // First attempt failed (network error, expired token, etc.).
       // trySilentRefresh refreshes the token. If it succeeds, retry getMe
       // once. wrappedFetch handles any further 401s transparently.
-      console.warn('[auth] AuthContext: initial getMe() failed, trying silent refresh', err);
+      console.warn('[auth] AuthContext: initial getMe() failed, trying silent refresh', error);
       const refreshed = await trySilentRefresh();
       if (refreshed) {
         try {
           const me = await getMe();
           setUser(me);
-        } catch (err2) {
+        } catch (error) {
           console.warn(
             '[auth] AuthContext: getMe() failed after successful refresh, setting user=null',
-            err2
+            error
           );
           setUser(null);
         }

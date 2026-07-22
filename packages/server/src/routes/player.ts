@@ -1,3 +1,5 @@
+import * as v from 'valibot';
+
 import { type GuildPlayer } from '../GuildPlayer';
 import { getGuildId } from '../lib/config';
 import { type RouteContext } from '../lib/context';
@@ -18,7 +20,6 @@ import {
 import { resolveOrAutoJoinPlayer } from '../lib/voice';
 import {
   fisherYatesShuffle as fisherYatesShuffleImpl,
-  type LoopMode,
   type QueuedSong,
   toQueuedSong,
 } from '../shared';
@@ -54,7 +55,7 @@ function handleGetQueue(
       queue: [],
       trackStartedAt: null,
       nextTrack: null,
-      timescaleSpeed: 1.0,
+      timescaleSpeed: 1,
       nodeLinkPosition: null,
       nodeLinkTime: null,
     });
@@ -62,6 +63,13 @@ function handleGetQueue(
 
   return json(player.getQueueState());
 }
+
+const PlaySchema = v.object({
+  playlistId: v.optional(v.string()),
+  mode: v.optional(v.picklist(['sequential', 'random'])),
+  loop: v.optional(v.picklist(['off', 'song', 'queue'])),
+  startFromSongId: v.optional(v.string()),
+});
 
 // ---------------------------------------------------------------------------
 // POST /api/player/play — load songs and start playback
@@ -73,19 +81,19 @@ async function handlePlay(ctx: RouteContext, request: Request): Promise<Response
   }
   const { user } = guards;
 
-  let body: {
-    playlistId?: string;
-    mode?: 'sequential' | 'random';
-    loop?: LoopMode;
-    startFromSongId?: string;
-  };
+  let raw: unknown;
   try {
-    body = (await request.json()) as typeof body;
+    raw = await request.json();
   } catch {
     return json({ error: 'Invalid JSON body.' }, 400);
   }
 
-  const { playlistId, mode, loop, startFromSongId } = body;
+  const parsed = v.safeParse(PlaySchema, raw);
+  if (!parsed.success) {
+    return json({ error: 'Invalid request body.', details: v.flatten(parsed.issues) }, 400);
+  }
+
+  const { playlistId, mode, loop, startFromSongId } = parsed.output;
 
   const playerResult = await resolveOrAutoJoinPlayer(user.discordId);
   if (!playerResult.ok) {
@@ -102,7 +110,7 @@ async function handlePlay(ctx: RouteContext, request: Request): Promise<Response
       return json({ error: 'Playlist not found.' }, 404);
     }
 
-    const accessResult = canAccessPlaylist(playlist, user, undefined);
+    const accessResult = canAccessPlaylist(playlist, user);
     if (!accessResult.ok) {
       return json({ error: accessResult.error }, 403);
     }
@@ -195,6 +203,10 @@ function handleLeave(
   return json({ message: 'Left the voice channel.' });
 }
 
+const LoopSchema = v.object({
+  mode: v.picklist(['off', 'song', 'queue']),
+});
+
 // ---------------------------------------------------------------------------
 // POST /api/player/loop — set loop mode
 // ---------------------------------------------------------------------------
@@ -204,18 +216,19 @@ async function handleLoop(ctx: RouteContext, request: Request): Promise<Response
     return guards;
   }
 
-  let body: { mode?: LoopMode };
+  let raw: unknown;
   try {
-    body = (await request.json()) as typeof body;
+    raw = await request.json();
   } catch {
     return json({ error: 'Invalid JSON body.' }, 400);
   }
 
-  const { mode } = body;
-
-  if (!mode || !['off', 'song', 'queue'].includes(mode)) {
+  const parsed = v.safeParse(LoopSchema, raw);
+  if (!parsed.success) {
     return json({ error: 'mode must be "off", "song", or "queue".' }, 400);
   }
+
+  const { mode } = parsed.output;
 
   const playerResult = requirePlayer();
   if (!playerResult.ok) {
@@ -271,6 +284,10 @@ function handleUnshuffle(
   return json({ message: 'Queue order restored.' });
 }
 
+const UrlSchema = v.object({
+  url: v.optional(v.string()),
+});
+
 // ---------------------------------------------------------------------------
 // Shared: resolve a source URL into a temp QueuedSong with player ready
 // ---------------------------------------------------------------------------
@@ -290,14 +307,19 @@ async function resolveUrlTempSong(
   }
   const { user } = guards;
 
-  let body: { url?: unknown };
+  let raw: unknown;
   try {
-    body = (await request.json()) as typeof body;
+    raw = await request.json();
   } catch {
     return { ok: false, response: json({ error: 'Invalid JSON body.' }, 400) };
   }
 
-  const urlResult = validateSourceUrl(body.url);
+  const parsed = v.safeParse(UrlSchema, raw);
+  if (!parsed.success) {
+    return { ok: false, response: json({ error: 'url is required.' }, 400) };
+  }
+
+  const urlResult = validateSourceUrl(parsed.output.url);
   if (!urlResult.ok) {
     return { ok: false, response: urlResult.response };
   }
@@ -345,6 +367,11 @@ async function handleQuickAdd(ctx: RouteContext, request: Request): Promise<Resp
   });
 }
 
+const QuickAddPlaylistSchema = v.object({
+  url: v.optional(v.string()),
+  maxVideos: v.optional(v.number()),
+});
+
 // ---------------------------------------------------------------------------
 // POST /api/player/quick-add-playlist — add playlist to queue (admin only)
 // ---------------------------------------------------------------------------
@@ -355,15 +382,20 @@ async function handleQuickAddPlaylist(ctx: RouteContext, request: Request): Prom
   }
   const { user } = guards;
 
-  let body: { url?: unknown; maxVideos?: number };
+  let raw: unknown;
   try {
-    body = (await request.json()) as typeof body;
+    raw = await request.json();
   } catch {
     return json({ error: 'Invalid JSON body.' }, 400);
   }
 
-  const maxVideos = clampMaxVideos(body.maxVideos);
-  const urlResult = validatePlaylistUrl(body.url);
+  const parsed = v.safeParse(QuickAddPlaylistSchema, raw);
+  if (!parsed.success) {
+    return json({ error: 'Invalid request body.', details: v.flatten(parsed.issues) }, 400);
+  }
+
+  const maxVideos = clampMaxVideos(parsed.output.maxVideos);
+  const urlResult = validatePlaylistUrl(parsed.output.url);
   if (!urlResult.ok) {
     return urlResult.response;
   }
@@ -428,6 +460,10 @@ function handlePauseToggle(
   return json({ isPaused });
 }
 
+const SeekSchema = v.object({
+  position: v.number(),
+});
+
 // ---------------------------------------------------------------------------
 // POST /api/player/seek — seek to position in current track
 // ---------------------------------------------------------------------------
@@ -437,18 +473,19 @@ async function handleSeek(ctx: RouteContext, request: Request): Promise<Response
     return guards;
   }
 
-  let body: { position?: unknown };
+  let raw: unknown;
   try {
-    body = (await request.json()) as typeof body;
+    raw = await request.json();
   } catch {
     return json({ error: 'Invalid JSON body.' }, 400);
   }
 
-  const { position } = body;
-
-  if (typeof position !== 'number' || !Number.isFinite(position) || position < 0) {
+  const parsed = v.safeParse(SeekSchema, raw);
+  if (!parsed.success || parsed.output.position < 0 || !Number.isFinite(parsed.output.position)) {
     return json({ error: 'position must be a non-negative number (milliseconds).' }, 400);
   }
+
+  const { position } = parsed.output;
 
   const playingResult = requirePlaying();
   if (!playingResult.ok) {
@@ -481,6 +518,10 @@ function handleClear(
   return json({ message: 'Queue cleared.' });
 }
 
+const SongIdSchema = v.object({
+  songId: v.string(),
+});
+
 // ---------------------------------------------------------------------------
 // POST /api/player/add-to-priority — add library song to Up Next (admin only)
 // ---------------------------------------------------------------------------
@@ -491,18 +532,19 @@ async function handleAddToPriority(ctx: RouteContext, request: Request): Promise
   }
   const { user } = guards;
 
-  let body: { songId?: unknown };
+  let raw: unknown;
   try {
-    body = (await request.json()) as typeof body;
+    raw = await request.json();
   } catch {
     return json({ error: 'Invalid JSON body.' }, 400);
   }
 
-  const { songId } = body;
-
-  if (!songId || typeof songId !== 'string') {
+  const parsed = v.safeParse(SongIdSchema, raw);
+  if (!parsed.success) {
     return json({ error: 'songId is required.' }, 400);
   }
+
+  const { songId } = parsed.output;
 
   const [song] = await db.select().from(songTable).where(eq(songTable.id, songId)).limit(1);
 
@@ -633,6 +675,11 @@ function handleDemoteSong(
   return json({ message: 'Song moved to queue.' });
 }
 
+const ReorderSchema = v.object({
+  songIds: v.array(v.string()),
+  target: v.optional(v.picklist(['queue', 'priority'])),
+});
+
 // ---------------------------------------------------------------------------
 // PATCH /api/player/queue/reorder — reorder remaining queue or priority items
 // ---------------------------------------------------------------------------
@@ -642,22 +689,25 @@ async function handleReorderQueue(ctx: RouteContext, request: Request): Promise<
     return guards;
   }
 
-  let body: { songIds?: unknown; target?: unknown };
+  let raw: unknown;
   try {
-    body = (await request.json()) as typeof body;
+    raw = await request.json();
   } catch {
     return json({ error: 'Invalid JSON body.' }, 400);
   }
 
-  const { songIds, target } = body;
-
-  if (!Array.isArray(songIds) || !songIds.every((id): id is string => typeof id === 'string')) {
+  const parsed = v.safeParse(ReorderSchema, raw);
+  if (!parsed.success) {
     return json({ error: 'songIds must be an array of strings.' }, 400);
   }
 
-  if (target !== undefined && target !== 'queue' && target !== 'priority') {
-    return json({ error: 'target must be "queue" or "priority".' }, 400);
+  const { songIds, target } = parsed.output;
+
+  if (songIds.length === 0) {
+    return json({ error: 'songIds must not be empty.' }, 400);
   }
+
+  // target already validated by picklist — no additional check needed
 
   const playerResult = requirePlayer();
   if (!playerResult.ok) {
@@ -670,8 +720,8 @@ async function handleReorderQueue(ctx: RouteContext, request: Request): Promise<
     } else {
       playerResult.player.reorderQueue(songIds);
     }
-  } catch (err) {
-    return json({ error: err instanceof Error ? err.message : 'Invalid reorder.' }, 422);
+  } catch (error) {
+    return json({ error: error instanceof Error ? error.message : 'Invalid reorder.' }, 422);
   }
 
   return json({ message: 'Queue reordered.' });

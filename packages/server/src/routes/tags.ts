@@ -1,4 +1,5 @@
 import { eq, sql } from 'drizzle-orm';
+import * as v from 'valibot';
 
 import { type RouteContext } from '../lib/context';
 import { json } from '../lib/json';
@@ -10,7 +11,6 @@ import { db, tables } from '../shared/db';
 const { tag: tagTable, song: songTable, playlist: playlistTable } = tables;
 
 const TAG_COLORS = ['orange', 'sky', 'emerald', 'amber', 'violet'] as const;
-type TagColor = (typeof TAG_COLORS)[number];
 
 // ---------------------------------------------------------------------------
 // GET /api/tags — list all tags
@@ -80,6 +80,13 @@ function handleGetTagSongs(
   return json({ songs });
 }
 
+const TagPatchSchema = v.partial(
+  v.object({
+    canonicalName: v.pipe(v.string(), v.minLength(1)),
+    color: v.nullable(v.picklist(TAG_COLORS)),
+  })
+);
+
 async function handlePatchTag(
   ctx: RouteContext,
   request: Request,
@@ -87,12 +94,20 @@ async function handlePatchTag(
 ): Promise<Response> {
   const { nameLower } = params;
 
-  let body: Record<string, unknown>;
+  let raw: unknown;
   try {
-    body = (await request.json()) as typeof body;
+    raw = await request.json();
   } catch {
     return json({ error: 'Invalid JSON body.' }, 400);
   }
+
+  const parsed = v.safeParse(TagPatchSchema, raw);
+  if (!parsed.success) {
+    return json({ error: 'Invalid request body.', details: v.flatten(parsed.issues) }, 400);
+  }
+
+  const body = parsed.output;
+
   const guards = checkGuards(ctx, { admin: true, permission: 'tags.manage' });
   if (guards instanceof Response) {
     return guards;
@@ -109,20 +124,11 @@ async function handlePatchTag(
 
   const data: Record<string, unknown> = {};
 
-  if ('canonicalName' in body) {
-    if (typeof body.canonicalName !== 'string' || body.canonicalName.trim().length === 0) {
-      return json({ error: 'canonicalName must be a non-empty string.' }, 400);
-    }
+  if (body.canonicalName !== undefined) {
     data.canonicalName = body.canonicalName.replace(/\s+/g, '-').trim();
   }
 
-  if ('color' in body) {
-    if (body.color !== null && typeof body.color !== 'string') {
-      return json({ error: 'color must be a string or null.' }, 400);
-    }
-    if (body.color !== null && !TAG_COLORS.includes(body.color as TagColor)) {
-      return json({ error: `color must be one of: ${TAG_COLORS.join(', ')}.` }, 400);
-    }
+  if (body.color !== undefined) {
     data.color = body.color;
   }
 

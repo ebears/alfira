@@ -1,4 +1,5 @@
 import { and, eq, inArray, or, sql } from 'drizzle-orm';
+import * as v from 'valibot';
 
 import { type RouteContext } from '../lib/context';
 import { getUserDisplayName, resolveDisplayNames } from '../lib/displayName';
@@ -33,14 +34,14 @@ const { song: songTable, songRequest: requestTable } = tables;
 // ---------------------------------------------------------------------------
 
 function formatRequest(row: typeof requestTable.$inferSelect): SongRequest {
-  const base = {
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion
+  return {
     ...row,
     createdAt: new Date(row.createdAt).toISOString(),
     closedAt: row.closedAt ? new Date(row.closedAt).toISOString() : null,
     playlistData: row.playlistData,
-    type: row.type as 'track' | 'playlist',
-  };
-  return base as SongRequest;
+    type: row.type === 'playlist' ? 'playlist' : 'track',
+  } as SongRequest;
 }
 
 async function userCanAutoApprove(ctx: RouteContext): Promise<boolean> {
@@ -70,20 +71,29 @@ async function userCanAutoApprove(ctx: RouteContext): Promise<boolean> {
 // ---------------------------------------------------------------------------
 // POST /api/requests/preview — resolve URL metadata without creating.
 // ---------------------------------------------------------------------------
+const PreviewRequestSchema = v.object({
+  url: v.string(),
+});
+
 async function handlePreviewRequest(ctx: RouteContext, request: Request): Promise<Response> {
   const guards = checkGuards(ctx);
   if (guards instanceof Response) {
     return guards;
   }
 
-  let body: { url?: unknown };
+  let raw: unknown;
   try {
-    body = (await request.json()) as typeof body;
+    raw = await request.json();
   } catch {
     return json({ error: 'Invalid JSON body.' }, 400);
   }
 
-  const urlResult = validateSourceUrl(body.url);
+  const parsed = v.safeParse(PreviewRequestSchema, raw);
+  if (!parsed.success) {
+    return json({ error: 'Invalid request body.', details: v.flatten(parsed.issues) }, 400);
+  }
+
+  const urlResult = validateSourceUrl(parsed.output.url);
   if (!urlResult.ok) {
     return urlResult.response;
   }
@@ -160,6 +170,20 @@ async function handlePreviewRequest(ctx: RouteContext, request: Request): Promis
   });
 }
 
+const CreateRequestSchema = v.partial(
+  v.object({
+    sourceUrl: v.unknown(),
+    notifyDm: v.unknown(),
+    nickname: v.unknown(),
+    artist: v.unknown(),
+    album: v.unknown(),
+    artwork: v.unknown(),
+    tags: v.unknown(),
+    volumeBoost: v.unknown(),
+    type: v.optional(v.union([v.literal('track'), v.literal('playlist')])),
+  })
+);
+
 // ---------------------------------------------------------------------------
 // POST /api/requests — create a song or playlist request.
 // ---------------------------------------------------------------------------
@@ -170,21 +194,19 @@ async function handleCreateRequest(ctx: RouteContext, request: Request): Promise
   }
   const { user } = guards;
 
-  let body: {
-    sourceUrl?: unknown;
-    notifyDm?: unknown;
-    nickname?: unknown;
-    artist?: unknown;
-    album?: unknown;
-    artwork?: unknown;
-    tags?: unknown;
-    volumeBoost?: unknown;
-  };
+  let raw: unknown;
   try {
-    body = (await request.json()) as typeof body;
+    raw = await request.json();
   } catch {
     return json({ error: 'Invalid JSON body.' }, 400);
   }
+
+  const parsed = v.safeParse(CreateRequestSchema, raw);
+  if (!parsed.success) {
+    return json({ error: 'Invalid request body.', details: v.flatten(parsed.issues) }, 400);
+  }
+
+  const body = parsed.output;
 
   const notifyDm = body.notifyDm === true;
 
@@ -341,8 +363,8 @@ async function handleCreateRequest(ctx: RouteContext, request: Request): Promise
         void (async () => {
           try {
             await sendRequestNotification('approved', formatRequest(reqRow), user, ctx);
-          } catch (err) {
-            logger.warn({ err }, 'Failed to send playlist auto-approve notification');
+          } catch (error) {
+            logger.warn({ error }, 'Failed to send playlist auto-approve notification');
           }
         })();
       }
@@ -496,8 +518,8 @@ async function handleCreateRequest(ctx: RouteContext, request: Request): Promise
       void (async () => {
         try {
           await sendRequestNotification('approved', formatRequest(reqRow), user, ctx);
-        } catch (err) {
-          logger.warn({ err }, 'Failed to send auto-approve notification');
+        } catch (error) {
+          logger.warn({ error }, 'Failed to send auto-approve notification');
         }
       })();
     }
@@ -506,8 +528,8 @@ async function handleCreateRequest(ctx: RouteContext, request: Request): Promise
     if (notifyDm) {
       try {
         await sendRequestDm(user.discordId, 'approved', metadata.title);
-      } catch (err) {
-        logger.warn({ err }, 'Failed to send auto-approve DM');
+      } catch (error) {
+        logger.warn({ error }, 'Failed to send auto-approve DM');
       }
     }
 
@@ -589,7 +611,7 @@ async function handleGetRequests(ctx: RouteContext, request: Request): Promise<R
       .where(where),
   ]);
 
-  const total = parseInt(String(countResult[0]?.count ?? 0), 10);
+  const total = Number.parseInt(String(countResult[0]?.count ?? 0), 10);
 
   // Resolve display names for requesters
   const nameMap = await resolveDisplayNames(requests.map((r) => ({ addedBy: r.requestedBy })));
@@ -610,6 +632,10 @@ async function handleGetRequests(ctx: RouteContext, request: Request): Promise<R
   });
 }
 
+const PatchRequestSchema = v.object({
+  status: v.union([v.literal('approved'), v.literal('denied')]),
+});
+
 // ---------------------------------------------------------------------------
 // PATCH /api/requests/:id — approve or deny a request. Admin only.
 // ---------------------------------------------------------------------------
@@ -625,15 +651,16 @@ async function handlePatchRequest(
   }
   const { user } = guards;
 
-  let body: { status?: unknown };
+  let raw: unknown;
   try {
-    body = (await request.json()) as typeof body;
+    raw = await request.json();
   } catch {
     return json({ error: 'Invalid JSON body.' }, 400);
   }
 
-  if (body.status !== 'approved' && body.status !== 'denied') {
-    return json({ error: 'status must be "approved" or "denied".' }, 400);
+  const parsed = v.safeParse(PatchRequestSchema, raw);
+  if (!parsed.success) {
+    return json({ error: 'Invalid request body.', details: v.flatten(parsed.issues) }, 400);
   }
 
   const [existing] = await db.select().from(requestTable).where(eq(requestTable.id, id)).limit(1);
@@ -646,7 +673,7 @@ async function handlePatchRequest(
     return json({ error: 'This request has already been processed.' }, 409);
   }
 
-  const newStatus = body.status;
+  const newStatus = parsed.output.status;
   const closedAt = new Date();
 
   if (newStatus === 'denied') {
@@ -667,8 +694,8 @@ async function handlePatchRequest(
     void (async () => {
       try {
         await sendRequestNotification('denied', formatted, user, ctx);
-      } catch (err) {
-        logger.warn({ err }, 'Failed to send denied notification');
+      } catch (error) {
+        logger.warn({ error }, 'Failed to send denied notification');
       }
     })();
 
@@ -676,8 +703,8 @@ async function handlePatchRequest(
     if (existing.notifyDm) {
       try {
         await sendRequestDm(existing.requestedBy, 'denied', existing.title);
-      } catch (err) {
-        logger.warn({ err }, 'Failed to send denied DM');
+      } catch (error) {
+        logger.warn({ error }, 'Failed to send denied DM');
       }
     }
 
@@ -743,8 +770,8 @@ async function handlePatchRequest(
     if (existing.notifyDm) {
       try {
         await sendRequestDm(existing.requestedBy, 'approved', existing.title);
-      } catch (err) {
-        logger.warn({ err }, 'Failed to send approved DM');
+      } catch (error) {
+        logger.warn({ error }, 'Failed to send approved DM');
       }
     }
 
@@ -759,8 +786,8 @@ async function handlePatchRequest(
     void (async () => {
       try {
         await sendRequestNotification('approved', formatted, user, ctx);
-      } catch (err) {
-        logger.warn({ err }, 'Failed to send playlist approved notification');
+      } catch (error) {
+        logger.warn({ error }, 'Failed to send playlist approved notification');
       }
     })();
 
@@ -808,8 +835,8 @@ async function handlePatchRequest(
   if (existing.notifyDm) {
     try {
       await sendRequestDm(existing.requestedBy, 'approved', existing.title);
-    } catch (err) {
-      logger.warn({ err }, 'Failed to send approved DM');
+    } catch (error) {
+      logger.warn({ error }, 'Failed to send approved DM');
     }
   }
 
@@ -824,8 +851,8 @@ async function handlePatchRequest(
   void (async () => {
     try {
       await sendRequestNotification('approved', formatted, user, ctx);
-    } catch (err) {
-      logger.warn({ err }, 'Failed to send approved notification');
+    } catch (error) {
+      logger.warn({ error }, 'Failed to send approved notification');
     }
   })();
 

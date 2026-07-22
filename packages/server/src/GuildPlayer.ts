@@ -144,8 +144,8 @@ export class GuildPlayer {
           });
         }
       }
-    } catch (err) {
-      logger.warn({ err, guildId: this.guildId }, 'Failed to send idle-leave notification');
+    } catch (error) {
+      logger.warn({ error, guildId: this.guildId }, 'Failed to send idle-leave notification');
     }
 
     this.stop();
@@ -723,11 +723,13 @@ export class GuildPlayer {
 
     if (this.queue.isAtEnd) {
       if (this.loopMode === 'queue' && !this.queue.isEmpty) {
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion
         return this.queue.current() as QueuedSong | null;
       }
       return null;
     }
 
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion
     return this.queue.current() as QueuedSong | null;
   }
 
@@ -847,9 +849,10 @@ export class GuildPlayer {
       if (settings?.enabled) {
         try {
           const compressorFilter = buildCompressorFilter(settings);
+          // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion
           patch.filters = { ...(patch.filters as Record<string, unknown>), ...compressorFilter };
-        } catch (err) {
-          logger.error({ err, guildId: this.guildId }, 'Failed to build compressor filter');
+        } catch (error) {
+          logger.error({ error, guildId: this.guildId }, 'Failed to build compressor filter');
         }
       }
 
@@ -858,11 +861,12 @@ export class GuildPlayer {
         try {
           const equalizerFilter = buildEqualizerFilter(eqBands);
           patch.filters = {
+            // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion
             ...(patch.filters as Record<string, unknown>),
             equalizer: equalizerFilter,
           };
-        } catch (err) {
-          logger.error({ err, guildId: this.guildId }, 'Failed to build equalizer filter');
+        } catch (error) {
+          logger.error({ error, guildId: this.guildId }, 'Failed to build equalizer filter');
         }
       }
 
@@ -946,9 +950,10 @@ export class GuildPlayer {
     if (settings?.enabled) {
       try {
         const compressorFilter = buildCompressorFilter(settings);
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion
         patch.filters = { ...(patch.filters as Record<string, unknown>), ...compressorFilter };
-      } catch (err) {
-        logger.error({ err, guildId: this.guildId }, 'Failed to build compressor filter');
+      } catch (error) {
+        logger.error({ error, guildId: this.guildId }, 'Failed to build compressor filter');
       }
     }
 
@@ -957,11 +962,12 @@ export class GuildPlayer {
       try {
         const equalizerFilter = buildEqualizerFilter(eqBands);
         patch.filters = {
+          // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion
           ...(patch.filters as Record<string, unknown>),
           equalizer: equalizerFilter,
         };
-      } catch (err) {
-        logger.error({ err, guildId: this.guildId }, 'Failed to build equalizer filter');
+      } catch (error) {
+        logger.error({ error, guildId: this.guildId }, 'Failed to build equalizer filter');
       }
     }
 
@@ -1006,16 +1012,16 @@ export class GuildPlayer {
     const attempt = async () => {
       try {
         await preloadTrack(this.guildId, sessionId, nextTrack.sourceUrl);
-      } catch (err) {
+      } catch (error) {
         logger.warn(
-          { guildId: this.guildId, track: nextTrack.title, err },
+          { guildId: this.guildId, track: nextTrack.title, error },
           'Gapless preload failed — retrying once'
         );
         try {
           await preloadTrack(this.guildId, sessionId, nextTrack.sourceUrl);
-        } catch (err2) {
+        } catch (error) {
           logger.warn(
-            { guildId: this.guildId, track: nextTrack.title, err: err2 },
+            { guildId: this.guildId, track: nextTrack.title, err: error },
             'Gapless preload retry also failed'
           );
         }

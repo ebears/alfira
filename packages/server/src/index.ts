@@ -61,7 +61,6 @@ const requiredVars = [
   'DISCORD_CLIENT_ID',
   'DISCORD_CLIENT_SECRET',
   'DISCORD_REDIRECT_URI',
-  'DATABASE_URL',
   'JWT_SECRET',
 ];
 const missing = requiredVars.filter((v) => !process.env[v]);
@@ -73,6 +72,8 @@ if (missing.length > 0) {
 }
 
 const PORT = 3001;
+const NODELINK_HOME = process.env.NODELINK_HOME ?? '/usr/local/nodelink';
+const WEB_DIST = join(import.meta.dir, '../../web/dist');
 
 // Re-export RouteContext for consumers that import from '../index'
 export type { RouteContext } from './lib/context';
@@ -157,7 +158,9 @@ async function handleHealth(): Promise<Response> {
   // NodeLink
   try {
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 500);
+    const timeout = setTimeout(() => {
+      controller.abort();
+    }, 500);
     const res = await fetch('http://127.0.0.1:2333/v4/info', {
       headers: { Authorization: 'nodelink-internal' },
       signal: controller.signal,
@@ -258,7 +261,7 @@ function startServer(): void {
         }
         const success = server.upgrade(request, { data: { user } });
         if (success) {
-          return undefined;
+          return;
         }
         return new Response('WebSocket upgrade failed', { status: 500 });
       }
@@ -275,7 +278,7 @@ function startServer(): void {
         url.pathname === '/registerSW.js';
 
       if (isAsset || url.pathname === '/') {
-        const filePath = `/app/packages/web/dist${url.pathname === '/' ? '/index.html' : url.pathname}`;
+        const filePath = `${WEB_DIST}${url.pathname === '/' ? '/index.html' : url.pathname}`;
         const response = serveStatic(filePath, url.pathname);
         if (response) {
           return response;
@@ -283,23 +286,27 @@ function startServer(): void {
       }
 
       return (
-        serveStatic('/app/packages/web/dist/index.html', '/index.html') ??
+        serveStatic(join(WEB_DIST, 'index.html'), '/index.html') ??
         setSecurityHeaders(json({ error: 'Not Found' }, 404))
       );
     },
     websocket: {
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion
       data: {} as { user: NonNullable<ReturnType<typeof verifySessionToken>> },
       open(ws) {
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion
         const wsc = ws as unknown as WsClient;
         logger.debug({ socketId: wsc.id }, 'WebSocket opened');
         registerClient(wsc, ws.data.user);
       },
       message(ws, message) {
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion
         const wsc = ws as unknown as WsClient;
         // No-op: client does not send messages
         logger.debug({ socketId: wsc.id, message }, 'Unexpected WebSocket message received');
       },
       close(ws, code, reason) {
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion
         const wsc = ws as unknown as WsClient;
         unregisterClient(wsc);
         logger.info({ socketId: wsc.id, code, reason }, 'WebSocket closed');
@@ -334,6 +341,7 @@ function runMigrations(): void {
     const hash = createHash('sha256').update(readFileSync(filePath)).digest('hex');
 
     // Check if already applied
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion
     const existing = $client
       .query('SELECT hash FROM "__drizzle_migrations" WHERE hash = ?')
       .get(hash) as { hash: string } | undefined;
@@ -351,21 +359,19 @@ function runMigrations(): void {
       }
       try {
         $client.run(trimmed);
-      } catch (err) {
+      } catch (error) {
         // Skip errors that indicate the schema change was already applied
         // in a previous partial run (RENAME, ADD COLUMN, CREATE TABLE retries).
-        if (
-          (err as Error).message.includes('already exists') ||
-          (err as Error).message.includes('no such column') ||
-          (err as Error).message.includes('duplicate column name')
-        ) {
-          logger.info(
-            { file, stmt: trimmed.substring(0, 50) },
-            'Skipping already-applied statement'
-          );
+        const isKnownError =
+          error instanceof Error &&
+          (error.message.includes('already exists') ||
+            error.message.includes('no such column') ||
+            error.message.includes('duplicate column name'));
+        if (isKnownError) {
+          logger.info({ file, stmt: trimmed.slice(0, 50) }, 'Skipping already-applied statement');
           continue;
         }
-        throw err;
+        throw error;
       }
     }
 
@@ -382,8 +388,8 @@ function runMigrations(): void {
 // ---------------------------------------------------------------------------
 function startNodeLink(): Promise<void> {
   return new Promise((resolve) => {
-    nodelinkProcess = Bun.spawn(['/usr/local/bin/bun', 'src/index.ts'], {
-      cwd: '/usr/local/nodelink',
+    nodelinkProcess = Bun.spawn(['bun', 'src/index.ts'], {
+      cwd: NODELINK_HOME,
       stdout: 'pipe',
       stderr: 'pipe',
       env: { ...process.env, NODELINK_AUTHORIZATION: 'nodelink-internal' },
@@ -394,6 +400,7 @@ function startNodeLink(): Promise<void> {
     // entries, which matches the Node.js EventEmitter behavior this replaces.
     void (async () => {
       const decoder = new TextDecoder();
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion
       for await (const chunk of nodelinkProcess.stdout as ReadableStream<Uint8Array>) {
         for (const line of decoder.decode(chunk).split('\n')) {
           const trimmed = line.trimEnd();
@@ -407,6 +414,7 @@ function startNodeLink(): Promise<void> {
     // Fire-and-forget: consume stderr, suppressing git "fatal:" noise.
     void (async () => {
       const decoder = new TextDecoder();
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion
       for await (const chunk of nodelinkProcess.stderr as ReadableStream<Uint8Array>) {
         for (const line of decoder.decode(chunk).split('\n')) {
           const trimmed = line.trimEnd();
@@ -504,8 +512,8 @@ async function main(): Promise<void> {
 void (async () => {
   try {
     await main();
-  } catch (err) {
-    logger.fatal(err, 'Fatal startup error');
+  } catch (error) {
+    logger.fatal(error, 'Fatal startup error');
     process.exit(1);
   }
 })();
@@ -545,5 +553,9 @@ function shutdown(signal: string): void {
   process.exit(0);
 }
 
-process.on('SIGTERM', () => shutdown('SIGTERM'));
-process.on('SIGINT', () => shutdown('SIGINT'));
+process.on('SIGTERM', () => {
+  shutdown('SIGTERM');
+});
+process.on('SIGINT', () => {
+  shutdown('SIGINT');
+});

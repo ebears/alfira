@@ -7,6 +7,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-07-21
+
+### Added
+
+- **Drag-and-drop reorder across the app** — Songs can now be reordered via drag-and-drop in playlist detail views (#737), playlist grid view (#746), and the queue panel (#745).
+- **Fast local dev workflow** — `bun dev` now provides a single-command local development experience: check → web build → server with `--watch` for auto-restart on changes (#742).
+- **Unit test suite** — Added a comprehensive unit test suite (120 tests across 9 files) with CI integration (#741).
+
+### Changed
+
+- **AddSongsModal virtualization** — The add-songs modal now uses VirtualList for efficient rendering of large song libraries (#736).
+- **Type safety improvements** — Unsafe type assertions replaced with valibot schemas across the server, and the `no-unsafe-type-assertion` lint rule enabled to prevent regression (#732).
+- **Linting tightened** — oxlint rules strengthened and all violations fixed; added oxfmt `sortPackageJson` for consistent package.json ordering (#733, #734).
+
+### Fixed
+
+- **Volume boost of 0** — Volume boost of 0 is now correctly handled (previously treated as falsy/absent), and display names are preserved on song updates (#735).
+
+### Docs
+
+- Added oxc badge to README (#744).
+- Clarified networking requirements and polished development choices documentation (#743).
+- Added development choices document and philosophy section (#740).
+
 ## [0.3.0] - 2026-07-20
 
 ### Added
@@ -234,7 +258,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - UI actions now properly gated by granular permissions rather than a simple admin check.
 - Inherited pointer cursor on modal cards.
 
-[Unreleased]: https://github.com/ebears/alfira/compare/v0.3.0...dev
+[Unreleased]: https://github.com/ebears/alfira/compare/v0.4.0...dev
+[0.4.0]: https://github.com/ebears/alfira/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/ebears/alfira/compare/v0.2.2...v0.3.0
 [0.2.2]: https://github.com/ebears/alfira/compare/v0.2.1...v0.2.2
 [0.2.1]: https://github.com/ebears/alfira/compare/v0.2.0...v0.2.1

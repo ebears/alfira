@@ -17,7 +17,7 @@ export const DurationBadge = memo(function DurationBadge({
   if (variant === 'overlay') {
     return (
       <span
-        className={`font-mono text-[10px] text-white/80 bg-black/50 px-1.5 py-0.5 rounded ${className}`}
+        className={`rounded bg-black/50 px-1.5 py-0.5 font-mono text-[10px] text-white/80 ${className}`}
       >
         {formatDuration(seconds)}
       </span>
@@ -25,7 +25,7 @@ export const DurationBadge = memo(function DurationBadge({
   }
 
   return (
-    <span className={`flex items-center gap-1.5 font-mono text-xs text-muted ${className}`}>
+    <span className={`text-muted flex items-center gap-1.5 font-mono text-xs ${className}`}>
       <ClockIcon size={11} weight='fill' className='shrink-0' />
       {formatDuration(seconds)}
     </span>

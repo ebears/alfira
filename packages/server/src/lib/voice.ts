@@ -40,10 +40,8 @@ export async function resolveOrAutoJoinPlayer(
 > {
   const guildId = getGuildId();
   const existingPlayer = getPlayer(guildId);
-  if (existingPlayer) {
-    if (lavalink.isGuildConnected(guildId)) {
-      return { ok: true, player: existingPlayer };
-    }
+  if (existingPlayer && lavalink.isGuildConnected(guildId)) {
+    return { ok: true, player: existingPlayer };
   }
 
   const gateway = getClient();
@@ -77,7 +75,10 @@ export async function resolveOrAutoJoinPlayer(
 
     return { ok: true, player: createPlayer(guildId, voiceChannelId) };
   } catch (error) {
-    logger.error({ err: error as Error }, 'Failed to auto-join voice channel');
+    logger.error(
+      { err: error instanceof Error ? error : String(error) },
+      'Failed to auto-join voice channel'
+    );
     return {
       ok: false,
       response: json(

@@ -37,14 +37,14 @@ function SkeletonList() {
       {Array.from({ length: 4 }).map((_, i) => (
         <div
           key={`skel-${i}`}
-          className='flex items-center gap-4 p-4 rounded-xl bg-elevated clay-resting'
+          className='bg-elevated clay-resting flex items-center gap-4 rounded-xl p-4'
         >
-          <Skeleton className='w-14 h-14 rounded-lg shrink-0' />
-          <div className='flex-1 min-w-0 space-y-2'>
+          <Skeleton className='h-14 w-14 shrink-0 rounded-lg' />
+          <div className='min-w-0 flex-1 space-y-2'>
             <Skeleton className='h-3 w-3/4' />
             <Skeleton className='h-2 w-1/2' />
           </div>
-          <Skeleton className='h-4 w-16 rounded-full shrink-0' />
+          <Skeleton className='h-4 w-16 shrink-0 rounded-full' />
         </div>
       ))}
     </div>

@@ -37,6 +37,10 @@ npm-debug.log*
 # -----------------------------------------------
 .cache/
 
+# Local NodeLink clone (created by `bun setup:nodelink`)
+# -----------------------------------------------
+.nodelink/
+
 # OS clutter
 # -----------------------------------------------
 .DS_Store

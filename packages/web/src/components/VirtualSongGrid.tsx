@@ -1,8 +1,10 @@
 import { type Playlist, type Song } from '@alfira/server/shared';
+import { DotsSixVerticalIcon } from '@phosphor-icons/react';
 import { useMasonry, usePositioner, useResizeObserver } from 'masonic';
-import { memo, useCallback, useMemo, useRef } from 'react';
+import { memo, useCallback, useMemo, useRef, useState } from 'react';
 
 import { useScrollObserver } from '../hooks/useScrollObserver';
+import { SortableGridProvider, useSortableGridItem } from '../hooks/useSortableMasonicGrid';
 import SongCard from './SongCard';
 import { Skeleton } from './ui/Skeleton';
 
@@ -31,6 +33,9 @@ interface VirtualSongGridProps {
   selectionMode?: boolean;
   isSelected?: (id: string) => boolean;
   onToggleSelect?: (id: string) => void;
+  // Drag-and-drop reorder (masonic grid)
+  sortable?: boolean;
+  onReorder?: (orderedIds: string[]) => Promise<void>;
 }
 
 /** Composite item passed to masonic so state changes trigger re-renders. */
@@ -56,10 +61,10 @@ function SkeletonGrid() {
         {Array.from({ length: 8 }).map((_, i) => (
           <div
             key={`skeleton-${i}`}
-            className='rounded-lg bg-elevated clay-resting overflow-hidden'
+            className='bg-elevated clay-resting overflow-hidden rounded-lg'
           >
-            <Skeleton className='aspect-square m-3 rounded-lg' />
-            <div className='p-4 flex flex-col gap-2'>
+            <Skeleton className='m-3 aspect-square rounded-lg' />
+            <div className='flex flex-col gap-2 p-4'>
               <Skeleton className='h-3.5 w-3/5' />
               <Skeleton className='h-3 w-4/5' />
               <Skeleton className='h-3 w-2/5' />
@@ -95,9 +100,20 @@ export const VirtualSongGrid = memo(function VirtualSongGrid({
   selectionMode = false,
   isSelected,
   onToggleSelect,
+  sortable = false,
+  onReorder,
 }: VirtualSongGridProps) {
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const masonryContainerRef = useRef<HTMLDivElement>(null);
+
+  // Refs don't trigger effect re-runs, so mirror the grid element in
+  // state. SortableGridProvider uses this state as a dep so its drop
+  // target registration fires when the masonry container mounts.
+  const [gridElement, setGridElement] = useState<HTMLElement | null>(null);
+  const gridContainerCallback = useCallback((el: HTMLElement) => {
+    masonryContainerRef.current = el as HTMLDivElement;
+    setGridElement(el);
+  }, []);
 
   // rAF-batched scroll + isScrolling + size tracking via a single
   // ResizeObserver. Width is throttled (see useScrollObserver) to avoid
@@ -122,6 +138,14 @@ export const VirtualSongGrid = memo(function VirtualSongGrid({
     columnGutter: 0, // We handle padding in the render wrapper
   });
   const resizeObserver = useResizeObserver(positioner);
+
+  // Store positioner in a ref so SortableGridProvider can access it for
+  // hit-testing during drag operations.
+  const positionerRef = useRef(positioner);
+  positionerRef.current = positioner;
+
+  // Stable ID array for the sortable provider
+  const songIds = useMemo(() => items.map((s) => s.id), [items]);
 
   // ── Infinite scroll trigger ────────────────────────────────────────
   const handleRender = useCallback(
@@ -156,9 +180,14 @@ export const VirtualSongGrid = memo(function VirtualSongGrid({
   // producing a visible flash. We store dynamic props in a ref so the
   // component type identity never changes.
   //
-  // NB: playingId / selectionMode / isSelected live in gridItems (above);
+  // DnB: playingId / selectionMode / isSelected live in gridItems (above);
   // masonic re-renders individual cards when these flip without changing
   // the render function identity. Callbacks and stable props go in the ref.
+  //
+  // Sortable drag-and-drop: useSortableGridItem is called unconditionally
+  // (hooks rules). When there is no SortableGridProvider in the tree
+  // (sortable=false), it returns no-op refs and isEnabled=false, so no
+  // drag handles are rendered and no draggable behaviour is attached.
   const cardPropsRef = useRef({
     isAdminView,
     playlists,
@@ -178,7 +207,7 @@ export const VirtualSongGrid = memo(function VirtualSongGrid({
 
   const GridCard = useMemo(() => {
     const Component = ({
-      index: _index,
+      index,
       width,
       data: { song, isPlaying, selectionMode: sel, isSelected: selSelected },
     }: {
@@ -187,21 +216,55 @@ export const VirtualSongGrid = memo(function VirtualSongGrid({
       data: GridSongItem;
     }) => {
       const p = cardPropsRef.current;
+      const {
+        itemRef,
+        dragHandleRef,
+        isDragging,
+        isAnyDragging,
+        isDropTarget,
+        isEnabled: isSortable,
+      } = useSortableGridItem(song.id, index);
+
       return (
-        <div style={{ width, padding: '0 6px 16px' }}>
-          <SongCard
-            song={song}
-            variant='grid'
-            isAdminView={p.isAdminView}
-            playlists={p.playlists}
-            onDelete={p.onDelete}
-            onPlay={() => p.onPlay(song.id)}
-            isPlaying={isPlaying}
-            onAddToQueue={() => p.onAddToQueue(song.id)}
-            selectionMode={sel}
-            isSelected={selSelected}
-            onToggleSelect={p.onToggleSelect ? () => p.onToggleSelect?.(song.id) : undefined}
-          />
+        <div ref={itemRef} style={{ width, padding: '0 6px 16px' }} className='group relative'>
+          {/* Drop target highlight */}
+          {isDropTarget && (
+            <div className='bg-accent/10 pointer-events-none absolute inset-0 z-10 rounded-lg' />
+          )}
+
+          {/* Drag handle — rendered only when sortable is enabled */}
+          {isSortable && (
+            <button
+              ref={dragHandleRef}
+              type='button'
+              style={{ position: 'absolute', bottom: 24, left: 8, zIndex: 20 }}
+              className={`text-faint hover:text-muted cursor-grab rounded p-1 opacity-0 transition-opacity active:cursor-grabbing ${isAnyDragging ? 'opacity-100' : 'group-hover:opacity-100'}`}
+              aria-label={`Drag to reorder "${song.nickname ?? song.title}"`}
+            >
+              <DotsSixVerticalIcon size={18} weight='bold' />
+            </button>
+          )}
+
+          {/* Card content — dimmed while this item is being dragged */}
+          <div className={`min-w-0 transition-opacity ${isDragging ? 'opacity-50' : ''}`}>
+            <SongCard
+              song={song}
+              variant='grid'
+              isAdminView={p.isAdminView}
+              playlists={p.playlists}
+              onDelete={p.onDelete}
+              onPlay={() => {
+                p.onPlay(song.id);
+              }}
+              isPlaying={isPlaying}
+              onAddToQueue={() => {
+                p.onAddToQueue(song.id);
+              }}
+              selectionMode={sel}
+              isSelected={selSelected}
+              onToggleSelect={p.onToggleSelect ? () => p.onToggleSelect?.(song.id) : undefined}
+            />
+          </div>
         </div>
       );
     };
@@ -235,7 +298,7 @@ export const VirtualSongGrid = memo(function VirtualSongGrid({
     scrollTop,
     isScrolling,
     height: containerHeight || 600,
-    containerRef: masonryContainerRef,
+    containerRef: gridContainerCallback,
     itemKey: (item: GridSongItem) => item.song.id,
     itemHeightEstimate: 330,
     overscanBy: 2,
@@ -262,15 +325,15 @@ export const VirtualSongGrid = memo(function VirtualSongGrid({
     [isContentReady]
   );
 
-  return (
-    <div ref={scrollRefCallback} className='pt-3 min-h-0 flex-1' style={scrollStyle}>
+  const gridContent = (
+    <div ref={scrollRefCallback} className='min-h-0 flex-1 pt-3' style={scrollStyle}>
       {showSkeleton && <SkeletonGrid />}
 
       {showEmpty && (
         <div className='px-4 pt-4'>
-          <div className='text-center py-16'>
+          <div className='py-16 text-center'>
             <p className='text-fg font-semibold'>{emptyTitle}</p>
-            {emptyMessage && <p className='text-muted text-sm mt-1'>{emptyMessage}</p>}
+            {emptyMessage && <p className='text-muted mt-1 text-sm'>{emptyMessage}</p>}
           </div>
         </div>
       )}
@@ -279,11 +342,11 @@ export const VirtualSongGrid = memo(function VirtualSongGrid({
       <div style={masonryWrapperStyle}>{masonry}</div>
 
       {isContentReady && isFetching && (
-        <div className='flex justify-center py-4 gap-2'>
+        <div className='flex justify-center gap-2 py-4'>
           {Array.from({ length: 3 }).map((_, i) => (
             <div
               key={`loading-dot-${i}`}
-              className='h-3 w-3 rounded-full bg-border animate-pulse'
+              className='bg-border h-3 w-3 animate-pulse rounded-full'
             />
           ))}
         </div>
@@ -294,7 +357,7 @@ export const VirtualSongGrid = memo(function VirtualSongGrid({
           <button
             type='button'
             onClick={onRetry}
-            className='font-mono text-xs text-muted hover:text-fg transition-colors underline'
+            className='text-muted hover:text-fg font-mono text-xs underline transition-colors'
           >
             Failed to load more. Retry
           </button>
@@ -302,6 +365,25 @@ export const VirtualSongGrid = memo(function VirtualSongGrid({
       )}
     </div>
   );
+
+  // When sortable is enabled, wrap with the sortable context provider so
+  // grid cards can register draggable handles and the container acts as
+  // a drop target with positioner-based hit-testing.
+  if (sortable && onReorder) {
+    return (
+      <SortableGridProvider
+        itemIds={songIds}
+        onReorder={onReorder}
+        scrollContainerRef={scrollContainerRef}
+        positionerRef={positionerRef}
+        gridElement={gridElement}
+      >
+        {gridContent}
+      </SortableGridProvider>
+    );
+  }
+
+  return gridContent;
 });
 
 export default VirtualSongGrid;

@@ -37,7 +37,7 @@ function LayoutContent() {
 
   useEffect(() => {
     if (!user?.isAdmin) {
-      return undefined;
+      return;
     }
 
     const interval = setInterval(() => {
@@ -49,7 +49,9 @@ function LayoutContent() {
       }
     }, 20_000);
 
-    return () => clearInterval(interval);
+    return () => {
+      clearInterval(interval);
+    };
   }, [user?.isAdmin, hintControls]);
 
   const [collapsed, setCollapsed] = useState(() => {
@@ -71,7 +73,9 @@ function LayoutContent() {
     void navigate('/login');
   }, [logout, navigate]);
 
-  const handleToggleCollapse = useCallback(() => setCollapsed((c) => !c), []);
+  const handleToggleCollapse = useCallback(() => {
+    setCollapsed((c) => !c);
+  }, []);
 
   const navLinkClassName = useCallback(
     ({ isActive }: { isActive: boolean }) =>
@@ -87,7 +91,7 @@ function LayoutContent() {
     []
   );
   return (
-    <div className='flex flex-col h-full bg-surface overflow-hidden'>
+    <div className='bg-surface flex h-full flex-col overflow-hidden'>
       {/* ------------------------------------------------------------------ */}
       {/* Mobile Navigation - visible on small screens */}
       {/* ------------------------------------------------------------------ */}
@@ -96,12 +100,12 @@ function LayoutContent() {
       {/* ------------------------------------------------------------------ */}
       {/* Middle row: sidebar + content */}
       {/* ------------------------------------------------------------------ */}
-      <div className='flex-1 flex overflow-hidden'>
+      <div className='flex flex-1 overflow-hidden'>
         {/* ------------------------------------------------------------------ */}
         {/* Sidebar - visible on medium screens and up */}
         {/* ------------------------------------------------------------------ */}
         <m.aside
-          className='hidden md:flex shrink-0 flex-col bg-elevated overflow-hidden h-full'
+          className='bg-elevated hidden h-full shrink-0 flex-col overflow-hidden md:flex'
           animate={sidebarAnimate}
           initial={false}
           transition={sidebarTransition}
@@ -109,11 +113,11 @@ function LayoutContent() {
           {/* Wordmark */}
           <div
             className={`flex pt-6 pb-4 ${
-              collapsed ? 'flex-col items-center justify-start px-3 gap-2' : 'items-center px-5'
+              collapsed ? 'flex-col items-center justify-start gap-2 px-3' : 'items-center px-5'
             }`}
           >
             {!collapsed && (
-              <div className='flex items-center gap-2 min-w-0'>
+              <div className='flex min-w-0 items-center gap-2'>
                 <m.button
                   type='button'
                   onClick={toggleAdminView}
@@ -125,7 +129,7 @@ function LayoutContent() {
                         : 'Switch to Admin view'
                       : undefined
                   }
-                  className={`flex items-center justify-center w-10 h-10 shrink-0 rounded border border-accent/30 bg-accent/10 self-end transition-opacity ${
+                  className={`border-accent/30 bg-accent/10 flex h-10 w-10 shrink-0 items-center justify-center self-end rounded border transition-opacity ${
                     user?.isAdmin ? 'cursor-pointer hover:opacity-80' : 'cursor-default'
                   }`}
                 >
@@ -135,7 +139,7 @@ function LayoutContent() {
                     <GuitarIcon size={24} weight='duotone' className='text-accent' />
                   )}
                 </m.button>
-                <span className='font-display text-5xl text-accent tracking-wider'>Alfira</span>
+                <span className='font-display text-accent text-5xl tracking-wider'>Alfira</span>
               </div>
             )}
             {collapsed && (
@@ -143,7 +147,7 @@ function LayoutContent() {
                 type='button'
                 onClick={toggleAdminView}
                 animate={hintControls}
-                className={`w-10 h-10 flex items-center justify-center shrink-0 rounded border border-accent/30 bg-accent/10 transition-opacity ${
+                className={`border-accent/30 bg-accent/10 flex h-10 w-10 shrink-0 items-center justify-center rounded border transition-opacity ${
                   user?.isAdmin ? 'cursor-pointer hover:opacity-80' : 'cursor-default'
                 }`}
                 title={
@@ -166,11 +170,11 @@ function LayoutContent() {
           {/* Spacer between wordmark and nav */}
           {collapsed ? (
             <div className='flex justify-center px-2'>
-              <div className='w-full h-px bg-fg/20' />
+              <div className='bg-fg/20 h-px w-full' />
             </div>
           ) : (
             <div className='px-5'>
-              <div className='h-px bg-fg/20' />
+              <div className='bg-fg/20 h-px' />
             </div>
           )}
 
@@ -193,11 +197,11 @@ function LayoutContent() {
                 {/* Separator between user and admin nav items */}
                 {collapsed ? (
                   <div className='flex justify-center px-2 py-1'>
-                    <div className='w-6 h-px bg-fg/15' />
+                    <div className='bg-fg/15 h-px w-6' />
                   </div>
                 ) : (
                   <div className='px-2 py-1'>
-                    <div className='h-px bg-fg/15' />
+                    <div className='bg-fg/15 h-px' />
                   </div>
                 )}
                 {ADMIN_NAV_ITEMS.map(({ to, label, icon: Icon }) => (
@@ -221,12 +225,12 @@ function LayoutContent() {
             <div className={collapsed ? 'flex justify-center px-2 pb-2' : 'px-3 pb-2'}>
               <div
                 title={connectionStatus === 'reconnecting' ? 'Reconnecting...' : 'Disconnected'}
-                className={`flex items-center rounded-xl font-body w-full select-none ${
-                  collapsed ? 'justify-center px-0 py-3' : 'px-3 py-3 gap-3'
+                className={`font-body flex w-full items-center rounded-xl select-none ${
+                  collapsed ? 'justify-center px-0 py-3' : 'gap-3 px-3 py-3'
                 } ${connectionStatus === 'reconnecting' ? 'text-warning' : 'text-danger'}`}
               >
                 {!collapsed && (
-                  <span className='mr-auto text-sm text-fg/80'>
+                  <span className='text-fg/80 mr-auto text-sm'>
                     {connectionStatus === 'reconnecting' ? 'Reconnecting...' : 'Disconnected'}
                   </span>
                 )}
@@ -248,7 +252,7 @@ function LayoutContent() {
               type='button'
               onClick={handleToggleCollapse}
               title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-              className={`flex items-center rounded-xl font-body transition-all duration-150 cursor-pointer w-full ${
+              className={`font-body flex w-full cursor-pointer items-center rounded-xl transition-all duration-150 ${
                 collapsed ? 'justify-center px-0 py-2' : 'px-3 py-2'
               } btn-inherit`}
               style={elevatedSurfaceStyle}
@@ -261,11 +265,11 @@ function LayoutContent() {
           {/* Separator above user section */}
           {collapsed ? (
             <div className='flex justify-center px-2'>
-              <div className='w-full h-px bg-fg/20' />
+              <div className='bg-fg/20 h-px w-full' />
             </div>
           ) : (
             <div className='px-5'>
-              <div className='h-px bg-fg/20' />
+              <div className='bg-fg/20 h-px' />
             </div>
           )}
 
@@ -302,15 +306,15 @@ function QueueLayout() {
 
   return (
     <>
-      <div className='flex-1 flex flex-col min-w-0 pt-14 md:pt-0 overflow-hidden'>
-        <main className='flex-1 flex flex-col overflow-hidden'>
+      <div className='flex min-w-0 flex-1 flex-col overflow-hidden pt-14 md:pt-0'>
+        <main className='flex flex-1 flex-col overflow-hidden'>
           <AnimatedOutlet />
         </main>
       </div>
 
       {/* Desktop: right-side panel that pushes content */}
       <m.aside
-        className='shrink-0 flex-col bg-elevated overflow-hidden clay-floating md:flex hidden h-full'
+        className='bg-elevated clay-floating hidden h-full shrink-0 flex-col overflow-hidden md:flex'
         animate={queuePanelAnimate}
         initial={false}
         transition={queuePanelTransition}

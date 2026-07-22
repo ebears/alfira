@@ -1,4 +1,5 @@
 import { eq } from 'drizzle-orm';
+import * as v from 'valibot';
 
 import { type RouteContext } from '../lib/context';
 import { json } from '../lib/json';
@@ -71,20 +72,22 @@ function handleGetGeneral(
   return json(attachAvailableSources(row));
 }
 
+const GeneralSettingsPatchSchema = v.partial(
+  v.object({
+    adminRoleIds: v.pipe(v.string(), v.minLength(1)),
+    voiceIdleTimeoutMinutes: v.pipe(v.number(), v.integer(), v.minValue(1), v.maxValue(120)),
+    afkNotificationChannelId: v.nullable(v.string()),
+    requestNotificationChannelId: v.nullable(v.string()),
+    notifyOnApproved: v.boolean(),
+    notifyOnDenied: v.boolean(),
+    publicUrl: v.nullable(v.string()),
+    enabledSources: v.pipe(v.string(), v.minLength(1)),
+  })
+);
+
 // ---------------------------------------------------------------------------
 // PATCH /api/settings/general
 // ---------------------------------------------------------------------------
-interface GeneralSettingsPatch {
-  adminRoleIds?: string;
-  voiceIdleTimeoutMinutes?: number;
-  afkNotificationChannelId?: string | null;
-  requestNotificationChannelId?: string | null;
-  notifyOnApproved?: boolean;
-  notifyOnDenied?: boolean;
-  publicUrl?: string | null;
-  enabledSources?: string;
-}
-
 async function handlePatchGeneral(
   ctx: RouteContext,
   request: Request,
@@ -95,78 +98,51 @@ async function handlePatchGeneral(
     return guards;
   }
 
-  let body: GeneralSettingsPatch;
+  let raw: unknown;
   try {
-    body = (await request.json()) as GeneralSettingsPatch;
+    raw = await request.json();
   } catch {
     return json({ error: 'Invalid JSON' }, 400);
   }
 
+  const parsed = v.safeParse(GeneralSettingsPatchSchema, raw);
+  if (!parsed.success) {
+    return json({ error: 'Invalid request body.', details: v.flatten(parsed.issues) }, 400);
+  }
+
+  const body = parsed.output;
+
   const updates: Record<string, unknown> = {};
 
   if (body.adminRoleIds !== undefined) {
-    if (typeof body.adminRoleIds !== 'string') {
-      return json({ error: 'adminRoleIds must be a string' }, 400);
-    }
-    if (body.adminRoleIds.trim().length === 0) {
-      return json({ error: 'adminRoleIds must not be empty' }, 400);
-    }
     updates.adminRoleIds = body.adminRoleIds;
   }
 
   if (body.voiceIdleTimeoutMinutes !== undefined) {
-    const v = body.voiceIdleTimeoutMinutes;
-    if (!Number.isInteger(v) || v < 1 || v > 120) {
-      return json({ error: 'voiceIdleTimeoutMinutes must be an integer between 1 and 120' }, 400);
-    }
-    updates.voiceIdleTimeoutMinutes = v;
+    updates.voiceIdleTimeoutMinutes = body.voiceIdleTimeoutMinutes;
   }
 
   if (body.afkNotificationChannelId !== undefined) {
-    if (
-      body.afkNotificationChannelId !== null &&
-      typeof body.afkNotificationChannelId !== 'string'
-    ) {
-      return json({ error: 'afkNotificationChannelId must be a string or null' }, 400);
-    }
     updates.afkNotificationChannelId = body.afkNotificationChannelId;
   }
 
   if (body.requestNotificationChannelId !== undefined) {
-    if (
-      body.requestNotificationChannelId !== null &&
-      typeof body.requestNotificationChannelId !== 'string'
-    ) {
-      return json({ error: 'requestNotificationChannelId must be a string or null' }, 400);
-    }
     updates.requestNotificationChannelId = body.requestNotificationChannelId;
   }
 
   if (body.notifyOnApproved !== undefined) {
-    if (typeof body.notifyOnApproved !== 'boolean') {
-      return json({ error: 'notifyOnApproved must be a boolean' }, 400);
-    }
     updates.notifyOnApproved = body.notifyOnApproved;
   }
 
   if (body.notifyOnDenied !== undefined) {
-    if (typeof body.notifyOnDenied !== 'boolean') {
-      return json({ error: 'notifyOnDenied must be a boolean' }, 400);
-    }
     updates.notifyOnDenied = body.notifyOnDenied;
   }
 
   if (body.publicUrl !== undefined) {
-    if (body.publicUrl !== null && typeof body.publicUrl !== 'string') {
-      return json({ error: 'publicUrl must be a string or null' }, 400);
-    }
     updates.publicUrl = body.publicUrl;
   }
 
   if (body.enabledSources !== undefined) {
-    if (typeof body.enabledSources !== 'string' || body.enabledSources.trim().length === 0) {
-      return json({ error: 'enabledSources must be a non-empty comma-separated string' }, 400);
-    }
     updates.enabledSources = body.enabledSources.trim();
   }
 
@@ -183,8 +159,8 @@ async function handlePatchGeneral(
     .run();
 
   // Refresh the enabled sources cache if sources were updated.
-  if (updates.enabledSources) {
-    refreshEnabledSources(updates.enabledSources as string);
+  if (body.enabledSources) {
+    refreshEnabledSources(body.enabledSources.trim());
   }
 
   // Return the full updated row.
@@ -194,7 +170,11 @@ async function handlePatchGeneral(
     .where(eq(tables.guildSettings.id, 1))
     .get();
 
-  return json(attachAvailableSources(row as Omit<GeneralSettings, 'availableSources'>));
+  if (!row) {
+    return json({ error: 'Settings not found after update.' }, 500);
+  }
+
+  return json(attachAvailableSources(row));
 }
 
 export const handleGeneralSettings = routeTable('/api/settings/general', {

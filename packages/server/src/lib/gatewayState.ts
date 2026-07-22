@@ -79,8 +79,8 @@ async function tryCompleteVoiceConnection(guildId: string): Promise<void> {
     });
     lavalink.markConnected(guildId, true);
     pending.resolve();
-  } catch (err) {
-    pending.reject(err as Error);
+  } catch (error) {
+    pending.reject(error instanceof Error ? error : new Error(String(error)));
   }
 }
 

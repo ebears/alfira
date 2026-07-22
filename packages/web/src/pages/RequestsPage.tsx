@@ -63,8 +63,8 @@ export default function RequestsPage() {
       try {
         await approveRequest(id);
         removeItem(id);
-      } catch (err: unknown) {
-        setActionError(err instanceof Error ? err.message : 'Failed to approve.');
+      } catch (error: unknown) {
+        setActionError(error instanceof Error ? error.message : 'Failed to approve.');
       }
     },
     [removeItem]
@@ -76,8 +76,8 @@ export default function RequestsPage() {
       try {
         await denyRequest(id);
         removeItem(id);
-      } catch (err: unknown) {
-        setActionError(err instanceof Error ? err.message : 'Failed to deny.');
+      } catch (error: unknown) {
+        setActionError(error instanceof Error ? error.message : 'Failed to deny.');
       }
     },
     [removeItem]
@@ -89,8 +89,8 @@ export default function RequestsPage() {
       try {
         await cancelRequest(id);
         removeItem(id);
-      } catch (err: unknown) {
-        setActionError(err instanceof Error ? err.message : 'Failed to cancel.');
+      } catch (error: unknown) {
+        setActionError(error instanceof Error ? error.message : 'Failed to cancel.');
       }
     },
     [removeItem]
@@ -127,8 +127,12 @@ export default function RequestsPage() {
 
   const pageStyle = useMemo(() => ({ paddingBottom: 0 }), []);
 
-  const handleShowAddModal = useCallback(() => setShowAddModal(true), []);
-  const handleHideAddModal = useCallback(() => setShowAddModal(false), []);
+  const handleShowAddModal = useCallback(() => {
+    setShowAddModal(true);
+  }, []);
+  const handleHideAddModal = useCallback(() => {
+    setShowAddModal(false);
+  }, []);
 
   const handleSelectPendingTab = useCallback(() => {
     setTab('pending');
@@ -148,7 +152,7 @@ export default function RequestsPage() {
   }, [reset]);
 
   return (
-    <div className='p-4 md:p-8 flex flex-col min-h-0 h-full' style={pageStyle}>
+    <div className='flex h-full min-h-0 flex-col p-4 md:p-8' style={pageStyle}>
       <PageHeader
         icon={TrayIcon}
         title='Requests'
@@ -166,12 +170,12 @@ export default function RequestsPage() {
       {/* Tabs + filter — hidden until the initial tab is resolved */}
       {resolved && (
         <>
-          <div className='flex items-center gap-3 mb-4 md:mb-6'>
-            <div className='flex gap-1 bg-elevated rounded-lg p-1'>
+          <div className='mb-4 flex items-center gap-3 md:mb-6'>
+            <div className='bg-elevated flex gap-1 rounded-lg p-1'>
               <button
                 type='button'
                 onClick={handleSelectPendingTab}
-                className={`px-3 py-1.5 rounded-md text-sm font-body transition-colors cursor-pointer ${
+                className={`font-body cursor-pointer rounded-md px-3 py-1.5 text-sm transition-colors ${
                   tab === 'pending' ? 'bg-accent text-elevated' : 'text-muted hover:text-fg'
                 }`}
               >
@@ -180,7 +184,7 @@ export default function RequestsPage() {
               <button
                 type='button'
                 onClick={handleSelectHistoryTab}
-                className={`px-3 py-1.5 rounded-md text-sm font-body transition-colors cursor-pointer ${
+                className={`font-body cursor-pointer rounded-md px-3 py-1.5 text-sm transition-colors ${
                   tab === 'closed' ? 'bg-accent text-elevated' : 'text-muted hover:text-fg'
                 }`}
               >
@@ -189,9 +193,9 @@ export default function RequestsPage() {
             </div>
 
             {tab === 'pending' && (
-              <label className='flex items-center gap-2 cursor-pointer ml-auto'>
+              <label className='ml-auto flex cursor-pointer items-center gap-2'>
                 <Checkbox checked={mineOnly} onChange={setMineOnly} />
-                <span className='font-mono text-xs text-muted'>Only show my requests</span>
+                <span className='text-muted font-mono text-xs'>Only show my requests</span>
               </label>
             )}
           </div>

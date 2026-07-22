@@ -1,6 +1,6 @@
 {
   "name": "@alfira/web",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "private": true,
   "type": "module",
   "scripts": {
@@ -10,6 +10,9 @@
   },
   "dependencies": {
     "@alfira/server": "workspace:*",
+    "@atlaskit/pragmatic-drag-and-drop": "^2.0.1",
+    "@atlaskit/pragmatic-drag-and-drop-auto-scroll": "^3.0.0",
+    "@atlaskit/pragmatic-drag-and-drop-hitbox": "^2.0.0",
     "@phosphor-icons/react": "2.1.10",
     "@tanstack/react-virtual": "3.14.6",
     "masonic": "^4.1.0",
