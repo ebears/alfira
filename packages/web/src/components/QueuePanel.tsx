@@ -118,36 +118,59 @@ export default function QueuePanel({
   const priorityIds = useMemo(() => priorityQueue.map((s) => s.id), [priorityQueue]);
   const queueIds = useMemo(() => queue.map((s) => s.id), [queue]);
 
-  const priorityVirtualizer = useVirtualizer({
-    count: priorityQueue.length,
-    getItemKey: (i) => priorityQueue[i]?.id ?? i,
+  type VirtualQueueItem =
+    | {
+        type: 'song';
+        variant: 'priority' | 'regular';
+        song: QueuedSong;
+        listIndex: number;
+        key: string;
+      }
+    | { type: 'header'; variant: 'priority' | 'regular'; key: string };
+
+  const virtualItems: VirtualQueueItem[] = useMemo(() => {
+    const items: VirtualQueueItem[] = [];
+    if (priorityQueue.length > 0) {
+      items.push({ type: 'header', variant: 'priority', key: 'header-priority' });
+      for (const [i, song] of priorityQueue.entries()) {
+        items.push({
+          type: 'song',
+          variant: 'priority',
+          song,
+          listIndex: i,
+          key: `p-${song.id}`,
+        });
+      }
+    }
+    if (queue.length > 0) {
+      items.push({ type: 'header', variant: 'regular', key: 'header-regular' });
+      for (const [i, song] of queue.entries()) {
+        items.push({
+          type: 'song',
+          variant: 'regular',
+          song,
+          listIndex: i,
+          key: `r-${song.id}`,
+        });
+      }
+    }
+    return items;
+  }, [priorityQueue, queue]);
+
+  const virtualizer = useVirtualizer({
+    count: virtualItems.length,
+    getItemKey: (i) => virtualItems[i]?.key,
     getScrollElement: () => scrollRef.current,
-    estimateSize: () => 92,
+    estimateSize: (i) => (virtualItems[i]?.type === 'header' ? 36 : 92),
     overscan: 5,
   });
 
-  const queueVirtualizer = useVirtualizer({
-    count: queue.length,
-    getItemKey: (i) => queue[i]?.id ?? i,
-    getScrollElement: () => scrollRef.current,
-    estimateSize: () => 92,
-    overscan: 5,
-  });
-
-  const priorityContainerStyle = useMemo(
+  const virtualContainerStyle = useMemo(
     () => ({
-      height: `${priorityVirtualizer.getTotalSize()}px`,
+      height: `${virtualizer.getTotalSize()}px`,
       position: 'relative' as const,
     }),
-    [priorityVirtualizer]
-  );
-
-  const queueContainerStyle = useMemo(
-    () => ({
-      height: `${queueVirtualizer.getTotalSize()}px`,
-      position: 'relative' as const,
-    }),
-    [queueVirtualizer]
+    [virtualizer]
   );
 
   const isQueueEmpty = queue.length === 0 && priorityQueue.length === 0 && !currentSong;
@@ -411,129 +434,124 @@ export default function QueuePanel({
       </div>
 
       {/* Virtualized scroll container */}
-      {(priorityQueue.length > 0 || queue.length > 0) && (
+      {virtualItems.length > 0 && (
         <div
           ref={scrollRef}
           className='min-h-0 flex-1 overflow-y-auto px-4 pb-4'
           style={SCROLL_MASK_STYLE}
         >
-          {/* Priority queue section — provider always mounted for warm transitions */}
-          <SortableListProvider
-            itemIds={priorityIds}
-            onReorder={handlePriorityReorder}
-            scrollContainerRef={scrollRef}
-          >
-            {priorityQueue.length > 0 && (
-              <>
-                <h2 className='font-display text-fg text-lg tracking-wider'>
-                  <LightningIcon size={16} weight='duotone' className='mr-1 inline' />
-                  Up Next
-                  <span className='text-accent ml-2 font-mono text-xs tracking-normal normal-case'>
-                    {priorityQueue.length}
-                  </span>
-                </h2>
-                <div style={priorityContainerStyle}>
-                  {priorityVirtualizer.getVirtualItems().map((virtualRow) => {
-                    const song = priorityQueue[virtualRow.index];
-                    if (!song) {
-                      return null;
-                    }
-                    return (
-                      <div
-                        key={virtualRow.key}
-                        data-index={virtualRow.index}
-                        ref={priorityVirtualizer.measureElement}
-                        className='pb-1'
-                        style={getVirtualRowStyle(virtualRow.start)}
+          <div style={virtualContainerStyle}>
+            {/* Priority queue section */}
+            <SortableListProvider
+              itemIds={priorityIds}
+              onReorder={handlePriorityReorder}
+              scrollContainerRef={scrollRef}
+            >
+              {virtualizer.getVirtualItems().map((virtualRow) => {
+                const item = virtualItems[virtualRow.index];
+                if (!item || item.variant !== 'priority') {
+                  return null;
+                }
+                return (
+                  <div
+                    key={item.key}
+                    data-index={virtualRow.index}
+                    ref={virtualizer.measureElement}
+                    className={item.type === 'header' ? undefined : 'pb-1'}
+                    style={getVirtualRowStyle(virtualRow.start)}
+                  >
+                    {item.type === 'header' ? (
+                      <h2 className='font-display text-fg text-lg tracking-wider'>
+                        <LightningIcon size={16} weight='duotone' className='mr-1 inline' />
+                        Up Next
+                        <span className='text-accent ml-2 font-mono text-xs tracking-normal normal-case'>
+                          {priorityQueue.length}
+                        </span>
+                      </h2>
+                    ) : (
+                      <m.div
+                        initial='initial'
+                        animate='animate'
+                        variants={queueItemVariants}
+                        transition={QUEUE_TRANSITION}
                       >
-                        <m.div
-                          initial='initial'
-                          animate='animate'
-                          variants={queueItemVariants}
-                          transition={QUEUE_TRANSITION}
-                        >
-                          <QueueSongItem
-                            song={song}
-                            index={virtualRow.index}
-                            variant='priority'
-                            canManage={canManage}
-                            targetQueue={priorityQueue}
-                            onRemove={handleRemove}
-                            onPromote={handlePromote}
-                            onDemote={handleDemote}
-                            onMoveUp={handleMoveUp}
-                            onMoveDown={handleMoveDown}
-                            onMoveToTop={handleMoveToTop}
-                            onMoveToBottom={handleMoveToBottom}
-                          />
-                        </m.div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </>
-            )}
-          </SortableListProvider>
+                        <QueueSongItem
+                          song={item.song}
+                          index={item.listIndex}
+                          variant='priority'
+                          canManage={canManage}
+                          targetQueue={priorityQueue}
+                          onRemove={handleRemove}
+                          onPromote={handlePromote}
+                          onDemote={handleDemote}
+                          onMoveUp={handleMoveUp}
+                          onMoveDown={handleMoveDown}
+                          onMoveToTop={handleMoveToTop}
+                          onMoveToBottom={handleMoveToBottom}
+                        />
+                      </m.div>
+                    )}
+                  </div>
+                );
+              })}
+            </SortableListProvider>
 
-          {/* Regular queue section — provider always mounted for warm transitions */}
-          <SortableListProvider
-            itemIds={queueIds}
-            onReorder={handleQueueReorder}
-            scrollContainerRef={scrollRef}
-          >
-            {priorityQueue.length > 0 && <div className='mt-4' />}
-            {queue.length > 0 && (
-              <>
-                <h2 className='font-display text-fg text-lg tracking-wider'>
-                  Queue
-                  {queue.length > 0 && (
-                    <span className='text-muted ml-2 font-mono text-xs tracking-normal normal-case'>
-                      {queue.length}
-                    </span>
-                  )}
-                </h2>
-                <div style={queueContainerStyle}>
-                  {queueVirtualizer.getVirtualItems().map((virtualRow) => {
-                    const song = queue[virtualRow.index];
-                    if (!song) {
-                      return null;
-                    }
-                    return (
-                      <div
-                        key={virtualRow.key}
-                        data-index={virtualRow.index}
-                        ref={queueVirtualizer.measureElement}
-                        className='pb-1'
-                        style={getVirtualRowStyle(virtualRow.start)}
+            {/* Regular queue section */}
+            <SortableListProvider
+              itemIds={queueIds}
+              onReorder={handleQueueReorder}
+              scrollContainerRef={scrollRef}
+            >
+              {virtualizer.getVirtualItems().map((virtualRow) => {
+                const item = virtualItems[virtualRow.index];
+                if (!item || item.variant !== 'regular') {
+                  return null;
+                }
+                return (
+                  <div
+                    key={item.key}
+                    data-index={virtualRow.index}
+                    ref={virtualizer.measureElement}
+                    className={item.type === 'header' ? undefined : 'pb-1'}
+                    style={getVirtualRowStyle(virtualRow.start)}
+                  >
+                    {item.type === 'header' ? (
+                      <h2 className='font-display text-fg text-lg tracking-wider'>
+                        Queue
+                        {queue.length > 0 && (
+                          <span className='text-muted ml-2 font-mono text-xs tracking-normal normal-case'>
+                            {queue.length}
+                          </span>
+                        )}
+                      </h2>
+                    ) : (
+                      <m.div
+                        initial='initial'
+                        animate='animate'
+                        variants={queueItemVariants}
+                        transition={QUEUE_TRANSITION}
                       >
-                        <m.div
-                          initial='initial'
-                          animate='animate'
-                          variants={queueItemVariants}
-                          transition={QUEUE_TRANSITION}
-                        >
-                          <QueueSongItem
-                            song={song}
-                            index={virtualRow.index}
-                            variant='regular'
-                            canManage={canManage}
-                            targetQueue={queue}
-                            onRemove={handleRemove}
-                            onPromote={handlePromote}
-                            onDemote={handleDemote}
-                            onMoveUp={handleMoveUp}
-                            onMoveDown={handleMoveDown}
-                            onMoveToTop={handleMoveToTop}
-                            onMoveToBottom={handleMoveToBottom}
-                          />
-                        </m.div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </>
-            )}
-          </SortableListProvider>
+                        <QueueSongItem
+                          song={item.song}
+                          index={item.listIndex}
+                          variant='regular'
+                          canManage={canManage}
+                          targetQueue={queue}
+                          onRemove={handleRemove}
+                          onPromote={handlePromote}
+                          onDemote={handleDemote}
+                          onMoveUp={handleMoveUp}
+                          onMoveDown={handleMoveDown}
+                          onMoveToTop={handleMoveToTop}
+                          onMoveToBottom={handleMoveToBottom}
+                        />
+                      </m.div>
+                    )}
+                  </div>
+                );
+              })}
+            </SortableListProvider>
+          </div>
         </div>
       )}
 
