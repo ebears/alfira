@@ -972,6 +972,8 @@ export default function PlaylistDetailPage() {
                 onDelete={selectionMode ? undefined : handleSongDelete}
                 onPlay={handlePlayFromSong}
                 onAddToQueue={handleAddToQueue}
+                sortable={sort === 'position' && !isSmart && (isAdminView || isOwner)}
+                onReorder={handleReorder}
                 selectionMode={selectionMode}
                 isSelected={bulk.isSelected}
                 onToggleSelect={bulk.toggle}
