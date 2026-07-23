@@ -1,11 +1,11 @@
 import { AnimatePresence } from 'motion/react';
 import * as m from 'motion/react-m';
-import { useLocation, useOutlet } from 'react-router-dom';
+import { useLocation, useOutlet } from 'react-router';
 
 import { pageVariants, viewTransition } from '../lib/motion';
 
 /**
- * Drop-in replacement for react-router-dom's <Outlet /> that animates page
+ * Drop-in replacement for react-router's <Outlet /> that animates page
  * transitions using motion's AnimatePresence.
  *
  * Each route change triggers a quick crossfade + vertical slide. The exiting

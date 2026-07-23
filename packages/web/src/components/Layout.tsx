@@ -2,7 +2,7 @@ import { CaretLeftIcon, CraneTowerIcon, GuitarIcon, LinkBreakIcon } from '@phosp
 import { useAnimationControls } from 'motion/react';
 import * as m from 'motion/react-m';
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { NavLink, useNavigate } from 'react-router-dom';
+import { NavLink, useNavigate } from 'react-router';
 
 import { ADMIN_NAV_ITEMS, NAV_ITEMS } from '../constants';
 import { useAdminView } from '../context/AdminViewContext';

@@ -1,6 +1,6 @@
 import { DiscordLogoIcon } from '@phosphor-icons/react';
 import { useEffect, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router';
 
 import { SpringUp } from '../components/ui/SpringUp';
 import { useAuth } from '../context/AuthContext';
