@@ -1,6 +1,6 @@
 import { WrenchIcon } from '@phosphor-icons/react';
 import { useCallback, useMemo } from 'react';
-import { NavLink } from 'react-router-dom';
+import { NavLink } from 'react-router';
 
 interface SettingsMenuProps {
   collapsed?: boolean;

@@ -4,7 +4,7 @@ import { MusicNotesIcon, QuestionIcon } from '@phosphor-icons/react';
 import { AnimatePresence } from 'motion/react';
 import * as m from 'motion/react-m';
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams } from 'react-router';
 
 import {
   bulkDeleteSongs,

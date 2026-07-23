@@ -17,7 +17,7 @@ import {
 import { AnimatePresence } from 'motion/react';
 import * as m from 'motion/react-m';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router';
 
 import {
   bulkEditSongs,

@@ -6,7 +6,7 @@ import {
   XCircleIcon,
 } from '@phosphor-icons/react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { NavLink, useNavigate } from 'react-router-dom';
+import { NavLink, useNavigate } from 'react-router';
 
 import { ADMIN_NAV_ITEMS, NAV_ITEMS } from '../constants';
 import { useAdminView } from '../context/AdminViewContext';
