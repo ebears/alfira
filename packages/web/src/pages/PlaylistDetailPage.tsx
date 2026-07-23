@@ -255,12 +255,7 @@ export default function PlaylistDetailPage() {
       };
     },
     limit: ITEMS_PER_PAGE,
-    deps: [
-      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- route param is always defined
-      id!,
-      isAdminView,
-      songsOpts,
-    ],
+    deps: [id!, isAdminView, songsOpts],
     compareFn: playlistSongCompareFn,
   });
 
@@ -810,7 +805,7 @@ export default function PlaylistDetailPage() {
             className='rounded-full!'
             {...cooldownButtonProps(cooldown, {
               onClick: () => {
-                void handlePlayFromSong(songs[0]?.songId, 'random');
+                void handlePlayFromSong(songs[0]!.songId, 'random');
               },
               disabled: songItems.length === 0,
               title: 'Shuffle',
@@ -823,7 +818,7 @@ export default function PlaylistDetailPage() {
             className='flex items-center gap-1.5 text-xs'
             {...cooldownButtonProps(cooldown, {
               onClick: () => {
-                void handlePlayFromSong(songs[0]?.songId, 'sequential');
+                void handlePlayFromSong(songs[0]!.songId, 'sequential');
               },
               disabled: songItems.length === 0,
               title: 'Play',

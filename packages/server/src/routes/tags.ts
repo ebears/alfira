@@ -46,7 +46,7 @@ async function handleGetTag(
   _request: Request,
   params: Record<string, string>
 ): Promise<Response> {
-  const { nameLower } = params;
+  const nameLower = params.nameLower!;
   const guards = checkGuards(ctx);
   if (guards instanceof Response) {
     return guards;
@@ -63,7 +63,7 @@ function handleGetTagSongs(
   _request: Request,
   params: Record<string, string>
 ): Response {
-  const { nameLower } = params;
+  const nameLower = params.nameLower!;
   const guards = checkGuards(ctx);
   if (guards instanceof Response) {
     return guards;
@@ -92,7 +92,7 @@ async function handlePatchTag(
   request: Request,
   params: Record<string, string>
 ): Promise<Response> {
-  const { nameLower } = params;
+  const nameLower = params.nameLower!;
 
   let raw: unknown;
   try {
@@ -150,7 +150,7 @@ async function handleDeleteTag(
   _request: Request,
   params: Record<string, string>
 ): Promise<Response> {
-  const { nameLower } = params;
+  const nameLower = params.nameLower!;
   const guards = checkGuards(ctx, { admin: true, permission: 'tags.manage' });
   if (guards instanceof Response) {
     return guards;

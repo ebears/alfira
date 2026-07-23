@@ -389,7 +389,7 @@ async function handleDeleteSong(
   _request: Request,
   params: Record<string, string>
 ): Promise<Response> {
-  const { id } = params;
+  const id = params.id!;
   const guards = checkGuards(ctx, { admin: true, permission: 'songs.delete' });
   if (guards instanceof Response) {
     return guards;
@@ -427,7 +427,7 @@ async function handlePatchSong(
   request: Request,
   params: Record<string, string>
 ): Promise<Response> {
-  const { id } = params;
+  const id = params.id!;
   const guards = checkGuards(ctx, { admin: true, permission: 'songs.edit' });
   if (guards instanceof Response) {
     return guards;

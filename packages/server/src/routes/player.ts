@@ -610,7 +610,7 @@ function handleRemoveFromQueue(
     return playerResult.response;
   }
 
-  const removed = playerResult.player.removeSongById(songId);
+  const removed = playerResult.player.removeSongById(songId!);
 
   if (!removed) {
     return json({ error: 'Song not found in queue.' }, 404);
@@ -638,7 +638,7 @@ function handlePromoteSong(
     return playerResult.response;
   }
 
-  const promoted = playerResult.player.promoteSong(songId);
+  const promoted = playerResult.player.promoteSong(songId!);
 
   if (!promoted) {
     return json({ error: 'Song not found in queue.' }, 404);
@@ -666,7 +666,7 @@ function handleDemoteSong(
     return playerResult.response;
   }
 
-  const demoted = playerResult.player.demoteSong(songId);
+  const demoted = playerResult.player.demoteSong(songId!);
 
   if (!demoted) {
     return json({ error: 'Song not found in Up Next.' }, 404);

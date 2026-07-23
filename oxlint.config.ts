@@ -224,7 +224,6 @@ export default defineConfig({
     '@typescript-eslint/consistent-type-imports': 'warn',
     '@typescript-eslint/no-inferrable-types': 'warn',
     '@typescript-eslint/no-namespace': 'error',
-    '@typescript-eslint/no-non-null-assertion': 'warn',
     '@typescript-eslint/prefer-for-of': 'warn',
     '@typescript-eslint/prefer-optional-chain': 'warn',
     '@typescript-eslint/prefer-ts-expect-error': 'warn',

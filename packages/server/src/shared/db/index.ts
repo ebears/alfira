@@ -75,5 +75,5 @@ export async function findPlaylistWithSongs(playlistId: string) {
         }
     );
 
-  return { ...result[0]?.Playlist, songs };
+  return { ...result[0]!.Playlist, songs };
 }

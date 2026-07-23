@@ -159,7 +159,7 @@ export default function QueuePanel({
 
   const virtualizer = useVirtualizer({
     count: virtualItems.length,
-    getItemKey: (i) => virtualItems[i]?.key,
+    getItemKey: (i) => virtualItems[i]!.key,
     getScrollElement: () => scrollRef.current,
     estimateSize: (i) => (virtualItems[i]?.type === 'header' ? 36 : 92),
     overscan: 5,

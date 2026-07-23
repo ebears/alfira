@@ -185,7 +185,7 @@ export function SortableListProvider({
 
         const newIds = [...currentIds];
         const [removed] = newIds.splice(srcData.index, 1);
-        newIds.splice(dest, 0, removed);
+        newIds.splice(dest, 0, removed!);
 
         void onReorder(newIds);
       },
