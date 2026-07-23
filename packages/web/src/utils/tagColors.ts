@@ -54,5 +54,5 @@ export function getTagColorClasses(
       return found;
     }
   }
-  return TAG_COLORS[djb2(tag.toLowerCase()) % TAG_COLORS.length];
+  return TAG_COLORS[djb2(tag.toLowerCase()) % TAG_COLORS.length]!;
 }

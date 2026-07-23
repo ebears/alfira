@@ -69,7 +69,7 @@ export function eqBandsFromRow(row: EqSettingsRow | null | undefined): number[] 
 export function eqBandValues(bands: number[]): Record<EqBandKey, number> {
   const result: Record<string, number> = {};
   for (let i = 0; i < 15; i++) {
-    result[`eqBand${i}`] = bands[i];
+    result[`eqBand${i}`] = bands[i]!;
   }
   return result;
 }

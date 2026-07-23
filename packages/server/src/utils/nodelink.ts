@@ -189,7 +189,7 @@ function getEnabledSourcesSync(): string[] {
 export function getEnabledSourceDisplayNames(): string[] {
   return getEnabledSourcesSync()
     .map((key) => SOURCE_DEFINITIONS[key]?.displayName)
-    .filter(Boolean);
+    .filter((s): s is string => s !== undefined);
 }
 
 export function initEnabledSources(): void {

@@ -644,7 +644,7 @@ async function handlePatchRequest(
   request: Request,
   params: Record<string, string>
 ): Promise<Response> {
-  const { id } = params;
+  const id = params.id!;
   const guards = checkGuards(ctx, { admin: true });
   if (guards instanceof Response) {
     return guards;
@@ -870,7 +870,7 @@ async function handleDeleteRequest(
   _request: Request,
   params: Record<string, string>
 ): Promise<Response> {
-  const { id } = params;
+  const id = params.id!;
   const guards = checkGuards(ctx);
   if (guards instanceof Response) {
     return guards;

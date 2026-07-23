@@ -45,10 +45,8 @@ async function handleGetPermissions(
   // Build mapping: action → roleIds
   const mapping: Record<string, string[]> = {};
   for (const row of allRows) {
-    if (!mapping[row.action]) {
-      mapping[row.action] = [];
-    }
-    mapping[row.action].push(row.roleId);
+    mapping[row.action] ??= [];
+    mapping[row.action]!.push(row.roleId);
   }
 
   return json({

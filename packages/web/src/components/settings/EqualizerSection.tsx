@@ -241,7 +241,7 @@ export default function EqualizerSection() {
             key={i}
             index={i}
             value={value}
-            label={FREQ_LABELS[i]}
+            label={FREQ_LABELS[i]!}
             onChange={updateBand}
           />
         ))}
