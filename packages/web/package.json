@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "bunx @tailwindcss/cli -i ./src/index.css -o ./public/index.css --watch & bun run src/server.ts",
     "build:css": "bunx @tailwindcss/cli -i ./src/index.css -o ./dist/index.css --minify",
+    "test": "bun test",
     "build": "bun run build:css && bun build ./src/main.tsx --outdir=./dist --minify --sourcemap=external && cp ./index.html ./dist/ && sed -i 's|/src/main.tsx|/main.js|g' ./dist/index.html && sed -i 's|/src/index.css|/index.css|g' ./dist/index.html && cp -r ./public/* ./dist/"
   },
   "dependencies": {
