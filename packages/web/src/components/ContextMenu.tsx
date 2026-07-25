@@ -444,7 +444,7 @@ function InfoRow({ item }: { item: MenuItem }) {
       role='presentation'
       className='text-muted flex items-center gap-2 px-3 py-1.5 font-mono text-xs'
     >
-      {item.icon && <span className='shrink-0'>{item.icon}</span>}
+      {item.icon != null && <span className='shrink-0'>{item.icon}</span>}
       <span className='truncate'>{item.info?.label}</span>
     </div>
   );

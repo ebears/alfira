@@ -598,22 +598,6 @@ export default defineConfig({
       },
     },
 
-    // Web components: union types with inconsistent truthiness (e.g. string | number)
-    // or any-typed conditionals. These need individual type narrowing — deferred.
-    {
-      files: [
-        'packages/web/src/hooks/useProgressBar.ts',
-        'packages/web/src/components/ContextMenu/MenuItemButton.tsx',
-        'packages/web/src/components/ContextMenu/SubmenuPanel.tsx',
-        'packages/web/src/components/ContextMenu.tsx',
-        'packages/web/src/components/ui/PageHeader.tsx',
-        'packages/web/src/components/VirtualList.tsx',
-      ],
-      rules: {
-        '@typescript-eslint/strict-boolean-expressions': 'off',
-      },
-    },
-
     // Logger: console is the implementation, not a mistake
     {
       files: ['packages/server/src/shared/logger.ts'],

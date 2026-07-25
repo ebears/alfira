@@ -217,7 +217,7 @@ function VirtualListInner<T>({
                 );
               }
 
-              if (!item) {
+              if (item === undefined) {
                 return null;
               }
 

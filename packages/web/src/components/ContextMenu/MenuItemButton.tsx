@@ -17,6 +17,8 @@ interface MenuItemButtonProps {
 }
 
 export function MenuItemButton({ item, onClick }: MenuItemButtonProps) {
+  const hasSubmenu = item.submenu != null || item.editSubmenu != null;
+
   return (
     <button
       type='button'
@@ -26,9 +28,9 @@ export function MenuItemButton({ item, onClick }: MenuItemButtonProps) {
       onClick={onClick}
       className={`flex w-full items-center gap-2 px-3 py-1.5 text-left font-mono text-xs transition-colors duration-100 disabled:cursor-not-allowed disabled:opacity-50 ${item.danger ? 'text-danger hover:bg-danger/10' : 'text-fg hover:bg-muted/20'} `}
     >
-      {item.icon && <span className='shrink-0'>{item.icon}</span>}
+      {item.icon != null && <span className='shrink-0'>{item.icon}</span>}
       <span className='flex-1 truncate'>{item.label}</span>
-      {(item.submenu ?? item.editSubmenu) && (
+      {hasSubmenu && (
         <CaretRightIcon size={12} weight='duotone' className='ml-auto shrink-0 opacity-50' />
       )}
     </button>
