@@ -20,101 +20,96 @@ describe('sign', () => {
 
   test('round-trips a simple payload through verify', () => {
     const token = sign({ sub: 'user-1', role: 'admin' }, SECRET, { expiresIn: '1h' });
-    const payload = verify(token, SECRET);
+    const payload = verify(token, SECRET) as Record<string, unknown>;
     expect(payload).not.toBeNull();
-    expect(payload!.sub).toBe('user-1');
-    expect(payload!.role).toBe('admin');
+    expect(payload.sub).toBe('user-1');
+    expect(payload.role).toBe('admin');
   });
 
   test('sets iat to within 1 second of now', () => {
     const before = Math.floor(Date.now() / 1000);
     const token = sign({ sub: 'user-1' }, SECRET, { expiresIn: '1h' });
     const after = Math.floor(Date.now() / 1000);
-    const payload = verify(token, SECRET);
-    expect(typeof payload!.iat).toBe('number');
-    expect(payload!.iat).toBeGreaterThanOrEqual(before);
-    expect(payload!.iat).toBeLessThanOrEqual(after);
+    const payload = verify(token, SECRET) as Record<string, unknown>;
+    expect(typeof payload.iat).toBe('number');
+    expect(payload.iat).toBeGreaterThanOrEqual(before);
+    expect(payload.iat).toBeLessThanOrEqual(after);
   });
 
   test('sets exp based on expiresIn', () => {
     const before = Math.floor(Date.now() / 1000);
     const token = sign({ sub: 'user-1' }, SECRET, { expiresIn: '2h' });
-    const payload = verify(token, SECRET);
+    const payload = verify(token, SECRET) as Record<string, unknown>;
     // exp should be iat + 7200
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion
-    expect(payload!.exp).toBe((payload!.iat as number) + 7200);
-    expect(payload!.exp).toBeGreaterThan(before + 7100);
+    expect(payload.exp).toBe((payload.iat as number) + 7200);
+    expect(payload.exp).toBeGreaterThan(before + 7100);
   });
 
   test('expiresIn seconds: 30s', () => {
     const token = sign({ sub: 'user-1' }, SECRET, { expiresIn: '30s' });
-    const payload = verify(token, SECRET);
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion
-    expect(payload!.exp).toBe((payload!.iat as number) + 30);
+    const payload = verify(token, SECRET) as Record<string, unknown>;
+    expect(payload.exp).toBe((payload.iat as number) + 30);
   });
 
   test('expiresIn minutes: 5m', () => {
     const token = sign({ sub: 'user-1' }, SECRET, { expiresIn: '5m' });
-    const payload = verify(token, SECRET);
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion
-    expect(payload!.exp).toBe((payload!.iat as number) + 300);
+    const payload = verify(token, SECRET) as Record<string, unknown>;
+    expect(payload.exp).toBe((payload.iat as number) + 300);
   });
 
   test('expiresIn hours: 24h', () => {
     const token = sign({ sub: 'user-1' }, SECRET, { expiresIn: '24h' });
-    const payload = verify(token, SECRET);
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion
-    expect(payload!.exp).toBe((payload!.iat as number) + 86_400);
+    const payload = verify(token, SECRET) as Record<string, unknown>;
+    expect(payload.exp).toBe((payload.iat as number) + 86_400);
   });
 
   test('expiresIn days: 7d', () => {
     const token = sign({ sub: 'user-1' }, SECRET, { expiresIn: '7d' });
-    const payload = verify(token, SECRET);
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion
-    expect(payload!.exp).toBe((payload!.iat as number) + 604_800);
+    const payload = verify(token, SECRET) as Record<string, unknown>;
+    expect(payload.exp).toBe((payload.iat as number) + 604_800);
   });
 
   test('accepts empty payload', () => {
     const token = sign({}, SECRET, { expiresIn: '1h' });
-    const payload = verify(token, SECRET);
+    const payload = verify(token, SECRET) as Record<string, unknown>;
     expect(payload).not.toBeNull();
-    expect(payload!.iat).toBeDefined();
-    expect(payload!.exp).toBeDefined();
+    expect(payload.iat).toBeDefined();
+    expect(payload.exp).toBeDefined();
   });
 
   test('preserves extra claims like iss and aud', () => {
     const token = sign({ sub: 'user-1', iss: 'alfira', aud: 'discord' }, SECRET, {
       expiresIn: '1h',
     });
-    const payload = verify(token, SECRET);
-    expect(payload!.iss).toBe('alfira');
-    expect(payload!.aud).toBe('discord');
+    const payload = verify(token, SECRET) as Record<string, unknown>;
+    expect(payload.iss).toBe('alfira');
+    expect(payload.aud).toBe('discord');
   });
 
   test('preserves nested objects', () => {
     const token = sign({ user: { id: '123', name: 'Test' } }, SECRET, { expiresIn: '1h' });
-    const payload = verify(token, SECRET);
-    expect(payload!.user).toEqual({ id: '123', name: 'Test' });
+    const payload = verify(token, SECRET) as Record<string, unknown>;
+    expect(payload.user).toEqual({ id: '123', name: 'Test' });
   });
 
   test('preserves arrays', () => {
     const token = sign({ roles: ['admin', 'dj'] }, SECRET, { expiresIn: '1h' });
-    const payload = verify(token, SECRET);
-    expect(payload!.roles).toEqual(['admin', 'dj']);
+    const payload = verify(token, SECRET) as Record<string, unknown>;
+    expect(payload.roles).toEqual(['admin', 'dj']);
   });
 
   test('preserves number and boolean values', () => {
     const token = sign({ count: 42, active: true, disabled: false }, SECRET, { expiresIn: '1h' });
-    const payload = verify(token, SECRET);
-    expect(payload!.count).toBe(42);
-    expect(payload!.active).toBe(true);
-    expect(payload!.disabled).toBe(false);
+    const payload = verify(token, SECRET) as Record<string, unknown>;
+    expect(payload.count).toBe(42);
+    expect(payload.active).toBe(true);
+    expect(payload.disabled).toBe(false);
   });
 
   test('preserves null values', () => {
     const token = sign({ nickname: null }, SECRET, { expiresIn: '1h' });
-    const payload = verify(token, SECRET);
-    expect(payload!.nickname).toBeNull();
+    const payload = verify(token, SECRET) as Record<string, unknown>;
+    expect(payload.nickname).toBeNull();
   });
 
   test('throws on invalid expiresIn format — no unit', () => {
@@ -174,7 +169,7 @@ describe('verify', () => {
     const token = sign({ sub: 'user-1' }, SECRET, { expiresIn: '1h' });
     const parts = token.split('.');
     // Replace the last character of the signature
-    const sig = parts[2]!;
+    const sig = parts[2] as string;
     const tamperedSig = sig.slice(0, -1) + (sig.endsWith('a') ? 'b' : 'a');
     const tampered = `${parts[0]}.${parts[1]}.${tamperedSig}`;
     expect(verify(tampered, SECRET)).toBeNull();

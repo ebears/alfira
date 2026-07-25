@@ -34,7 +34,6 @@ const { song: songTable, songRequest: requestTable } = tables;
 // ---------------------------------------------------------------------------
 
 function formatRequest(row: typeof requestTable.$inferSelect): SongRequest {
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion
   return {
     ...row,
     createdAt: new Date(row.createdAt).toISOString(),
@@ -644,7 +643,7 @@ async function handlePatchRequest(
   request: Request,
   params: Record<string, string>
 ): Promise<Response> {
-  const id = params.id!;
+  const id = params.id as string;
   const guards = checkGuards(ctx, { admin: true });
   if (guards instanceof Response) {
     return guards;
@@ -870,7 +869,7 @@ async function handleDeleteRequest(
   _request: Request,
   params: Record<string, string>
 ): Promise<Response> {
-  const id = params.id!;
+  const id = params.id as string;
   const guards = checkGuards(ctx);
   if (guards instanceof Response) {
     return guards;
