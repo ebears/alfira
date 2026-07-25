@@ -1,4 +1,5 @@
 import { eq } from 'drizzle-orm';
+import * as v from 'valibot';
 
 import { refreshGuildId } from '../lib/config';
 import { type RouteContext } from '../lib/context';
@@ -26,6 +27,19 @@ interface CacheEntry<T> {
 }
 
 const channelsCache = new Map<string, CacheEntry<SetupChannel[]>>();
+
+// ---------------------------------------------------------------------------
+// Request body schema for POST /api/setup/complete
+// ---------------------------------------------------------------------------
+const SetupCompleteSchema = v.object({
+  guildId: v.pipe(v.string(), v.minLength(1)),
+  adminRoleIds: v.pipe(v.string(), v.minLength(1)),
+  voiceIdleTimeoutMinutes: v.pipe(v.number(), v.integer(), v.minValue(1), v.maxValue(120)),
+  afkNotificationChannelId: v.optional(v.string()),
+  requestNotificationChannelId: v.optional(v.string()),
+  publicUrl: v.optional(v.string()),
+  enabledSources: v.optional(v.string()),
+});
 
 // ---------------------------------------------------------------------------
 // GET /api/setup/status
@@ -225,73 +239,31 @@ async function handlePostComplete(
     return guards;
   }
 
-  let body: {
-    guildId?: unknown;
-    adminRoleIds?: unknown;
-    voiceIdleTimeoutMinutes?: unknown;
-    afkNotificationChannelId?: unknown;
-    requestNotificationChannelId?: unknown;
-    publicUrl?: unknown;
-    enabledSources?: unknown;
-  };
-
+  let raw: unknown;
   try {
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion
-    body = (await request.json()) as typeof body;
+    raw = await request.json();
   } catch {
     return json({ error: 'Invalid JSON body.' }, 400);
   }
 
-  // Validate guildId
-  if (!body.guildId || typeof body.guildId !== 'string') {
-    return json({ error: 'guildId is required and must be a string.' }, 400);
+  const parsed = v.safeParse(SetupCompleteSchema, raw);
+  if (!parsed.success) {
+    return json({ error: 'Invalid request body.', details: v.flatten(parsed.issues) }, 400);
   }
 
-  // Validate adminRoleIds
-  if (!body.adminRoleIds || typeof body.adminRoleIds !== 'string') {
-    return json({ error: 'adminRoleIds is required and must be a comma-separated string.' }, 400);
-  }
-
-  // Validate voiceIdleTimeoutMinutes
-  const timeout = Number(body.voiceIdleTimeoutMinutes);
-  if (
-    body.voiceIdleTimeoutMinutes === undefined ||
-    !Number.isInteger(timeout) ||
-    timeout < 1 ||
-    timeout > 120
-  ) {
-    return json({ error: 'voiceIdleTimeoutMinutes must be an integer between 1 and 120.' }, 400);
-  }
-
-  // Validate afkNotificationChannelId (optional)
-  const afkNotificationChannelId =
-    body.afkNotificationChannelId && typeof body.afkNotificationChannelId === 'string'
-      ? body.afkNotificationChannelId
-      : null;
-
-  // Validate requestNotificationChannelId (optional)
-  const requestNotificationChannelId =
-    body.requestNotificationChannelId && typeof body.requestNotificationChannelId === 'string'
-      ? body.requestNotificationChannelId
-      : null;
-
-  // Validate publicUrl (optional)
-  const publicUrl =
-    body.publicUrl && typeof body.publicUrl === 'string' ? body.publicUrl.trim() : null;
-
-  // Validate enabledSources (optional, defaults to all sources)
-  const enabledSources =
-    body.enabledSources && typeof body.enabledSources === 'string'
-      ? body.enabledSources.trim()
-      : 'youtube,soundcloud';
+  const { guildId, adminRoleIds, voiceIdleTimeoutMinutes: timeout } = parsed.output;
+  const afkNotificationChannelId = parsed.output.afkNotificationChannelId ?? null;
+  const requestNotificationChannelId = parsed.output.requestNotificationChannelId ?? null;
+  const publicUrl = parsed.output.publicUrl?.trim() ?? null;
+  const enabledSources = parsed.output.enabledSources?.trim() ?? 'youtube,soundcloud';
 
   try {
     db.insert(tables.guildSettings)
       .values({
         id: 1,
-        guildId: body.guildId,
+        guildId,
         setupCompleted: true,
-        adminRoleIds: body.adminRoleIds,
+        adminRoleIds,
         voiceIdleTimeoutMinutes: timeout,
         afkNotificationChannelId,
         requestNotificationChannelId,
@@ -301,9 +273,9 @@ async function handlePostComplete(
       .onConflictDoUpdate({
         target: tables.guildSettings.id,
         set: {
-          guildId: body.guildId,
+          guildId,
           setupCompleted: true,
-          adminRoleIds: body.adminRoleIds,
+          adminRoleIds,
           voiceIdleTimeoutMinutes: timeout,
           afkNotificationChannelId,
           requestNotificationChannelId,
@@ -314,7 +286,7 @@ async function handlePostComplete(
       .run();
 
     // Update the in-memory guild ID cache so getGuildId() returns the new value.
-    refreshGuildId(body.guildId);
+    refreshGuildId(guildId);
 
     // Update the enabled sources cache.
     refreshEnabledSources(enabledSources);

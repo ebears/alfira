@@ -653,16 +653,6 @@ export default defineConfig({
       },
     },
 
-    // Validation + setup: request body uses any/unknown patterns flagged by
-    // strict-boolean-expressions. These would benefit from proper request
-    // schema typing — deferred to a follow-up refactor.
-    {
-      files: ['packages/server/src/lib/validation.ts', 'packages/server/src/routes/setup.ts'],
-      rules: {
-        '@typescript-eslint/strict-boolean-expressions': 'off',
-      },
-    },
-
     // GuildPlayer + Drizzle query results: defensive null checks on types
     // that the type system says are non-nullable. The checks exist as runtime
     // safety. strict-boolean-expressions flags these as dead checks on

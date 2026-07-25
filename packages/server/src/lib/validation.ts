@@ -25,7 +25,7 @@ type ValidationResult<T> = ValidationSuccess<T> | ValidationError;
  * Used by URL validators to avoid duplication.
  */
 function validateUrlInput(sourceUrl: unknown): ValidationResult<string> {
-  if (!sourceUrl || typeof sourceUrl !== 'string') {
+  if (typeof sourceUrl !== 'string' || sourceUrl.trim().length === 0) {
     return { ok: false, response: json({ error: 'url is required.' }, 400) };
   }
 
@@ -155,7 +155,7 @@ export function youTubeUrl(videoId: string): string {
 /** Validates and trims a playlist name. */
 export function validatePlaylistName(name: unknown): ValidationResult<string> {
   const MAX_NAME_LENGTH = 200;
-  if (!name || typeof name !== 'string' || name.trim().length === 0) {
+  if (typeof name !== 'string' || name.trim().length === 0) {
     return { ok: false, response: json({ error: 'name is required.' }, 400) };
   }
   if (name.length > MAX_NAME_LENGTH) {
