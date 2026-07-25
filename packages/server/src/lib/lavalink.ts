@@ -120,6 +120,13 @@ class LavalinkSocket extends EventEmitter<LavalinkEvents> {
   // -----------------------------------------------------------------------
 
   connect(url: string, auth: string, userId?: string): Promise<void> {
+    // Close any existing connection before creating a new one.
+    // The Lavalink client auto-reconnects via scheduleReconnect() on close,
+    // so external callers should only call connect() once. This guard
+    // prevents duplicate WebSocket connections if connect() is called
+    // while a connection is already active.
+    this.disconnect();
+
     this.url = url;
     this.auth = auth;
     this._userId = userId ?? null;

@@ -130,13 +130,23 @@ function handleVoiceServerUpdate(data: unknown): void {
   setPendingConnectionDetails(d.guild_id, d.token, d.endpoint);
 }
 
+// Tracks whether the initial Lavalink connection has been established.
+// Prevents duplicate connections when the Discord gateway re-identifies
+// (e.g. after a failed resume on op 7 reconnect).
+let lavalinkConnected = false;
+
 function handleReady(data: unknown): void {
   // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion
   const ready = data as { user: { id: string; username: string } };
   setBotUserId(ready.user.id);
   logger.info(`Bot logged in as ${ready.user.username}`);
 
-  // Now that we have the bot's Discord user ID, connect to NodeLink.
+  // Connect to NodeLink on the first READY only. The Lavalink client
+  // handles its own reconnection internally via scheduleReconnect().
+  if (lavalinkConnected) {
+    return;
+  }
+
   const nodelinkParsed = new URL(NODELINK_URL);
   const wsProtocol = nodelinkParsed.protocol === 'https:' ? 'wss:' : 'ws:';
   const wsUrl = `${wsProtocol}//${nodelinkParsed.hostname}:${nodelinkParsed.port || 2333}/v4/websocket`;
@@ -144,6 +154,7 @@ function handleReady(data: unknown): void {
   void (async () => {
     try {
       await lavalink.connect(wsUrl, NODELINK_AUTH, ready.user.id);
+      lavalinkConnected = true;
       logger.info('Lavalink WebSocket connected');
     } catch (error) {
       logger.error({ error }, 'Lavalink WebSocket connection failed — audio will be unavailable');
