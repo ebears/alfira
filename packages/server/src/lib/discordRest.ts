@@ -27,7 +27,7 @@ async function discordFetch(path: string): Promise<Response> {
 
   if (res.status === 429) {
     const retryAfter = res.headers.get('Retry-After');
-    const delayMs = retryAfter ? Number.parseFloat(retryAfter) * 1000 : 1000;
+    const delayMs = retryAfter ? Number(retryAfter) * 1000 : 1000;
     logger.warn({ path, delayMs }, 'Discord REST rate limited, retrying');
     await new Promise((resolve) => setTimeout(resolve, delayMs));
     return fetch(url, {

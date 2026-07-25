@@ -36,7 +36,7 @@ const CompressorSlider = memo(function CompressorSlider({
 }: CompressorSliderProps) {
   const handleChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
-      onChange(key, Number.parseFloat(e.target.value));
+      onChange(key, Number(e.target.value));
     },
     [onChange, key]
   );

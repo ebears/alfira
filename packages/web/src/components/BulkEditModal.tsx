@@ -150,7 +150,7 @@ export default function BulkEditModal({ count, onApply, onClose, isApplying }: B
   const volumeNumeric =
     volumeBoost.trim() === '' || volumeBoost.trim() === '-'
       ? 0
-      : Math.min(200, Math.max(-100, Number.parseInt(volumeBoost, 10) || 0));
+      : Math.min(200, Math.max(-100, Math.trunc(Number(volumeBoost)) || 0));
   const volumePct = `${((volumeNumeric - -100) / (200 - -100)) * 100}%`;
 
   const fieldValues: Record<TextEditableField, string> = { nickname, artist, album, artwork };
@@ -244,7 +244,7 @@ export default function BulkEditModal({ count, onApply, onClose, isApplying }: B
     if (volumeBoost.trim() === '' || volumeBoost.trim() === '-') {
       setVolumeBoost('0');
     } else {
-      const n = Number.parseInt(volumeBoost, 10);
+      const n = Math.trunc(Number(volumeBoost));
       if (!Number.isNaN(n)) {
         setVolumeBoost(String(Math.min(200, Math.max(-100, n))));
       }
@@ -300,7 +300,7 @@ export default function BulkEditModal({ count, onApply, onClose, isApplying }: B
       data.volumeBoost = null;
       hasChanges = true;
     } else if (volumeBoost.trim()) {
-      const parsed = Number.parseFloat(volumeBoost.trim());
+      const parsed = Number(volumeBoost.trim());
       if (!Number.isNaN(parsed)) {
         data.volumeBoost = parsed;
         hasChanges = true;
