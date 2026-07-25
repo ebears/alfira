@@ -15,12 +15,12 @@ export function PageHeader({ icon: Icon, title, subtitle, children }: PageHeader
     </h1>
   );
 
-  if (children) {
+  if (children != null) {
     return (
       <div className='mb-6 flex shrink-0 flex-col justify-between gap-3 sm:flex-row sm:items-center md:mb-8'>
         <div>
           {heading}
-          {subtitle && <p className='text-muted mt-2 font-mono text-xs'>{subtitle}</p>}
+          {subtitle != null && <p className='text-muted mt-2 font-mono text-xs'>{subtitle}</p>}
         </div>
         {children}
       </div>
@@ -30,7 +30,7 @@ export function PageHeader({ icon: Icon, title, subtitle, children }: PageHeader
   return (
     <div className='mb-6 shrink-0 md:mb-8'>
       {heading}
-      {subtitle && <p className='text-muted mt-2 font-mono text-xs'>{subtitle}</p>}
+      {subtitle != null && <p className='text-muted mt-2 font-mono text-xs'>{subtitle}</p>}
     </div>
   );
 }

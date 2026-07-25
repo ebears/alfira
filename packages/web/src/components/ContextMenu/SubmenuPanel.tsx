@@ -29,7 +29,7 @@ const SubmenuItem = memo(function SubmenuItem({ item, onSelect }: SubmenuItemPro
       onClick={handleClick}
       className='text-fg hover:bg-border/50 flex w-full items-center gap-2 px-3 py-1.5 text-left font-mono text-xs transition-colors duration-100 disabled:opacity-50'
     >
-      {item.icon && <span className='shrink-0'>{item.icon}</span>}
+      {item.icon != null && <span className='shrink-0'>{item.icon}</span>}
       <span className='truncate'>{item.label}</span>
     </button>
   );
