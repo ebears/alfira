@@ -599,7 +599,7 @@ function handleRemoveFromQueue(
   _request: Request,
   params: Record<string, string>
 ): Response {
-  const { songId } = params;
+  const songId = params.songId as string;
   const guards = checkGuards(ctx, { admin: true, voice: true, permission: 'queue.manage' });
   if (guards instanceof Response) {
     return guards;
@@ -610,7 +610,7 @@ function handleRemoveFromQueue(
     return playerResult.response;
   }
 
-  const removed = playerResult.player.removeSongById(songId!);
+  const removed = playerResult.player.removeSongById(songId);
 
   if (!removed) {
     return json({ error: 'Song not found in queue.' }, 404);
@@ -627,7 +627,7 @@ function handlePromoteSong(
   _request: Request,
   params: Record<string, string>
 ): Response {
-  const { songId } = params;
+  const songId = params.songId as string;
   const guards = checkGuards(ctx, { admin: true, voice: true, permission: 'queue.manage' });
   if (guards instanceof Response) {
     return guards;
@@ -638,7 +638,7 @@ function handlePromoteSong(
     return playerResult.response;
   }
 
-  const promoted = playerResult.player.promoteSong(songId!);
+  const promoted = playerResult.player.promoteSong(songId);
 
   if (!promoted) {
     return json({ error: 'Song not found in queue.' }, 404);
@@ -655,7 +655,7 @@ function handleDemoteSong(
   _request: Request,
   params: Record<string, string>
 ): Response {
-  const { songId } = params;
+  const songId = params.songId as string;
   const guards = checkGuards(ctx, { admin: true, voice: true, permission: 'queue.manage' });
   if (guards instanceof Response) {
     return guards;
@@ -666,7 +666,7 @@ function handleDemoteSong(
     return playerResult.response;
   }
 
-  const demoted = playerResult.player.demoteSong(songId!);
+  const demoted = playerResult.player.demoteSong(songId);
 
   if (!demoted) {
     return json({ error: 'Song not found in Up Next.' }, 404);

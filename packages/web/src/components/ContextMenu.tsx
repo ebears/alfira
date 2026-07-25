@@ -311,10 +311,10 @@ export function ContextMenu({
       const findNextEnabled = (current: number, direction: 1 | -1): number => {
         const pos = enabledIndices.indexOf(current);
         if (pos === -1) {
-          return enabledIndices[0]!;
+          return enabledIndices[0] as number;
         }
         const nextPos = (pos + direction + enabledIndices.length) % enabledIndices.length;
-        return enabledIndices[nextPos]!;
+        return enabledIndices[nextPos] as number;
       };
 
       if (e.key === 'ArrowDown') {

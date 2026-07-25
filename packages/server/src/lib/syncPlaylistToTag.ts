@@ -88,7 +88,7 @@ export async function reSyncPlaylistsForTags(tagNamesLower: string[]): Promise<v
       .select({ count: sql<number>`count(*)` })
       .from(playlistSongTable)
       .where(eq(playlistSongTable.playlistId, pl.id));
-    const { count } = row!;
+    const { count } = row as { count: number };
 
     emitPlaylistUpdated({
       ...updatedPl,

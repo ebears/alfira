@@ -132,7 +132,7 @@ export default function SongEditPanel({ song, isOpen, onClose }: SongEditPanelPr
         setHighlightedIndex(-1);
       }
       if (e.key === 'Backspace' && tagInput === '' && tags.length > 0) {
-        removeTag(tags[tags.length - 1]!);
+        removeTag(tags[tags.length - 1] as string);
       }
     },
     [addTag, availableTags, highlightedIndex, removeTag, showTagDropdown, tagInput, tags]

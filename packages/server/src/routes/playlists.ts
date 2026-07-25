@@ -214,7 +214,7 @@ async function handleGetPlaylist(
   request: Request,
   params: Record<string, string>
 ): Promise<Response> {
-  const id = params.id!;
+  const id = params.id as string;
   const guards = checkGuards(ctx);
   if (guards instanceof Response) {
     return guards;
@@ -424,7 +424,7 @@ async function handlePatchVisibility(
   request: Request,
   params: Record<string, string>
 ): Promise<Response> {
-  const id = params.id!;
+  const id = params.id as string;
   const guards = checkGuards(ctx);
   if (guards instanceof Response) {
     return guards;
@@ -479,7 +479,7 @@ async function handlePatchPlaylist(
   request: Request,
   params: Record<string, string>
 ): Promise<Response> {
-  const id = params.id!;
+  const id = params.id as string;
   const guards = checkGuards(ctx);
   if (guards instanceof Response) {
     return guards;
@@ -556,7 +556,7 @@ async function handleDeletePlaylist(
   _request: Request,
   params: Record<string, string>
 ): Promise<Response> {
-  const id = params.id!;
+  const id = params.id as string;
   const guards = checkGuards(ctx);
   if (guards instanceof Response) {
     return guards;
@@ -581,7 +581,7 @@ async function handleAddSong(
   request: Request,
   params: Record<string, string>
 ): Promise<Response> {
-  const id = params.id!;
+  const id = params.id as string;
   const guards = checkGuards(ctx);
   if (guards instanceof Response) {
     return guards;
@@ -676,8 +676,8 @@ async function handleRemoveSong(
   _request: Request,
   params: Record<string, string>
 ): Promise<Response> {
-  const playlistId = params.id!;
-  const songId = params.songId!;
+  const playlistId = params.id as string;
+  const songId = params.songId as string;
   const guards = checkGuards(ctx);
   if (guards instanceof Response) {
     return guards;
@@ -737,7 +737,7 @@ async function handleBulkRemoveSongs(
   request: Request,
   params: Record<string, string>
 ): Promise<Response> {
-  const playlistId = params.id!;
+  const playlistId = params.id as string;
   const guards = checkGuards(ctx);
   if (guards instanceof Response) {
     return guards;
@@ -802,7 +802,7 @@ async function handleReorderSongs(
   request: Request,
   params: Record<string, string>
 ): Promise<Response> {
-  const playlistId = params.id!;
+  const playlistId = params.id as string;
   const guards = checkGuards(ctx);
   if (guards instanceof Response) {
     return guards;

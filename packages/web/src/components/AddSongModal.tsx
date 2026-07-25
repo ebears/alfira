@@ -214,7 +214,7 @@ export default function AddSongModal({
         addTag();
       }
       if (e.key === 'Backspace' && tagInput === '' && tags.length > 0) {
-        removeTag(tags[tags.length - 1]!);
+        removeTag(tags[tags.length - 1] as string);
       }
     },
     [addTag, removeTag, tagInput, tags]
