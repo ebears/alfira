@@ -759,10 +759,7 @@ export class GuildPlayer {
       // NodeLink auto-started it.
       this.gaplessTransition = false;
 
-      this.currentSong = prioritySong;
-      if (this.currentSong) {
-        this.currentSong = { ...this.currentSong, isSeekable: true };
-      }
+      this.currentSong = { ...prioritySong, isSeekable: true };
       this.paused = false;
       await this.playSong(prioritySong);
       return;
@@ -795,10 +792,7 @@ export class GuildPlayer {
       return;
     }
 
-    this.currentSong = next;
-    if (this.currentSong) {
-      this.currentSong = { ...this.currentSong, isSeekable: true };
-    }
+    this.currentSong = { ...next, isSeekable: true };
     this.queue.advance();
 
     await this.playSong(next);
@@ -884,6 +878,7 @@ export class GuildPlayer {
 
       // Fire gapless preload before broadcast so NodeLink has maximum
       // time to fetch + decode the next track.
+      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- feature flag; flip to false if NodeLink gapless regresses
       if (GuildPlayer.ENABLE_GAPLESS_PRELOAD) {
         this.preloadNextTrack(sessionId);
       }
@@ -983,6 +978,7 @@ export class GuildPlayer {
 
     // Fire gapless preload as soon as the track starts — don't wait for
     // broadcast so NodeLink has maximum time to fetch + decode.
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- feature flag; flip to false if NodeLink gapless regresses
     if (GuildPlayer.ENABLE_GAPLESS_PRELOAD) {
       this.preloadNextTrack(sessionId);
     }

@@ -173,10 +173,8 @@ async function handleDeleteTag(
     .all();
 
   for (const song of songsWithTag) {
-    if (song.tags && Array.isArray(song.tags)) {
-      const updatedTags = song.tags.filter((t) => t.toLowerCase() !== nameLower);
-      db.update(songTable).set({ tags: updatedTags }).where(eq(songTable.id, song.id)).returning();
-    }
+    const updatedTags = song.tags.filter((t) => t.toLowerCase() !== nameLower);
+    db.update(songTable).set({ tags: updatedTags }).where(eq(songTable.id, song.id)).returning();
   }
 
   // Convert any smart playlists tracking this tag to regular playlists

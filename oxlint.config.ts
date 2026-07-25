@@ -653,21 +653,6 @@ export default defineConfig({
       },
     },
 
-    // GuildPlayer + Drizzle query results: defensive null checks on types
-    // that the type system says are non-nullable. The checks exist as runtime
-    // safety. strict-boolean-expressions flags these as dead checks on
-    // always-truthy objects.
-    {
-      files: [
-        'packages/server/src/GuildPlayer.ts',
-        'packages/server/src/lib/migrateExistingTags.ts',
-        'packages/server/src/routes/tags.ts',
-      ],
-      rules: {
-        '@typescript-eslint/strict-boolean-expressions': 'off',
-      },
-    },
-
     // Route handler files: "always falsy/truthy" checks on Drizzle query results
     // are defensive guards. The type system says the value can't be null, but
     // these checks exist as runtime safety. Suppress no-unnecessary-condition
@@ -679,15 +664,12 @@ export default defineConfig({
         'packages/server/src/routes/player.ts',
         'packages/server/src/routes/playlists.ts',
         'packages/server/src/routes/songs.ts',
-        'packages/server/src/routes/tags.ts',
         'packages/server/src/routes/requests.ts',
-        'packages/server/src/lib/migrateExistingTags.ts',
         'packages/server/src/lib/ensureTagsMigrated.ts',
         'packages/server/src/lib/playlistAccess.ts',
         'packages/server/src/lib/syncPlaylistToTag.ts',
         'packages/server/src/lib/search.ts',
         'packages/server/src/utils/nodelink.ts',
-        'packages/server/src/GuildPlayer.ts',
         'packages/server/src/routes/equalizer.ts',
         'packages/server/src/index.ts',
         // Web files with known false positives for this pedantic rule:
