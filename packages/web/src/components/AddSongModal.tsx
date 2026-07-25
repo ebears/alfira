@@ -136,8 +136,7 @@ export default function AddSongModal({
     setSuccessMsg('');
 
     try {
-      const parsedBoost =
-        volumeBoost.trim() === '' ? null : Number.parseInt(volumeBoost.trim(), 10);
+      const parsedBoost = volumeBoost.trim() === '' ? null : Math.trunc(Number(volumeBoost.trim()));
 
       const result = await createRequest({
         sourceUrl: url.trim(),
@@ -262,7 +261,7 @@ export default function AddSongModal({
     if (volumeBoost.trim() === '' || volumeBoost === '-') {
       setVolumeBoost('0');
     } else {
-      const n = Number.parseInt(volumeBoost, 10);
+      const n = Math.trunc(Number(volumeBoost));
       if (!Number.isNaN(n)) {
         setVolumeBoost(String(Math.min(200, Math.max(-100, n))));
       }
@@ -277,14 +276,14 @@ export default function AddSongModal({
     () =>
       volumeBoost.trim() === '' || volumeBoost === '-'
         ? 0
-        : Math.min(200, Math.max(-100, Number.parseInt(volumeBoost, 10) || 0)),
+        : Math.min(200, Math.max(-100, Math.trunc(Number(volumeBoost)) || 0)),
     [volumeBoost]
   );
 
   const volumeRangeStyle = useMemo(
     () =>
       ({
-        '--volume-pct': `${((Math.min(200, Math.max(-100, Number.parseInt(volumeBoost, 10) || 0)) + 100) / 300) * 100}%`,
+        '--volume-pct': `${((Math.min(200, Math.max(-100, Math.trunc(Number(volumeBoost)) || 0)) + 100) / 300) * 100}%`,
       }) as React.CSSProperties,
     [volumeBoost]
   );

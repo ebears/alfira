@@ -30,7 +30,7 @@ function parseExpiresIn(expiresIn: string): number {
   if (!match?.[1] || !match[2]) {
     throw new Error(`Invalid expiresIn format: ${expiresIn}`);
   }
-  const num = Number.parseInt(match[1], 10);
+  const num = Math.trunc(Number(match[1]));
   const unit = match[2];
   const multipliers: Record<string, number> = { s: 1, m: 60, h: 3600, d: 86400 };
   return num * (multipliers[unit] ?? 1);

@@ -27,6 +27,8 @@ export default defineConfig({
     // -----------------------------------------------------------------------
     'react/rules-of-hooks': 'error',
     'react/exhaustive-deps': 'error',
+    // Enforce one consistent component definition style across the codebase
+    'react/function-component-definition': ['warn', { namedComponents: 'function-declaration' }],
 
     // -----------------------------------------------------------------------
     // a11y
@@ -42,6 +44,8 @@ export default defineConfig({
     'no-useless-catch': 'error',
     '@typescript-eslint/no-this-alias': 'error',
     '@typescript-eslint/no-unnecessary-type-constraint': 'error',
+    // Deeply nested callbacks are hard to read and debug — extract named functions
+    'unicorn/max-nested-calls': ['warn', { max: 4 }],
 
     // -----------------------------------------------------------------------
     // oxc — Oxc-specific correctness rules that catch subtle bugs
@@ -88,6 +92,12 @@ export default defineConfig({
     'no-return-assign': 'error',
     // Functions inside loops capture mutable variables — a classic footgun
     'no-loop-func': 'error',
+    // Loops that can only iterate once (e.g. for (; false; )) — dead code
+    'no-unreachable-loop': 'error',
+    // Misused array method arguments (e.g. arr.indexOf(x, -1) → always -1)
+    'unicorn/no-confusing-array-with': 'error',
+    // setTimeout/clearTimeout without explicit delay — browser vs Node/Bun differs
+    'unicorn/explicit-timer-delay': 'warn',
     // a = b = c leaks globals in sloppy mode; confusing in strict
     'no-multi-assign': 'warn',
     // delete obj[computed] breaks type safety — use Map or undefined
@@ -110,6 +120,8 @@ export default defineConfig({
     'react/jsx-no-script-url': 'error',
     'react/no-danger': 'error',
     'react/jsx-no-target-blank': 'error',
+    // Array(3).fill([]) — all elements share the same reference; use .map() or Array.from()
+    'unicorn/no-array-fill-with-reference-type': 'error',
 
     // -----------------------------------------------------------------------
     // type safety — catch TypeScript type-level mistakes
@@ -124,6 +136,18 @@ export default defineConfig({
     '@typescript-eslint/no-duplicate-enum-values': 'error',
     // void in unions or intersections is a type-level mistake
     '@typescript-eslint/no-invalid-void-type': 'error',
+    // Conditionals on non-boolean types — requires explicit comparison.
+    // Allows nullable types (if (maybeNull)) and nullable booleans (if (maybeBool)).
+    // Non-nullable strings/numbers/objects must be compared explicitly.
+    '@typescript-eslint/strict-boolean-expressions': [
+      'warn',
+      {
+        allowNullableObject: true,
+        allowNullableBoolean: true,
+        allowNullableString: true,
+        allowNullableNumber: true,
+      },
+    ],
 
     // -----------------------------------------------------------------------
     // suspicious
@@ -415,6 +439,9 @@ export default defineConfig({
     'unicorn/prefer-structured-clone': 'warn',
     // String.raw over escaping backslashes in regex / path strings
     'unicorn/prefer-string-raw': 'warn',
+    // Number(x) over parseInt(x) / parseFloat(x) — faster and clearer for coercion
+    'unicorn/prefer-number-coercion': 'warn',
+
     // Enforce kebab-case, PascalCase, or camelCase filenames
     'unicorn/filename-case': [
       'warn',
@@ -566,7 +593,24 @@ export default defineConfig({
         '@typescript-eslint/no-unsafe-return': 'off',
         '@typescript-eslint/no-unsafe-argument': 'off',
         '@typescript-eslint/no-unnecessary-condition': 'off',
+        '@typescript-eslint/strict-boolean-expressions': 'off',
         'no-console': 'off',
+      },
+    },
+
+    // Web components: union types with inconsistent truthiness (e.g. string | number)
+    // or any-typed conditionals. These need individual type narrowing — deferred.
+    {
+      files: [
+        'packages/web/src/hooks/useProgressBar.ts',
+        'packages/web/src/components/ContextMenu/MenuItemButton.tsx',
+        'packages/web/src/components/ContextMenu/SubmenuPanel.tsx',
+        'packages/web/src/components/ContextMenu.tsx',
+        'packages/web/src/components/ui/PageHeader.tsx',
+        'packages/web/src/components/VirtualList.tsx',
+      ],
+      rules: {
+        '@typescript-eslint/strict-boolean-expressions': 'off',
       },
     },
 
@@ -597,6 +641,40 @@ export default defineConfig({
       ],
       rules: {
         'no-console': 'off',
+      },
+    },
+
+    // Valibot schemas: max-nested-calls fires on idiomatic v.pipe(v.array(...)) chains.
+    // The nesting is inherent to the declarative API and cannot be meaningfully flattened.
+    {
+      files: ['packages/server/src/routes/equalizer.ts', 'packages/server/src/routes/requests.ts'],
+      rules: {
+        'unicorn/max-nested-calls': 'off',
+      },
+    },
+
+    // Validation + setup: request body uses any/unknown patterns flagged by
+    // strict-boolean-expressions. These would benefit from proper request
+    // schema typing — deferred to a follow-up refactor.
+    {
+      files: ['packages/server/src/lib/validation.ts', 'packages/server/src/routes/setup.ts'],
+      rules: {
+        '@typescript-eslint/strict-boolean-expressions': 'off',
+      },
+    },
+
+    // GuildPlayer + Drizzle query results: defensive null checks on types
+    // that the type system says are non-nullable. The checks exist as runtime
+    // safety. strict-boolean-expressions flags these as dead checks on
+    // always-truthy objects.
+    {
+      files: [
+        'packages/server/src/GuildPlayer.ts',
+        'packages/server/src/lib/migrateExistingTags.ts',
+        'packages/server/src/routes/tags.ts',
+      ],
+      rules: {
+        '@typescript-eslint/strict-boolean-expressions': 'off',
       },
     },
 

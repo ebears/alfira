@@ -42,7 +42,7 @@ interface SongCardProps {
 // ---------------------------------------------------------------------------
 // Main component
 // ---------------------------------------------------------------------------
-const SongCardInner = ({
+function SongCardInner({
   song,
   variant,
   playlists,
@@ -57,7 +57,7 @@ const SongCardInner = ({
   selectionMode = false,
   isSelected = false,
   onToggleSelect,
-}: SongCardProps) => {
+}: SongCardProps) {
   const { openSongId, setOpenSongId } = useSongEdit();
   const { hasPermission } = usePermissions();
   const isOpen = openSongId === song.id;
@@ -384,7 +384,7 @@ const SongCardInner = ({
       </div>
     </Card>
   );
-};
+}
 
 SongCardInner.displayName = 'SongCard';
 

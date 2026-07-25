@@ -15,7 +15,7 @@ const SCROLL_SPEED_FACTOR = 0.003;
 /** Return spring — snappy with a visible bounce. */
 const RETURN_SPRING = { type: 'spring' as const, stiffness: 250, damping: 12, mass: 0.3 };
 
-const TagTicker = memo(({ tags, isHovered: externalHovered }: TagTickerProps) => {
+function TagTickerInner({ tags, isHovered: externalHovered }: TagTickerProps) {
   const outerRef = useRef<HTMLDivElement>(null);
   const innerRef = useRef<HTMLDivElement>(null);
   const [shouldScroll, setShouldScroll] = useState(false);
@@ -177,8 +177,9 @@ const TagTicker = memo(({ tags, isHovered: externalHovered }: TagTickerProps) =>
       </div>
     </div>
   );
-});
+}
 
+const TagTicker = memo(TagTickerInner);
 TagTicker.displayName = 'TagTicker';
 
 export default TagTicker;

@@ -97,7 +97,7 @@ async function wrapBotCall<T>(
     if (error instanceof Error && error.message.startsWith('NodeLink REST')) {
       const match = /NodeLink REST (\d+):/.exec(error.message);
       if (match?.[1]) {
-        const status = Number.parseInt(match[1], 10);
+        const status = Math.trunc(Number(match[1]));
         return { ok: false, response: json({ error: error.message }, status) };
       }
       // If regex didn't match but it's a NodeLink REST error, use 502

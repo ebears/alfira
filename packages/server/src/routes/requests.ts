@@ -611,7 +611,7 @@ async function handleGetRequests(ctx: RouteContext, request: Request): Promise<R
       .where(where),
   ]);
 
-  const total = Number.parseInt(String(countResult[0]?.count ?? 0), 10);
+  const total = Math.trunc(Number(String(countResult[0]?.count ?? 0)));
 
   // Resolve display names for requesters
   const nameMap = await resolveDisplayNames(requests.map((r) => ({ addedBy: r.requestedBy })));

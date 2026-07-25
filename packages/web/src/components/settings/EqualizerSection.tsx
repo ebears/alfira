@@ -45,7 +45,7 @@ const EqBandSlider = memo(function EqBandSlider({
 }: EqBandSliderProps) {
   const handleChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
-      onChange(index, Number.parseInt(e.target.value, 10));
+      onChange(index, Math.trunc(Number(e.target.value)));
     },
     [onChange, index]
   );
@@ -68,7 +68,7 @@ const EqBandSlider = memo(function EqBandSlider({
   return (
     <div className='flex shrink-0 flex-col items-center gap-1'>
       <span className='text-muted font-mono text-[10px]'>{label}</span>
-      <div className='relative h-[120px] w-2'>
+      <div className='relative h-30 w-2'>
         <input
           type='range'
           min={0}

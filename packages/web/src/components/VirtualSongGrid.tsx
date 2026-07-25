@@ -206,7 +206,7 @@ export const VirtualSongGrid = memo(function VirtualSongGrid({
   };
 
   const GridCard = useMemo(() => {
-    const Component = ({
+    function Component({
       index,
       width,
       data: { song, isPlaying, selectionMode: sel, isSelected: selSelected },
@@ -214,7 +214,7 @@ export const VirtualSongGrid = memo(function VirtualSongGrid({
       index: number;
       width: number;
       data: GridSongItem;
-    }) => {
+    }) {
       const p = cardPropsRef.current;
       const {
         itemRef,
@@ -267,7 +267,7 @@ export const VirtualSongGrid = memo(function VirtualSongGrid({
           </div>
         </div>
       );
-    };
+    }
     Component.displayName = 'GridCard';
     return Component;
   }, []);

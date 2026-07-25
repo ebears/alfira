@@ -152,7 +152,7 @@ export default function SongEditPanel({ song, isOpen, onClose }: SongEditPanelPr
         tags: t,
         volumeBoost: vo,
       } = fieldsRef.current();
-      const parsedRaw = vo.trim() === '' ? null : Number.parseInt(vo.trim(), 10);
+      const parsedRaw = vo.trim() === '' ? null : Math.trunc(Number(vo.trim()));
       const parsedBoost =
         parsedRaw != null && !Number.isNaN(parsedRaw) && parsedRaw !== 0 ? parsedRaw : null;
 
@@ -202,7 +202,7 @@ export default function SongEditPanel({ song, isOpen, onClose }: SongEditPanelPr
         tags: t,
         volumeBoost: vo,
       } = fieldsRef.current();
-      const parsedRaw = vo.trim() === '' ? null : Number.parseInt(vo.trim(), 10);
+      const parsedRaw = vo.trim() === '' ? null : Math.trunc(Number(vo.trim()));
       const parsedBoost =
         parsedRaw != null && !Number.isNaN(parsedRaw) && parsedRaw !== 0 ? parsedRaw : null;
 
@@ -424,7 +424,7 @@ function VolumeSlider({
   onKeyDown?: (e: React.KeyboardEvent<HTMLInputElement>) => void;
 }) {
   const numeric =
-    value.trim() === '' ? 0 : Math.min(max, Math.max(min, Number.parseInt(value, 10) || 0));
+    value.trim() === '' ? 0 : Math.min(max, Math.max(min, Math.trunc(Number(value)) || 0));
   const pct = `${((numeric - min) / (max - min)) * 100}%`;
 
   const handleChange = useCallback(
@@ -441,7 +441,7 @@ function VolumeSlider({
     if (value.trim() === '') {
       onChange('0');
     } else {
-      const n = Number.parseInt(value, 10);
+      const n = Math.trunc(Number(value));
       if (!Number.isNaN(n)) {
         onChange(String(Math.min(max, Math.max(min, n))));
       }
@@ -664,7 +664,7 @@ function TagDropdown({
 
   const handleItemMouseEnter = useCallback(
     (e: React.MouseEvent<HTMLDivElement>) => {
-      const idx = Number.parseInt(e.currentTarget.dataset.index ?? '0', 10);
+      const idx = Math.trunc(Number(e.currentTarget.dataset.index ?? '0'));
       onHighlight(idx);
     },
     [onHighlight]

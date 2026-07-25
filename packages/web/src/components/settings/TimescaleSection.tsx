@@ -30,7 +30,7 @@ const TimescaleSlider = memo(function TimescaleSlider({
 }: TimescaleSliderProps) {
   const handleChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
-      onChange(key, Number.parseFloat(e.target.value));
+      onChange(key, Number(e.target.value));
     },
     [onChange, key]
   );
