@@ -188,7 +188,7 @@ export const SortableVirtualSongList = memo(function SortableVirtualSongList({
     } else {
       const timeout = setTimeout(() => {
         setEffectiveOpenId(null);
-      }, 300);
+      }, 200);
       return () => {
         clearTimeout(timeout);
       };

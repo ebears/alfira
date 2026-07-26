@@ -24,13 +24,13 @@ export { LazyMotion, domAnimation };
 
 /**
  * List item enter variants.
- * Slides in from the right with a spring settle — subtle per-item animation on scroll.
+ * Slides up with a spring settle — subtle per-item animation on scroll.
  */
 export const listItemVariants: Variants = {
-  initial: { opacity: 0, x: 24 },
+  initial: { opacity: 0, y: 12 },
   animate: {
     opacity: 1,
-    x: 0,
+    y: 0,
     transition: { type: 'spring', stiffness: 400, damping: 38 },
   },
   exit: { opacity: 0 },

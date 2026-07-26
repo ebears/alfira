@@ -159,10 +159,10 @@ export const VirtualSongList = memo(function VirtualSongList({
       setEffectiveOpenId(openSongId);
       return;
     } else {
-      // Collapse: wait for the CSS transition to finish before releasing space.
+      // Collapse: wait for the exit animation to finish before releasing space.
       const timeout = setTimeout(() => {
         setEffectiveOpenId(null);
-      }, 300);
+      }, 200);
       return () => {
         clearTimeout(timeout);
       };
