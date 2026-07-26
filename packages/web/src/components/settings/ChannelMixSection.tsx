@@ -1,19 +1,13 @@
-import type React from 'react';
-
+import { type ChannelMixSettings, DEFAULT_CHANNEL_MIX } from '@alfira/server/shared';
 import { ArrowCounterClockwiseIcon, FloppyDiskIcon } from '@phosphor-icons/react';
-import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { memo, useCallback, useMemo, useState } from 'react';
 
 import { useAdminView } from '../../context/AdminViewContext';
 import { usePermissions } from '../../context/PermissionsContext';
+import { useFilterSection } from '../../hooks/useFilterSection';
 import { Button } from '../ui/Button';
 
-const DEFAULTS = {
-  enabled: false,
-  leftToLeft: 1,
-  leftToRight: 0,
-  rightToLeft: 0,
-  rightToRight: 1,
-};
+const DEFAULTS: ChannelMixSettings = { ...DEFAULT_CHANNEL_MIX };
 
 const SLIDERS = [
   { key: 'leftToLeft', label: 'L → L', min: 0, max: 1, step: 0.05, unit: '' },
@@ -66,16 +60,8 @@ const ChannelMixSlider = memo(function ChannelMixSlider({
   );
 });
 
-interface ChannelMixValues {
-  enabled: boolean;
-  leftToLeft: number;
-  leftToRight: number;
-  rightToLeft: number;
-  rightToRight: number;
-}
-
 interface ChannelMixSectionProps {
-  initialValues?: ChannelMixValues;
+  initialValues?: ChannelMixSettings;
 }
 
 export default function ChannelMixSection({ initialValues }: ChannelMixSectionProps) {
@@ -83,43 +69,17 @@ export default function ChannelMixSection({ initialValues }: ChannelMixSectionPr
   const { hasPermission } = usePermissions();
 
   const canManage = isAdminView || hasPermission('audio.manage');
-  const [values, setValues] = useState<ChannelMixValues>(DEFAULTS);
-  const [savedValues, setSavedValues] = useState<ChannelMixValues>(DEFAULTS);
+  const [values, setValues] = useState<ChannelMixSettings>(DEFAULTS);
+  const [savedValues, setSavedValues] = useState<ChannelMixSettings>(DEFAULTS);
   const [saving, setSaving] = useState(false);
-  const [loaded, setLoaded] = useState(false);
-  const didInitRef = useRef(false);
 
-  useEffect(() => {
-    if (!canManage) {
-      setLoaded(true);
-      return;
-    }
-    if (initialValues && !didInitRef.current) {
-      setValues(initialValues);
-      setSavedValues(initialValues);
-      setLoaded(true);
-      didInitRef.current = true;
-      return;
-    }
-    if (initialValues) {
-      return;
-    }
-    async function load() {
-      try {
-        const res = await fetch('/api/settings/channelmix');
-        if (res.ok) {
-          const data = (await res.json()) as ChannelMixValues;
-          setValues(data);
-          setSavedValues(data);
-        }
-      } catch {
-        // silently fail
-      } finally {
-        setLoaded(true);
-      }
-    }
-    void load();
-  }, [canManage, initialValues]);
+  const loaded = useFilterSection(
+    canManage,
+    '/api/settings/channelmix',
+    initialValues,
+    setValues,
+    setSavedValues
+  );
 
   const hasChanges = JSON.stringify(values) !== JSON.stringify(savedValues);
 

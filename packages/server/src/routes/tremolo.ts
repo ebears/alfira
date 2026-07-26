@@ -7,6 +7,7 @@ import { checkGuards } from '../lib/routeGuards';
 import { routeTable } from '../lib/routeTable';
 import { syncAllFilters } from '../lib/syncAllFilters';
 import { db, tables } from '../shared/db';
+import { DEFAULT_TREMOLO } from '../shared/filterDefaults';
 
 const TremoloSchema = v.object({
   enabled: v.boolean(),
@@ -27,9 +28,9 @@ function handleTremoloGet(
   const row = db.select().from(tables.guildSettings).where(eq(tables.guildSettings.id, 1)).get();
 
   return json({
-    enabled: row?.tremoloEnabled ?? false,
-    frequency: row?.tremoloFrequency ?? 2,
-    depth: row?.tremoloDepth ?? 0.5,
+    enabled: row?.tremoloEnabled ?? DEFAULT_TREMOLO.enabled,
+    frequency: row?.tremoloFrequency ?? DEFAULT_TREMOLO.frequency,
+    depth: row?.tremoloDepth ?? DEFAULT_TREMOLO.depth,
   });
 }
 

@@ -76,6 +76,122 @@ export interface EqualizerSettings {
 }
 
 // ---------------------------------------------------------------------------
+// KaraokeSettings
+//
+// Guild-level karaoke audio filter configuration.
+// ---------------------------------------------------------------------------
+export interface KaraokeSettings {
+  enabled: boolean;
+  level: number;
+  monoLevel: number;
+  filterBand: number;
+  filterWidth: number;
+}
+
+// ---------------------------------------------------------------------------
+// TimescaleSettings
+//
+// Guild-level timescale audio filter configuration.
+// ---------------------------------------------------------------------------
+export interface TimescaleSettings {
+  enabled: boolean;
+  speed: number;
+  pitch: number;
+  rate: number;
+}
+
+// ---------------------------------------------------------------------------
+// TremoloSettings
+//
+// Guild-level tremolo audio filter configuration.
+// ---------------------------------------------------------------------------
+export interface TremoloSettings {
+  enabled: boolean;
+  frequency: number;
+  depth: number;
+}
+
+// ---------------------------------------------------------------------------
+// VibratoSettings
+//
+// Guild-level vibrato audio filter configuration.
+// ---------------------------------------------------------------------------
+export interface VibratoSettings {
+  enabled: boolean;
+  frequency: number;
+  depth: number;
+}
+
+// ---------------------------------------------------------------------------
+// RotationSettings
+//
+// Guild-level rotation audio filter configuration.
+// ---------------------------------------------------------------------------
+export interface RotationSettings {
+  enabled: boolean;
+  rotationHz: number;
+}
+
+// ---------------------------------------------------------------------------
+// DistortionSettings
+//
+// Guild-level distortion audio filter configuration.
+// ---------------------------------------------------------------------------
+export interface DistortionSettings {
+  enabled: boolean;
+  sinOffset: number;
+  sinScale: number;
+  cosOffset: number;
+  cosScale: number;
+  tanOffset: number;
+  tanScale: number;
+  offset: number;
+  scale: number;
+}
+
+// ---------------------------------------------------------------------------
+// ChannelMixSettings
+//
+// Guild-level channel mix audio filter configuration.
+// ---------------------------------------------------------------------------
+export interface ChannelMixSettings {
+  enabled: boolean;
+  leftToLeft: number;
+  leftToRight: number;
+  rightToLeft: number;
+  rightToRight: number;
+}
+
+// ---------------------------------------------------------------------------
+// LowPassSettings
+//
+// Guild-level low-pass audio filter configuration.
+// ---------------------------------------------------------------------------
+export interface LowPassSettings {
+  enabled: boolean;
+  smoothing: number;
+}
+
+// ---------------------------------------------------------------------------
+// FiltersData
+//
+// Batched response from GET /api/settings/filters. Contains all filter
+// settings in a single payload to reduce HTTP round-trips on page load.
+// ---------------------------------------------------------------------------
+export interface FiltersData {
+  compressor: CompressorSettings;
+  equalizer: EqualizerSettings;
+  karaoke: KaraokeSettings;
+  timescale: TimescaleSettings;
+  tremolo: TremoloSettings;
+  vibrato: VibratoSettings;
+  rotation: RotationSettings;
+  distortion: DistortionSettings;
+  channelMix: ChannelMixSettings;
+  lowPass: LowPassSettings;
+}
+
+// ---------------------------------------------------------------------------
 // GeneralSettings
 //
 // Guild-level general configuration. Stored in guildSettings table,

@@ -1,13 +1,13 @@
-import type React from 'react';
-
+import { type LowPassSettings, DEFAULT_LOW_PASS } from '@alfira/server/shared';
 import { ArrowCounterClockwiseIcon, FloppyDiskIcon } from '@phosphor-icons/react';
-import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { memo, useCallback, useMemo, useState } from 'react';
 
 import { useAdminView } from '../../context/AdminViewContext';
 import { usePermissions } from '../../context/PermissionsContext';
+import { useFilterSection } from '../../hooks/useFilterSection';
 import { Button } from '../ui/Button';
 
-const DEFAULTS = { enabled: false, smoothing: 20 };
+const DEFAULTS: LowPassSettings = { ...DEFAULT_LOW_PASS };
 
 const SLIDERS = [
   { key: 'smoothing', label: 'Smoothing', min: 0, max: 60, step: 0.5, unit: '' },
@@ -57,13 +57,8 @@ const LowPassSlider = memo(function LowPassSlider({
   );
 });
 
-interface LowPassValues {
-  enabled: boolean;
-  smoothing: number;
-}
-
 interface LowPassSectionProps {
-  initialValues?: LowPassValues;
+  initialValues?: LowPassSettings;
 }
 
 export default function LowPassSection({ initialValues }: LowPassSectionProps) {
@@ -71,43 +66,17 @@ export default function LowPassSection({ initialValues }: LowPassSectionProps) {
   const { hasPermission } = usePermissions();
 
   const canManage = isAdminView || hasPermission('audio.manage');
-  const [values, setValues] = useState<LowPassValues>(DEFAULTS);
-  const [savedValues, setSavedValues] = useState<LowPassValues>(DEFAULTS);
+  const [values, setValues] = useState<LowPassSettings>(DEFAULTS);
+  const [savedValues, setSavedValues] = useState<LowPassSettings>(DEFAULTS);
   const [saving, setSaving] = useState(false);
-  const [loaded, setLoaded] = useState(false);
-  const didInitRef = useRef(false);
 
-  useEffect(() => {
-    if (!canManage) {
-      setLoaded(true);
-      return;
-    }
-    if (initialValues && !didInitRef.current) {
-      setValues(initialValues);
-      setSavedValues(initialValues);
-      setLoaded(true);
-      didInitRef.current = true;
-      return;
-    }
-    if (initialValues) {
-      return;
-    }
-    async function load() {
-      try {
-        const res = await fetch('/api/settings/lowpass');
-        if (res.ok) {
-          const data = (await res.json()) as LowPassValues;
-          setValues(data);
-          setSavedValues(data);
-        }
-      } catch {
-        // silently fail
-      } finally {
-        setLoaded(true);
-      }
-    }
-    void load();
-  }, [canManage, initialValues]);
+  const loaded = useFilterSection(
+    canManage,
+    '/api/settings/lowpass',
+    initialValues,
+    setValues,
+    setSavedValues
+  );
 
   const hasChanges = JSON.stringify(values) !== JSON.stringify(savedValues);
 

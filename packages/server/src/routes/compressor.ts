@@ -7,6 +7,7 @@ import { checkGuards } from '../lib/routeGuards';
 import { routeTable } from '../lib/routeTable';
 import { syncAllFilters } from '../lib/syncAllFilters';
 import { db, tables } from '../shared/db';
+import { DEFAULT_COMPRESSOR } from '../shared/filterDefaults';
 
 const CompressorSchema = v.object({
   enabled: v.boolean(),
@@ -30,12 +31,12 @@ function handleCompressorGet(
   const row = db.select().from(tables.guildSettings).where(eq(tables.guildSettings.id, 1)).get();
 
   return json({
-    enabled: row?.compressorEnabled ?? false,
-    threshold: row?.compressorThreshold ?? -6,
-    ratio: row?.compressorRatio ?? 4,
-    attack: row?.compressorAttack ?? 5,
-    release: row?.compressorRelease ?? 50,
-    gain: row?.compressorGain ?? 3,
+    enabled: row?.compressorEnabled ?? DEFAULT_COMPRESSOR.enabled,
+    threshold: row?.compressorThreshold ?? DEFAULT_COMPRESSOR.threshold,
+    ratio: row?.compressorRatio ?? DEFAULT_COMPRESSOR.ratio,
+    attack: row?.compressorAttack ?? DEFAULT_COMPRESSOR.attack,
+    release: row?.compressorRelease ?? DEFAULT_COMPRESSOR.release,
+    gain: row?.compressorGain ?? DEFAULT_COMPRESSOR.gain,
   });
 }
 

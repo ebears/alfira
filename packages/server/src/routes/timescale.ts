@@ -9,6 +9,7 @@ import { routeTable } from '../lib/routeTable';
 import { emitPlayerUpdate } from '../lib/socket';
 import { syncAllFilters } from '../lib/syncAllFilters';
 import { db, tables } from '../shared/db';
+import { DEFAULT_TIMESCALE } from '../shared/filterDefaults';
 import { getPlayer } from '../startDiscord';
 
 const TimescaleSchema = v.object({
@@ -31,10 +32,10 @@ function handleTimescaleGet(
   const row = db.select().from(tables.guildSettings).where(eq(tables.guildSettings.id, 1)).get();
 
   return json({
-    enabled: row?.timescaleEnabled ?? false,
-    speed: row?.timescaleSpeed ?? 1,
-    pitch: row?.timescalePitch ?? 1,
-    rate: row?.timescaleRate ?? 1,
+    enabled: row?.timescaleEnabled ?? DEFAULT_TIMESCALE.enabled,
+    speed: row?.timescaleSpeed ?? DEFAULT_TIMESCALE.speed,
+    pitch: row?.timescalePitch ?? DEFAULT_TIMESCALE.pitch,
+    rate: row?.timescaleRate ?? DEFAULT_TIMESCALE.rate,
   });
 }
 

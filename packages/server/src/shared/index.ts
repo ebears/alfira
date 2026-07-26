@@ -2,10 +2,29 @@ export * from './api';
 export { formatDuration } from './format';
 export { toQueuedSong } from './queue';
 export { fisherYatesShuffle } from './shuffle';
+export {
+  DEFAULT_CHANNEL_MIX,
+  DEFAULT_COMPRESSOR,
+  DEFAULT_DISTORTION,
+  DEFAULT_EQUALIZER,
+  DEFAULT_EQUALIZER_BANDS,
+  DEFAULT_KARAOKE,
+  DEFAULT_LOW_PASS,
+  DEFAULT_ROTATION,
+  DEFAULT_TIMESCALE,
+  DEFAULT_TREMOLO,
+  DEFAULT_VIBRATO,
+} from './filterDefaults';
 export type {
+  ChannelMixSettings,
   CompressorSettings,
+  DistortionSettings,
+  EqualizerSettings,
+  FiltersData,
   GeneralSettings,
+  KaraokeSettings,
   LoopMode,
+  LowPassSettings,
   PaginatedResult,
   PaginationMeta,
   PermissionAction,
@@ -14,6 +33,7 @@ export type {
   QueuedSong,
   QueueState,
   RequestPreview,
+  RotationSettings,
   SetupChannel,
   SetupGuild,
   SetupRole,
@@ -22,6 +42,9 @@ export type {
   SongRequest,
   SongRequestPlaylist,
   SongRequestTrack,
+  TimescaleSettings,
+  TremoloSettings,
   User,
+  VibratoSettings,
 } from './types';
 export { PERMISSION_CATEGORIES, PERMISSION_LABELS } from './types';

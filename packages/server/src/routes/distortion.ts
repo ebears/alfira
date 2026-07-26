@@ -7,6 +7,7 @@ import { checkGuards } from '../lib/routeGuards';
 import { routeTable } from '../lib/routeTable';
 import { syncAllFilters } from '../lib/syncAllFilters';
 import { db, tables } from '../shared/db';
+import { DEFAULT_DISTORTION } from '../shared/filterDefaults';
 
 const DistortionSchema = v.object({
   enabled: v.boolean(),
@@ -33,15 +34,15 @@ function handleDistortionGet(
   const row = db.select().from(tables.guildSettings).where(eq(tables.guildSettings.id, 1)).get();
 
   return json({
-    enabled: row?.distortionEnabled ?? false,
-    sinOffset: row?.distortionSinOffset ?? 0,
-    sinScale: row?.distortionSinScale ?? 1,
-    cosOffset: row?.distortionCosOffset ?? 0,
-    cosScale: row?.distortionCosScale ?? 1,
-    tanOffset: row?.distortionTanOffset ?? 0,
-    tanScale: row?.distortionTanScale ?? 1,
-    offset: row?.distortionOffset ?? 0,
-    scale: row?.distortionScale ?? 1,
+    enabled: row?.distortionEnabled ?? DEFAULT_DISTORTION.enabled,
+    sinOffset: row?.distortionSinOffset ?? DEFAULT_DISTORTION.sinOffset,
+    sinScale: row?.distortionSinScale ?? DEFAULT_DISTORTION.sinScale,
+    cosOffset: row?.distortionCosOffset ?? DEFAULT_DISTORTION.cosOffset,
+    cosScale: row?.distortionCosScale ?? DEFAULT_DISTORTION.cosScale,
+    tanOffset: row?.distortionTanOffset ?? DEFAULT_DISTORTION.tanOffset,
+    tanScale: row?.distortionTanScale ?? DEFAULT_DISTORTION.tanScale,
+    offset: row?.distortionOffset ?? DEFAULT_DISTORTION.offset,
+    scale: row?.distortionScale ?? DEFAULT_DISTORTION.scale,
   });
 }
 

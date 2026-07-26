@@ -1,13 +1,13 @@
-import type React from 'react';
-
+import { type TremoloSettings, DEFAULT_TREMOLO } from '@alfira/server/shared';
 import { ArrowCounterClockwiseIcon, FloppyDiskIcon } from '@phosphor-icons/react';
-import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { memo, useCallback, useMemo, useState } from 'react';
 
 import { useAdminView } from '../../context/AdminViewContext';
 import { usePermissions } from '../../context/PermissionsContext';
+import { useFilterSection } from '../../hooks/useFilterSection';
 import { Button } from '../ui/Button';
 
-const DEFAULTS = { enabled: false, frequency: 2, depth: 0.5 };
+const DEFAULTS: TremoloSettings = { ...DEFAULT_TREMOLO };
 
 const SLIDERS = [
   { key: 'frequency', label: 'Frequency', min: 0.1, max: 14, step: 0.1, unit: 'Hz' },
@@ -60,14 +60,8 @@ const TremoloSlider = memo(function TremoloSlider({
   );
 });
 
-interface TremoloValues {
-  enabled: boolean;
-  frequency: number;
-  depth: number;
-}
-
 interface TremoloSectionProps {
-  initialValues?: TremoloValues;
+  initialValues?: TremoloSettings;
 }
 
 export default function TremoloSection({ initialValues }: TremoloSectionProps) {
@@ -75,43 +69,17 @@ export default function TremoloSection({ initialValues }: TremoloSectionProps) {
   const { hasPermission } = usePermissions();
 
   const canManage = isAdminView || hasPermission('audio.manage');
-  const [values, setValues] = useState<TremoloValues>(DEFAULTS);
-  const [savedValues, setSavedValues] = useState<TremoloValues>(DEFAULTS);
+  const [values, setValues] = useState<TremoloSettings>(DEFAULTS);
+  const [savedValues, setSavedValues] = useState<TremoloSettings>(DEFAULTS);
   const [saving, setSaving] = useState(false);
-  const [loaded, setLoaded] = useState(false);
-  const didInitRef = useRef(false);
 
-  useEffect(() => {
-    if (!canManage) {
-      setLoaded(true);
-      return;
-    }
-    if (initialValues && !didInitRef.current) {
-      setValues(initialValues);
-      setSavedValues(initialValues);
-      setLoaded(true);
-      didInitRef.current = true;
-      return;
-    }
-    if (initialValues) {
-      return;
-    }
-    async function load() {
-      try {
-        const res = await fetch('/api/settings/tremolo');
-        if (res.ok) {
-          const data = (await res.json()) as TremoloValues;
-          setValues(data);
-          setSavedValues(data);
-        }
-      } catch {
-        // silently fail
-      } finally {
-        setLoaded(true);
-      }
-    }
-    void load();
-  }, [canManage, initialValues]);
+  const loaded = useFilterSection(
+    canManage,
+    '/api/settings/tremolo',
+    initialValues,
+    setValues,
+    setSavedValues
+  );
 
   const hasChanges = JSON.stringify(values) !== JSON.stringify(savedValues);
 

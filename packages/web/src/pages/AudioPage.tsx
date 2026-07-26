@@ -1,3 +1,4 @@
+import { type FiltersData } from '@alfira/server/shared';
 import {
   ArrowsDownUpIcon,
   BarricadeIcon,
@@ -27,48 +28,6 @@ import { PageHeader } from '../components/ui/PageHeader';
 import { Spinner } from '../components/ui/Spinner';
 import { useAdminView } from '../context/AdminViewContext';
 import { usePermissions } from '../context/PermissionsContext';
-
-interface FiltersData {
-  compressor: {
-    enabled: boolean;
-    threshold: number;
-    ratio: number;
-    attack: number;
-    release: number;
-    gain: number;
-  };
-  equalizer: { bands: number[]; enabled: boolean };
-  karaoke: {
-    enabled: boolean;
-    level: number;
-    monoLevel: number;
-    filterBand: number;
-    filterWidth: number;
-  };
-  timescale: { enabled: boolean; speed: number; pitch: number; rate: number };
-  tremolo: { enabled: boolean; frequency: number; depth: number };
-  vibrato: { enabled: boolean; frequency: number; depth: number };
-  rotation: { enabled: boolean; rotationHz: number };
-  distortion: {
-    enabled: boolean;
-    sinOffset: number;
-    sinScale: number;
-    cosOffset: number;
-    cosScale: number;
-    tanOffset: number;
-    tanScale: number;
-    offset: number;
-    scale: number;
-  };
-  channelMix: {
-    enabled: boolean;
-    leftToLeft: number;
-    leftToRight: number;
-    rightToLeft: number;
-    rightToRight: number;
-  };
-  lowPass: { enabled: boolean; smoothing: number };
-}
 
 interface FilterCardDef {
   icon: Icon;

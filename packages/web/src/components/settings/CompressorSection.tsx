@@ -1,13 +1,15 @@
 import type React from 'react';
 
+import { type CompressorSettings, DEFAULT_COMPRESSOR } from '@alfira/server/shared';
 import { ArrowCounterClockwiseIcon, FloppyDiskIcon } from '@phosphor-icons/react';
-import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { memo, useCallback, useMemo, useState } from 'react';
 
 import { useAdminView } from '../../context/AdminViewContext';
 import { usePermissions } from '../../context/PermissionsContext';
+import { useFilterSection } from '../../hooks/useFilterSection';
 import { Button } from '../ui/Button';
 
-const DEFAULTS = { enabled: false, threshold: -6, ratio: 4, attack: 5, release: 50, gain: 3 };
+const DEFAULTS: CompressorSettings = { ...DEFAULT_COMPRESSOR };
 
 const SLIDERS = [
   { key: 'threshold', label: 'Threshold', min: -60, max: 0, step: 1, unit: 'dB' },
@@ -71,17 +73,8 @@ const CompressorSlider = memo(function CompressorSlider({
   );
 });
 
-interface CompressorValues {
-  enabled: boolean;
-  threshold: number;
-  ratio: number;
-  attack: number;
-  release: number;
-  gain: number;
-}
-
 interface CompressorSectionProps {
-  initialValues?: CompressorValues;
+  initialValues?: CompressorSettings;
 }
 
 export default function CompressorSection({ initialValues }: CompressorSectionProps) {
@@ -89,43 +82,17 @@ export default function CompressorSection({ initialValues }: CompressorSectionPr
   const { hasPermission } = usePermissions();
 
   const canManage = isAdminView || hasPermission('audio.manage');
-  const [values, setValues] = useState<CompressorValues>(DEFAULTS);
-  const [savedValues, setSavedValues] = useState<CompressorValues>(DEFAULTS);
+  const [values, setValues] = useState<CompressorSettings>(DEFAULTS);
+  const [savedValues, setSavedValues] = useState<CompressorSettings>(DEFAULTS);
   const [saving, setSaving] = useState(false);
-  const [loaded, setLoaded] = useState(false);
-  const didInitRef = useRef(false);
 
-  useEffect(() => {
-    if (!canManage) {
-      setLoaded(true);
-      return;
-    }
-    if (initialValues && !didInitRef.current) {
-      setValues(initialValues);
-      setSavedValues(initialValues);
-      setLoaded(true);
-      didInitRef.current = true;
-      return;
-    }
-    if (initialValues) {
-      return;
-    }
-    async function load() {
-      try {
-        const res = await fetch('/api/settings/compressor');
-        if (res.ok) {
-          const data = (await res.json()) as CompressorValues;
-          setValues(data);
-          setSavedValues(data);
-        }
-      } catch {
-        // silently fail
-      } finally {
-        setLoaded(true);
-      }
-    }
-    void load();
-  }, [canManage, initialValues]);
+  const loaded = useFilterSection(
+    canManage,
+    '/api/settings/compressor',
+    initialValues,
+    setValues,
+    setSavedValues
+  );
 
   const hasChanges = JSON.stringify(values) !== JSON.stringify(savedValues);
 

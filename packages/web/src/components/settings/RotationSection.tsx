@@ -1,13 +1,13 @@
-import type React from 'react';
-
+import { type RotationSettings, DEFAULT_ROTATION } from '@alfira/server/shared';
 import { ArrowCounterClockwiseIcon, FloppyDiskIcon } from '@phosphor-icons/react';
-import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { memo, useCallback, useMemo, useState } from 'react';
 
 import { useAdminView } from '../../context/AdminViewContext';
 import { usePermissions } from '../../context/PermissionsContext';
+import { useFilterSection } from '../../hooks/useFilterSection';
 import { Button } from '../ui/Button';
 
-const DEFAULTS = { enabled: false, rotationHz: 0 };
+const DEFAULTS: RotationSettings = { ...DEFAULT_ROTATION };
 
 const SLIDERS = [
   { key: 'rotationHz', label: 'Rotation Hz', min: 0, max: 1, step: 0.01, unit: 'Hz' },
@@ -59,13 +59,8 @@ const RotationSlider = memo(function RotationSlider({
   );
 });
 
-interface RotationValues {
-  enabled: boolean;
-  rotationHz: number;
-}
-
 interface RotationSectionProps {
-  initialValues?: RotationValues;
+  initialValues?: RotationSettings;
 }
 
 export default function RotationSection({ initialValues }: RotationSectionProps) {
@@ -73,43 +68,17 @@ export default function RotationSection({ initialValues }: RotationSectionProps)
   const { hasPermission } = usePermissions();
 
   const canManage = isAdminView || hasPermission('audio.manage');
-  const [values, setValues] = useState<RotationValues>(DEFAULTS);
-  const [savedValues, setSavedValues] = useState<RotationValues>(DEFAULTS);
+  const [values, setValues] = useState<RotationSettings>(DEFAULTS);
+  const [savedValues, setSavedValues] = useState<RotationSettings>(DEFAULTS);
   const [saving, setSaving] = useState(false);
-  const [loaded, setLoaded] = useState(false);
-  const didInitRef = useRef(false);
 
-  useEffect(() => {
-    if (!canManage) {
-      setLoaded(true);
-      return;
-    }
-    if (initialValues && !didInitRef.current) {
-      setValues(initialValues);
-      setSavedValues(initialValues);
-      setLoaded(true);
-      didInitRef.current = true;
-      return;
-    }
-    if (initialValues) {
-      return;
-    }
-    async function load() {
-      try {
-        const res = await fetch('/api/settings/rotation');
-        if (res.ok) {
-          const data = (await res.json()) as RotationValues;
-          setValues(data);
-          setSavedValues(data);
-        }
-      } catch {
-        // silently fail
-      } finally {
-        setLoaded(true);
-      }
-    }
-    void load();
-  }, [canManage, initialValues]);
+  const loaded = useFilterSection(
+    canManage,
+    '/api/settings/rotation',
+    initialValues,
+    setValues,
+    setSavedValues
+  );
 
   const hasChanges = JSON.stringify(values) !== JSON.stringify(savedValues);
 

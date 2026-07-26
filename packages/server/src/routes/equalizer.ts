@@ -8,6 +8,7 @@ import { checkGuards } from '../lib/routeGuards';
 import { routeTable } from '../lib/routeTable';
 import { syncAllFilters } from '../lib/syncAllFilters';
 import { db, tables } from '../shared/db';
+import { DEFAULT_EQUALIZER } from '../shared/filterDefaults';
 
 const EqualizerSchema = v.object({
   bands: v.pipe(
@@ -37,7 +38,7 @@ function handleEqualizerGet(
     .get();
 
   const bands = eqBandsFromRow(row);
-  const enabled = row?.eqEnabled ?? true;
+  const enabled = row?.eqEnabled ?? DEFAULT_EQUALIZER.enabled;
 
   return json({ bands, enabled });
 }
