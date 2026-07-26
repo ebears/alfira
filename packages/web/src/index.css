@@ -1265,28 +1265,6 @@
   box-shadow: var(--clay-shadow-player);
 }
 
-.expand-panel {
-  max-height: 0px;
-  overflow: hidden;
-  transition: max-height 0.3s ease;
-}
-.expand-panel.expanded {
-  max-height: 600px;
-}
-.expand-panel .expand-panel-content {
-  transition:
-    opacity 0.25s ease,
-    visibility 0s linear 0s;
-  visibility: visible;
-}
-.expand-panel .expand-panel-content[data-closing='true'] {
-  opacity: 0;
-  visibility: hidden;
-  transition:
-    opacity 0.25s ease,
-    visibility 0s linear 0.25s;
-}
-
 /* Volume range input — fill track using accent color up to thumb position */
 .volume-range-input {
   appearance: none;

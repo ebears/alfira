@@ -14,23 +14,7 @@ interface SongEditPanelProps {
 }
 
 export default function SongEditPanel({ song, isOpen, onClose }: SongEditPanelProps) {
-  const [closing, setClosing] = useState(false);
-  const closingRef = useRef(false);
   const { tagColorMap } = useTagColors();
-
-  useLayoutEffect(() => {
-    if (isOpen) {
-      closingRef.current = false;
-      setClosing(false);
-    } else if (!closingRef.current) {
-      closingRef.current = true;
-      setClosing(true);
-      setTimeout(() => {
-        closingRef.current = false;
-        setClosing(false);
-      }, 300);
-    }
-  }, [isOpen]);
 
   const songExtended = song as Song & {
     artist?: string | null;
@@ -245,11 +229,6 @@ export default function SongEditPanel({ song, isOpen, onClose }: SongEditPanelPr
     e.stopPropagation();
   }, []);
 
-  const panelStyle = useMemo(
-    () => (closing ? ({ pointerEvents: 'none' } as const) : undefined),
-    [closing]
-  );
-
   const handleFocusTagInput = useCallback(() => {
     tagInputRef.current?.focus();
     if (!fetchedTags) {
@@ -294,17 +273,8 @@ export default function SongEditPanel({ song, isOpen, onClose }: SongEditPanelPr
     setHighlightedIndex(-1);
   }, []);
 
-  if (!isOpen && !closing) {
-    return null;
-  }
-
   return (
-    <div
-      className='expand-panel-content'
-      data-closing={closing ? 'true' : undefined}
-      style={panelStyle}
-      onClick={handlePanelClick}
-    >
+    <div onClick={handlePanelClick}>
       <div className='border-border border-t px-3 pt-4 pb-4 md:px-4'>
         <div className='flex flex-col gap-3'>
           <Field

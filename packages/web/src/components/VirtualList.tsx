@@ -237,7 +237,7 @@ function VirtualListInner<T>({
                     transform: `translateY(${virtualRow.start}px)`,
                   }}
                 >
-                  <m.div layout initial='initial' animate='animate' variants={listItemVariants}>
+                  <m.div initial='initial' animate='animate' variants={listItemVariants}>
                     {renderItem(item, virtualRow.index)}
                   </m.div>
                   {spacer}
