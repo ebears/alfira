@@ -20,13 +20,22 @@ See [AGENTS.md](../AGENTS.md) for the full git workflow and commit conventions.
 
 ## Development Workflow
 
-The main dev command is `bun run dev`, which builds the server dist/ locally and then starts all services with Docker.
+Two dev modes are available:
 
-| What Changed             | Action                                                                                  |
-| ------------------------ | --------------------------------------------------------------------------------------- |
-| Any of the above         | `bun run dev` — rebuilds server dist/ and restarts Docker                               |
-| `packages/web/src/**`    | Run `bun run web:build` locally to rebuild the UI, then `docker compose restart alfira` |
-| `packages/server/src/**` | `docker compose restart alfira` (source is live-mounted)                                |
+| Command          | What it does                                                                                    |
+| ---------------- | ----------------------------------------------------------------------------------------------- |
+| `bun dev`        | Lint + format check + tests → build web → start server with `--watch` (auto-restart on changes) |
+| `bun dev:docker` | Full Docker integration test: lint + tests → build both packages → `docker compose up --build`  |
+
+`bun dev` is the fast path for day-to-day work — the server runs directly on your machine and watches for changes. `bun dev:docker` mirrors the production deployment and is good for a final integration check before submitting.
+
+During a `bun dev` session, if you change web source files you'll need to rebuild the UI separately:
+
+```bash
+bun run web:build
+```
+
+Server source changes are picked up automatically by `--watch`.
 
 ## Database Migrations
 
@@ -48,22 +57,65 @@ docker compose up --build
 
 ---
 
-## Code Quality
+## Testing
 
-The project uses [oxlint](https://oxc.rs/) and [oxfmt](https://oxc.rs/) for linting and formatting.
+The project uses [Bun's built-in test runner](https://bun.sh/docs/cli/test). Tests live alongside source files as `*.test.ts`.
 
 ```bash
-# Lint + format check with auto-fix (recommended before committing)
-bun run check
+# Run all tests
+bun test
 
-# Lint only, with auto-fix
-bun run lint:fix
-
-# Format only, with auto-fix
-bun run format
+# Run tests for a specific package
+bun test --filter @alfira/server
+bun test --filter @alfira/web
 ```
 
-CI runs `bun run lint` and `bun run build` for both packages — your code must pass before merging.
+## Code Quality
+
+The project uses [oxlint](https://oxc.rs/) and [oxfmt](https://oxc.rs/) for linting and formatting, plus Bun's test runner. The universal pre-commit gate is:
+
+```bash
+# Lint (type-aware) + format check + tests — run this before every commit
+bun run check
+```
+
+Individual commands are also available:
+
+```bash
+# Typecheck only
+bun run typecheck
+
+# Lint with auto-fix
+bun run lint:fix
+
+# Format with auto-fix
+bun run format
+
+# Tests only
+bun test
+```
+
+CI runs `bun run check` plus Trivy vulnerability scanning, then builds both packages. Your code must pass `bun run check` locally before pushing — any failure in CI means you skipped the pre-commit check.
+
+### Git Hooks (lefthook)
+
+The project uses [lefthook](https://github.com/evilmartians/lefthook) to run checks automatically on commit. Install the hooks once:
+
+```bash
+bunx lefthook install
+```
+
+After that, every `git commit` will run lint, format check, and tests in parallel on staged files. If anything fails, the commit is blocked — same checks as CI, but before you push.
+
+### Dead Code Detection (knip)
+
+[knip](https://knip.dev/) finds unused files, dependencies, and exports. Run it periodically to keep the codebase lean:
+
+```bash
+bunx knip
+```
+
+It's preconfigured in `knip.json` and won't flag intentional exports (entry points, scripts, etc.).
 
 ## Editor Tooling
 

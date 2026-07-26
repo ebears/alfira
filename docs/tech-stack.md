@@ -69,14 +69,23 @@ package via the `@alfira/server/shared` export.
 
 Top-level scripts:
 
-| Script              | Description                                             |
-| ------------------- | ------------------------------------------------------- |
-| `bun run dev`       | Build server dist/, then start all services with Docker |
-| `bun run web:build` | Build the web UI (used by Docker)                       |
+| Script              | Description                                                              |
+| ------------------- | ------------------------------------------------------------------------ |
+| `bun dev`           | Lint + format check + tests → build web → start server with `--watch`    |
+| `bun dev:docker`    | Full Docker integration test (lint + tests → build → docker compose up)  |
+| `bun run web:build` | Build the web UI                                                         |
+| `bun run check`     | Lint (type-aware) + format check + tests — the universal pre-commit gate |
+| `bun run typecheck` | Lint with type-aware checking only                                       |
+| `bun run lint:fix`  | Lint with auto-fix                                                       |
+| `bun run format`    | Format with auto-fix                                                     |
+| `bun test`          | Run all tests                                                            |
 
-| `bun run check` | Lint (oxlint) and check format (oxfmt) |
-| `bun run lint:fix` | Lint with auto-fix |
-| `bun run format` | Format with auto-fix |
+Additional QA tools:
+
+| Tool     | Command                 | Purpose                                   |
+| -------- | ----------------------- | ----------------------------------------- |
+| knip     | `bunx knip`             | Find unused files, dependencies, exports  |
+| lefthook | `bunx lefthook install` | Run lint + format check + tests on commit |
 
 ## Shared Package Exports
 
@@ -105,9 +114,9 @@ Top-level scripts:
 
 Four GitHub Actions workflows run on the repository:
 
-| Workflow             | Trigger                                               | Purpose                                                           |
-| -------------------- | ----------------------------------------------------- | ----------------------------------------------------------------- |
-| **ci.yml**           | All PRs, pushes to `main` and `dev`                   | Lint with oxlint + build all packages + Trivy vuln scan           |
-| **codeql.yml**       | All PRs, pushes to `main` and `dev`, weekly schedule  | CodeQL security analysis                                          |
-| **docker-build.yml** | All PRs, pushes to `main` and `dev` (ignores `docs/`) | Build Docker images; publish to GHCR on `main`                    |
-| **release.yml**      | Pushes of `v*` tags                                   | Build multi-arch Docker image, push to GHCR, draft GitHub release |
+| Workflow             | Trigger                                               | Purpose                                                                              |
+| -------------------- | ----------------------------------------------------- | ------------------------------------------------------------------------------------ |
+| **ci.yml**           | All PRs, pushes to `main` and `dev`                   | `bun run check` (lint + format check + tests) + build all packages + Trivy vuln scan |
+| **codeql.yml**       | All PRs, pushes to `main` and `dev`, weekly schedule  | CodeQL security analysis                                                             |
+| **docker-build.yml** | All PRs, pushes to `main` and `dev` (ignores `docs/`) | Build Docker images; publish to GHCR on `main`                                       |
+| **release.yml**      | Pushes of `v*` tags                                   | Build multi-arch Docker image, push to GHCR, draft GitHub release                    |
