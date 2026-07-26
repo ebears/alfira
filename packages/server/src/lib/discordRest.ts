@@ -29,7 +29,9 @@ async function discordFetch(path: string): Promise<Response> {
     const retryAfter = res.headers.get('Retry-After');
     const delayMs = retryAfter ? Number(retryAfter) * 1000 : 1000;
     logger.warn({ path, delayMs }, 'Discord REST rate limited, retrying');
-    await new Promise((resolve) => setTimeout(resolve, delayMs));
+    await new Promise((resolve) => {
+      setTimeout(resolve, delayMs);
+    });
     return fetch(url, {
       headers: { Authorization: `Bot ${botToken()}` },
     });
@@ -46,9 +48,9 @@ async function discordFetch(path: string): Promise<Response> {
 
 class ConcurrencyLimiter {
   private running = 0;
-  private queue: (() => void)[] = [];
+  private readonly queue: (() => void)[] = [];
 
-  constructor(private max: number) {}
+  constructor(private readonly max: number) {}
 
   acquire(): Promise<void> {
     if (this.running < this.max) {

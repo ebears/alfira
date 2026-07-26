@@ -50,6 +50,8 @@ export default defineConfig({
     // -----------------------------------------------------------------------
     // oxc — Oxc-specific correctness rules that catch subtle bugs
     // -----------------------------------------------------------------------
+    // overly broad disable comments (e.g. eslint-disable without specific rules)
+    'unicorn/no-abusive-eslint-disable': 'warn',
     // Math.min(Math.max(x, min), max) — wrong clamping direction
     'oxc/bad-min-max-func': 'error',
     // a < b < c evaluates as (a < b) < c — a boolean-number comparison
@@ -75,6 +77,12 @@ export default defineConfig({
     'no-unsafe-finally': 'error',
     'no-unsafe-optional-chaining': 'error',
     'no-unused-labels': 'error',
+    // new Promise(r => r(5)) — return value of executor is silently ignored
+    'no-promise-executor-return': 'error',
+    // 9007199254740993 — integer exceeds IEEE 754 safe range; value silently changes
+    'no-loss-of-precision': 'error',
+    // while (node) { ... } where node never changes — infinite loop or dead code
+    'no-unmodified-loop-condition': 'error',
     '@typescript-eslint/no-unused-vars': 'warn',
     'use-isnan': 'error',
     'for-direction': 'error',
@@ -126,6 +134,8 @@ export default defineConfig({
     // -----------------------------------------------------------------------
     // type safety — catch TypeScript type-level mistakes
     // -----------------------------------------------------------------------
+    // private foo: string → private readonly foo: string — immutability intent
+    '@typescript-eslint/prefer-readonly': 'warn',
     // {} means "any non-nullish value", not "empty object" — use Record<string, never>
     '@typescript-eslint/no-empty-object-type': 'error',
     // Function type is unsafe — use (...args: unknown[]) => unknown
@@ -221,6 +231,8 @@ export default defineConfig({
     // -----------------------------------------------------------------------
     // promises
     // -----------------------------------------------------------------------
+    // for (const x of xs) { await f(x); } — serial where parallel was intended
+    'no-await-in-loop': 'warn',
     'promise/prefer-await-to-then': 'error',
     'promise/valid-params': 'error',
     'promise/catch-or-return': 'error',
@@ -444,6 +456,8 @@ export default defineConfig({
     'unicorn/prefer-string-raw': 'warn',
     // Number(x) over parseInt(x) / parseFloat(x) — faster and clearer for coercion
     'unicorn/prefer-number-coercion': 'warn',
+    // arr.filter(Boolean) over arr.filter(x => !!x) — cleaner, zero-cost
+    'unicorn/prefer-native-coercion-functions': 'warn',
 
     // Enforce kebab-case, PascalCase, or camelCase filenames
     'unicorn/filename-case': [
@@ -790,6 +804,33 @@ export default defineConfig({
       files: ['packages/server/src/index.ts'],
       rules: {
         '@typescript-eslint/consistent-return': 'off',
+      },
+    },
+
+    // Sequential await-in-loop is intentional for these files:
+    // - Discord API calls must respect rate limits
+    // - Playback operations are inherently serial
+    // - Route registration order matters
+    // - Tag sync / migration writes to DB and needs consistency
+    // - Voice connection state machine steps must be serial
+    // - Retry loops with backoff are serial by design
+    // - Chunked bulk operations throttle server load
+    // - DB transactions are serial by SQLite design
+    {
+      files: [
+        'packages/server/src/utils/unregisterCommands.ts',
+        'packages/server/src/lib/routeTable.ts',
+        'packages/server/src/GuildPlayer.ts',
+        'packages/server/src/lib/syncPlaylistToTag.ts',
+        'packages/server/src/lib/voice.ts',
+        'packages/web/src/api/client.ts',
+        'packages/server/src/routes/auth.ts',
+        'packages/web/src/pages/PlaylistDetailPage.tsx',
+        'packages/server/src/lib/tagCanonicalization.ts',
+        'packages/server/src/lib/migrateExistingTags.ts',
+      ],
+      rules: {
+        'no-await-in-loop': 'off',
       },
     },
   ],

@@ -1,4 +1,4 @@
-import { eq, sql } from 'drizzle-orm';
+import { eq, inArray, sql } from 'drizzle-orm';
 import * as v from 'valibot';
 
 import { type RouteContext } from '../lib/context';
@@ -184,21 +184,28 @@ async function handleDeleteTag(
     .where(eq(playlistTable.tagNameLower, nameLower))
     .all();
 
-  for (const pl of smartPlaylists) {
-    await db.update(playlistTable).set({ tagNameLower: null }).where(eq(playlistTable.id, pl.id));
+  // Update all smart playlists to remove the tag reference, then re-fetch and emit
+  await Promise.all(
+    smartPlaylists.map((pl) =>
+      db.update(playlistTable).set({ tagNameLower: null }).where(eq(playlistTable.id, pl.id))
+    )
+  );
 
-    // Emit update for each affected playlist
-    const [updatedPl] = await db
-      .select()
-      .from(playlistTable)
-      .where(eq(playlistTable.id, pl.id))
-      .limit(1);
-    if (updatedPl) {
-      emitPlaylistUpdated({
-        ...updatedPl,
-        createdAt: updatedPl.createdAt.toISOString(),
-      });
-    }
+  const updatedPlaylists = await db
+    .select()
+    .from(playlistTable)
+    .where(
+      inArray(
+        playlistTable.id,
+        smartPlaylists.map((pl) => pl.id)
+      )
+    );
+
+  for (const updatedPl of updatedPlaylists) {
+    emitPlaylistUpdated({
+      ...updatedPl,
+      createdAt: updatedPl.createdAt.toISOString(),
+    });
   }
 
   await db.delete(tagTable).where(eq(tagTable.nameLower, nameLower));

@@ -56,9 +56,9 @@ interface VoiceStateData {
 
 export class DiscordGateway {
   private ws: WebSocket | null = null;
-  private token: string;
-  private intents: number;
-  private handlers: DispatchHandler[] = [];
+  private readonly token: string;
+  private readonly intents: number;
+  private readonly handlers: DispatchHandler[] = [];
 
   // Session state for resume.
   private sessionId: string | null = null;
@@ -81,7 +81,7 @@ export class DiscordGateway {
 
   // Voice state tracking (for voice.ts lookups).
   // Map of userId -> channelId.
-  private voiceStates = new Map<string, string>();
+  private readonly voiceStates = new Map<string, string>();
 
   constructor(token: string, intents: number) {
     this.token = token;

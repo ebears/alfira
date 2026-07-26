@@ -132,7 +132,9 @@ export async function trySilentRefresh(): Promise<boolean> {
   let result = await refreshToken();
   for (let attempt = 0; attempt < 2 && !result.ok && result.retryable; attempt++) {
     console.warn(`[auth] trySilentRefresh: retry ${attempt + 1}/2 after retryable failure`);
-    await new Promise((resolve) => setTimeout(resolve, 1500));
+    await new Promise((resolve) => {
+      setTimeout(resolve, 1500);
+    });
     result = await refreshToken();
   }
 

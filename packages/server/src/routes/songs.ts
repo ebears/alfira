@@ -115,13 +115,15 @@ async function handleBulkTag(ctx: RouteContext, request: Request): Promise<Respo
     await db.update(songTable).set({ tags: newTags }).where(inArray(songTable.id, ids));
     updatedIds.push(...ids);
   } else {
-    // Merge: add new tags to each song's existing tags
-    for (const song of existingSongs) {
-      const existingTags = song.tags ?? [];
-      const merged = [...new Set([...existingTags, ...newTags])];
-      await db.update(songTable).set({ tags: merged }).where(eq(songTable.id, song.id));
-      updatedIds.push(song.id);
-    }
+    // Merge: add new tags to each song's existing tags — run updates in parallel
+    await Promise.all(
+      existingSongs.map(async (song) => {
+        const existingTags = song.tags ?? [];
+        const merged = [...new Set([...existingTags, ...newTags])];
+        await db.update(songTable).set({ tags: merged }).where(eq(songTable.id, song.id));
+        updatedIds.push(song.id);
+      })
+    );
   }
 
   // Re-fetch updated songs and emit events

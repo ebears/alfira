@@ -19,7 +19,7 @@ import {
 export class GuildPlayer {
   private static readonly MAX_CONSECUTIVE_FAILURES = 3;
 
-  private queue = new PlaybackCursor<QueuedSong>();
+  private readonly queue = new PlaybackCursor<QueuedSong>();
   private priorityQueue: QueuedSong[] = [];
   private currentSong: QueuedSong | null = null;
   private loopMode: LoopMode = 'off';
@@ -928,7 +928,9 @@ export class GuildPlayer {
         return;
       }
       await connectToVoice(this.guildId, this.voiceId);
-      await new Promise((resolve) => setTimeout(resolve, 500));
+      await new Promise((resolve) => {
+        setTimeout(resolve, 500);
+      });
     }
     const tCold2 = Date.now();
 
@@ -1038,7 +1040,9 @@ export class GuildPlayer {
       } catch (error) {
         lastError = error;
         if (attempt < RETRY_ATTEMPTS - 1) {
-          await new Promise((resolve) => setTimeout(resolve, RETRY_DELAY_MS));
+          await new Promise((resolve) => {
+            setTimeout(resolve, RETRY_DELAY_MS);
+          });
         }
       }
     }

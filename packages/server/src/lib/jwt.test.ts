@@ -207,7 +207,9 @@ describe('verify', () => {
     // Sign with a very short expiration and wait for it to expire.
     // exp = iat + 1, so we need floor(now) > iat + 1 — wait 2 full seconds.
     const token = sign({ sub: 'user-1' }, SECRET, { expiresIn: '1s' });
-    await new Promise((resolve) => setTimeout(resolve, 2000));
+    await new Promise((resolve) => {
+      setTimeout(resolve, 2000);
+    });
     expect(verify(token, SECRET)).toBeNull();
   });
 

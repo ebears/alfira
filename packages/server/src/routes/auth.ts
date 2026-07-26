@@ -527,7 +527,9 @@ async function withRetry<T>(fn: () => Promise<T>, attempts = 3, baseDelayMs = 50
     } catch (error) {
       lastErr = error;
       if (i < attempts - 1) {
-        await new Promise((resolve) => setTimeout(resolve, baseDelayMs * 2 ** i));
+        await new Promise((resolve) => {
+          setTimeout(resolve, baseDelayMs * 2 ** i);
+        });
       }
     }
   }
