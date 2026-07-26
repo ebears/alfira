@@ -71,7 +71,9 @@ export async function resolveOrAutoJoinPlayer(
     await connectToVoice(guildId, voiceChannelId);
     // Give NodeLink time to fully establish the voice connection
     // before we start sending track data.
-    await new Promise((resolve) => setTimeout(resolve, 500));
+    await new Promise((resolve) => {
+      setTimeout(resolve, 500);
+    });
 
     return { ok: true, player: createPlayer(guildId, voiceChannelId) };
   } catch (error) {

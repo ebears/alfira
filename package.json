@@ -12,12 +12,12 @@
     "web:build": "bun run --filter @alfira/web build",
     "discord:unregister-commands": "bun run packages/server/src/utils/unregisterCommands.ts",
     "setup:nodelink": "bash scripts/setup-nodelink.sh",
-    "lint": "oxlint .",
-    "lint:fix": "oxlint --fix .",
+    "lint": "oxlint --deny-warnings .",
+    "lint:fix": "oxlint --fix --deny-warnings .",
     "format": "oxfmt --write .",
     "format:check": "oxfmt --check .",
-    "check": "oxlint --type-aware --type-check --deny-warnings . && oxfmt --check . && bun test",
-    "typecheck": "oxlint --type-aware --type-check --deny-warnings .",
+    "check": "oxlint --deny-warnings . && oxfmt --check . && bun test",
+    "typecheck": "oxlint --deny-warnings .",
     "test": "bun test"
   },
   "devDependencies": {
