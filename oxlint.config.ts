@@ -208,6 +208,8 @@ export default defineConfig({
     'import/no-self-import': 'error',
     // Merge duplicate imports from the same module
     'import/no-duplicates': 'warn',
+    // Side-effect-only imports (import 'foo') create implicit, hidden dependencies
+    'import/no-unassigned-import': ['warn', { allow: ['**/*.css'] }],
 
     // -----------------------------------------------------------------------
     // equality — 'smart' allows == null / != null (idiomatic nullish checks)
