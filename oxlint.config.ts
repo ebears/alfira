@@ -7,7 +7,7 @@ export default defineConfig({
     reportUnusedDisableDirectives: 'error',
   },
 
-  ignorePatterns: ['.pi/**', '.zed/**'],
+  ignorePatterns: ['.pi/**', '.zed/**', 'nodelink-config/**'],
 
   plugins: [
     'react',
@@ -602,7 +602,7 @@ export default defineConfig({
 
     // Plain JS files: type-aware rules produce noise on untyped code
     {
-      files: ['nodelink-config/**', 'packages/web/public/**'],
+      files: ['packages/web/public/**'],
       rules: {
         '@typescript-eslint/no-unsafe-assignment': 'off',
         '@typescript-eslint/no-unsafe-member-access': 'off',

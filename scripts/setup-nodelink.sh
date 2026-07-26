@@ -13,7 +13,7 @@ set -euo pipefail
 PROJECT_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 NODELINK_DIR="$PROJECT_ROOT/.nodelink"
 NODELINK_REPO="https://github.com/PerformanC/NodeLink.git"
-NODELINK_COMMIT="e524ed7f38c01e0fc8f031134c86ee87e0bc7ffa"
+NODELINK_COMMIT="86e85be89836fa148adf4a3abc362c27e2c70879"
 
 echo "→ Cloning NodeLink (commit ${NODELINK_COMMIT:0:7})..."
 if [ -d "$NODELINK_DIR" ]; then
@@ -36,7 +36,7 @@ bun run build
 
 # Copy our custom NodeLink config into the cloned repo
 echo "→ Copying NodeLink config..."
-cp "$PROJECT_ROOT/nodelink-config/config.js" "$NODELINK_DIR/config.js"
+cp "$PROJECT_ROOT/nodelink-config/config.ts" "$NODELINK_DIR/config.ts"
 
 echo "✓ NodeLink is ready at .nodelink/"
 echo "  You can now run: bun dev"
