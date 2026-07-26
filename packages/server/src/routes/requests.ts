@@ -34,7 +34,6 @@ const { song: songTable, songRequest: requestTable } = tables;
 // ---------------------------------------------------------------------------
 
 function formatRequest(row: typeof requestTable.$inferSelect): SongRequest {
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion
   return {
     ...row,
     createdAt: new Date(row.createdAt).toISOString(),
@@ -611,7 +610,7 @@ async function handleGetRequests(ctx: RouteContext, request: Request): Promise<R
       .where(where),
   ]);
 
-  const total = Number.parseInt(String(countResult[0]?.count ?? 0), 10);
+  const total = Math.trunc(Number(String(countResult[0]?.count ?? 0)));
 
   // Resolve display names for requesters
   const nameMap = await resolveDisplayNames(requests.map((r) => ({ addedBy: r.requestedBy })));
@@ -644,7 +643,7 @@ async function handlePatchRequest(
   request: Request,
   params: Record<string, string>
 ): Promise<Response> {
-  const { id } = params;
+  const id = params.id as string;
   const guards = checkGuards(ctx, { admin: true });
   if (guards instanceof Response) {
     return guards;
@@ -870,7 +869,7 @@ async function handleDeleteRequest(
   _request: Request,
   params: Record<string, string>
 ): Promise<Response> {
-  const { id } = params;
+  const id = params.id as string;
   const guards = checkGuards(ctx);
   if (guards instanceof Response) {
     return guards;

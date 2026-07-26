@@ -112,7 +112,7 @@ function hitTest(
   const colWidth = positioner.columnWidth;
 
   for (let i = 0; i < items.length; i++) {
-    const item = items[i];
+    const item = items[i] as (typeof items)[number];
     const cx = item.left + colWidth / 2;
     const cy = item.top + item.height / 2;
     const dist = Math.sqrt((cursorX - cx) ** 2 + (cursorY - cy) ** 2);
@@ -122,7 +122,7 @@ function hitTest(
     }
   }
 
-  const nearestItem = items[nearestIndex];
+  const nearestItem = items[nearestIndex] as (typeof items)[number];
   // In a column-based masonry layout, left/right maps to before/after in
   // the flat list more intuitively than top/bottom. Cursor on the left
   // half of a card → insert before; right half → insert after.
@@ -267,7 +267,7 @@ export function SortableGridProvider({
 
         const newIds = [...currentIds];
         const [removed] = newIds.splice(srcData.index, 1);
-        newIds.splice(dest, 0, removed);
+        newIds.splice(dest, 0, removed as string);
 
         void onReorder(newIds);
       },

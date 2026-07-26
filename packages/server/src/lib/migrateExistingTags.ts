@@ -35,10 +35,6 @@ export async function runTagMigration(): Promise<{ normalized: number; errors: n
   let errors = 0;
 
   for (const song of songs) {
-    if (!song.tags || !Array.isArray(song.tags) || song.tags.length === 0) {
-      continue;
-    }
-
     try {
       const canonicalTags = await canonicalizeTags(song.tags.map(normalizeTag));
 

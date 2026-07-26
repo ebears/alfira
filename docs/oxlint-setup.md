@@ -8,7 +8,7 @@ This document describes the oxlint and oxfmt configuration for the Alfira projec
 
 Together they provide:
 
-- **Linting**: 660+ rules across eslint, typescript, react, jsx-a11y, unicorn, import, and more
+- **Linting**: 700+ rules across eslint, typescript, react, jsx-a11y, unicorn, import, and more
 - **Formatting**: Prettier-compatible code formatting with near-identical options
 
 ## Installation
@@ -38,7 +38,10 @@ bun run format
 # Check formatting without making changes
 bun run format:check
 
-# Combined: lint + format check
+# Lint with type-aware checking only
+bun run typecheck
+
+# Combined: lint + format check + tests
 bun run check
 ```
 
@@ -54,11 +57,11 @@ See the [oxlint editor setup](https://oxc.rs/docs/guide/usage/linter/editors.htm
 
 ## CI Integration
 
-oxlint is integrated into the GitHub Actions workflow (`.github/workflows/ci.yml`):
+CI runs `bun run check` (`.github/workflows/ci.yml`), which includes lint, format check, and tests — plus Trivy vulnerability scanning and full builds of both packages.
 
 ```yaml
-- name: Lint (oxlint)
-  run: bun run lint
+- name: Lint, typecheck, and format check
+  run: bun run check
 ```
 
 ## Common Workflows

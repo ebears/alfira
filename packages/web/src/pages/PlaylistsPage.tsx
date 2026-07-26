@@ -2,7 +2,7 @@ import { type Playlist, type TagItem } from '@alfira/server/shared';
 import { fetchTags } from '@alfira/server/shared/api';
 import { PlaylistIcon } from '@phosphor-icons/react';
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router';
 
 import { getPlaylistsPage } from '../api/api';
 import { Backdrop } from '../components/Backdrop';

@@ -1,19 +1,13 @@
-import type React from 'react';
-
+import { type KaraokeSettings, DEFAULT_KARAOKE } from '@alfira/server/shared';
 import { ArrowCounterClockwiseIcon, FloppyDiskIcon } from '@phosphor-icons/react';
-import { memo, useCallback, useEffect, useMemo, useState } from 'react';
+import { memo, useCallback, useMemo, useState } from 'react';
 
 import { useAdminView } from '../../context/AdminViewContext';
 import { usePermissions } from '../../context/PermissionsContext';
+import { useFilterSection } from '../../hooks/useFilterSection';
 import { Button } from '../ui/Button';
 
-const DEFAULTS = {
-  enabled: false,
-  level: 1,
-  monoLevel: 1,
-  filterBand: 220,
-  filterWidth: 100,
-};
+const DEFAULTS: KaraokeSettings = { ...DEFAULT_KARAOKE };
 
 const SLIDERS = [
   { key: 'level', label: 'Level', min: 0, max: 1, step: 0.05, unit: '' },
@@ -37,7 +31,7 @@ const KaraokeSlider = memo(function KaraokeSlider({
 }: KaraokeSliderProps) {
   const handleChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
-      onChange(key, Number.parseFloat(e.target.value));
+      onChange(key, Number(e.target.value));
     },
     [onChange, key]
   );
@@ -68,45 +62,26 @@ const KaraokeSlider = memo(function KaraokeSlider({
   );
 });
 
-interface KaraokeValues {
-  enabled: boolean;
-  level: number;
-  monoLevel: number;
-  filterBand: number;
-  filterWidth: number;
+interface KaraokeSectionProps {
+  initialValues?: KaraokeSettings;
 }
 
-export default function KaraokeSection() {
+export default function KaraokeSection({ initialValues }: KaraokeSectionProps) {
   const { isAdminView } = useAdminView();
   const { hasPermission } = usePermissions();
 
   const canManage = isAdminView || hasPermission('audio.manage');
-  const [values, setValues] = useState<KaraokeValues>(DEFAULTS);
-  const [savedValues, setSavedValues] = useState<KaraokeValues>(DEFAULTS);
+  const [values, setValues] = useState<KaraokeSettings>(DEFAULTS);
+  const [savedValues, setSavedValues] = useState<KaraokeSettings>(DEFAULTS);
   const [saving, setSaving] = useState(false);
-  const [loaded, setLoaded] = useState(false);
 
-  useEffect(() => {
-    async function load() {
-      try {
-        const res = await fetch('/api/settings/karaoke');
-        if (res.ok) {
-          const data = (await res.json()) as KaraokeValues;
-          setValues(data);
-          setSavedValues(data);
-        }
-      } catch {
-        // silently fail
-      } finally {
-        setLoaded(true);
-      }
-    }
-    if (canManage) {
-      void load();
-    } else {
-      setLoaded(true);
-    }
-  }, [canManage]);
+  const loaded = useFilterSection(
+    canManage,
+    '/api/settings/karaoke',
+    initialValues,
+    setValues,
+    setSavedValues
+  );
 
   const hasChanges = JSON.stringify(values) !== JSON.stringify(savedValues);
 

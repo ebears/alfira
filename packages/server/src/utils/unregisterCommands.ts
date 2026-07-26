@@ -14,7 +14,9 @@ import { logger } from '../shared/logger';
 
 /** Delay helper for rate limit pacing. */
 function delay(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
+  return new Promise((resolve) => {
+    setTimeout(resolve, ms);
+  });
 }
 
 /** Delete a command with retry on rate limit (429). */

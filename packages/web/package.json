@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "bunx @tailwindcss/cli -i ./src/index.css -o ./public/index.css --watch & bun run src/server.ts",
     "build:css": "bunx @tailwindcss/cli -i ./src/index.css -o ./dist/index.css --minify",
+    "test": "bun test",
     "build": "bun run build:css && bun build ./src/main.tsx --outdir=./dist --minify --sourcemap=external && cp ./index.html ./dist/ && sed -i 's|/src/main.tsx|/main.js|g' ./dist/index.html && sed -i 's|/src/index.css|/index.css|g' ./dist/index.html && cp -r ./public/* ./dist/"
   },
   "dependencies": {
@@ -14,12 +15,12 @@
     "@atlaskit/pragmatic-drag-and-drop-auto-scroll": "^3.0.0",
     "@atlaskit/pragmatic-drag-and-drop-hitbox": "^2.0.0",
     "@phosphor-icons/react": "2.1.10",
-    "@tanstack/react-virtual": "3.14.6",
+    "@tanstack/react-virtual": "3.14.8",
     "masonic": "^4.1.0",
     "motion": "^12.42.2",
-    "react": "19.2.7",
-    "react-dom": "19.2.7",
-    "react-router-dom": "7.18.1"
+    "react": "19.2.8",
+    "react-dom": "19.2.8",
+    "react-router": "8.3.0"
   },
   "devDependencies": {
     "@tailwindcss/cli": "4.3.3",

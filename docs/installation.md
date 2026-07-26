@@ -6,12 +6,16 @@ This guide covers everything you need to set up Alfira for both development and 
 
 - [Prerequisites](#prerequisites)
 - [Networking & Access](#networking--access)
+- [First Run: What to Expect](#first-run-what-to-expect)
 - [Discord Application Setup](#discord-application-setup)
 - [Configuration](#configuration)
 - [Development Setup](#development-setup)
 - [Production Setup](#production-setup)
 - [Setup Wizard](#setup-wizard)
 - [Upgrading](#upgrading)
+- [Backup & Restore](#backup--restore)
+- [Custom Port](#custom-port)
+- [Health Check](#health-check)
 
 ---
 
@@ -33,6 +37,17 @@ This guide covers everything you need to set up Alfira for both development and 
 | Git         | Any     | For cloning the repository            |
 
 ---
+
+## First Run: What to Expect
+
+After starting Alfira for the first time:
+
+1. **Open the web UI** at `http://localhost:3001` (or your configured URL).
+2. **Log in with Discord** — click the login button, authorize the application, and you'll be redirected back to the web UI.
+3. **Complete the setup wizard** — choose your Discord server, enable music sources, pick admin roles, and configure playback settings. See [Setup Wizard](#setup-wizard) for details.
+4. **Start using Alfira** — after setup, you'll land on the Songs page. Import tracks by pasting URLs, create playlists, and control playback from the Now Playing bar.
+
+> **Note:** If you're upgrading from a previous version that used `GUILD_ID` and `ADMIN_ROLE_IDS` in `.env`, those values are automatically migrated — you won't see the wizard and will land directly on the Songs page.
 
 ## Networking & Access
 
@@ -102,7 +117,9 @@ bun setup:nodelink
 bun dev
 ```
 
-The server auto-restarts on file changes. For web/frontend changes during a session, run `bun web:build` in another terminal and refresh.
+**What `bun setup:nodelink` does:** Clones the [NodeLink](https://github.com/PerformanC/NodeLink) audio server at a pinned commit into `.nodelink/`, installs its dependencies, builds it, and copies the project's custom config (`nodelink-config/config.ts`) into place. This only needs to be run once — the resulting `.nodelink/` directory is excluded from git. NodeLink is spawned automatically as a child process when the dev server starts.
+
+The server auto-restarts on file changes. For web/frontend changes during a session, run `bun run web:build` in another terminal and refresh.
 
 ### Option 2: Docker Development
 
@@ -123,7 +140,7 @@ bun dev:docker
 
 ## Production Setup
 
-Alfira uses pre-built Docker images from the GitHub Container Registry.
+Alfira uses pre-built Docker images from the GitHub Container Registry. Images are multi-arch (`linux/amd64`, `linux/arm64`) and run on x86-64 and ARM64 hosts (including Raspberry Pi 4/5).
 
 ```bash
 # 1. Grab the compose file and example env
@@ -133,9 +150,17 @@ curl -o .env https://raw.githubusercontent.com/ebears/alfira/main/.env.example
 # 2. Configure .env with your values
 nano .env  # or micro, zed, code, vim, etc.
 
-# 3. Start the stack — web UI at http://localhost:3001
+# 3. Create the data directory with proper permissions
+#    The container runs as UID 1001 (non-root). This directory
+#    holds your SQLite database — back it up regularly.
+mkdir -p data
+chmod 755 data
+
+# 4. Start the stack — web UI at http://localhost:3001
 docker compose up -d
 ```
+
+> **Note:** If you're on a system where the `data/` directory was created by a previous `docker compose up` with root ownership, fix it with: `sudo chown -R 1001:1001 data/`
 
 ### Environment Variables
 
@@ -265,8 +290,93 @@ Database migrations run automatically on startup. If you encounter issues:
 docker compose logs -f alfira
 ```
 
+### Upgrade checklist
+
+1. **Check the [changelog](https://github.com/ebears/alfira/blob/main/CHANGELOG.md)** for breaking changes between your version and the latest.
+2. **Back up your database** before upgrading (see [Backup & Restore](#backup--restore)).
+3. **Review new optional env vars** in `.env.example` — new features may require additional configuration.
+
+---
+
+## Backup & Restore
+
+All Alfira data (song library, playlists, tags, settings) lives in a single SQLite file at `./data/alfira.db`. Backing up is as simple as copying that file.
+
+### Backup
+
+```bash
+# While Alfira is running (SQLite handles this safely for reads)
+cp ./data/alfira.db ./backups/alfira-$(date +%Y-%m-%d).db
+```
+
+For automated daily backups, add a cron job:
+
+```bash
+0 3 * * * cp /path/to/alfira/data/alfira.db /path/to/backups/alfira-$(date +\%Y-\%m-\%d).db
+```
+
+### Restore
+
+```bash
+# 1. Stop Alfira
+docker compose down
+
+# 2. Replace the database file
+cp ./backups/alfira-2026-01-01.db ./data/alfira.db
+chmod 644 ./data/alfira.db
+
+# 3. Start again
+docker compose up -d
+```
+
+> **Note:** The database file must be readable and writable by UID 1001 (the `nodejs` user inside the container).
+
+---
+
+## Custom Port
+
+By default, Alfira's web UI is exposed on port 3001. To use a different port, edit the port mapping in `docker-compose.yml`:
+
+```yaml
+ports:
+  - 8080:3001 # host:container — change 8080 to your preferred port
+```
+
+Then update your `DISCORD_REDIRECT_URI` to match:
+
+```env
+DISCORD_REDIRECT_URI=http://localhost:8080/auth/callback
+```
+
+Apply the changes:
+
+```bash
+docker compose up -d
+```
+
+> The container-internal port (right side of the colon) must stay `3001`. Only change the host port (left side).
+
+---
+
+## Health Check
+
+Alfira exposes a `/health` endpoint that returns `200 OK` when the server is running. You can use this for monitoring or reverse proxy health checks:
+
+```bash
+curl http://localhost:3001/health
+```
+
+The Docker health check uses this endpoint automatically — `docker compose ps` will show the container as `healthy` when everything is working. If the container shows `unhealthy`, check the logs:
+
+```bash
+docker compose logs alfira
+```
+
 ---
 
 For more information, see:
 
 - **[Troubleshooting](troubleshooting.md)** — Common issues and solutions
+- **[Tech Stack](tech-stack.md)** — Architecture and project structure
+- **[Development Choices](development-choices.md)** — Why each technology was chosen
+- **[oxlint Setup](oxlint-setup.md)** — Linter and formatter configuration for IDE integration

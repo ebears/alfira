@@ -311,10 +311,10 @@ export function ContextMenu({
       const findNextEnabled = (current: number, direction: 1 | -1): number => {
         const pos = enabledIndices.indexOf(current);
         if (pos === -1) {
-          return enabledIndices[0];
+          return enabledIndices[0] as number;
         }
         const nextPos = (pos + direction + enabledIndices.length) % enabledIndices.length;
-        return enabledIndices[nextPos];
+        return enabledIndices[nextPos] as number;
       };
 
       if (e.key === 'ArrowDown') {
@@ -444,7 +444,7 @@ function InfoRow({ item }: { item: MenuItem }) {
       role='presentation'
       className='text-muted flex items-center gap-2 px-3 py-1.5 font-mono text-xs'
     >
-      {item.icon && <span className='shrink-0'>{item.icon}</span>}
+      {item.icon != null && <span className='shrink-0'>{item.icon}</span>}
       <span className='truncate'>{item.info?.label}</span>
     </div>
   );

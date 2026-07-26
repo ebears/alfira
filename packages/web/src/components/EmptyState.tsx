@@ -46,7 +46,7 @@ export function getRandomIdleIcon() {
     idx = Math.floor(Math.random() * IdleIcons.length);
   } while (IdleIcons.length > 1 && idx === lastIndex);
   lastIndex = idx;
-  return IdleIcons[idx] ?? IdleIcons[0];
+  return IdleIcons[idx] ?? (IdleIcons[0] as (typeof IdleIcons)[number]);
 }
 
 export default function EmptyState({

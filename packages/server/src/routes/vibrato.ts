@@ -7,6 +7,7 @@ import { checkGuards } from '../lib/routeGuards';
 import { routeTable } from '../lib/routeTable';
 import { syncAllFilters } from '../lib/syncAllFilters';
 import { db, tables } from '../shared/db';
+import { DEFAULT_VIBRATO } from '../shared/filterDefaults';
 
 const VibratoSchema = v.object({
   enabled: v.boolean(),
@@ -27,9 +28,9 @@ function handleVibratoGet(
   const row = db.select().from(tables.guildSettings).where(eq(tables.guildSettings.id, 1)).get();
 
   return json({
-    enabled: row?.vibratoEnabled ?? false,
-    frequency: row?.vibratoFrequency ?? 2,
-    depth: row?.vibratoDepth ?? 0.5,
+    enabled: row?.vibratoEnabled ?? DEFAULT_VIBRATO.enabled,
+    frequency: row?.vibratoFrequency ?? DEFAULT_VIBRATO.frequency,
+    depth: row?.vibratoDepth ?? DEFAULT_VIBRATO.depth,
   });
 }
 

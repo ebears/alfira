@@ -7,7 +7,7 @@ export default defineConfig({
     reportUnusedDisableDirectives: 'error',
   },
 
-  ignorePatterns: ['.pi/**', '.zed/**'],
+  ignorePatterns: ['.pi/**', '.zed/**', 'nodelink-config/**'],
 
   plugins: [
     'react',
@@ -27,6 +27,8 @@ export default defineConfig({
     // -----------------------------------------------------------------------
     'react/rules-of-hooks': 'error',
     'react/exhaustive-deps': 'error',
+    // Enforce one consistent component definition style across the codebase
+    'react/function-component-definition': ['warn', { namedComponents: 'function-declaration' }],
 
     // -----------------------------------------------------------------------
     // a11y
@@ -42,10 +44,14 @@ export default defineConfig({
     'no-useless-catch': 'error',
     '@typescript-eslint/no-this-alias': 'error',
     '@typescript-eslint/no-unnecessary-type-constraint': 'error',
+    // Deeply nested callbacks are hard to read and debug — extract named functions
+    'unicorn/max-nested-calls': ['warn', { max: 4 }],
 
     // -----------------------------------------------------------------------
     // oxc — Oxc-specific correctness rules that catch subtle bugs
     // -----------------------------------------------------------------------
+    // overly broad disable comments (e.g. eslint-disable without specific rules)
+    'unicorn/no-abusive-eslint-disable': 'warn',
     // Math.min(Math.max(x, min), max) — wrong clamping direction
     'oxc/bad-min-max-func': 'error',
     // a < b < c evaluates as (a < b) < c — a boolean-number comparison
@@ -71,6 +77,12 @@ export default defineConfig({
     'no-unsafe-finally': 'error',
     'no-unsafe-optional-chaining': 'error',
     'no-unused-labels': 'error',
+    // new Promise(r => r(5)) — return value of executor is silently ignored
+    'no-promise-executor-return': 'error',
+    // 9007199254740993 — integer exceeds IEEE 754 safe range; value silently changes
+    'no-loss-of-precision': 'error',
+    // while (node) { ... } where node never changes — infinite loop or dead code
+    'no-unmodified-loop-condition': 'error',
     '@typescript-eslint/no-unused-vars': 'warn',
     'use-isnan': 'error',
     'for-direction': 'error',
@@ -88,6 +100,12 @@ export default defineConfig({
     'no-return-assign': 'error',
     // Functions inside loops capture mutable variables — a classic footgun
     'no-loop-func': 'error',
+    // Loops that can only iterate once (e.g. for (; false; )) — dead code
+    'no-unreachable-loop': 'error',
+    // Misused array method arguments (e.g. arr.indexOf(x, -1) → always -1)
+    'unicorn/no-confusing-array-with': 'error',
+    // setTimeout/clearTimeout without explicit delay — browser vs Node/Bun differs
+    'unicorn/explicit-timer-delay': 'warn',
     // a = b = c leaks globals in sloppy mode; confusing in strict
     'no-multi-assign': 'warn',
     // delete obj[computed] breaks type safety — use Map or undefined
@@ -110,10 +128,14 @@ export default defineConfig({
     'react/jsx-no-script-url': 'error',
     'react/no-danger': 'error',
     'react/jsx-no-target-blank': 'error',
+    // Array(3).fill([]) — all elements share the same reference; use .map() or Array.from()
+    'unicorn/no-array-fill-with-reference-type': 'error',
 
     // -----------------------------------------------------------------------
     // type safety — catch TypeScript type-level mistakes
     // -----------------------------------------------------------------------
+    // private foo: string → private readonly foo: string — immutability intent
+    '@typescript-eslint/prefer-readonly': 'warn',
     // {} means "any non-nullish value", not "empty object" — use Record<string, never>
     '@typescript-eslint/no-empty-object-type': 'error',
     // Function type is unsafe — use (...args: unknown[]) => unknown
@@ -124,6 +146,18 @@ export default defineConfig({
     '@typescript-eslint/no-duplicate-enum-values': 'error',
     // void in unions or intersections is a type-level mistake
     '@typescript-eslint/no-invalid-void-type': 'error',
+    // Conditionals on non-boolean types — requires explicit comparison.
+    // Allows nullable types (if (maybeNull)) and nullable booleans (if (maybeBool)).
+    // Non-nullable strings/numbers/objects must be compared explicitly.
+    '@typescript-eslint/strict-boolean-expressions': [
+      'warn',
+      {
+        allowNullableObject: true,
+        allowNullableBoolean: true,
+        allowNullableString: true,
+        allowNullableNumber: true,
+      },
+    ],
 
     // -----------------------------------------------------------------------
     // suspicious
@@ -197,6 +231,8 @@ export default defineConfig({
     // -----------------------------------------------------------------------
     // promises
     // -----------------------------------------------------------------------
+    // for (const x of xs) { await f(x); } — serial where parallel was intended
+    'no-await-in-loop': 'warn',
     'promise/prefer-await-to-then': 'error',
     'promise/valid-params': 'error',
     'promise/catch-or-return': 'error',
@@ -224,7 +260,6 @@ export default defineConfig({
     '@typescript-eslint/consistent-type-imports': 'warn',
     '@typescript-eslint/no-inferrable-types': 'warn',
     '@typescript-eslint/no-namespace': 'error',
-    '@typescript-eslint/no-non-null-assertion': 'warn',
     '@typescript-eslint/prefer-for-of': 'warn',
     '@typescript-eslint/prefer-optional-chain': 'warn',
     '@typescript-eslint/prefer-ts-expect-error': 'warn',
@@ -273,6 +308,9 @@ export default defineConfig({
     // -----------------------------------------------------------------------
     // typescript strictness — close the `any` escape hatch
     // -----------------------------------------------------------------------
+    // `!` non-null assertion overrides the type system with no runtime check.
+    // Use explicit `as` assertions or proper null guards instead.
+    '@typescript-eslint/no-non-null-assertion': 'error',
     '@typescript-eslint/no-unsafe-assignment': 'warn',
     '@typescript-eslint/no-unsafe-argument': 'warn',
     '@typescript-eslint/no-unsafe-member-access': 'warn',
@@ -324,8 +362,8 @@ export default defineConfig({
     '@typescript-eslint/no-unsafe-enum-comparison': 'warn',
     // Default `= undefined` when the type says the param is always passed
     '@typescript-eslint/no-useless-default-assignment': 'warn',
-    // `x!` non-null assertion where the type already excludes null
-    '@typescript-eslint/non-nullable-type-assertion-style': 'warn',
+    // Disabled: conflicts with no-non-null-assertion (this rule suggests using !)
+    '@typescript-eslint/non-nullable-type-assertion-style': 'off',
     // `void` operator used meaninglessly (`void console.log(x)`)
     '@typescript-eslint/no-meaningless-void-operator': 'warn',
     // Unnecessary namespace qualifier on a type that's already in scope
@@ -416,6 +454,11 @@ export default defineConfig({
     'unicorn/prefer-structured-clone': 'warn',
     // String.raw over escaping backslashes in regex / path strings
     'unicorn/prefer-string-raw': 'warn',
+    // Number(x) over parseInt(x) / parseFloat(x) — faster and clearer for coercion
+    'unicorn/prefer-number-coercion': 'warn',
+    // arr.filter(Boolean) over arr.filter(x => !!x) — cleaner, zero-cost
+    'unicorn/prefer-native-coercion-functions': 'warn',
+
     // Enforce kebab-case, PascalCase, or camelCase filenames
     'unicorn/filename-case': [
       'warn',
@@ -559,7 +602,7 @@ export default defineConfig({
 
     // Plain JS files: type-aware rules produce noise on untyped code
     {
-      files: ['nodelink-config/**', 'packages/web/public/**'],
+      files: ['packages/web/public/**'],
       rules: {
         '@typescript-eslint/no-unsafe-assignment': 'off',
         '@typescript-eslint/no-unsafe-member-access': 'off',
@@ -567,6 +610,7 @@ export default defineConfig({
         '@typescript-eslint/no-unsafe-return': 'off',
         '@typescript-eslint/no-unsafe-argument': 'off',
         '@typescript-eslint/no-unnecessary-condition': 'off',
+        '@typescript-eslint/strict-boolean-expressions': 'off',
         'no-console': 'off',
       },
     },
@@ -601,6 +645,15 @@ export default defineConfig({
       },
     },
 
+    // Valibot schemas: max-nested-calls fires on idiomatic v.pipe(v.array(...)) chains.
+    // The nesting is inherent to the declarative API and cannot be meaningfully flattened.
+    {
+      files: ['packages/server/src/routes/equalizer.ts', 'packages/server/src/routes/requests.ts'],
+      rules: {
+        'unicorn/max-nested-calls': 'off',
+      },
+    },
+
     // Route handler files: "always falsy/truthy" checks on Drizzle query results
     // are defensive guards. The type system says the value can't be null, but
     // these checks exist as runtime safety. Suppress no-unnecessary-condition
@@ -612,15 +665,12 @@ export default defineConfig({
         'packages/server/src/routes/player.ts',
         'packages/server/src/routes/playlists.ts',
         'packages/server/src/routes/songs.ts',
-        'packages/server/src/routes/tags.ts',
         'packages/server/src/routes/requests.ts',
-        'packages/server/src/lib/migrateExistingTags.ts',
         'packages/server/src/lib/ensureTagsMigrated.ts',
         'packages/server/src/lib/playlistAccess.ts',
         'packages/server/src/lib/syncPlaylistToTag.ts',
         'packages/server/src/lib/search.ts',
         'packages/server/src/utils/nodelink.ts',
-        'packages/server/src/GuildPlayer.ts',
         'packages/server/src/routes/equalizer.ts',
         'packages/server/src/index.ts',
         // Web files with known false positives for this pedantic rule:
@@ -673,11 +723,69 @@ export default defineConfig({
       },
     },
 
-    // useSocket.ts: as WebSocket is clearer intent than !
+    // Route param extraction: params.id / params.songId / params.nameLower are
+    // guaranteed by route pattern matching. The `as string` assertion documents
+    // this runtime guarantee — a missing param would indicate a routing bug, not a
+    // normal execution path.
     {
-      files: ['packages/web/src/hooks/useSocket.ts'],
+      files: [
+        'packages/server/src/routes/playlists.ts',
+        'packages/server/src/routes/tags.ts',
+        'packages/server/src/routes/songs.ts',
+        'packages/server/src/routes/requests.ts',
+        'packages/server/src/routes/player.ts',
+      ],
       rules: {
-        'non-nullable-type-assertion-style': 'off',
+        '@typescript-eslint/no-unsafe-type-assertion': 'off',
+      },
+    },
+
+    // Algorithm code with provably correct bounds: Fisher-Yates shuffle loop
+    // indices, JWT parts after length check, eqBands fixed-length iteration.
+    // The `as` assertions document programmer-verified invariants.
+    {
+      files: [
+        'packages/server/src/shared/shuffle.ts',
+        'packages/server/src/lib/jwt.ts',
+        'packages/server/src/lib/eqBands.ts',
+        'packages/server/src/shared/db/index.ts',
+        'packages/server/src/lib/syncPlaylistToTag.ts',
+      ],
+      rules: {
+        '@typescript-eslint/no-unsafe-type-assertion': 'off',
+      },
+    },
+
+    // Web code with fixed-size arrays or virtualizer-guaranteed indices:
+    // FREQ_LABELS[i] (parallel array), TAG_COLORS[hash % length] (modulo bounds),
+    // enabledIndices (guarded non-empty), virtualItems[i] (virtualizer API),
+    // tags[t.length-1] (guarded non-empty). The `as` assertions make these
+    // invariants explicit.
+    {
+      files: [
+        'packages/web/src/components/settings/EqualizerSection.tsx',
+        'packages/web/src/utils/tagColors.ts',
+        'packages/web/src/components/ContextMenu.tsx',
+        'packages/web/src/components/EmptyState.tsx',
+        'packages/web/src/components/SongEditPanel.tsx',
+        'packages/web/src/components/AddSongModal.tsx',
+        'packages/web/src/components/QueuePanel.tsx',
+        'packages/web/src/pages/PlaylistDetailPage.tsx',
+        'packages/web/src/hooks/useSortableVirtualList.ts',
+        'packages/web/src/hooks/useSortableMasonicGrid.tsx',
+      ],
+      rules: {
+        '@typescript-eslint/no-unsafe-type-assertion': 'off',
+      },
+    },
+
+    // Test file: jwt.test.ts uses `as Record<string, unknown>` on known-valid
+    // test tokens instead of `!` after expect().not.toBeNull(). The assertion
+    // documents "this token is valid in this test scenario."
+    {
+      files: ['packages/server/src/lib/jwt.test.ts'],
+      rules: {
+        '@typescript-eslint/no-unsafe-type-assertion': 'off',
       },
     },
 
@@ -696,6 +804,33 @@ export default defineConfig({
       files: ['packages/server/src/index.ts'],
       rules: {
         '@typescript-eslint/consistent-return': 'off',
+      },
+    },
+
+    // Sequential await-in-loop is intentional for these files:
+    // - Discord API calls must respect rate limits
+    // - Playback operations are inherently serial
+    // - Route registration order matters
+    // - Tag sync / migration writes to DB and needs consistency
+    // - Voice connection state machine steps must be serial
+    // - Retry loops with backoff are serial by design
+    // - Chunked bulk operations throttle server load
+    // - DB transactions are serial by SQLite design
+    {
+      files: [
+        'packages/server/src/utils/unregisterCommands.ts',
+        'packages/server/src/lib/routeTable.ts',
+        'packages/server/src/GuildPlayer.ts',
+        'packages/server/src/lib/syncPlaylistToTag.ts',
+        'packages/server/src/lib/voice.ts',
+        'packages/web/src/api/client.ts',
+        'packages/server/src/routes/auth.ts',
+        'packages/web/src/pages/PlaylistDetailPage.tsx',
+        'packages/server/src/lib/tagCanonicalization.ts',
+        'packages/server/src/lib/migrateExistingTags.ts',
+      ],
+      rules: {
+        'no-await-in-loop': 'off',
       },
     },
   ],

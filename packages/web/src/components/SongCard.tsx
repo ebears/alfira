@@ -1,6 +1,8 @@
 import { type Playlist, type Song } from '@alfira/server/shared';
 import { DiscIcon, MicrophoneStageIcon, MusicNoteIcon, UserIcon } from '@phosphor-icons/react';
-import React, { useCallback, useMemo, useState } from 'react';
+import { AnimatePresence } from 'motion/react';
+import * as m from 'motion/react-m';
+import React, { useCallback, useMemo, useRef, useState } from 'react';
 
 import { usePermissions } from '../context/PermissionsContext';
 import { useSongEdit } from '../context/SongEditContext';
@@ -42,7 +44,7 @@ interface SongCardProps {
 // ---------------------------------------------------------------------------
 // Main component
 // ---------------------------------------------------------------------------
-const SongCardInner = ({
+function SongCardInner({
   song,
   variant,
   playlists,
@@ -57,7 +59,7 @@ const SongCardInner = ({
   selectionMode = false,
   isSelected = false,
   onToggleSelect,
-}: SongCardProps) => {
+}: SongCardProps) {
   const { openSongId, setOpenSongId } = useSongEdit();
   const { hasPermission } = usePermissions();
   const isOpen = openSongId === song.id;
@@ -129,6 +131,12 @@ const SongCardInner = ({
   }, []);
 
   const handleToggleSelect = useCallback(() => onToggleSelect?.(), [onToggleSelect]);
+
+  // Stable motion props for the edit panel expand/collapse animation.
+  const editPanelInitial = useMemo(() => ({ height: 0, opacity: 0 }), []);
+  const editPanelAnimate = useMemo(() => ({ height: 'auto' as const, opacity: 1 }), []);
+  const editPanelExit = useMemo(() => ({ height: 0, opacity: 0 }), []);
+  const editPanelTransition = useRef({ duration: 0.2, ease: 'easeOut' as const });
 
   // ── Grid variant ──────────────────────────────────────────────────────
 
@@ -265,9 +273,19 @@ const SongCardInner = ({
         </div>
 
         {/* Inline edit panel */}
-        <div className={`expand-panel ${isOpen ? 'expanded' : ''}`}>
-          <SongEditPanel song={song} isOpen={isOpen} onClose={handleEditClose} />
-        </div>
+        <AnimatePresence>
+          {isOpen && (
+            <m.div
+              initial={editPanelInitial}
+              animate={editPanelAnimate}
+              exit={editPanelExit}
+              transition={editPanelTransition.current}
+              className='overflow-hidden'
+            >
+              <SongEditPanel song={song} isOpen={isOpen} onClose={handleEditClose} />
+            </m.div>
+          )}
+        </AnimatePresence>
       </Card>
     );
   }
@@ -379,12 +397,22 @@ const SongCardInner = ({
       </div>
 
       {/* Inline edit panel */}
-      <div className={`expand-panel ${isOpen ? 'expanded' : ''}`}>
-        <SongEditPanel song={song} isOpen={isOpen} onClose={handleEditClose} />
-      </div>
+      <AnimatePresence>
+        {isOpen && (
+          <m.div
+            initial={editPanelInitial}
+            animate={editPanelAnimate}
+            exit={editPanelExit}
+            transition={editPanelTransition.current}
+            className='overflow-hidden'
+          >
+            <SongEditPanel song={song} isOpen={isOpen} onClose={handleEditClose} />
+          </m.div>
+        )}
+      </AnimatePresence>
     </Card>
   );
-};
+}
 
 SongCardInner.displayName = 'SongCard';
 

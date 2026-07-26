@@ -98,7 +98,7 @@ const REFRESH_TOKEN_MAX_AGE = (() => {
   }
   const multipliers: Record<string, number> = { d: 86400000, h: 3600000, m: 60000, s: 1000 };
   const unit = match[2] ?? 'd';
-  const num = match[1] ? Number.parseInt(match[1], 10) : 30;
+  const num = match[1] ? Math.trunc(Number(match[1])) : 30;
   return num * (multipliers[unit] ?? 86400000);
 })();
 
@@ -527,7 +527,9 @@ async function withRetry<T>(fn: () => Promise<T>, attempts = 3, baseDelayMs = 50
     } catch (error) {
       lastErr = error;
       if (i < attempts - 1) {
-        await new Promise((resolve) => setTimeout(resolve, baseDelayMs * 2 ** i));
+        await new Promise((resolve) => {
+          setTimeout(resolve, baseDelayMs * 2 ** i);
+        });
       }
     }
   }

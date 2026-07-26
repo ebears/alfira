@@ -115,13 +115,15 @@ async function handleBulkTag(ctx: RouteContext, request: Request): Promise<Respo
     await db.update(songTable).set({ tags: newTags }).where(inArray(songTable.id, ids));
     updatedIds.push(...ids);
   } else {
-    // Merge: add new tags to each song's existing tags
-    for (const song of existingSongs) {
-      const existingTags = song.tags ?? [];
-      const merged = [...new Set([...existingTags, ...newTags])];
-      await db.update(songTable).set({ tags: merged }).where(eq(songTable.id, song.id));
-      updatedIds.push(song.id);
-    }
+    // Merge: add new tags to each song's existing tags — run updates in parallel
+    await Promise.all(
+      existingSongs.map(async (song) => {
+        const existingTags = song.tags ?? [];
+        const merged = [...new Set([...existingTags, ...newTags])];
+        await db.update(songTable).set({ tags: merged }).where(eq(songTable.id, song.id));
+        updatedIds.push(song.id);
+      })
+    );
   }
 
   // Re-fetch updated songs and emit events
@@ -360,7 +362,7 @@ async function handleGetSongs(ctx: RouteContext, request: Request): Promise<Resp
       .from(songTable)
       .where(where),
   ]);
-  const total = Number.parseInt(String(countResult[0]?.count ?? 0), 10);
+  const total = Math.trunc(Number(String(countResult[0]?.count ?? 0)));
 
   // Resolve Discord display names for unique addedBy IDs
   const nameMap = await resolveDisplayNames(songs);
@@ -389,7 +391,7 @@ async function handleDeleteSong(
   _request: Request,
   params: Record<string, string>
 ): Promise<Response> {
-  const { id } = params;
+  const id = params.id as string;
   const guards = checkGuards(ctx, { admin: true, permission: 'songs.delete' });
   if (guards instanceof Response) {
     return guards;
@@ -427,7 +429,7 @@ async function handlePatchSong(
   request: Request,
   params: Record<string, string>
 ): Promise<Response> {
-  const { id } = params;
+  const id = params.id as string;
   const guards = checkGuards(ctx, { admin: true, permission: 'songs.edit' });
   if (guards instanceof Response) {
     return guards;

@@ -62,7 +62,6 @@ export async function findPlaylistWithSongs(playlistId: string) {
     .sort((a, b) => (a.PlaylistSong?.position ?? 0) - (b.PlaylistSong?.position ?? 0))
     .map(
       (r) =>
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion
         ({
           ...r.PlaylistSong,
           song: r.Song,
@@ -75,5 +74,5 @@ export async function findPlaylistWithSongs(playlistId: string) {
         }
     );
 
-  return { ...result[0]?.Playlist, songs };
+  return { ...(result[0] as (typeof result)[number]).Playlist, songs };
 }

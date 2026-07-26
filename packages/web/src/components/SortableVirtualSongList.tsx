@@ -188,7 +188,7 @@ export const SortableVirtualSongList = memo(function SortableVirtualSongList({
     } else {
       const timeout = setTimeout(() => {
         setEffectiveOpenId(null);
-      }, 300);
+      }, 200);
       return () => {
         clearTimeout(timeout);
       };
@@ -231,9 +231,7 @@ export const SortableVirtualSongList = memo(function SortableVirtualSongList({
 
   const estimateSize = useCallback(
     (index: number) => {
-      return (items[index] as Song | undefined)?.id === effectiveOpenId
-        ? EXPANDED_ROW_HEIGHT
-        : COLLAPSED_ROW_HEIGHT;
+      return items[index]?.id === effectiveOpenId ? EXPANDED_ROW_HEIGHT : COLLAPSED_ROW_HEIGHT;
     },
     [items, effectiveOpenId]
   );

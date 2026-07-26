@@ -4,7 +4,7 @@ import { MusicNotesIcon, QuestionIcon } from '@phosphor-icons/react';
 import { AnimatePresence } from 'motion/react';
 import * as m from 'motion/react-m';
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams } from 'react-router';
 
 import {
   bulkDeleteSongs,
@@ -274,9 +274,11 @@ export default function SongsPage() {
     try {
       const allIds = [...bulk.selectedIds];
       const chunkSize = 500;
+      // oxlint-disable no-await-in-loop
       for (let i = 0; i < allIds.length; i += chunkSize) {
         await bulkDeleteSongs(allIds.slice(i, i + chunkSize));
       }
+      // oxlint-enable no-await-in-loop
       for (const id of allIds) {
         removeItem(id);
       }
@@ -299,9 +301,11 @@ export default function SongsPage() {
       try {
         const allIds = [...bulk.selectedIds];
         const chunkSize = 500;
+        // oxlint-disable no-await-in-loop
         for (let i = 0; i < allIds.length; i += chunkSize) {
           await bulkEditSongs(allIds.slice(i, i + chunkSize), data);
         }
+        // oxlint-enable no-await-in-loop
         notify(`Updated ${allIds.length} song${allIds.length !== 1 ? 's' : ''}`, 'success');
         setBulkEditingOpen(false);
       } catch (error: unknown) {

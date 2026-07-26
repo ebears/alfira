@@ -14,23 +14,7 @@ interface SongEditPanelProps {
 }
 
 export default function SongEditPanel({ song, isOpen, onClose }: SongEditPanelProps) {
-  const [closing, setClosing] = useState(false);
-  const closingRef = useRef(false);
   const { tagColorMap } = useTagColors();
-
-  useLayoutEffect(() => {
-    if (isOpen) {
-      closingRef.current = false;
-      setClosing(false);
-    } else if (!closingRef.current) {
-      closingRef.current = true;
-      setClosing(true);
-      setTimeout(() => {
-        closingRef.current = false;
-        setClosing(false);
-      }, 300);
-    }
-  }, [isOpen]);
 
   const songExtended = song as Song & {
     artist?: string | null;
@@ -132,7 +116,7 @@ export default function SongEditPanel({ song, isOpen, onClose }: SongEditPanelPr
         setHighlightedIndex(-1);
       }
       if (e.key === 'Backspace' && tagInput === '' && tags.length > 0) {
-        removeTag(tags[tags.length - 1]);
+        removeTag(tags[tags.length - 1] as string);
       }
     },
     [addTag, availableTags, highlightedIndex, removeTag, showTagDropdown, tagInput, tags]
@@ -152,7 +136,7 @@ export default function SongEditPanel({ song, isOpen, onClose }: SongEditPanelPr
         tags: t,
         volumeBoost: vo,
       } = fieldsRef.current();
-      const parsedRaw = vo.trim() === '' ? null : Number.parseInt(vo.trim(), 10);
+      const parsedRaw = vo.trim() === '' ? null : Math.trunc(Number(vo.trim()));
       const parsedBoost =
         parsedRaw != null && !Number.isNaN(parsedRaw) && parsedRaw !== 0 ? parsedRaw : null;
 
@@ -202,7 +186,7 @@ export default function SongEditPanel({ song, isOpen, onClose }: SongEditPanelPr
         tags: t,
         volumeBoost: vo,
       } = fieldsRef.current();
-      const parsedRaw = vo.trim() === '' ? null : Number.parseInt(vo.trim(), 10);
+      const parsedRaw = vo.trim() === '' ? null : Math.trunc(Number(vo.trim()));
       const parsedBoost =
         parsedRaw != null && !Number.isNaN(parsedRaw) && parsedRaw !== 0 ? parsedRaw : null;
 
@@ -244,11 +228,6 @@ export default function SongEditPanel({ song, isOpen, onClose }: SongEditPanelPr
   const handlePanelClick = useCallback((e: React.MouseEvent) => {
     e.stopPropagation();
   }, []);
-
-  const panelStyle = useMemo(
-    () => (closing ? ({ pointerEvents: 'none' } as const) : undefined),
-    [closing]
-  );
 
   const handleFocusTagInput = useCallback(() => {
     tagInputRef.current?.focus();
@@ -294,17 +273,8 @@ export default function SongEditPanel({ song, isOpen, onClose }: SongEditPanelPr
     setHighlightedIndex(-1);
   }, []);
 
-  if (!isOpen && !closing) {
-    return null;
-  }
-
   return (
-    <div
-      className='expand-panel-content'
-      data-closing={closing ? 'true' : undefined}
-      style={panelStyle}
-      onClick={handlePanelClick}
-    >
+    <div onClick={handlePanelClick}>
       <div className='border-border border-t px-3 pt-4 pb-4 md:px-4'>
         <div className='flex flex-col gap-3'>
           <Field
@@ -424,7 +394,7 @@ function VolumeSlider({
   onKeyDown?: (e: React.KeyboardEvent<HTMLInputElement>) => void;
 }) {
   const numeric =
-    value.trim() === '' ? 0 : Math.min(max, Math.max(min, Number.parseInt(value, 10) || 0));
+    value.trim() === '' ? 0 : Math.min(max, Math.max(min, Math.trunc(Number(value)) || 0));
   const pct = `${((numeric - min) / (max - min)) * 100}%`;
 
   const handleChange = useCallback(
@@ -441,7 +411,7 @@ function VolumeSlider({
     if (value.trim() === '') {
       onChange('0');
     } else {
-      const n = Number.parseInt(value, 10);
+      const n = Math.trunc(Number(value));
       if (!Number.isNaN(n)) {
         onChange(String(Math.min(max, Math.max(min, n))));
       }
@@ -664,7 +634,7 @@ function TagDropdown({
 
   const handleItemMouseEnter = useCallback(
     (e: React.MouseEvent<HTMLDivElement>) => {
-      const idx = Number.parseInt(e.currentTarget.dataset.index ?? '0', 10);
+      const idx = Math.trunc(Number(e.currentTarget.dataset.index ?? '0'));
       onHighlight(idx);
     },
     [onHighlight]

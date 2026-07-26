@@ -1,4 +1,4 @@
-import { eq, sql } from 'drizzle-orm';
+import { eq, inArray, sql } from 'drizzle-orm';
 import * as v from 'valibot';
 
 import { type RouteContext } from '../lib/context';
@@ -46,7 +46,7 @@ async function handleGetTag(
   _request: Request,
   params: Record<string, string>
 ): Promise<Response> {
-  const { nameLower } = params;
+  const nameLower = params.nameLower as string;
   const guards = checkGuards(ctx);
   if (guards instanceof Response) {
     return guards;
@@ -63,7 +63,7 @@ function handleGetTagSongs(
   _request: Request,
   params: Record<string, string>
 ): Response {
-  const { nameLower } = params;
+  const nameLower = params.nameLower as string;
   const guards = checkGuards(ctx);
   if (guards instanceof Response) {
     return guards;
@@ -92,7 +92,7 @@ async function handlePatchTag(
   request: Request,
   params: Record<string, string>
 ): Promise<Response> {
-  const { nameLower } = params;
+  const nameLower = params.nameLower as string;
 
   let raw: unknown;
   try {
@@ -150,7 +150,7 @@ async function handleDeleteTag(
   _request: Request,
   params: Record<string, string>
 ): Promise<Response> {
-  const { nameLower } = params;
+  const nameLower = params.nameLower as string;
   const guards = checkGuards(ctx, { admin: true, permission: 'tags.manage' });
   if (guards instanceof Response) {
     return guards;
@@ -173,10 +173,8 @@ async function handleDeleteTag(
     .all();
 
   for (const song of songsWithTag) {
-    if (song.tags && Array.isArray(song.tags)) {
-      const updatedTags = song.tags.filter((t) => t.toLowerCase() !== nameLower);
-      db.update(songTable).set({ tags: updatedTags }).where(eq(songTable.id, song.id)).returning();
-    }
+    const updatedTags = song.tags.filter((t) => t.toLowerCase() !== nameLower);
+    db.update(songTable).set({ tags: updatedTags }).where(eq(songTable.id, song.id)).returning();
   }
 
   // Convert any smart playlists tracking this tag to regular playlists
@@ -186,21 +184,28 @@ async function handleDeleteTag(
     .where(eq(playlistTable.tagNameLower, nameLower))
     .all();
 
-  for (const pl of smartPlaylists) {
-    await db.update(playlistTable).set({ tagNameLower: null }).where(eq(playlistTable.id, pl.id));
+  // Update all smart playlists to remove the tag reference, then re-fetch and emit
+  await Promise.all(
+    smartPlaylists.map((pl) =>
+      db.update(playlistTable).set({ tagNameLower: null }).where(eq(playlistTable.id, pl.id))
+    )
+  );
 
-    // Emit update for each affected playlist
-    const [updatedPl] = await db
-      .select()
-      .from(playlistTable)
-      .where(eq(playlistTable.id, pl.id))
-      .limit(1);
-    if (updatedPl) {
-      emitPlaylistUpdated({
-        ...updatedPl,
-        createdAt: updatedPl.createdAt.toISOString(),
-      });
-    }
+  const updatedPlaylists = await db
+    .select()
+    .from(playlistTable)
+    .where(
+      inArray(
+        playlistTable.id,
+        smartPlaylists.map((pl) => pl.id)
+      )
+    );
+
+  for (const updatedPl of updatedPlaylists) {
+    emitPlaylistUpdated({
+      ...updatedPl,
+      createdAt: updatedPl.createdAt.toISOString(),
+    });
   }
 
   await db.delete(tagTable).where(eq(tagTable.nameLower, nameLower));

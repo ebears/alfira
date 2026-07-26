@@ -1,4 +1,6 @@
-import { db, eq, tables } from '../shared/db';
+import { inArray } from 'drizzle-orm';
+
+import { db, tables } from '../shared/db';
 
 const { tag: tagTable } = tables;
 
@@ -34,15 +36,19 @@ export async function canonicalizeTags(rawTags: string[]): Promise<string[]> {
   const canonicalNames: string[] = [];
   const missingTags: string[] = [];
 
-  for (const [nameLower, originalSpelling] of seen) {
-    const existing = await db
-      .select({ canonicalName: tagTable.canonicalName })
-      .from(tagTable)
-      .where(eq(tagTable.nameLower, nameLower))
-      .limit(1);
+  // Batch-check all tags in one query instead of N sequential lookups
+  const nameLowers = [...seen.keys()];
+  const existingRows = await db
+    .select({ nameLower: tagTable.nameLower, canonicalName: tagTable.canonicalName })
+    .from(tagTable)
+    .where(inArray(tagTable.nameLower, nameLowers));
 
-    if (existing.length > 0) {
-      canonicalNames.push(existing[0]?.canonicalName ?? '');
+  const existingMap = new Map(existingRows.map((r) => [r.nameLower, r.canonicalName]));
+
+  for (const [nameLower, originalSpelling] of seen) {
+    const canonicalName = existingMap.get(nameLower);
+    if (canonicalName !== undefined) {
+      canonicalNames.push(canonicalName);
     } else {
       missingTags.push(originalSpelling);
     }

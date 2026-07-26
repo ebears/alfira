@@ -30,7 +30,7 @@ function parseExpiresIn(expiresIn: string): number {
   if (!match?.[1] || !match[2]) {
     throw new Error(`Invalid expiresIn format: ${expiresIn}`);
   }
-  const num = Number.parseInt(match[1], 10);
+  const num = Math.trunc(Number(match[1]));
   const unit = match[2];
   const multipliers: Record<string, number> = { s: 1, m: 60, h: 3600, d: 86400 };
   return num * (multipliers[unit] ?? 1);
@@ -80,9 +80,7 @@ export function verify<T = Record<string, unknown>>(token: string, secret: strin
     return null;
   }
 
-  const headerB64 = parts[0];
-  const payloadB64 = parts[1];
-  const signatureB64 = parts[2];
+  const [headerB64, payloadB64, signatureB64] = parts as [string, string, string];
 
   // Verify the signature using constant-time comparison
   const data = `${headerB64}.${payloadB64}`;
@@ -100,7 +98,6 @@ export function verify<T = Record<string, unknown>>(token: string, secret: strin
     if (typeof raw !== 'object' || raw === null || Array.isArray(raw)) {
       return null;
     }
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion
     payload = raw as Record<string, unknown>;
   } catch {
     return null;
@@ -111,6 +108,5 @@ export function verify<T = Record<string, unknown>>(token: string, secret: strin
     return null;
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion
   return payload as T;
 }

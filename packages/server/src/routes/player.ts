@@ -599,7 +599,7 @@ function handleRemoveFromQueue(
   _request: Request,
   params: Record<string, string>
 ): Response {
-  const { songId } = params;
+  const songId = params.songId as string;
   const guards = checkGuards(ctx, { admin: true, voice: true, permission: 'queue.manage' });
   if (guards instanceof Response) {
     return guards;
@@ -627,7 +627,7 @@ function handlePromoteSong(
   _request: Request,
   params: Record<string, string>
 ): Response {
-  const { songId } = params;
+  const songId = params.songId as string;
   const guards = checkGuards(ctx, { admin: true, voice: true, permission: 'queue.manage' });
   if (guards instanceof Response) {
     return guards;
@@ -655,7 +655,7 @@ function handleDemoteSong(
   _request: Request,
   params: Record<string, string>
 ): Response {
-  const { songId } = params;
+  const songId = params.songId as string;
   const guards = checkGuards(ctx, { admin: true, voice: true, permission: 'queue.manage' });
   if (guards instanceof Response) {
     return guards;

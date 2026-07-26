@@ -118,7 +118,7 @@ export function useProgressBar(
       if (rafIdRef.current) {
         cancelAnimationFrame(rafIdRef.current);
       }
-      if (intervalIdRef.current) {
+      if (intervalIdRef.current !== 0) {
         clearInterval(intervalIdRef.current);
       }
       rafIdRef.current = 0;
@@ -158,7 +158,7 @@ export function useProgressBar(
     if (rafIdRef.current) {
       cancelAnimationFrame(rafIdRef.current);
     }
-    if (intervalIdRef.current) {
+    if (intervalIdRef.current !== 0) {
       clearInterval(intervalIdRef.current);
     }
 
@@ -236,7 +236,7 @@ export function useProgressBar(
       if (rafIdRef.current) {
         cancelAnimationFrame(rafIdRef.current);
       }
-      if (intervalIdRef.current) {
+      if (intervalIdRef.current !== 0) {
         clearInterval(intervalIdRef.current);
       }
       rafIdRef.current = 0;

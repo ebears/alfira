@@ -17,6 +17,7 @@ import { handleChannelMix } from './routes/channelMix';
 import { handleCompressor } from './routes/compressor';
 import { handleDistortion } from './routes/distortion';
 import { handleEqualizer } from './routes/equalizer';
+import { handleFilters } from './routes/filters';
 import { handleGeneralSettings } from './routes/generalSettings';
 import { handleKaraoke } from './routes/karaoke';
 import { handleLowPass } from './routes/lowPass';
@@ -228,6 +229,8 @@ function startServer(): void {
       '/api/settings/distortion/*': apiRoute(handleDistortion),
       '/api/settings/equalizer': apiRoute(handleEqualizer),
       '/api/settings/equalizer/*': apiRoute(handleEqualizer),
+      '/api/settings/filters': apiRoute(handleFilters),
+      '/api/settings/filters/*': apiRoute(handleFilters),
       '/api/settings/karaoke': apiRoute(handleKaraoke),
       '/api/settings/karaoke/*': apiRoute(handleKaraoke),
       '/api/settings/lowpass': apiRoute(handleLowPass),
