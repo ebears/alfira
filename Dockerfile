@@ -36,7 +36,7 @@ RUN bun run --filter @alfira/server build && \
     bun run --filter @alfira/web build
 
 # Copy custom NodeLink config into the cloned repo
-COPY nodelink-config/config.ts /usr/local/nodelink/config.ts
+COPY nodelink.config.ts /usr/local/nodelink/config.ts
 
 ENV NODE_ENV=development
 

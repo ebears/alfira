@@ -1,6 +1,6 @@
 {
   "$schema": "https://unpkg.com/knip@6/schema.json",
-  "ignore": [".pi/**", "nodelink-config/**", "packages/web/public/**"],
+  "ignore": [".pi/**", "nodelink.config.ts", "packages/web/public/**"],
   "workspaces": {
     "packages/server": {
       "entry": ["src/utils/unregisterCommands.ts"]
