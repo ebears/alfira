@@ -1,0 +1,19 @@
+{
+  "$schema": "https://unpkg.com/knip@6/schema.json",
+  "ignore": [
+    ".pi/**",
+    "packages/server/dist/**",
+    "packages/web/dist/**",
+    "packages/web/public/**",
+    ".nodelink/**",
+    "nodelink-config/**",
+    "scripts/**"
+  ],
+  "entry": [
+    "packages/server/src/index.ts",
+    "packages/server/src/utils/unregisterCommands.ts",
+    "packages/web/src/main.tsx",
+    "packages/web/src/server.ts"
+  ],
+  "ignoreDependencies": ["@alfira/server", "@alfira/web"]
+}
