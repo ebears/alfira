@@ -2,7 +2,8 @@
   "name": "Alfira",
   "short_name": "Alfira",
   "description": "A self-hosted Discord music bot with a web UI",
-  "theme_color": "#ffffff",  "background_color": "#ffffff",
+  "theme_color": "#1a1a1a",
+  "background_color": "#1a1a1a",
   "display": "standalone",
   "start_url": "/",
   "icons": [
