@@ -1,7 +1,7 @@
 import type React from 'react';
 
 import { ArrowCounterClockwiseIcon, FloppyDiskIcon } from '@phosphor-icons/react';
-import { memo, useCallback, useEffect, useMemo, useState } from 'react';
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { useAdminView } from '../../context/AdminViewContext';
 import { usePermissions } from '../../context/PermissionsContext';
@@ -62,7 +62,11 @@ interface LowPassValues {
   smoothing: number;
 }
 
-export default function LowPassSection() {
+interface LowPassSectionProps {
+  initialValues?: LowPassValues;
+}
+
+export default function LowPassSection({ initialValues }: LowPassSectionProps) {
   const { isAdminView } = useAdminView();
   const { hasPermission } = usePermissions();
 
@@ -71,8 +75,23 @@ export default function LowPassSection() {
   const [savedValues, setSavedValues] = useState<LowPassValues>(DEFAULTS);
   const [saving, setSaving] = useState(false);
   const [loaded, setLoaded] = useState(false);
+  const didInitRef = useRef(false);
 
   useEffect(() => {
+    if (!canManage) {
+      setLoaded(true);
+      return;
+    }
+    if (initialValues && !didInitRef.current) {
+      setValues(initialValues);
+      setSavedValues(initialValues);
+      setLoaded(true);
+      didInitRef.current = true;
+      return;
+    }
+    if (initialValues) {
+      return;
+    }
     async function load() {
       try {
         const res = await fetch('/api/settings/lowpass');
@@ -87,12 +106,8 @@ export default function LowPassSection() {
         setLoaded(true);
       }
     }
-    if (canManage) {
-      void load();
-    } else {
-      setLoaded(true);
-    }
-  }, [canManage]);
+    void load();
+  }, [canManage, initialValues]);
 
   const hasChanges = JSON.stringify(values) !== JSON.stringify(savedValues);
 

@@ -10,6 +10,8 @@ import {
   WaveSineIcon,
   WavesIcon,
 } from '@phosphor-icons/react';
+import { type Icon } from '@phosphor-icons/react';
+import { useEffect, useState } from 'react';
 
 import ChannelMixSection from '../components/settings/ChannelMixSection';
 import CompressorSection from '../components/settings/CompressorSection';
@@ -22,27 +24,110 @@ import TimescaleSection from '../components/settings/TimescaleSection';
 import TremoloSection from '../components/settings/TremoloSection';
 import VibratoSection from '../components/settings/VibratoSection';
 import { PageHeader } from '../components/ui/PageHeader';
+import { Spinner } from '../components/ui/Spinner';
 import { useAdminView } from '../context/AdminViewContext';
 import { usePermissions } from '../context/PermissionsContext';
 
-const FILTER_CARDS = [
-  { icon: SlidersHorizontalIcon, label: 'Equalizer', component: EqualizerSection, wide: true },
-  { icon: ArrowsDownUpIcon, label: 'Compressor', component: CompressorSection, wide: true },
-  { icon: MicrophoneStageIcon, label: 'Karaoke', component: KaraokeSection, wide: true },
-  { icon: GaugeIcon, label: 'Timescale', component: TimescaleSection },
-  { icon: WaveSineIcon, label: 'Tremolo', component: TremoloSection },
-  { icon: WavesIcon, label: 'Vibrato', component: VibratoSection },
-  { icon: CirclesFourIcon, label: 'Rotation', component: RotationSection },
-  { icon: GuitarIcon, label: 'Distortion', component: DistortionSection, wide: true },
-  { icon: ChartBarIcon, label: 'Channel Mix', component: ChannelMixSection, wide: true },
-  { icon: BarricadeIcon, label: 'Low Pass', component: LowPassSection },
-];
+interface FiltersData {
+  compressor: {
+    enabled: boolean;
+    threshold: number;
+    ratio: number;
+    attack: number;
+    release: number;
+    gain: number;
+  };
+  equalizer: { bands: number[]; enabled: boolean };
+  karaoke: {
+    enabled: boolean;
+    level: number;
+    monoLevel: number;
+    filterBand: number;
+    filterWidth: number;
+  };
+  timescale: { enabled: boolean; speed: number; pitch: number; rate: number };
+  tremolo: { enabled: boolean; frequency: number; depth: number };
+  vibrato: { enabled: boolean; frequency: number; depth: number };
+  rotation: { enabled: boolean; rotationHz: number };
+  distortion: {
+    enabled: boolean;
+    sinOffset: number;
+    sinScale: number;
+    cosOffset: number;
+    cosScale: number;
+    tanOffset: number;
+    tanScale: number;
+    offset: number;
+    scale: number;
+  };
+  channelMix: {
+    enabled: boolean;
+    leftToLeft: number;
+    leftToRight: number;
+    rightToLeft: number;
+    rightToRight: number;
+  };
+  lowPass: { enabled: boolean; smoothing: number };
+}
+
+interface FilterCardDef {
+  icon: Icon;
+  label: string;
+  wide?: boolean;
+}
+
+function FilterCard({
+  icon: IconEl,
+  label,
+  wide,
+  children,
+}: FilterCardDef & { children: React.ReactNode }) {
+  return (
+    <section className={wide ? 'xl:col-span-2' : ''}>
+      <h2 className='text-muted mb-3 flex items-center gap-2 font-mono text-xs tracking-wider uppercase'>
+        <IconEl size={14} weight='duotone' />
+        {label}
+      </h2>
+      <div className='bg-elevated clay-resting rounded-lg p-5'>{children}</div>
+    </section>
+  );
+}
 
 export default function AudioPage() {
   const { isAdminView } = useAdminView();
   const { hasPermission } = usePermissions();
 
   const canManage = isAdminView || hasPermission('audio.manage');
+  const [filters, setFilters] = useState<FiltersData | null>(null);
+  const [loaded, setLoaded] = useState(false);
+
+  useEffect(() => {
+    if (!canManage) {
+      setLoaded(true);
+      return;
+    }
+    async function load() {
+      try {
+        const res = await fetch('/api/settings/filters');
+        if (res.ok) {
+          setFilters((await res.json()) as FiltersData);
+        }
+      } catch {
+        // silently fail — sections will fall back to individual fetches
+      } finally {
+        setLoaded(true);
+      }
+    }
+    void load();
+  }, [canManage]);
+
+  if (!loaded) {
+    return (
+      <div className='flex h-full items-center justify-center p-4 md:p-8'>
+        <Spinner />
+      </div>
+    );
+  }
 
   return (
     <div className='h-full overflow-y-auto p-4 md:p-8'>
@@ -62,17 +147,36 @@ export default function AudioPage() {
         </div>
       ) : (
         <div className='grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3'>
-          {FILTER_CARDS.map(({ icon: Icon, label, component: Section, wide }) => (
-            <section key={label} className={wide ? 'xl:col-span-2' : ''}>
-              <h2 className='text-muted mb-3 flex items-center gap-2 font-mono text-xs tracking-wider uppercase'>
-                <Icon size={14} weight='duotone' />
-                {label}
-              </h2>
-              <div className='bg-elevated clay-resting rounded-lg p-5'>
-                <Section />
-              </div>
-            </section>
-          ))}
+          <FilterCard icon={SlidersHorizontalIcon} label='Equalizer' wide>
+            <EqualizerSection initialValues={filters?.equalizer} />
+          </FilterCard>
+          <FilterCard icon={ArrowsDownUpIcon} label='Compressor' wide>
+            <CompressorSection initialValues={filters?.compressor} />
+          </FilterCard>
+          <FilterCard icon={MicrophoneStageIcon} label='Karaoke' wide>
+            <KaraokeSection initialValues={filters?.karaoke} />
+          </FilterCard>
+          <FilterCard icon={GaugeIcon} label='Timescale'>
+            <TimescaleSection initialValues={filters?.timescale} />
+          </FilterCard>
+          <FilterCard icon={WaveSineIcon} label='Tremolo'>
+            <TremoloSection initialValues={filters?.tremolo} />
+          </FilterCard>
+          <FilterCard icon={WavesIcon} label='Vibrato'>
+            <VibratoSection initialValues={filters?.vibrato} />
+          </FilterCard>
+          <FilterCard icon={CirclesFourIcon} label='Rotation'>
+            <RotationSection initialValues={filters?.rotation} />
+          </FilterCard>
+          <FilterCard icon={GuitarIcon} label='Distortion' wide>
+            <DistortionSection initialValues={filters?.distortion} />
+          </FilterCard>
+          <FilterCard icon={ChartBarIcon} label='Channel Mix' wide>
+            <ChannelMixSection initialValues={filters?.channelMix} />
+          </FilterCard>
+          <FilterCard icon={BarricadeIcon} label='Low Pass'>
+            <LowPassSection initialValues={filters?.lowPass} />
+          </FilterCard>
         </div>
       )}
     </div>

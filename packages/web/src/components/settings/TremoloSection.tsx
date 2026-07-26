@@ -1,7 +1,7 @@
 import type React from 'react';
 
 import { ArrowCounterClockwiseIcon, FloppyDiskIcon } from '@phosphor-icons/react';
-import { memo, useCallback, useEffect, useMemo, useState } from 'react';
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { useAdminView } from '../../context/AdminViewContext';
 import { usePermissions } from '../../context/PermissionsContext';
@@ -66,7 +66,11 @@ interface TremoloValues {
   depth: number;
 }
 
-export default function TremoloSection() {
+interface TremoloSectionProps {
+  initialValues?: TremoloValues;
+}
+
+export default function TremoloSection({ initialValues }: TremoloSectionProps) {
   const { isAdminView } = useAdminView();
   const { hasPermission } = usePermissions();
 
@@ -75,8 +79,23 @@ export default function TremoloSection() {
   const [savedValues, setSavedValues] = useState<TremoloValues>(DEFAULTS);
   const [saving, setSaving] = useState(false);
   const [loaded, setLoaded] = useState(false);
+  const didInitRef = useRef(false);
 
   useEffect(() => {
+    if (!canManage) {
+      setLoaded(true);
+      return;
+    }
+    if (initialValues && !didInitRef.current) {
+      setValues(initialValues);
+      setSavedValues(initialValues);
+      setLoaded(true);
+      didInitRef.current = true;
+      return;
+    }
+    if (initialValues) {
+      return;
+    }
     async function load() {
       try {
         const res = await fetch('/api/settings/tremolo');
@@ -91,12 +110,8 @@ export default function TremoloSection() {
         setLoaded(true);
       }
     }
-    if (canManage) {
-      void load();
-    } else {
-      setLoaded(true);
-    }
-  }, [canManage]);
+    void load();
+  }, [canManage, initialValues]);
 
   const hasChanges = JSON.stringify(values) !== JSON.stringify(savedValues);
 

@@ -1,7 +1,7 @@
 import type React from 'react';
 
 import { ArrowCounterClockwiseIcon, FloppyDiskIcon } from '@phosphor-icons/react';
-import { memo, useCallback, useEffect, useMemo, useState } from 'react';
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { useAdminView } from '../../context/AdminViewContext';
 import { usePermissions } from '../../context/PermissionsContext';
@@ -69,7 +69,11 @@ interface TimescaleValues {
   rate: number;
 }
 
-export default function TimescaleSection() {
+interface TimescaleSectionProps {
+  initialValues?: TimescaleValues;
+}
+
+export default function TimescaleSection({ initialValues }: TimescaleSectionProps) {
   const { isAdminView } = useAdminView();
   const { hasPermission } = usePermissions();
 
@@ -78,8 +82,23 @@ export default function TimescaleSection() {
   const [savedValues, setSavedValues] = useState<TimescaleValues>(DEFAULTS);
   const [saving, setSaving] = useState(false);
   const [loaded, setLoaded] = useState(false);
+  const didInitRef = useRef(false);
 
   useEffect(() => {
+    if (!canManage) {
+      setLoaded(true);
+      return;
+    }
+    if (initialValues && !didInitRef.current) {
+      setValues(initialValues);
+      setSavedValues(initialValues);
+      setLoaded(true);
+      didInitRef.current = true;
+      return;
+    }
+    if (initialValues) {
+      return;
+    }
     async function load() {
       try {
         const res = await fetch('/api/settings/timescale');
@@ -94,12 +113,8 @@ export default function TimescaleSection() {
         setLoaded(true);
       }
     }
-    if (canManage) {
-      void load();
-    } else {
-      setLoaded(true);
-    }
-  }, [canManage]);
+    void load();
+  }, [canManage, initialValues]);
 
   const hasChanges = JSON.stringify(values) !== JSON.stringify(savedValues);
 

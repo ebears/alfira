@@ -1,7 +1,7 @@
 import type React from 'react';
 
 import { ArrowCounterClockwiseIcon, FloppyDiskIcon } from '@phosphor-icons/react';
-import { memo, useCallback, useEffect, useMemo, useState } from 'react';
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { useAdminView } from '../../context/AdminViewContext';
 import { usePermissions } from '../../context/PermissionsContext';
@@ -76,7 +76,11 @@ interface KaraokeValues {
   filterWidth: number;
 }
 
-export default function KaraokeSection() {
+interface KaraokeSectionProps {
+  initialValues?: KaraokeValues;
+}
+
+export default function KaraokeSection({ initialValues }: KaraokeSectionProps) {
   const { isAdminView } = useAdminView();
   const { hasPermission } = usePermissions();
 
@@ -85,8 +89,23 @@ export default function KaraokeSection() {
   const [savedValues, setSavedValues] = useState<KaraokeValues>(DEFAULTS);
   const [saving, setSaving] = useState(false);
   const [loaded, setLoaded] = useState(false);
+  const didInitRef = useRef(false);
 
   useEffect(() => {
+    if (!canManage) {
+      setLoaded(true);
+      return;
+    }
+    if (initialValues && !didInitRef.current) {
+      setValues(initialValues);
+      setSavedValues(initialValues);
+      setLoaded(true);
+      didInitRef.current = true;
+      return;
+    }
+    if (initialValues) {
+      return;
+    }
     async function load() {
       try {
         const res = await fetch('/api/settings/karaoke');
@@ -101,12 +120,8 @@ export default function KaraokeSection() {
         setLoaded(true);
       }
     }
-    if (canManage) {
-      void load();
-    } else {
-      setLoaded(true);
-    }
-  }, [canManage]);
+    void load();
+  }, [canManage, initialValues]);
 
   const hasChanges = JSON.stringify(values) !== JSON.stringify(savedValues);
 
