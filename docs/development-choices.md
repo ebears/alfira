@@ -25,7 +25,7 @@ The catch is that Bun is younger and more experimental — it's not the safe, bo
 
 ## TypeScript, Linting & Formatting: The Oxc "Supertool"
 
-Alfira uses the **[Oxc](https://oxc.rs/) toolchain** (`oxlint` + `oxfmt`) for all three code quality concerns: **linting, typechecking, and formatting**. There is no `typescript` dev dependency and no `tsconfig.json`.
+Alfira uses the **[Oxc](https://oxc.rs/) toolchain** (`oxlint` + `oxfmt`) for all three code quality concerns: **linting, typechecking, and formatting**. There is no `typescript` dev dependency — typechecking is handled entirely by oxlint's tsgo engine.
 
 This is a deliberate bet on a newer toolchain that does more with less:
 
@@ -34,8 +34,9 @@ This is a deliberate bet on a newer toolchain that does more with less:
 `oxlint` handles both traditional lint rules (~120 enabled) **and** full type-aware checking via **tsgo** — the Go-based TypeScript compiler that just landed as the native engine in TypeScript 7. This means Alfira gets TypeScript 7-level type inference and checking without depending on the `typescript` npm package at all.
 
 ```bash
-bun run check    # lint + full typecheck + format check (runs in CI)
+bun run check    # lint + full typecheck + format check + tests (runs in CI)
 bun run typecheck # lint + typecheck only
+bun test          # run all tests
 ```
 
 The `--deny-warnings` flag means every rule — even `warn`-level — fails the build. There is no "fix it later" category.
@@ -54,6 +55,15 @@ Zero-config, runs as `oxfmt --write .`. Shares the same Rust-based parser and AS
 - **Speed.** Biome is fast. Oxc is a little faster. When the tools are otherwise close, the edge goes to the faster one.
 
 The `oxlint.config.ts` is the most detailed config file in the project (300+ lines) — a reflection of how seriously type safety and correctness are taken here. Every rule has a reason, and every file-specific override has a comment explaining why.
+
+### Additional QA tooling
+
+Two more tools round out the quality pipeline:
+
+- **[knip](https://knip.dev/)** finds unused files, dependencies, and exports. Run `bunx knip` periodically — it catches dead code that the linter can't see (unused exports, orphaned files, stale dependencies).
+- **[lefthook](https://github.com/evilmartians/lefthook)** runs lint, format check, and tests automatically on `git commit`. Install once with `bunx lefthook install` and every commit gets the same checks as CI — no more "works on my machine but fails in CI" surprises.
+
+Together with `oxlint --deny-warnings`, these create a ratchet: the bar never goes down, and violations are caught as early as possible (on save → on commit → in CI).
 
 ---
 
