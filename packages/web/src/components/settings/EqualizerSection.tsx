@@ -1,7 +1,7 @@
 import type React from 'react';
 
 import { ArrowCounterClockwiseIcon, FloppyDiskIcon } from '@phosphor-icons/react';
-import { memo, useCallback, useEffect, useMemo, useState } from 'react';
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { useAdminView } from '../../context/AdminViewContext';
 import { usePermissions } from '../../context/PermissionsContext';
@@ -86,7 +86,11 @@ const EqBandSlider = memo(function EqBandSlider({
   );
 });
 
-export default function EqualizerSection() {
+interface EqualizerSectionProps {
+  initialValues?: { bands: number[]; enabled: boolean };
+}
+
+export default function EqualizerSection({ initialValues }: EqualizerSectionProps) {
   const { isAdminView } = useAdminView();
   const { hasPermission } = usePermissions();
 
@@ -97,8 +101,25 @@ export default function EqualizerSection() {
   const [savedEnabled, setSavedEnabled] = useState(true);
   const [saving, setSaving] = useState(false);
   const [loaded, setLoaded] = useState(false);
+  const didInitRef = useRef(false);
 
   useEffect(() => {
+    if (!canManage) {
+      setLoaded(true);
+      return;
+    }
+    if (initialValues && !didInitRef.current) {
+      setBands(initialValues.bands);
+      setSavedBands(initialValues.bands);
+      setEqEnabled(initialValues.enabled);
+      setSavedEnabled(initialValues.enabled);
+      setLoaded(true);
+      didInitRef.current = true;
+      return;
+    }
+    if (initialValues) {
+      return;
+    }
     async function load() {
       try {
         const res = await fetch('/api/settings/equalizer');
@@ -116,12 +137,8 @@ export default function EqualizerSection() {
         setLoaded(true);
       }
     }
-    if (canManage) {
-      void load();
-    } else {
-      setLoaded(true);
-    }
-  }, [canManage]);
+    void load();
+  }, [canManage, initialValues]);
 
   // When off, save sends flat bands; when on, save sends real bands
   const effectiveBands = eqEnabled ? bands : DEFAULT_BANDS;
