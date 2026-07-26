@@ -16,15 +16,10 @@ import {
 } from '../lib/search';
 import { formatSong } from '../lib/serialization';
 import { emitSongDeleted, emitSongUpdated } from '../lib/socket';
+import { validateAndBuildSongFields } from '../lib/songFieldValidation';
 import { reSyncPlaylistsForTags } from '../lib/syncPlaylistToTag';
 import { canonicalizeTags } from '../lib/tagCanonicalization';
-import {
-  validateArtworkUrl,
-  validateNickname,
-  validateOptionalString,
-  validateTags,
-  validateVolumeBoost,
-} from '../lib/validation';
+import { validateTags } from '../lib/validation';
 import { db, tables } from '../shared/db';
 import { getPlayer } from '../startDiscord';
 
@@ -33,6 +28,51 @@ const { song: songTable } = tables;
 const BulkDeleteSchema = v.object({
   ids: v.pipe(v.array(v.string()), v.minLength(1), v.maxLength(5000)),
 });
+
+// ---------------------------------------------------------------------------
+// Shared helper — update the live GuildPlayer cache after a song edit so
+// the UI reflects metadata changes immediately (currentSong, priorityQueue,
+// regular queue).  Also pushes a live volume boost change to NodeLink when
+// the edited song is currently playing.
+// ---------------------------------------------------------------------------
+function notifyPlayerOfMetadataChange(
+  songIds: string[],
+  data: Record<string, unknown>,
+  processedVolumeBoost: number | null | undefined
+): void {
+  const player = getPlayer(getGuildId());
+  if (!player) {
+    return;
+  }
+
+  if (processedVolumeBoost !== undefined) {
+    const currentSong = player.getCurrentSong();
+    if (currentSong && songIds.includes(currentSong.id)) {
+      player.updateVolumeBoost(processedVolumeBoost ?? 0);
+    }
+  }
+
+  const fields: Record<string, unknown> = {};
+  if ('nickname' in data) {
+    fields.nickname = data.nickname;
+  }
+  if ('artist' in data) {
+    fields.artist = data.artist;
+  }
+  if ('album' in data) {
+    fields.album = data.album;
+  }
+  if ('artwork' in data) {
+    fields.artwork = data.artwork;
+  }
+  if ('tags' in data) {
+    fields.tags = data.tags;
+  }
+  if ('volumeBoost' in data) {
+    fields.volumeBoost = data.volumeBoost;
+  }
+  player.updateSongMetadata(songIds, fields);
+}
 
 // ---------------------------------------------------------------------------
 // POST /api/songs/bulk-delete — delete multiple songs at once.
@@ -182,69 +222,11 @@ async function handleBulkEdit(ctx: RouteContext, request: Request): Promise<Resp
   const { ids, clearFields = [] } = parsed.output;
   const body = parsed.output;
 
-  const data: Record<string, unknown> = {};
-
-  // Nickname
-  if (body.nickname !== undefined) {
-    const result = validateNickname(body.nickname);
-    if (!result.ok) {
-      return result.response;
-    }
-    data.nickname = result.value;
-  } else if (clearFields.includes('nickname')) {
-    data.nickname = null;
+  const fieldResult = await validateAndBuildSongFields(body, clearFields);
+  if (fieldResult instanceof Response) {
+    return fieldResult;
   }
-
-  // Artist
-  if (body.artist !== undefined) {
-    data.artist = validateOptionalString(body.artist);
-  } else if (clearFields.includes('artist')) {
-    data.artist = null;
-  }
-
-  // Album
-  if (body.album !== undefined) {
-    data.album = validateOptionalString(body.album);
-  } else if (clearFields.includes('album')) {
-    data.album = null;
-  }
-
-  // Artwork
-  if (body.artwork !== undefined) {
-    const artworkResult = validateArtworkUrl(body.artwork);
-    if (!artworkResult.ok) {
-      return artworkResult.response;
-    }
-    data.artwork = artworkResult.value;
-  } else if (clearFields.includes('artwork')) {
-    data.artwork = null;
-  }
-
-  // Tags
-  let processedTags: string[] | undefined;
-  if (body.tags !== undefined) {
-    const tagsResult = validateTags(body.tags);
-    if (!tagsResult.ok) {
-      return tagsResult.response;
-    }
-    processedTags = await canonicalizeTags(tagsResult.value);
-    data.tags = processedTags;
-  } else if (clearFields.includes('tags')) {
-    data.tags = [];
-  }
-
-  // Volume boost
-  let processedVolumeBoost: number | null | undefined;
-  if (body.volumeBoost !== undefined) {
-    const volumeResult = validateVolumeBoost(body.volumeBoost);
-    if (!volumeResult.ok) {
-      return volumeResult.response;
-    }
-    processedVolumeBoost = volumeResult.value;
-    data.volumeBoost = processedVolumeBoost;
-  } else if (clearFields.includes('volumeBoost')) {
-    data.volumeBoost = null;
-  }
+  const { data, processedTags, processedVolumeBoost } = fieldResult;
 
   if (Object.keys(data).length === 0) {
     return json({ error: 'No fields to update.' }, 400);
@@ -271,37 +253,7 @@ async function handleBulkEdit(ctx: RouteContext, request: Request): Promise<Resp
 
   // Update the player cache for any of the edited songs that are currently
   // in the queue / now playing.
-  const bulkPlayer = getPlayer(getGuildId());
-  if (bulkPlayer) {
-    // Use !== undefined so we handle explicit null (clear boost → 0)
-    // as well as explicit 0.
-    if (processedVolumeBoost !== undefined) {
-      const currentSong = bulkPlayer.getCurrentSong();
-      if (currentSong && ids.includes(currentSong.id)) {
-        bulkPlayer.updateVolumeBoost(processedVolumeBoost ?? 0);
-      }
-    }
-    const bulkFields: Record<string, unknown> = {};
-    if ('nickname' in data) {
-      bulkFields.nickname = data.nickname;
-    }
-    if ('artist' in data) {
-      bulkFields.artist = data.artist;
-    }
-    if ('album' in data) {
-      bulkFields.album = data.album;
-    }
-    if ('artwork' in data) {
-      bulkFields.artwork = data.artwork;
-    }
-    if ('tags' in data) {
-      bulkFields.tags = data.tags;
-    }
-    if ('volumeBoost' in data) {
-      bulkFields.volumeBoost = data.volumeBoost;
-    }
-    bulkPlayer.updateSongMetadata(ids, bulkFields);
-  }
+  notifyPlayerOfMetadataChange(ids, data, processedVolumeBoost);
 
   return json({ updated: ids.length });
 }
@@ -454,60 +406,14 @@ async function handlePatchSong(
     return json({ error: 'Song not found.' }, 404);
   }
 
-  const data: Record<string, unknown> = {};
-
-  // Nickname
-  if (body.nickname !== undefined) {
-    const result = validateNickname(body.nickname);
-    if (!result.ok) {
-      return result.response;
-    }
-    data.nickname = result.value;
-  }
-
-  // Artist
-  if (body.artist !== undefined) {
-    data.artist = validateOptionalString(body.artist);
-  }
-
-  // Album
-  if (body.album !== undefined) {
-    data.album = validateOptionalString(body.album);
-  }
-
-  // Artwork
-  if (body.artwork !== undefined) {
-    const artworkResult = validateArtworkUrl(body.artwork);
-    if (!artworkResult.ok) {
-      return artworkResult.response;
-    }
-    data.artwork = artworkResult.value;
-  }
-
-  // Tags
   // Track old tags for smart playlist re-sync
   const oldTagsLower = new Set((existing.tags ?? []).map((t: string) => t.toLowerCase()));
-  let processedTags: string[] | undefined;
 
-  if (body.tags !== undefined) {
-    const tagsResult = validateTags(body.tags);
-    if (!tagsResult.ok) {
-      return tagsResult.response;
-    }
-    processedTags = await canonicalizeTags(tagsResult.value);
-    data.tags = processedTags;
+  const fieldResult = await validateAndBuildSongFields(body);
+  if (fieldResult instanceof Response) {
+    return fieldResult;
   }
-
-  // Volume boost
-  let processedVolumeBoost: number | null | undefined;
-  if (body.volumeBoost !== undefined) {
-    const volumeResult = validateVolumeBoost(body.volumeBoost);
-    if (!volumeResult.ok) {
-      return volumeResult.response;
-    }
-    processedVolumeBoost = volumeResult.value;
-    data.volumeBoost = processedVolumeBoost;
-  }
+  const { data, processedTags, processedVolumeBoost } = fieldResult;
 
   const [updatedSong] = await db
     .update(songTable)
@@ -534,41 +440,7 @@ async function handlePatchSong(
 
   // Update the song in the GuildPlayer's cache (currentSong, priorityQueue,
   // regular queue) so the UI reflects metadata changes immediately.
-  const player = getPlayer(getGuildId());
-  if (player) {
-    // Volume boost also needs live audio update.
-    // Use !== undefined so we handle explicit null (clear boost → 0)
-    // as well as explicit 0.
-    if (processedVolumeBoost !== undefined) {
-      const currentSong = player.getCurrentSong();
-      if (currentSong?.id === id) {
-        player.updateVolumeBoost(processedVolumeBoost ?? 0);
-      }
-    }
-
-    // Build fields object with only the keys that are actually in data —
-    // undefined values still create keys, which would clear fields in merge.
-    const fields: Record<string, unknown> = {};
-    if ('nickname' in data) {
-      fields.nickname = data.nickname;
-    }
-    if ('artist' in data) {
-      fields.artist = data.artist;
-    }
-    if ('album' in data) {
-      fields.album = data.album;
-    }
-    if ('artwork' in data) {
-      fields.artwork = data.artwork;
-    }
-    if ('tags' in data) {
-      fields.tags = data.tags;
-    }
-    if ('volumeBoost' in data) {
-      fields.volumeBoost = data.volumeBoost;
-    }
-    player.updateSongMetadata(id, fields);
-  }
+  notifyPlayerOfMetadataChange([id], data, processedVolumeBoost);
 
   return json(formatSong(updatedSong));
 }

@@ -1,7 +1,12 @@
 import { eq } from 'drizzle-orm';
 
-import { buildCompressorFilter } from './lib/applyNodeLinkFilter';
-import { buildEqualizerFilter, EQ_BAND_COLUMNS, eqBandsFromRow } from './lib/eqBands';
+import { buildCompressorFilter, type CompressorFilterParams } from './lib/applyNodeLinkFilter';
+import {
+  buildEqualizerFilter,
+  EQ_BAND_COLUMNS,
+  eqBandsFromRow,
+  type EqSettingsRow,
+} from './lib/eqBands';
 import { connectToVoice, getClient } from './lib/gatewayState';
 import { lavalink, type TrackEndReason } from './lib/lavalink';
 import { emitPlayerUpdate } from './lib/socket';
@@ -43,6 +48,40 @@ export class GuildPlayer {
   // gapless TrackEndEvent can transition without a cold-start load.
   // Disable if a future NodeLink update regresses the gapless pipeline.
   private static readonly ENABLE_GAPLESS_PRELOAD = true;
+
+  /**
+   * Merge compressor and equalizer filters into a NodeLink PATCH payload.
+   * Extracted from playSong() so the gapless and cold-start paths share
+   * the same filter-building logic.
+   */
+  private applyPlaybackFilters(
+    patch: Record<string, unknown>,
+    settings: (CompressorFilterParams & { enabled: boolean } & EqSettingsRow) | undefined
+  ): void {
+    if (settings?.enabled) {
+      try {
+        const compressorFilter = buildCompressorFilter(settings);
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion
+        patch.filters = { ...(patch.filters as Record<string, unknown>), ...compressorFilter };
+      } catch (error) {
+        logger.error({ error, guildId: this.guildId }, 'Failed to build compressor filter');
+      }
+    }
+
+    const eqBands = eqBandsFromRow(settings);
+    if (eqBands.some((b) => b !== 50)) {
+      try {
+        const equalizerFilter = buildEqualizerFilter(eqBands);
+        patch.filters = {
+          // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion
+          ...(patch.filters as Record<string, unknown>),
+          equalizer: equalizerFilter,
+        };
+      } catch (error) {
+        logger.error({ error, guildId: this.guildId }, 'Failed to build equalizer filter');
+      }
+    }
+  }
 
   // Called when the voice session is torn down so the manager Map can
   // remove this GuildPlayer (see manager.ts).
@@ -840,29 +879,7 @@ export class GuildPlayer {
         volume: 100 + (next.volumeBoost ?? 0),
       };
 
-      if (settings?.enabled) {
-        try {
-          const compressorFilter = buildCompressorFilter(settings);
-          // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion
-          patch.filters = { ...(patch.filters as Record<string, unknown>), ...compressorFilter };
-        } catch (error) {
-          logger.error({ error, guildId: this.guildId }, 'Failed to build compressor filter');
-        }
-      }
-
-      const eqBands = eqBandsFromRow(settings);
-      if (eqBands.some((b) => b !== 50)) {
-        try {
-          const equalizerFilter = buildEqualizerFilter(eqBands);
-          patch.filters = {
-            // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion
-            ...(patch.filters as Record<string, unknown>),
-            equalizer: equalizerFilter,
-          };
-        } catch (error) {
-          logger.error({ error, guildId: this.guildId }, 'Failed to build equalizer filter');
-        }
-      }
+      this.applyPlaybackFilters(patch, settings);
 
       const t1 = Date.now();
       await updateNodeLinkPlayer(this.guildId, sessionId, patch);
@@ -944,29 +961,7 @@ export class GuildPlayer {
       volume,
     };
 
-    if (settings?.enabled) {
-      try {
-        const compressorFilter = buildCompressorFilter(settings);
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion
-        patch.filters = { ...(patch.filters as Record<string, unknown>), ...compressorFilter };
-      } catch (error) {
-        logger.error({ error, guildId: this.guildId }, 'Failed to build compressor filter');
-      }
-    }
-
-    const eqBands = eqBandsFromRow(settings);
-    if (eqBands.some((b) => b !== 50)) {
-      try {
-        const equalizerFilter = buildEqualizerFilter(eqBands);
-        patch.filters = {
-          // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion
-          ...(patch.filters as Record<string, unknown>),
-          equalizer: equalizerFilter,
-        };
-      } catch (error) {
-        logger.error({ error, guildId: this.guildId }, 'Failed to build equalizer filter');
-      }
-    }
+    this.applyPlaybackFilters(patch, settings);
 
     await updateNodeLinkPlayer(this.guildId, sessionId, patch);
     const tCold3 = Date.now();
