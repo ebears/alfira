@@ -7,7 +7,7 @@ export default defineConfig({
     reportUnusedDisableDirectives: 'error',
   },
 
-  ignorePatterns: ['.pi/**', '.zed/**', 'nodelink-config/**'],
+  ignorePatterns: ['.pi/**', '.zed/**', 'nodelink.config.ts'],
 
   plugins: [
     'react',

@@ -36,7 +36,7 @@ bun run build
 
 # Copy our custom NodeLink config into the cloned repo
 echo "→ Copying NodeLink config..."
-cp "$PROJECT_ROOT/nodelink-config/config.ts" "$NODELINK_DIR/config.ts"
+cp "$PROJECT_ROOT/nodelink.config.ts" "$NODELINK_DIR/config.ts"
 
 echo "✓ NodeLink is ready at .nodelink/"
 echo "  You can now run: bun dev"
