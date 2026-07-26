@@ -7,6 +7,43 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.4.1] - 2026-07-22
+
+### Added
+
+- PWA manifest, offline service worker caching, and auto-update reload (#769)
+
+### Changed
+
+- Audio filter settings now fetched in a single batched endpoint instead of individual requests (#764)
+- Filter settings defaults centralized and shared between server and web (#765)
+- All non-null assertions (`!`) banned; replaced with proper null checks (#763)
+- Request body validation typing refactored for correctness (#758)
+- Nodelink bumped to latest and config migrated to TypeScript (#767)
+- Lint config tightened with new violation fixes (#766)
+- React, React DOM, and @tanstack/react-virtual updated (#761)
+- Union type truthiness fixed across web components (#760)
+- Dead null checks removed and strict-boolean-expressions overrides eliminated (#759)
+- oxlint upgraded to 1.75, oxlint-tsgolint to 7.0.2001, oxfmt to 0.60 with 8 new rules (#757)
+- TypeScript config modernized with noUncheckedIndexedAccess enabled (#749)
+- Migrated from react-router-dom to react-router v8 (#748)
+
+### Fixed
+
+- Horizontal scrollbar appearing on virtual list scroll (#768)
+- Duplicate Lavalink connection on Discord re-identify (#753)
+- Missing crossorigin attribute on font preload links (#751)
+
+### Docs
+
+- Installation guide completed with backup, port, and health check sections (#772)
+- Contributing and project docs synced with current tooling (#771)
+
+### Tests
+
+- Backend test suite and QA tooling added (#770)
+- Tests added for JWT and web utilities (#762)
+
 ## [0.4.0] - 2026-07-21
 
 ### Added
@@ -258,7 +295,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - UI actions now properly gated by granular permissions rather than a simple admin check.
 - Inherited pointer cursor on modal cards.
 
-[Unreleased]: https://github.com/ebears/alfira/compare/v0.4.0...dev
+[Unreleased]: https://github.com/ebears/alfira/compare/v0.4.1...dev
+[0.4.1]: https://github.com/ebears/alfira/compare/v0.4.0...v0.4.1
 [0.4.0]: https://github.com/ebears/alfira/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/ebears/alfira/compare/v0.2.2...v0.3.0
 [0.2.2]: https://github.com/ebears/alfira/compare/v0.2.1...v0.2.2
