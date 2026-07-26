@@ -1,23 +1,13 @@
-import type React from 'react';
-
+import { type DistortionSettings, DEFAULT_DISTORTION } from '@alfira/server/shared';
 import { ArrowCounterClockwiseIcon, FloppyDiskIcon } from '@phosphor-icons/react';
-import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { memo, useCallback, useMemo, useState } from 'react';
 
 import { useAdminView } from '../../context/AdminViewContext';
 import { usePermissions } from '../../context/PermissionsContext';
+import { useFilterSection } from '../../hooks/useFilterSection';
 import { Button } from '../ui/Button';
 
-const DEFAULTS = {
-  enabled: false,
-  sinOffset: 0,
-  sinScale: 1,
-  cosOffset: 0,
-  cosScale: 1,
-  tanOffset: 0,
-  tanScale: 1,
-  offset: 0,
-  scale: 1,
-};
+const DEFAULTS: DistortionSettings = { ...DEFAULT_DISTORTION };
 
 const SLIDERS = [
   { key: 'sinOffset', label: 'Sin Offset', min: -1, max: 1, step: 0.05, unit: '' },
@@ -74,20 +64,8 @@ const DistortionSlider = memo(function DistortionSlider({
   );
 });
 
-interface DistortionValues {
-  enabled: boolean;
-  sinOffset: number;
-  sinScale: number;
-  cosOffset: number;
-  cosScale: number;
-  tanOffset: number;
-  tanScale: number;
-  offset: number;
-  scale: number;
-}
-
 interface DistortionSectionProps {
-  initialValues?: DistortionValues;
+  initialValues?: DistortionSettings;
 }
 
 export default function DistortionSection({ initialValues }: DistortionSectionProps) {
@@ -95,43 +73,17 @@ export default function DistortionSection({ initialValues }: DistortionSectionPr
   const { hasPermission } = usePermissions();
 
   const canManage = isAdminView || hasPermission('audio.manage');
-  const [values, setValues] = useState<DistortionValues>(DEFAULTS);
-  const [savedValues, setSavedValues] = useState<DistortionValues>(DEFAULTS);
+  const [values, setValues] = useState<DistortionSettings>(DEFAULTS);
+  const [savedValues, setSavedValues] = useState<DistortionSettings>(DEFAULTS);
   const [saving, setSaving] = useState(false);
-  const [loaded, setLoaded] = useState(false);
-  const didInitRef = useRef(false);
 
-  useEffect(() => {
-    if (!canManage) {
-      setLoaded(true);
-      return;
-    }
-    if (initialValues && !didInitRef.current) {
-      setValues(initialValues);
-      setSavedValues(initialValues);
-      setLoaded(true);
-      didInitRef.current = true;
-      return;
-    }
-    if (initialValues) {
-      return;
-    }
-    async function load() {
-      try {
-        const res = await fetch('/api/settings/distortion');
-        if (res.ok) {
-          const data = (await res.json()) as DistortionValues;
-          setValues(data);
-          setSavedValues(data);
-        }
-      } catch {
-        // silently fail
-      } finally {
-        setLoaded(true);
-      }
-    }
-    void load();
-  }, [canManage, initialValues]);
+  const loaded = useFilterSection(
+    canManage,
+    '/api/settings/distortion',
+    initialValues,
+    setValues,
+    setSavedValues
+  );
 
   const hasChanges = JSON.stringify(values) !== JSON.stringify(savedValues);
 

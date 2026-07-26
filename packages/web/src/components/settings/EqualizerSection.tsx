@@ -1,10 +1,16 @@
 import type React from 'react';
 
+import {
+  type EqualizerSettings,
+  DEFAULT_EQUALIZER,
+  DEFAULT_EQUALIZER_BANDS,
+} from '@alfira/server/shared';
 import { ArrowCounterClockwiseIcon, FloppyDiskIcon } from '@phosphor-icons/react';
-import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { memo, useCallback, useMemo, useState } from 'react';
 
 import { useAdminView } from '../../context/AdminViewContext';
 import { usePermissions } from '../../context/PermissionsContext';
+import { useFilterSection } from '../../hooks/useFilterSection';
 import { Button } from '../ui/Button';
 
 const FREQ_LABELS = [
@@ -24,7 +30,7 @@ const FREQ_LABELS = [
   '10k',
   '16k',
 ];
-const DEFAULT_BANDS = Array(15).fill(50);
+const DEFAULT_BANDS: number[] = [...DEFAULT_EQUALIZER_BANDS];
 
 // ---------------------------------------------------------------------------
 // Child component — extracted for stable onChange + style in the map loop
@@ -87,63 +93,36 @@ const EqBandSlider = memo(function EqBandSlider({
 });
 
 interface EqualizerSectionProps {
-  initialValues?: { bands: number[]; enabled: boolean };
+  initialValues?: EqualizerSettings;
 }
+
+const DEFAULTS: EqualizerSettings = {
+  bands: DEFAULT_BANDS,
+  enabled: DEFAULT_EQUALIZER.enabled,
+};
 
 export default function EqualizerSection({ initialValues }: EqualizerSectionProps) {
   const { isAdminView } = useAdminView();
   const { hasPermission } = usePermissions();
 
   const canManage = isAdminView || hasPermission('audio.manage');
-  const [bands, setBands] = useState<number[]>(DEFAULT_BANDS);
-  const [savedBands, setSavedBands] = useState<number[]>(DEFAULT_BANDS);
-  const [eqEnabled, setEqEnabled] = useState(true);
-  const [savedEnabled, setSavedEnabled] = useState(true);
+  const [values, setValues] = useState<EqualizerSettings>(DEFAULTS);
+  const [savedValues, setSavedValues] = useState<EqualizerSettings>(DEFAULTS);
   const [saving, setSaving] = useState(false);
-  const [loaded, setLoaded] = useState(false);
-  const didInitRef = useRef(false);
 
-  useEffect(() => {
-    if (!canManage) {
-      setLoaded(true);
-      return;
-    }
-    if (initialValues && !didInitRef.current) {
-      setBands(initialValues.bands);
-      setSavedBands(initialValues.bands);
-      setEqEnabled(initialValues.enabled);
-      setSavedEnabled(initialValues.enabled);
-      setLoaded(true);
-      didInitRef.current = true;
-      return;
-    }
-    if (initialValues) {
-      return;
-    }
-    async function load() {
-      try {
-        const res = await fetch('/api/settings/equalizer');
-        if (res.ok) {
-          const data = (await res.json()) as { bands: number[]; enabled: boolean };
-          setBands(data.bands);
-          setSavedBands(data.bands);
-          const enabled = data.enabled;
-          setEqEnabled(enabled);
-          setSavedEnabled(enabled);
-        }
-      } catch {
-        // silently fail
-      } finally {
-        setLoaded(true);
-      }
-    }
-    void load();
-  }, [canManage, initialValues]);
+  const loaded = useFilterSection(
+    canManage,
+    '/api/settings/equalizer',
+    initialValues,
+    setValues,
+    setSavedValues
+  );
 
   // When off, save sends flat bands; when on, save sends real bands
-  const effectiveBands = eqEnabled ? bands : DEFAULT_BANDS;
+  const effectiveBands = values.enabled ? values.bands : DEFAULT_BANDS;
   const hasChanges =
-    JSON.stringify(effectiveBands) !== JSON.stringify(savedBands) || eqEnabled !== savedEnabled;
+    JSON.stringify(effectiveBands) !== JSON.stringify(savedValues.bands) ||
+    values.enabled !== savedValues.enabled;
 
   const handleSave = useCallback(async () => {
     setSaving(true);
@@ -151,33 +130,32 @@ export default function EqualizerSection({ initialValues }: EqualizerSectionProp
       const res = await fetch('/api/settings/equalizer', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ bands: effectiveBands, enabled: eqEnabled }),
+        body: JSON.stringify({ bands: effectiveBands, enabled: values.enabled }),
       });
       if (res.ok) {
-        setSavedBands(effectiveBands);
-        setSavedEnabled(eqEnabled);
+        setSavedValues({ bands: effectiveBands, enabled: values.enabled });
       } else {
         console.error('Failed to save equalizer settings:', res.status);
       }
     } finally {
       setSaving(false);
     }
-  }, [effectiveBands, eqEnabled]);
+  }, [effectiveBands, values.enabled]);
 
   const handleReset = useCallback(() => {
-    setBands(DEFAULT_BANDS);
+    setValues((prev) => ({ ...prev, bands: DEFAULT_BANDS }));
   }, []);
 
   const updateBand = useCallback((index: number, value: number) => {
-    setBands((prev) => {
-      const next = [...prev];
+    setValues((prev) => {
+      const next = [...prev.bands];
       next[index] = value;
-      return next;
+      return { ...prev, bands: next };
     });
   }, []);
 
   const handleToggle = useCallback(() => {
-    setEqEnabled((v) => !v);
+    setValues((prev) => ({ ...prev, enabled: !prev.enabled }));
   }, []);
 
   // EQ curve SVG visualization
@@ -186,8 +164,8 @@ export default function EqualizerSection({ initialValues }: EqualizerSectionProp
     const H = 60;
     const pad = 8;
     const plotH = H - pad * 2;
-    const pts = bands.map((v, i) => {
-      const x = pad + (i / (bands.length - 1)) * (W - pad * 2);
+    const pts = values.bands.map((v, i) => {
+      const x = pad + (i / (values.bands.length - 1)) * (W - pad * 2);
       const y = pad + plotH - (v / 100) * plotH;
       return `${x},${y}`;
     });
@@ -197,7 +175,7 @@ export default function EqualizerSection({ initialValues }: EqualizerSectionProp
   })();
 
   const dimmed = !canManage;
-  const slidersDimmed = !eqEnabled;
+  const slidersDimmed = !values.enabled;
 
   if (!loaded) {
     return null;
@@ -211,16 +189,16 @@ export default function EqualizerSection({ initialValues }: EqualizerSectionProp
         <button
           type='button'
           role='switch'
-          aria-checked={eqEnabled}
+          aria-checked={values.enabled}
           aria-label='Enable equalizer'
           onClick={handleToggle}
           className={`focus:ring-accent/50 focus:ring-offset-surface relative h-5 w-9 shrink-0 cursor-pointer rounded-full transition-colors focus:ring-2 focus:ring-offset-2 focus:outline-none ${
-            eqEnabled ? 'bg-accent' : 'bg-border'
+            values.enabled ? 'bg-accent' : 'bg-border'
           }`}
         >
           <span
             className={`bg-elevated absolute top-0.5 left-0.5 h-4 w-4 rounded-full transition-transform ${
-              eqEnabled ? 'translate-x-4' : 'translate-x-0'
+              values.enabled ? 'translate-x-4' : 'translate-x-0'
             }`}
           />
         </button>
@@ -253,7 +231,7 @@ export default function EqualizerSection({ initialValues }: EqualizerSectionProp
       <div
         className={`flex flex-wrap justify-center gap-2 md:flex-nowrap ${slidersDimmed ? 'opacity-40' : ''}`}
       >
-        {bands.map((value, i) => (
+        {values.bands.map((value, i) => (
           <EqBandSlider
             key={i}
             index={i}

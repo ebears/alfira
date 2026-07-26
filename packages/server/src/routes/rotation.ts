@@ -7,6 +7,7 @@ import { checkGuards } from '../lib/routeGuards';
 import { routeTable } from '../lib/routeTable';
 import { syncAllFilters } from '../lib/syncAllFilters';
 import { db, tables } from '../shared/db';
+import { DEFAULT_ROTATION } from '../shared/filterDefaults';
 
 const RotationSchema = v.object({
   enabled: v.boolean(),
@@ -26,8 +27,8 @@ function handleRotationGet(
   const row = db.select().from(tables.guildSettings).where(eq(tables.guildSettings.id, 1)).get();
 
   return json({
-    enabled: row?.rotationEnabled ?? false,
-    rotationHz: row?.rotationHz ?? 0,
+    enabled: row?.rotationEnabled ?? DEFAULT_ROTATION.enabled,
+    rotationHz: row?.rotationHz ?? DEFAULT_ROTATION.rotationHz,
   });
 }
 

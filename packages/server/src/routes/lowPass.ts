@@ -7,6 +7,7 @@ import { checkGuards } from '../lib/routeGuards';
 import { routeTable } from '../lib/routeTable';
 import { syncAllFilters } from '../lib/syncAllFilters';
 import { db, tables } from '../shared/db';
+import { DEFAULT_LOW_PASS } from '../shared/filterDefaults';
 
 const LowPassSchema = v.object({
   enabled: v.boolean(),
@@ -26,8 +27,8 @@ function handleLowPassGet(
   const row = db.select().from(tables.guildSettings).where(eq(tables.guildSettings.id, 1)).get();
 
   return json({
-    enabled: row?.lowPassEnabled ?? false,
-    smoothing: row?.lowPassSmoothing ?? 20,
+    enabled: row?.lowPassEnabled ?? DEFAULT_LOW_PASS.enabled,
+    smoothing: row?.lowPassSmoothing ?? DEFAULT_LOW_PASS.smoothing,
   });
 }
 

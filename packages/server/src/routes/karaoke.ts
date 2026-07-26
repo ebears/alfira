@@ -7,6 +7,7 @@ import { checkGuards } from '../lib/routeGuards';
 import { routeTable } from '../lib/routeTable';
 import { syncAllFilters } from '../lib/syncAllFilters';
 import { db, tables } from '../shared/db';
+import { DEFAULT_KARAOKE } from '../shared/filterDefaults';
 
 const KaraokeSchema = v.object({
   enabled: v.boolean(),
@@ -29,11 +30,11 @@ function handleKaraokeGet(
   const row = db.select().from(tables.guildSettings).where(eq(tables.guildSettings.id, 1)).get();
 
   return json({
-    enabled: row?.karaokeEnabled ?? false,
-    level: row?.karaokeLevel ?? 1,
-    monoLevel: row?.karaokeMonoLevel ?? 1,
-    filterBand: row?.karaokeFilterBand ?? 220,
-    filterWidth: row?.karaokeFilterWidth ?? 100,
+    enabled: row?.karaokeEnabled ?? DEFAULT_KARAOKE.enabled,
+    level: row?.karaokeLevel ?? DEFAULT_KARAOKE.level,
+    monoLevel: row?.karaokeMonoLevel ?? DEFAULT_KARAOKE.monoLevel,
+    filterBand: row?.karaokeFilterBand ?? DEFAULT_KARAOKE.filterBand,
+    filterWidth: row?.karaokeFilterWidth ?? DEFAULT_KARAOKE.filterWidth,
   });
 }
 

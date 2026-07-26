@@ -1,13 +1,13 @@
-import type React from 'react';
-
+import { type TimescaleSettings, DEFAULT_TIMESCALE } from '@alfira/server/shared';
 import { ArrowCounterClockwiseIcon, FloppyDiskIcon } from '@phosphor-icons/react';
-import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { memo, useCallback, useMemo, useState } from 'react';
 
 import { useAdminView } from '../../context/AdminViewContext';
 import { usePermissions } from '../../context/PermissionsContext';
+import { useFilterSection } from '../../hooks/useFilterSection';
 import { Button } from '../ui/Button';
 
-const DEFAULTS = { enabled: false, speed: 1, pitch: 1, rate: 1 };
+const DEFAULTS: TimescaleSettings = { ...DEFAULT_TIMESCALE };
 
 const SLIDERS = [
   { key: 'speed', label: 'Speed', min: 0.5, max: 2, step: 0.05, unit: '×' },
@@ -62,15 +62,8 @@ const TimescaleSlider = memo(function TimescaleSlider({
   );
 });
 
-interface TimescaleValues {
-  enabled: boolean;
-  speed: number;
-  pitch: number;
-  rate: number;
-}
-
 interface TimescaleSectionProps {
-  initialValues?: TimescaleValues;
+  initialValues?: TimescaleSettings;
 }
 
 export default function TimescaleSection({ initialValues }: TimescaleSectionProps) {
@@ -78,43 +71,17 @@ export default function TimescaleSection({ initialValues }: TimescaleSectionProp
   const { hasPermission } = usePermissions();
 
   const canManage = isAdminView || hasPermission('audio.manage');
-  const [values, setValues] = useState<TimescaleValues>(DEFAULTS);
-  const [savedValues, setSavedValues] = useState<TimescaleValues>(DEFAULTS);
+  const [values, setValues] = useState<TimescaleSettings>(DEFAULTS);
+  const [savedValues, setSavedValues] = useState<TimescaleSettings>(DEFAULTS);
   const [saving, setSaving] = useState(false);
-  const [loaded, setLoaded] = useState(false);
-  const didInitRef = useRef(false);
 
-  useEffect(() => {
-    if (!canManage) {
-      setLoaded(true);
-      return;
-    }
-    if (initialValues && !didInitRef.current) {
-      setValues(initialValues);
-      setSavedValues(initialValues);
-      setLoaded(true);
-      didInitRef.current = true;
-      return;
-    }
-    if (initialValues) {
-      return;
-    }
-    async function load() {
-      try {
-        const res = await fetch('/api/settings/timescale');
-        if (res.ok) {
-          const data = (await res.json()) as TimescaleValues;
-          setValues(data);
-          setSavedValues(data);
-        }
-      } catch {
-        // silently fail
-      } finally {
-        setLoaded(true);
-      }
-    }
-    void load();
-  }, [canManage, initialValues]);
+  const loaded = useFilterSection(
+    canManage,
+    '/api/settings/timescale',
+    initialValues,
+    setValues,
+    setSavedValues
+  );
 
   const hasChanges = JSON.stringify(values) !== JSON.stringify(savedValues);
 

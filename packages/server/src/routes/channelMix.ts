@@ -7,6 +7,7 @@ import { checkGuards } from '../lib/routeGuards';
 import { routeTable } from '../lib/routeTable';
 import { syncAllFilters } from '../lib/syncAllFilters';
 import { db, tables } from '../shared/db';
+import { DEFAULT_CHANNEL_MIX } from '../shared/filterDefaults';
 
 const ChannelMixSchema = v.object({
   enabled: v.boolean(),
@@ -29,11 +30,11 @@ function handleChannelMixGet(
   const row = db.select().from(tables.guildSettings).where(eq(tables.guildSettings.id, 1)).get();
 
   return json({
-    enabled: row?.channelMixEnabled ?? false,
-    leftToLeft: row?.channelMixLeftToLeft ?? 1,
-    leftToRight: row?.channelMixLeftToRight ?? 0,
-    rightToLeft: row?.channelMixRightToLeft ?? 0,
-    rightToRight: row?.channelMixRightToRight ?? 1,
+    enabled: row?.channelMixEnabled ?? DEFAULT_CHANNEL_MIX.enabled,
+    leftToLeft: row?.channelMixLeftToLeft ?? DEFAULT_CHANNEL_MIX.leftToLeft,
+    leftToRight: row?.channelMixLeftToRight ?? DEFAULT_CHANNEL_MIX.leftToRight,
+    rightToLeft: row?.channelMixRightToLeft ?? DEFAULT_CHANNEL_MIX.rightToLeft,
+    rightToRight: row?.channelMixRightToRight ?? DEFAULT_CHANNEL_MIX.rightToRight,
   });
 }
 
