@@ -40,7 +40,7 @@ const BAND_KEYS = [
 
 type EqBandKey = (typeof BAND_KEYS)[number];
 
-interface EqSettingsRow {
+export interface EqSettingsRow {
   eqBand0: number;
   eqBand1: number;
   eqBand2: number;
