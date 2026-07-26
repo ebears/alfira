@@ -2,11 +2,8 @@ pre-commit:
   parallel: true
   commands:
     lint:
-      glob: '*.{ts,tsx}'
-      run: bun run lint {staged_files}
+      run: bun run lint
     format:
-      glob: '*.{ts,tsx,js,jsx,json,md,css}'
-      run: bun run format:check {staged_files}
+      run: bun run format:check
     test:
-      glob: '*.{ts,tsx}'
       run: bun test
