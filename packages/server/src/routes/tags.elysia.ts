@@ -3,6 +3,7 @@ import { type Elysia } from 'elysia';
 import * as v from 'valibot';
 /* eslint-disable @typescript-eslint/no-unsafe-type-assertion */
 
+import { elysiaJson as json } from '../lib/elysia-adapter';
 import { requireAdminOrPermission, requireAuth } from '../lib/elysia-guards';
 import { emitPlaylistUpdated } from '../lib/socket';
 import { db, tables } from '../shared/db';
@@ -17,13 +18,6 @@ const TagPatchSchema = v.partial(
     color: v.nullable(v.picklist(TAG_COLORS)),
   })
 );
-
-function json(data: unknown, status = 200): Response {
-  return new Response(JSON.stringify(data), {
-    status,
-    headers: { 'Content-Type': 'application/json' },
-  });
-}
 
 // ---------------------------------------------------------------------------
 // Query helpers — extracted to avoid tsgo inference issues with Elysia handlers

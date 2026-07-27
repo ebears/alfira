@@ -4,7 +4,7 @@ import { join } from 'node:path';
 
 import { VERSION } from './lib/config';
 import { parseCookies } from './lib/cookies';
-import { API_SECURITY_HEADERS, wrapLegacy } from './lib/elysia-adapter';
+import { wrapLegacy } from './lib/elysia-adapter';
 import { json } from './lib/json';
 import { lavalink } from './lib/lavalink';
 import { registerClient, unregisterClient, type WsClient } from './lib/socket';
@@ -146,22 +146,15 @@ export function createApp(): Elysia {
 
   const authLegacy = wrapLegacy(handleAuth);
   // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion
-  authApp.all('', authLegacy as unknown as Record<string, unknown>);
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion
-  authApp.all('/*', authLegacy as unknown as Record<string, unknown>);
+  const handler = authLegacy as unknown as Record<string, unknown>;
+  authApp.get('', handler);
+  authApp.post('', handler);
+  authApp.get('/*', handler);
+  authApp.post('/*', handler);
 
   const app = new Elysia()
     // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion
     .derive(deriveAuth as unknown as (ctx: Record<string, unknown>) => Record<string, unknown>)
-    // Security headers on API and auth routes only (not static files)
-    .onAfterHandle(({ request, set }) => {
-      const url = new URL(request.url);
-      if (url.pathname.startsWith('/api/') || url.pathname.startsWith('/auth/')) {
-        for (const [key, value] of Object.entries(API_SECURITY_HEADERS)) {
-          set.headers[key] = value;
-        }
-      }
-    })
     // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion
     .use(apiApp as unknown as Elysia)
     // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion

@@ -2,6 +2,7 @@ import { eq } from 'drizzle-orm';
 import { type Elysia } from 'elysia';
 /* eslint-disable @typescript-eslint/no-unsafe-type-assertion */
 
+import { elysiaJson as json } from '../lib/elysia-adapter';
 import { requireAdminOrPermission } from '../lib/elysia-guards';
 import { EQ_BAND_COLUMNS, eqBandsFromRow } from '../lib/eqBands';
 import { db, tables } from '../shared/db';
@@ -17,13 +18,6 @@ import {
   DEFAULT_TREMOLO,
   DEFAULT_VIBRATO,
 } from '../shared/filterDefaults';
-
-function json(data: unknown, status = 200): Response {
-  return new Response(JSON.stringify(data), {
-    status,
-    headers: { 'Content-Type': 'application/json' },
-  });
-}
 
 // ---------------------------------------------------------------------------
 // Query helper

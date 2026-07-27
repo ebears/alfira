@@ -3,6 +3,7 @@ import { type Elysia } from 'elysia';
 import * as v from 'valibot';
 /* eslint-disable @typescript-eslint/no-unsafe-type-assertion */
 
+import { elysiaJson as json } from '../lib/elysia-adapter';
 import { requireAdminOrPermission } from '../lib/elysia-guards';
 import { syncAllFilters } from '../lib/syncAllFilters';
 import { db, tables } from '../shared/db';
@@ -13,17 +14,6 @@ const TremoloSchema = v.object({
   frequency: v.pipe(v.number(), v.minValue(0.1), v.maxValue(14)),
   depth: v.pipe(v.number(), v.minValue(0), v.maxValue(1)),
 });
-
-function json(data: unknown, status = 200): Response {
-  return new Response(JSON.stringify(data), {
-    status,
-    headers: { 'Content-Type': 'application/json' },
-  });
-}
-
-// ---------------------------------------------------------------------------
-// Query helpers
-// ---------------------------------------------------------------------------
 
 function fetchTremoloSettings(): { enabled: boolean; frequency: number; depth: number } {
   const row = db.select().from(tables.guildSettings).where(eq(tables.guildSettings.id, 1)).get();

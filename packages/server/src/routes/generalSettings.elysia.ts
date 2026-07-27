@@ -3,6 +3,7 @@ import { type Elysia } from 'elysia';
 import * as v from 'valibot';
 /* eslint-disable @typescript-eslint/no-unsafe-type-assertion */
 
+import { elysiaJson as json } from '../lib/elysia-adapter';
 import { requireAdminOrPermission } from '../lib/elysia-guards';
 import { type GeneralSettings } from '../shared';
 import { db, tables } from '../shared/db';
@@ -44,13 +45,6 @@ const GeneralSettingsPatchSchema = v.partial(
     enabledSources: v.pipe(v.string(), v.minLength(1)),
   })
 );
-
-function json(data: unknown, status = 200): Response {
-  return new Response(JSON.stringify(data), {
-    status,
-    headers: { 'Content-Type': 'application/json' },
-  });
-}
 
 // ---------------------------------------------------------------------------
 // Query helpers

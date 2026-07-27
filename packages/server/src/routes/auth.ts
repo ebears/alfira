@@ -118,7 +118,10 @@ function generateAccessToken(payload: {
 }
 
 function generateRefreshToken(discordId: string): string {
-  return sign({ discordId, type: 'refresh' }, JWT_SECRET_, { expiresIn: REFRESH_TOKEN_EXPIRES_IN });
+  const jti = crypto.randomUUID();
+  return sign({ discordId, type: 'refresh', jti }, JWT_SECRET_, {
+    expiresIn: REFRESH_TOKEN_EXPIRES_IN,
+  });
 }
 
 function buildCookieHeader(

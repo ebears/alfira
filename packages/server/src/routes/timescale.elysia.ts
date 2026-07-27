@@ -4,6 +4,7 @@ import * as v from 'valibot';
 /* eslint-disable @typescript-eslint/no-unsafe-type-assertion */
 
 import { getGuildId } from '../lib/config';
+import { elysiaJson as json } from '../lib/elysia-adapter';
 import { requireAdminOrPermission } from '../lib/elysia-guards';
 import { emitPlayerUpdate } from '../lib/socket';
 import { syncAllFilters } from '../lib/syncAllFilters';
@@ -19,13 +20,6 @@ const TimescaleSchema = v.object({
 });
 
 type TimescaleSettings = v.InferOutput<typeof TimescaleSchema>;
-
-function json(data: unknown, status = 200): Response {
-  return new Response(JSON.stringify(data), {
-    status,
-    headers: { 'Content-Type': 'application/json' },
-  });
-}
 
 // ---------------------------------------------------------------------------
 // Query helpers

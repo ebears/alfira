@@ -3,6 +3,7 @@ import { type Elysia } from 'elysia';
 import * as v from 'valibot';
 /* eslint-disable @typescript-eslint/no-unsafe-type-assertion */
 
+import { elysiaJson as json } from '../lib/elysia-adapter';
 import { requireAdminOrPermission } from '../lib/elysia-guards';
 import { EQ_BAND_COLUMNS, eqBandsFromRow, eqBandValues } from '../lib/eqBands';
 import { syncAllFilters } from '../lib/syncAllFilters';
@@ -17,13 +18,6 @@ const EqualizerSchema = v.object({
 });
 
 type EqualizerSettings = v.InferOutput<typeof EqualizerSchema>;
-
-function json(data: unknown, status = 200): Response {
-  return new Response(JSON.stringify(data), {
-    status,
-    headers: { 'Content-Type': 'application/json' },
-  });
-}
 
 // ---------------------------------------------------------------------------
 // Query helpers
