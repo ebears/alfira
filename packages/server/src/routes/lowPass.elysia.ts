@@ -42,17 +42,17 @@ function getAuth(ctx: Record<string, unknown>): AuthContext {
 }
 
 export const lowPassPlugin = new Elysia({ prefix: '/settings/lowpass' })
-  .get('/', ((ctx: Record<string, unknown>) => {
+  .get('/', (ctx: Record<string, unknown>) => {
     const { user, isAdmin } = getAuth(ctx);
     const guardErr = requireAdminOrPermission({ user, isAdmin }, 'audio.manage');
     if (guardErr) {
       return guardErr;
     }
     return json(fetchLowPassSettings());
-  }) as never)
+  })
   .patch(
     '/',
-    (async (ctx: Record<string, unknown>) => {
+    async (ctx: Record<string, unknown>) => {
       const { user, isAdmin } = getAuth(ctx);
       const guardErr = requireAdminOrPermission({ user, isAdmin }, 'audio.manage');
       if (guardErr) {
@@ -64,6 +64,6 @@ export const lowPassPlugin = new Elysia({ prefix: '/settings/lowpass' })
       await syncAllFilters();
 
       return json(body);
-    }) as never,
+    },
     { body: LowPassSchema }
   );

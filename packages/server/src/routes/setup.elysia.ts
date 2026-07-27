@@ -173,7 +173,7 @@ function getAuth(ctx: Record<string, unknown>): AuthContext {
 }
 
 export const setupPlugin = new Elysia({ prefix: '/setup' })
-  .get('/', (async () => {
+  .get('/', async () => {
     try {
       const row = fetchSetupStatus();
 
@@ -202,8 +202,8 @@ export const setupPlugin = new Elysia({ prefix: '/setup' })
         clientId: process.env.DISCORD_CLIENT_ID ?? '',
       });
     }
-  }) as never)
-  .get('/status', (async () => {
+  })
+  .get('/status', async () => {
     try {
       const row = fetchSetupStatus();
 
@@ -232,8 +232,8 @@ export const setupPlugin = new Elysia({ prefix: '/setup' })
         clientId: process.env.DISCORD_CLIENT_ID ?? '',
       });
     }
-  }) as never)
-  .get('/guilds', ((ctx: Record<string, unknown>) => {
+  })
+  .get('/guilds', (ctx: Record<string, unknown>) => {
     const { user, isAdmin } = getAuth(ctx);
     const guardErr = requireSetupMode({ user, isAdmin });
     if (guardErr) {
@@ -249,8 +249,8 @@ export const setupPlugin = new Elysia({ prefix: '/setup' })
         return json({ error: 'Could not fetch guild list.' }, 502);
       }
     })();
-  }) as never)
-  .get('/roles', (async (ctx: Record<string, unknown>) => {
+  })
+  .get('/roles', async (ctx: Record<string, unknown>) => {
     const { user, isAdmin } = getAuth(ctx);
     const guardErr = requireSetupMode({ user, isAdmin });
     if (guardErr) {
@@ -264,8 +264,8 @@ export const setupPlugin = new Elysia({ prefix: '/setup' })
 
     const roles = await fetchGuildRoles(guildId);
     return json({ roles });
-  }) as never)
-  .get('/channels', (async (ctx: Record<string, unknown>) => {
+  })
+  .get('/channels', async (ctx: Record<string, unknown>) => {
     const { user, isAdmin } = getAuth(ctx);
     const guardErr = requireSetupMode({ user, isAdmin });
     if (guardErr) {
@@ -284,10 +284,10 @@ export const setupPlugin = new Elysia({ prefix: '/setup' })
       logger.error({ error }, 'Error fetching guild channels');
       return json({ error: 'Could not fetch channels.' }, 502);
     }
-  }) as never)
+  })
   .post(
     '/complete',
-    ((ctx: Record<string, unknown>) => {
+    (ctx: Record<string, unknown>) => {
       const { user, isAdmin } = getAuth(ctx);
       const guardErr = requireSetupMode({ user, isAdmin });
       if (guardErr) {
@@ -303,6 +303,6 @@ export const setupPlugin = new Elysia({ prefix: '/setup' })
         logger.error({ error }, 'Failed to save setup configuration');
         return json({ error: 'Could not save configuration.' }, 500);
       }
-    }) as never,
+    },
     { body: SetupCompleteSchema }
   );

@@ -107,7 +107,7 @@ function getAuth(ctx: Record<string, unknown>): AuthContext {
 export const requestsPlugin = new Elysia({ prefix: '/requests' })
   .post(
     '/preview',
-    (async (ctx: Record<string, unknown>) => {
+    async (ctx: Record<string, unknown>) => {
       const { user, isAdmin } = getAuth(ctx);
       const authErr = requireAuth({ user, isAdmin });
       if (authErr) {
@@ -190,10 +190,10 @@ export const requestsPlugin = new Elysia({ prefix: '/requests' })
         isPlaylist: false,
         playlistMeta: undefined,
       });
-    }) as never,
+    },
     { body: PreviewRequestSchema }
   )
-  .get('/', (async (ctx: Record<string, unknown>) => {
+  .get('/', async (ctx: Record<string, unknown>) => {
     const { user, isAdmin } = getAuth(ctx);
     const authErr = requireAuth({ user, isAdmin });
     if (authErr) {
@@ -254,10 +254,10 @@ export const requestsPlugin = new Elysia({ prefix: '/requests' })
         totalPages: Math.ceil(total / limit),
       },
     });
-  }) as never)
+  })
   .post(
     '/',
-    (async (ctx: Record<string, unknown>) => {
+    async (ctx: Record<string, unknown>) => {
       const { user, isAdmin } = getAuth(ctx);
       const authErr = requireAuth({ user, isAdmin });
       if (authErr) {
@@ -636,12 +636,12 @@ export const requestsPlugin = new Elysia({ prefix: '/requests' })
       );
 
       return json({ request: formatted, autoApproved: false }, 201);
-    }) as never,
+    },
     { body: CreateRequestSchema }
   )
   .patch(
     '/:id',
-    (async (ctx: Record<string, unknown>) => {
+    async (ctx: Record<string, unknown>) => {
       const { user, isAdmin } = getAuth(ctx);
       const guardErr = requireAdmin({ user, isAdmin });
       if (guardErr) {
@@ -853,10 +853,10 @@ export const requestsPlugin = new Elysia({ prefix: '/requests' })
         request: formatted,
         song: formatSong(newSong),
       });
-    }) as never,
+    },
     { body: PatchRequestSchema }
   )
-  .delete('/:id', (async (ctx: Record<string, unknown>) => {
+  .delete('/:id', async (ctx: Record<string, unknown>) => {
     const { user, isAdmin } = getAuth(ctx);
     const authErr = requireAuth({ user, isAdmin });
     if (authErr) {
@@ -887,4 +887,4 @@ export const requestsPlugin = new Elysia({ prefix: '/requests' })
     await db.delete(requestTable).where(eq(requestTable.id, id));
 
     return new Response(null, { status: 204 });
-  }) as never);
+  });

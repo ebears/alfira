@@ -65,7 +65,7 @@ function getAuth(ctx: Record<string, unknown>): AuthContext {
 }
 
 export const permissionsPlugin = new Elysia({ prefix: '/permissions' })
-  .get('/me', ((ctx: Record<string, unknown>) => {
+  .get('/me', (ctx: Record<string, unknown>) => {
     const { user, isAdmin } = getAuth(ctx);
     const authErr = requireAuth({ user, isAdmin });
     if (authErr) {
@@ -75,8 +75,8 @@ export const permissionsPlugin = new Elysia({ prefix: '/permissions' })
     const userRoles = (user as { roles?: string[] } | null)?.roles ?? [];
     const permissions = fetchUserPermissions(userRoles);
     return json({ permissions });
-  }) as never)
-  .get('/', (async (ctx: Record<string, unknown>) => {
+  })
+  .get('/', async (ctx: Record<string, unknown>) => {
     const { user, isAdmin } = getAuth(ctx);
     const guardErr = requireAdmin({ user, isAdmin });
     if (guardErr) {
@@ -109,10 +109,10 @@ export const permissionsPlugin = new Elysia({ prefix: '/permissions' })
       categories: PERMISSION_CATEGORIES,
       labels: PERMISSION_LABELS,
     });
-  }) as never)
+  })
   .patch(
     '/',
-    ((ctx: Record<string, unknown>) => {
+    (ctx: Record<string, unknown>) => {
       const { user, isAdmin } = getAuth(ctx);
       const guardErr = requireAdmin({ user, isAdmin });
       if (guardErr) {
@@ -128,6 +128,6 @@ export const permissionsPlugin = new Elysia({ prefix: '/permissions' })
       replacePermissionRoles(action, roleIds);
 
       return json({ action, roleIds });
-    }) as never,
+    },
     { body: PermissionsPatchSchema }
   );

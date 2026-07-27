@@ -67,17 +67,17 @@ function getAuth(ctx: Record<string, unknown>): AuthContext {
 }
 
 export const karaokePlugin = new Elysia({ prefix: '/settings/karaoke' })
-  .get('/', ((ctx: Record<string, unknown>) => {
+  .get('/', (ctx: Record<string, unknown>) => {
     const { user, isAdmin } = getAuth(ctx);
     const guardErr = requireAdminOrPermission({ user, isAdmin }, 'audio.manage');
     if (guardErr) {
       return guardErr;
     }
     return json(fetchKaraokeSettings());
-  }) as never)
+  })
   .patch(
     '/',
-    (async (ctx: Record<string, unknown>) => {
+    async (ctx: Record<string, unknown>) => {
       const { user, isAdmin } = getAuth(ctx);
       const guardErr = requireAdminOrPermission({ user, isAdmin }, 'audio.manage');
       if (guardErr) {
@@ -89,6 +89,6 @@ export const karaokePlugin = new Elysia({ prefix: '/settings/karaoke' })
       await syncAllFilters();
 
       return json(body);
-    }) as never,
+    },
     { body: KaraokeSchema }
   );

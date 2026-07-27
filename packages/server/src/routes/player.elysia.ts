@@ -151,7 +151,7 @@ const ReorderSchema = v.object({
 // ---------------------------------------------------------------------------
 
 export const playerPlugin = new Elysia({ prefix: '/player' })
-  .get('/queue', ((ctx: Record<string, unknown>) => {
+  .get('/queue', (ctx: Record<string, unknown>) => {
     const { user, isAdmin } = getAuth(ctx);
     const authErr = requireAuth({ user, isAdmin });
     if (authErr) {
@@ -179,10 +179,10 @@ export const playerPlugin = new Elysia({ prefix: '/player' })
     }
 
     return json(player.getQueueState());
-  }) as never)
+  })
   .patch(
     '/queue/reorder',
-    ((ctx: Record<string, unknown>) => {
+    (ctx: Record<string, unknown>) => {
       const { user, isAdmin } = getAuth(ctx);
       const adminErr = requireAdminOrPermission({ user, isAdmin }, 'queue.manage');
       if (adminErr) {
@@ -216,10 +216,10 @@ export const playerPlugin = new Elysia({ prefix: '/player' })
       }
 
       return json({ message: 'Queue reordered.' });
-    }) as never,
+    },
     { body: ReorderSchema }
   )
-  .post('/queue/:songId/promote', ((ctx: Record<string, unknown>) => {
+  .post('/queue/:songId/promote', (ctx: Record<string, unknown>) => {
     const { user, isAdmin } = getAuth(ctx);
     const adminErr = requireAdminOrPermission({ user, isAdmin }, 'queue.manage');
     if (adminErr) {
@@ -243,8 +243,8 @@ export const playerPlugin = new Elysia({ prefix: '/player' })
     }
 
     return json({ message: 'Song promoted to Up Next.' });
-  }) as never)
-  .post('/queue/:songId/demote', ((ctx: Record<string, unknown>) => {
+  })
+  .post('/queue/:songId/demote', (ctx: Record<string, unknown>) => {
     const { user, isAdmin } = getAuth(ctx);
     const adminErr = requireAdminOrPermission({ user, isAdmin }, 'queue.manage');
     if (adminErr) {
@@ -268,8 +268,8 @@ export const playerPlugin = new Elysia({ prefix: '/player' })
     }
 
     return json({ message: 'Song moved to queue.' });
-  }) as never)
-  .delete('/queue/:songId', ((ctx: Record<string, unknown>) => {
+  })
+  .delete('/queue/:songId', (ctx: Record<string, unknown>) => {
     const { user, isAdmin } = getAuth(ctx);
     const adminErr = requireAdminOrPermission({ user, isAdmin }, 'queue.manage');
     if (adminErr) {
@@ -293,10 +293,10 @@ export const playerPlugin = new Elysia({ prefix: '/player' })
     }
 
     return json({ message: 'Song removed from queue.' });
-  }) as never)
+  })
   .post(
     '/add-to-priority',
-    (async (ctx: Record<string, unknown>) => {
+    async (ctx: Record<string, unknown>) => {
       const { user, isAdmin } = getAuth(ctx);
       const adminErr = requireAdminOrPermission({ user, isAdmin }, 'queue.manage');
       if (adminErr) {
@@ -335,10 +335,10 @@ export const playerPlugin = new Elysia({ prefix: '/player' })
         message: `Added "${song.nickname ?? song.title}" to Up Next.`,
         song: queuedSong,
       });
-    }) as never,
+    },
     { body: SongIdSchema }
   )
-  .post('/clear', ((ctx: Record<string, unknown>) => {
+  .post('/clear', (ctx: Record<string, unknown>) => {
     const { user, isAdmin } = getAuth(ctx);
     const adminErr = requireAdminOrPermission({ user, isAdmin }, 'queue.manage');
     if (adminErr) {
@@ -357,8 +357,8 @@ export const playerPlugin = new Elysia({ prefix: '/player' })
 
     playerResult.player.clearQueue();
     return json({ message: 'Queue cleared.' });
-  }) as never)
-  .post('/leave', ((ctx: Record<string, unknown>) => {
+  })
+  .post('/leave', (ctx: Record<string, unknown>) => {
     const { user, isAdmin } = getAuth(ctx);
     const authErr = requireAuth({ user, isAdmin });
     if (authErr) {
@@ -381,10 +381,10 @@ export const playerPlugin = new Elysia({ prefix: '/player' })
     }
 
     return json({ message: 'Left the voice channel.' });
-  }) as never)
+  })
   .post(
     '/loop',
-    ((ctx: Record<string, unknown>) => {
+    (ctx: Record<string, unknown>) => {
       const { user, isAdmin } = getAuth(ctx);
       const authErr = requireAuth({ user, isAdmin });
       if (authErr) {
@@ -404,12 +404,12 @@ export const playerPlugin = new Elysia({ prefix: '/player' })
 
       playerResult.player.setLoopMode(mode);
       return json({ loopMode: mode });
-    }) as never,
+    },
     { body: LoopSchema }
   )
   .post(
     '/override',
-    (async (ctx: Record<string, unknown>) => {
+    async (ctx: Record<string, unknown>) => {
       const { user, isAdmin } = getAuth(ctx);
       const adminErr = requireAdminOrPermission({ user, isAdmin }, 'queue.override');
       if (adminErr) {
@@ -431,10 +431,10 @@ export const playerPlugin = new Elysia({ prefix: '/player' })
         message: `Now playing "${result.metadataTitle}".`,
         song: result.queuedSong,
       });
-    }) as never,
+    },
     { body: UrlSchema }
   )
-  .post('/pause-toggle', ((ctx: Record<string, unknown>) => {
+  .post('/pause-toggle', (ctx: Record<string, unknown>) => {
     const { user, isAdmin } = getAuth(ctx);
     const authErr = requireAuth({ user, isAdmin });
     if (authErr) {
@@ -453,10 +453,10 @@ export const playerPlugin = new Elysia({ prefix: '/player' })
 
     const isPaused = playingResult.player.togglePause();
     return json({ isPaused });
-  }) as never)
+  })
   .post(
     '/play',
-    (async (ctx: Record<string, unknown>) => {
+    async (ctx: Record<string, unknown>) => {
       const { user, isAdmin } = getAuth(ctx);
       const authErr = requireAuth({ user, isAdmin });
       if (authErr) {
@@ -487,7 +487,7 @@ export const playerPlugin = new Elysia({ prefix: '/player' })
           return json({ error: 'Playlist not found.' }, 404);
         }
 
-        const accessResult = canAccessPlaylist(playlist, user as never);
+        const accessResult = canAccessPlaylist(playlist, user ?? undefined);
         if (!accessResult.ok) {
           return json({ error: accessResult.error }, 403);
         }
@@ -530,12 +530,12 @@ export const playerPlugin = new Elysia({ prefix: '/player' })
       }
 
       return json({ message: `Queued ${queuedSongs.length} song(s).` });
-    }) as never,
+    },
     { body: PlaySchema }
   )
   .post(
     '/quick-add',
-    (async (ctx: Record<string, unknown>) => {
+    async (ctx: Record<string, unknown>) => {
       const { user, isAdmin } = getAuth(ctx);
       const adminErr = requireAdminOrPermission({ user, isAdmin }, 'queue.quickadd');
       if (adminErr) {
@@ -557,12 +557,12 @@ export const playerPlugin = new Elysia({ prefix: '/player' })
         message: `Added "${result.metadataTitle}" to the queue.`,
         song: result.queuedSong,
       });
-    }) as never,
+    },
     { body: UrlSchema }
   )
   .post(
     '/quick-add-playlist',
-    (async (ctx: Record<string, unknown>) => {
+    async (ctx: Record<string, unknown>) => {
       const { user, isAdmin } = getAuth(ctx);
       const adminErr = requireAdminOrPermission({ user, isAdmin }, 'queue.quickadd');
       if (adminErr) {
@@ -618,12 +618,12 @@ export const playerPlugin = new Elysia({ prefix: '/player' })
         queuedCount: queuedSongs.length,
         songs: queuedSongs,
       });
-    }) as never,
+    },
     { body: QuickAddPlaylistSchema }
   )
   .post(
     '/seek',
-    (async (ctx: Record<string, unknown>) => {
+    async (ctx: Record<string, unknown>) => {
       const { user, isAdmin } = getAuth(ctx);
       const authErr = requireAuth({ user, isAdmin });
       if (authErr) {
@@ -644,10 +644,10 @@ export const playerPlugin = new Elysia({ prefix: '/player' })
 
       await playingResult.player.seek(position);
       return json(playingResult.player.getQueueState());
-    }) as never,
+    },
     { body: SeekSchema }
   )
-  .post('/shuffle', ((ctx: Record<string, unknown>) => {
+  .post('/shuffle', (ctx: Record<string, unknown>) => {
     const { user, isAdmin } = getAuth(ctx);
     const adminErr = requireAdminOrPermission({ user, isAdmin }, 'queue.manage');
     if (adminErr) {
@@ -667,8 +667,8 @@ export const playerPlugin = new Elysia({ prefix: '/player' })
 
     player.shuffle();
     return json({ message: 'Queue shuffled.' });
-  }) as never)
-  .post('/skip', (async (ctx: Record<string, unknown>) => {
+  })
+  .post('/skip', async (ctx: Record<string, unknown>) => {
     const { user, isAdmin } = getAuth(ctx);
     const authErr = requireAuth({ user, isAdmin });
     if (authErr) {
@@ -687,8 +687,8 @@ export const playerPlugin = new Elysia({ prefix: '/player' })
 
     await playingResult.player.skip();
     return json({ message: 'Skipped.' });
-  }) as never)
-  .post('/unshuffle', ((ctx: Record<string, unknown>) => {
+  })
+  .post('/unshuffle', (ctx: Record<string, unknown>) => {
     const { user, isAdmin } = getAuth(ctx);
     const adminErr = requireAdminOrPermission({ user, isAdmin }, 'queue.manage');
     if (adminErr) {
@@ -707,4 +707,4 @@ export const playerPlugin = new Elysia({ prefix: '/player' })
 
     playerResult.player.unshuffle();
     return json({ message: 'Queue order restored.' });
-  }) as never);
+  });

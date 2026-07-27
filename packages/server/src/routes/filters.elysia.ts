@@ -145,13 +145,14 @@ function getAuth(ctx: Record<string, unknown>): AuthContext {
   return ctx as unknown as AuthContext;
 }
 
-export const filtersPlugin = new Elysia({ prefix: '/settings/filters' }).get('/', ((
-  ctx: Record<string, unknown>
-) => {
-  const { user, isAdmin } = getAuth(ctx);
-  const guardErr = requireAdminOrPermission({ user, isAdmin }, 'audio.manage');
-  if (guardErr) {
-    return guardErr;
+export const filtersPlugin = new Elysia({ prefix: '/settings/filters' }).get(
+  '/',
+  (ctx: Record<string, unknown>) => {
+    const { user, isAdmin } = getAuth(ctx);
+    const guardErr = requireAdminOrPermission({ user, isAdmin }, 'audio.manage');
+    if (guardErr) {
+      return guardErr;
+    }
+    return json(fetchAllFilters());
   }
-  return json(fetchAllFilters());
-}) as never);
+);

@@ -736,8 +736,8 @@ async function handleLogout(ctx: Record<string, unknown>): Promise<Response> {
 // ---------------------------------------------------------------------------
 
 export const authPlugin = new Elysia()
-  .get('/login', handleLogin as never)
-  .get('/callback', handleCallback as never)
-  .post('/refresh', handleRefresh as never)
-  .get('/me', handleMe as never)
-  .post('/logout', handleLogout as never);
+  .get('/login', handleLogin)
+  .get('/callback', handleCallback)
+  .post('/refresh', handleRefresh)
+  .get('/me', handleMe)
+  .post('/logout', handleLogout);

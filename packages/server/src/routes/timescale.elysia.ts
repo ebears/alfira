@@ -66,17 +66,17 @@ function getAuth(ctx: Record<string, unknown>): AuthContext {
 }
 
 export const timescalePlugin = new Elysia({ prefix: '/settings/timescale' })
-  .get('/', ((ctx: Record<string, unknown>) => {
+  .get('/', (ctx: Record<string, unknown>) => {
     const { user, isAdmin } = getAuth(ctx);
     const guardErr = requireAdminOrPermission({ user, isAdmin }, 'audio.manage');
     if (guardErr) {
       return guardErr;
     }
     return json(fetchTimescaleSettings());
-  }) as never)
+  })
   .patch(
     '/',
-    (async (ctx: Record<string, unknown>) => {
+    async (ctx: Record<string, unknown>) => {
       const { user, isAdmin } = getAuth(ctx);
       const guardErr = requireAdminOrPermission({ user, isAdmin }, 'audio.manage');
       if (guardErr) {
@@ -95,6 +95,6 @@ export const timescalePlugin = new Elysia({ prefix: '/settings/timescale' })
       }
 
       return json(body);
-    }) as never,
+    },
     { body: TimescaleSchema }
   );

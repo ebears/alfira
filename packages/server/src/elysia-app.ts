@@ -86,7 +86,7 @@ function isAssetPath(pathname: string): boolean {
   );
 }
 
-export function createApp(): Elysia {
+export function createApp() {
   const apiApp = new Elysia({ prefix: '/api' }).get('/version', () =>
     elysiaJson({ version: VERSION })
   );
@@ -201,6 +201,5 @@ export function createApp(): Elysia {
       return { error: 'Not Found' };
     });
 
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion
-  return app as unknown as Elysia;
+  return app;
 }

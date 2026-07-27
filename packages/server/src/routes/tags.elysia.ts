@@ -103,15 +103,15 @@ function getAuth(ctx: Record<string, unknown>): AuthContext {
 }
 
 export const tagsPlugin = new Elysia({ prefix: '/tags' })
-  .get('/', ((ctx: Record<string, unknown>) => {
+  .get('/', (ctx: Record<string, unknown>) => {
     const { user, isAdmin } = getAuth(ctx);
     const authErr = requireAuth({ user, isAdmin });
     if (authErr) {
       return authErr;
     }
     return json({ tags: fetchTagList() });
-  }) as never)
-  .get('/:nameLower', ((ctx: Record<string, unknown>) => {
+  })
+  .get('/:nameLower', (ctx: Record<string, unknown>) => {
     const { user, isAdmin } = getAuth(ctx);
     const authErr = requireAuth({ user, isAdmin });
     if (authErr) {
@@ -125,8 +125,8 @@ export const tagsPlugin = new Elysia({ prefix: '/tags' })
     }
 
     return json({ tag });
-  }) as never)
-  .get('/:nameLower/songs', ((ctx: Record<string, unknown>) => {
+  })
+  .get('/:nameLower/songs', (ctx: Record<string, unknown>) => {
     const { user, isAdmin } = getAuth(ctx);
     const authErr = requireAuth({ user, isAdmin });
     if (authErr) {
@@ -134,10 +134,10 @@ export const tagsPlugin = new Elysia({ prefix: '/tags' })
     }
     const nameLower = (ctx.params as Record<string, string>).nameLower as string;
     return json({ songs: fetchSongsByTag(nameLower) });
-  }) as never)
+  })
   .patch(
     '/:nameLower',
-    (async (ctx: Record<string, unknown>) => {
+    async (ctx: Record<string, unknown>) => {
       const { user, isAdmin } = getAuth(ctx);
       const guardErr = requireAdminOrPermission({ user, isAdmin }, 'tags.manage');
       if (guardErr) {
@@ -168,10 +168,10 @@ export const tagsPlugin = new Elysia({ prefix: '/tags' })
 
       const updated = await updateTagReturning(nameLower, data);
       return json({ tag: updated });
-    }) as never,
+    },
     { body: TagPatchSchema }
   )
-  .delete('/:nameLower', (async (ctx: Record<string, unknown>) => {
+  .delete('/:nameLower', async (ctx: Record<string, unknown>) => {
     const { user, isAdmin } = getAuth(ctx);
     const guardErr = requireAdminOrPermission({ user, isAdmin }, 'tags.manage');
     if (guardErr) {
@@ -210,4 +210,4 @@ export const tagsPlugin = new Elysia({ prefix: '/tags' })
     await deleteTagRow(nameLower);
 
     return json({ success: true });
-  }) as never);
+  });

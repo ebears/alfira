@@ -98,7 +98,7 @@ function getAuth(ctx: Record<string, unknown>): AuthContext {
 }
 
 export const generalSettingsPlugin = new Elysia({ prefix: '/settings/general' })
-  .get('/', ((ctx: Record<string, unknown>) => {
+  .get('/', (ctx: Record<string, unknown>) => {
     const { user, isAdmin } = getAuth(ctx);
     const guardErr = requireAdminOrPermission({ user, isAdmin });
     if (guardErr) {
@@ -107,10 +107,10 @@ export const generalSettingsPlugin = new Elysia({ prefix: '/settings/general' })
 
     const settings = fetchGeneralSettings();
     return json(settings ?? defaultGeneralSettings());
-  }) as never)
+  })
   .patch(
     '/',
-    ((ctx: Record<string, unknown>) => {
+    (ctx: Record<string, unknown>) => {
       const { user, isAdmin } = getAuth(ctx);
       const guardErr = requireAdminOrPermission({ user, isAdmin });
       if (guardErr) {
@@ -170,6 +170,6 @@ export const generalSettingsPlugin = new Elysia({ prefix: '/settings/general' })
       }
 
       return json(settings);
-    }) as never,
+    },
     { body: GeneralSettingsPatchSchema }
   );

@@ -53,17 +53,17 @@ function getAuth(ctx: Record<string, unknown>): AuthContext {
 }
 
 export const vibratoPlugin = new Elysia({ prefix: '/settings/vibrato' })
-  .get('/', ((ctx: Record<string, unknown>) => {
+  .get('/', (ctx: Record<string, unknown>) => {
     const { user, isAdmin } = getAuth(ctx);
     const guardErr = requireAdminOrPermission({ user, isAdmin }, 'audio.manage');
     if (guardErr) {
       return guardErr;
     }
     return json(fetchVibratoSettings());
-  }) as never)
+  })
   .patch(
     '/',
-    (async (ctx: Record<string, unknown>) => {
+    async (ctx: Record<string, unknown>) => {
       const { user, isAdmin } = getAuth(ctx);
       const guardErr = requireAdminOrPermission({ user, isAdmin }, 'audio.manage');
       if (guardErr) {
@@ -75,6 +75,6 @@ export const vibratoPlugin = new Elysia({ prefix: '/settings/vibrato' })
       await syncAllFilters();
 
       return json(body);
-    }) as never,
+    },
     { body: VibratoSchema }
   );

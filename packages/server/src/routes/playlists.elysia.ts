@@ -80,7 +80,7 @@ function getAuth(ctx: Record<string, unknown>): AuthContext {
 }
 
 export const playlistsPlugin = new Elysia({ prefix: '/playlists' })
-  .get('/', (async (ctx: Record<string, unknown>) => {
+  .get('/', async (ctx: Record<string, unknown>) => {
     const { user, isAdmin } = getAuth(ctx);
     const authErr = requireAuth({ user, isAdmin });
     if (authErr) {
@@ -152,10 +152,10 @@ export const playlistsPlugin = new Elysia({ prefix: '/playlists' })
         totalPages: Math.ceil(totalCount / limit),
       },
     });
-  }) as never)
+  })
   .post(
     '/',
-    (async (ctx: Record<string, unknown>) => {
+    async (ctx: Record<string, unknown>) => {
       const { user, isAdmin } = getAuth(ctx);
       const authErr = requireAuth({ user, isAdmin });
       if (authErr) {
@@ -196,12 +196,12 @@ export const playlistsPlugin = new Elysia({ prefix: '/playlists' })
       const songCount = await getPlaylistSongCount(playlist.id);
       emitPlaylistUpdated(formatPlaylist(playlist, songCount));
       return json(playlist, 201);
-    }) as never,
+    },
     { body: PlaylistCreateSchema }
   )
   .post(
     '/:id/songs/bulk-remove',
-    (async (ctx: Record<string, unknown>) => {
+    async (ctx: Record<string, unknown>) => {
       const { user, isAdmin } = getAuth(ctx);
       const authErr = requireAuth({ user, isAdmin });
       if (authErr) {
@@ -247,10 +247,10 @@ export const playlistsPlugin = new Elysia({ prefix: '/playlists' })
       emitPlaylistUpdated(formatPlaylist(playlist, value));
 
       return json({ removed: songIds.length });
-    }) as never,
+    },
     { body: PlaylistRemoveSongsSchema }
   )
-  .delete('/:id/songs/:songId', (async (ctx: Record<string, unknown>) => {
+  .delete('/:id/songs/:songId', async (ctx: Record<string, unknown>) => {
     const { user, isAdmin } = getAuth(ctx);
     const authErr = requireAuth({ user, isAdmin });
     if (authErr) {
@@ -305,10 +305,10 @@ export const playlistsPlugin = new Elysia({ prefix: '/playlists' })
     emitPlaylistUpdated(formatPlaylist(playlist, value));
 
     return new Response(null, { status: 204 });
-  }) as never)
+  })
   .post(
     '/:id/songs',
-    (async (ctx: Record<string, unknown>) => {
+    async (ctx: Record<string, unknown>) => {
       const { user, isAdmin } = getAuth(ctx);
       const authErr = requireAuth({ user, isAdmin });
       if (authErr) {
@@ -377,12 +377,12 @@ export const playlistsPlugin = new Elysia({ prefix: '/playlists' })
       emitPlaylistUpdated(formatPlaylist(playlist, value));
 
       return json({ ...ps, song: songData }, 201);
-    }) as never,
+    },
     { body: PlaylistAddSongSchema }
   )
   .patch(
     '/:id/visibility',
-    (async (ctx: Record<string, unknown>) => {
+    async (ctx: Record<string, unknown>) => {
       const { user, isAdmin } = getAuth(ctx);
       const authErr = requireAuth({ user, isAdmin });
       if (authErr) {
@@ -416,10 +416,10 @@ export const playlistsPlugin = new Elysia({ prefix: '/playlists' })
       const value = await getPlaylistSongCount(updatedPlaylist.id);
       emitPlaylistUpdated(formatPlaylist(updatedPlaylist, value));
       return json(updatedPlaylist);
-    }) as never,
+    },
     { body: PlaylistVisibilitySchema }
   )
-  .get('/:id', (async (ctx: Record<string, unknown>) => {
+  .get('/:id', async (ctx: Record<string, unknown>) => {
     const { user, isAdmin } = getAuth(ctx);
     const authErr = requireAuth({ user, isAdmin });
     if (authErr) {
@@ -618,10 +618,10 @@ export const playlistsPlugin = new Elysia({ prefix: '/playlists' })
         totalPages: Math.ceil(total / limit),
       },
     });
-  }) as never)
+  })
   .patch(
     '/:id',
-    (async (ctx: Record<string, unknown>) => {
+    async (ctx: Record<string, unknown>) => {
       const { user, isAdmin } = getAuth(ctx);
       const authErr = requireAuth({ user, isAdmin });
       if (authErr) {
@@ -676,12 +676,12 @@ export const playlistsPlugin = new Elysia({ prefix: '/playlists' })
       const value = await getPlaylistSongCount(updatedPlaylist.id);
       emitPlaylistUpdated(formatPlaylist(updatedPlaylist, value));
       return json(updatedPlaylist);
-    }) as never,
+    },
     { body: PlaylistCreateSchema }
   )
   .patch(
     '/:id/reorder',
-    (async (ctx: Record<string, unknown>) => {
+    async (ctx: Record<string, unknown>) => {
       const { user, isAdmin } = getAuth(ctx);
       const authErr = requireAuth({ user, isAdmin });
       if (authErr) {
@@ -739,10 +739,10 @@ export const playlistsPlugin = new Elysia({ prefix: '/playlists' })
       emitPlaylistUpdated(formatPlaylist(playlist, value));
 
       return json({ message: 'Playlist reordered.' });
-    }) as never,
+    },
     { body: PlaylistReorderSchema }
   )
-  .delete('/:id', (async (ctx: Record<string, unknown>) => {
+  .delete('/:id', async (ctx: Record<string, unknown>) => {
     const { user, isAdmin } = getAuth(ctx);
     const authErr = requireAuth({ user, isAdmin });
     if (authErr) {
@@ -759,4 +759,4 @@ export const playlistsPlugin = new Elysia({ prefix: '/playlists' })
     await db.delete(playlistTable).where(eq(playlistTable.id, id));
 
     return new Response(null, { status: 204 });
-  }) as never);
+  });

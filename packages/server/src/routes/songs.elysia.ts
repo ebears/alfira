@@ -135,7 +135,7 @@ function getAuth(ctx: Record<string, unknown>): AuthContext {
 }
 
 export const songsPlugin = new Elysia({ prefix: '/songs' })
-  .get('/', (async (ctx: Record<string, unknown>) => {
+  .get('/', async (ctx: Record<string, unknown>) => {
     const { user, isAdmin } = getAuth(ctx);
     const authErr = requireAuth({ user, isAdmin });
     if (authErr) {
@@ -208,10 +208,10 @@ export const songsPlugin = new Elysia({ prefix: '/songs' })
         totalPages: Math.ceil(total / limit),
       },
     });
-  }) as never)
+  })
   .post(
     '/bulk-delete',
-    (async (ctx: Record<string, unknown>) => {
+    async (ctx: Record<string, unknown>) => {
       const { user, isAdmin } = getAuth(ctx);
       const guardErr = requireAdminOrPermission({ user, isAdmin }, 'songs.delete');
       if (guardErr) {
@@ -222,12 +222,12 @@ export const songsPlugin = new Elysia({ prefix: '/songs' })
       await deleteSongsByIds(ids);
 
       return json({ deleted: ids.length });
-    }) as never,
+    },
     { body: BulkDeleteSchema }
   )
   .post(
     '/bulk-tag',
-    (async (ctx: Record<string, unknown>) => {
+    async (ctx: Record<string, unknown>) => {
       const { user, isAdmin } = getAuth(ctx);
       const guardErr = requireAdminOrPermission({ user, isAdmin }, 'songs.edit');
       if (guardErr) {
@@ -276,10 +276,10 @@ export const songsPlugin = new Elysia({ prefix: '/songs' })
       }
 
       return json({ updated: updatedSongs.length, tags: newTags });
-    }) as never,
+    },
     { body: BulkTagSchema }
   )
-  .post('/bulk-edit', (async (ctx: Record<string, unknown>) => {
+  .post('/bulk-edit', async (ctx: Record<string, unknown>) => {
     const { user, isAdmin } = getAuth(ctx);
     const guardErr = requireAdminOrPermission({ user, isAdmin }, 'songs.edit');
     if (guardErr) {
@@ -318,8 +318,8 @@ export const songsPlugin = new Elysia({ prefix: '/songs' })
     notifyPlayerOfMetadataChange(ids, data, processedVolumeBoost);
 
     return json({ updated: ids.length });
-  }) as never)
-  .delete('/:id', ((ctx: Record<string, unknown>) => {
+  })
+  .delete('/:id', (ctx: Record<string, unknown>) => {
     const { user, isAdmin } = getAuth(ctx);
     const guardErr = requireAdminOrPermission({ user, isAdmin }, 'songs.delete');
     if (guardErr) {
@@ -336,10 +336,10 @@ export const songsPlugin = new Elysia({ prefix: '/songs' })
     emitSongDeleted(id);
 
     return new Response(null, { status: 204 });
-  }) as never)
+  })
   .patch(
     '/:id',
-    (async (ctx: Record<string, unknown>) => {
+    async (ctx: Record<string, unknown>) => {
       const { user, isAdmin } = getAuth(ctx);
       const guardErr = requireAdminOrPermission({ user, isAdmin }, 'songs.edit');
       if (guardErr) {
@@ -382,6 +382,6 @@ export const songsPlugin = new Elysia({ prefix: '/songs' })
       notifyPlayerOfMetadataChange([id], data, processedVolumeBoost);
 
       return json(formatSong(updatedSong));
-    }) as never,
+    },
     { body: SongPatchSchema }
   );
