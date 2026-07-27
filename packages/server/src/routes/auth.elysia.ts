@@ -4,8 +4,8 @@ import crypto from 'node:crypto';
 import * as v from 'valibot';
 /* eslint-disable @typescript-eslint/no-unsafe-type-assertion */
 
+import { elysiaJson as json } from '../lib/apiResponse';
 import { getGuildId, refreshGuildId } from '../lib/config';
-import { elysiaJson as json } from '../lib/elysia-adapter';
 import { sign, verify } from '../lib/jwt';
 import { getClientIp } from '../lib/rateLimit';
 import { db, tables } from '../shared/db';

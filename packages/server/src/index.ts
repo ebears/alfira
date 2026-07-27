@@ -33,9 +33,6 @@ if (missing.length > 0) {
 const PORT = 3001;
 const NODELINK_HOME = process.env.NODELINK_HOME ?? '/usr/local/nodelink';
 
-// Re-export RouteContext for consumers that import from '../index'
-export type { RouteContext } from './lib/context';
-
 // ---------------------------------------------------------------------------
 // Main server
 //

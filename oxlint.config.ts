@@ -650,7 +650,10 @@ export default defineConfig({
     // Valibot schemas: max-nested-calls fires on idiomatic v.pipe(v.array(...)) chains.
     // The nesting is inherent to the declarative API and cannot be meaningfully flattened.
     {
-      files: ['packages/server/src/routes/equalizer.ts', 'packages/server/src/routes/requests.ts'],
+      files: [
+        'packages/server/src/routes/equalizer.elysia.ts',
+        'packages/server/src/routes/requests.elysia.ts',
+      ],
       rules: {
         'unicorn/max-nested-calls': 'off',
       },
@@ -660,20 +663,14 @@ export default defineConfig({
     // are defensive guards. The type system says the value can't be null, but
     // these checks exist as runtime safety. Suppress no-unnecessary-condition
     // here and fix types incrementally.
+    // (Elysia plugin files handle this via file-level eslint-disable directives.)
     {
       files: [
-        'packages/server/src/routes/auth.ts',
-        'packages/server/src/routes/permissions.ts',
-        'packages/server/src/routes/player.ts',
-        'packages/server/src/routes/playlists.ts',
-        'packages/server/src/routes/songs.ts',
-        'packages/server/src/routes/requests.ts',
         'packages/server/src/lib/ensureTagsMigrated.ts',
         'packages/server/src/lib/playlistAccess.ts',
         'packages/server/src/lib/syncPlaylistToTag.ts',
         'packages/server/src/lib/search.ts',
         'packages/server/src/utils/nodelink.ts',
-        'packages/server/src/routes/equalizer.ts',
         'packages/server/src/index.ts',
         // Web files with known false positives for this pedantic rule:
         // optional chains on union types (User | null) and defensive checks
@@ -722,23 +719,6 @@ export default defineConfig({
       files: ['packages/server/src/lib/displayName.ts'],
       rules: {
         'prefer-nullish-coalescing': 'off',
-      },
-    },
-
-    // Route param extraction: params.id / params.songId / params.nameLower are
-    // guaranteed by route pattern matching. The `as string` assertion documents
-    // this runtime guarantee — a missing param would indicate a routing bug, not a
-    // normal execution path.
-    {
-      files: [
-        'packages/server/src/routes/playlists.ts',
-        'packages/server/src/routes/tags.ts',
-        'packages/server/src/routes/songs.ts',
-        'packages/server/src/routes/requests.ts',
-        'packages/server/src/routes/player.ts',
-      ],
-      rules: {
-        '@typescript-eslint/no-unsafe-type-assertion': 'off',
       },
     },
 
@@ -812,7 +792,6 @@ export default defineConfig({
     // Sequential await-in-loop is intentional for these files:
     // - Discord API calls must respect rate limits
     // - Playback operations are inherently serial
-    // - Route registration order matters
     // - Tag sync / migration writes to DB and needs consistency
     // - Voice connection state machine steps must be serial
     // - Retry loops with backoff are serial by design
@@ -821,12 +800,10 @@ export default defineConfig({
     {
       files: [
         'packages/server/src/utils/unregisterCommands.ts',
-        'packages/server/src/lib/routeTable.ts',
         'packages/server/src/GuildPlayer.ts',
         'packages/server/src/lib/syncPlaylistToTag.ts',
         'packages/server/src/lib/voice.ts',
         'packages/web/src/api/client.ts',
-        'packages/server/src/routes/auth.ts',
         'packages/web/src/pages/PlaylistDetailPage.tsx',
         'packages/server/src/lib/tagCanonicalization.ts',
         'packages/server/src/lib/migrateExistingTags.ts',

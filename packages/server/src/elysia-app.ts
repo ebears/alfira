@@ -2,9 +2,9 @@ import { sql } from 'drizzle-orm';
 import { Elysia } from 'elysia';
 import { join } from 'node:path';
 
+import { elysiaJson } from './lib/apiResponse';
 import { VERSION } from './lib/config';
 import { parseCookies } from './lib/cookies';
-import { json } from './lib/json';
 import { lavalink } from './lib/lavalink';
 import { registerClient, unregisterClient, type WsClient } from './lib/socket';
 import { verifySessionToken } from './middleware/requireAuth';
@@ -87,7 +87,9 @@ function isAssetPath(pathname: string): boolean {
 }
 
 export function createApp(): Elysia {
-  const apiApp = new Elysia({ prefix: '/api' }).get('/version', () => json({ version: VERSION }));
+  const apiApp = new Elysia({ prefix: '/api' }).get('/version', () =>
+    elysiaJson({ version: VERSION })
+  );
 
   // Native Elysia route groups
   // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion
@@ -168,7 +170,7 @@ export function createApp(): Elysia {
       checks.discord = lavalink.getSessionId() ? 'ok' : 'disconnected';
 
       const allOk = Object.values(checks).every((v) => v === 'ok');
-      return json(
+      return elysiaJson(
         { status: allOk ? 'ok' : 'degraded', version: VERSION, checks },
         allOk ? 200 : 503
       );

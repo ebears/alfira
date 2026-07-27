@@ -4,8 +4,8 @@ import * as v from 'valibot';
 /* eslint-disable @typescript-eslint/no-unsafe-type-assertion */
 
 import { type GuildPlayer } from '../GuildPlayer';
+import { elysiaJson as json } from '../lib/apiResponse';
 import { getGuildId } from '../lib/config';
-import { elysiaJson as json } from '../lib/elysia-adapter';
 import { requireAdminOrPermission, requireAuth, requireUserInVoice } from '../lib/elysia-guards';
 import { lavalink } from '../lib/lavalink';
 import { requirePlayer, requirePlaying } from '../lib/player';

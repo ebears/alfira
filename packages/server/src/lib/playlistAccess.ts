@@ -1,7 +1,7 @@
 import { count, eq } from 'drizzle-orm';
 
 import { db, tables } from '../shared/db';
-import { json } from './json';
+import { elysiaJson as json } from './apiResponse';
 
 const { playlist: playlistTable, playlistSong: playlistSongTable } = tables;
 

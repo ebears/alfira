@@ -3,9 +3,9 @@ import { type Elysia } from 'elysia';
 import * as v from 'valibot';
 /* eslint-disable @typescript-eslint/no-unsafe-type-assertion */
 
+import { elysiaJson as json } from '../lib/apiResponse';
 import { getGuildId } from '../lib/config';
 import { fetchGuildRoles } from '../lib/discordRoles';
-import { elysiaJson as json } from '../lib/elysia-adapter';
 import { requireAdmin, requireAuth } from '../lib/elysia-guards';
 import { PERMISSION_CATEGORIES, PERMISSION_LABELS, type PermissionAction } from '../shared';
 import { db, tables } from '../shared/db';

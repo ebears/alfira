@@ -5,9 +5,9 @@ import * as v from 'valibot';
 /* eslint-disable @typescript-eslint/no-unnecessary-type-assertion */
 /* eslint-disable @typescript-eslint/no-unnecessary-condition */
 
+import { elysiaJson as json } from '../lib/apiResponse';
 import { getGuildId } from '../lib/config';
 import { getUserDisplayName, resolveDisplayNames } from '../lib/displayName';
-import { elysiaJson as json } from '../lib/elysia-adapter';
 import { requireAdminOrPermission, requireAuth } from '../lib/elysia-guards';
 import { parsePagination } from '../lib/pagination';
 import {

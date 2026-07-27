@@ -4,8 +4,8 @@ import * as v from 'valibot';
 /* eslint-disable @typescript-eslint/no-unsafe-type-assertion */
 /* eslint-disable @typescript-eslint/no-unnecessary-condition */
 
+import { elysiaJson as json } from '../lib/apiResponse';
 import { getUserDisplayName, resolveDisplayNames } from '../lib/displayName';
-import { elysiaJson as json } from '../lib/elysia-adapter';
 import { requireAuth } from '../lib/elysia-guards';
 import { parsePagination } from '../lib/pagination';
 import { canAccessPlaylist, getPlaylistSongCount, requirePlaylist } from '../lib/playlistAccess';

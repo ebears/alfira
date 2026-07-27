@@ -6,7 +6,6 @@ import { getClient, getUserVoiceChannel } from './gatewayState';
 
 /**
  * Elysia context shape after the global auth derive.
- * Mirrors the old RouteContext for compatibility with checkGuards.
  */
 export interface AuthContext {
   user: {

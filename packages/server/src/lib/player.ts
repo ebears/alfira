@@ -1,7 +1,7 @@
 import { type GuildPlayer } from '../startDiscord';
 import { getPlayer } from '../startDiscord';
+import { elysiaJson as json } from './apiResponse';
 import { getGuildId } from './config';
-import { json } from './json';
 
 export function requirePlaying():
   | { ok: true; player: GuildPlayer }

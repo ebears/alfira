@@ -4,10 +4,9 @@ import * as v from 'valibot';
 /* eslint-disable @typescript-eslint/no-unsafe-type-assertion */
 /* eslint-disable @typescript-eslint/no-unnecessary-condition */
 /* eslint-disable @typescript-eslint/no-unnecessary-type-assertion */
-/* eslint-disable unicorn/max-nested-calls */
 
+import { elysiaJson as json } from '../lib/apiResponse';
 import { getUserDisplayName, resolveDisplayNames } from '../lib/displayName';
-import { elysiaJson as json } from '../lib/elysia-adapter';
 import { requireAdmin, requireAuth } from '../lib/elysia-guards';
 import { sendRequestDm, sendRequestNotification } from '../lib/notifications';
 import { parsePagination } from '../lib/pagination';
@@ -346,7 +345,7 @@ async function handleCreateRequest(ctx: Record<string, unknown>): Promise<Respon
       if (reqRow) {
         void (async () => {
           try {
-            await sendRequestNotification('approved', formatRequest(reqRow), user, ctx as never);
+            await sendRequestNotification('approved', formatRequest(reqRow), user);
           } catch (error) {
             logger.warn({ error }, 'Failed to send playlist auto-approve notification');
           }
@@ -405,7 +404,7 @@ async function handleCreateRequest(ctx: Record<string, unknown>): Promise<Respon
     }
 
     const formatted = formatRequest(created);
-    await sendRequestNotification('new', formatted, user, ctx as never);
+    await sendRequestNotification('new', formatted, user);
 
     return json({ request: formatted, autoApproved: false }, 201);
   }
@@ -495,7 +494,7 @@ async function handleCreateRequest(ctx: Record<string, unknown>): Promise<Respon
     if (reqRow) {
       void (async () => {
         try {
-          await sendRequestNotification('approved', formatRequest(reqRow), user, ctx as never);
+          await sendRequestNotification('approved', formatRequest(reqRow), user);
         } catch (error) {
           logger.warn({ error }, 'Failed to send auto-approve notification');
         }
@@ -537,7 +536,7 @@ async function handleCreateRequest(ctx: Record<string, unknown>): Promise<Respon
   }
 
   const formatted = formatRequest(created);
-  await sendRequestNotification('new', formatted, user, ctx as never);
+  await sendRequestNotification('new', formatted, user);
 
   return json({ request: formatted, autoApproved: false }, 201);
 }
@@ -656,7 +655,7 @@ async function handlePatchRequest(ctx: Record<string, unknown>): Promise<Respons
 
     void (async () => {
       try {
-        await sendRequestNotification('denied', formatted, user, ctx as never);
+        await sendRequestNotification('denied', formatted, user);
       } catch (error) {
         logger.warn({ error }, 'Failed to send denied notification');
       }
@@ -754,7 +753,7 @@ async function handlePatchRequest(ctx: Record<string, unknown>): Promise<Respons
 
     void (async () => {
       try {
-        await sendRequestNotification('approved', formatted, user, ctx as never);
+        await sendRequestNotification('approved', formatted, user);
       } catch (error) {
         logger.warn({ error }, 'Failed to send playlist approved notification');
       }
@@ -815,7 +814,7 @@ async function handlePatchRequest(ctx: Record<string, unknown>): Promise<Respons
 
   void (async () => {
     try {
-      await sendRequestNotification('approved', formatted, user, ctx as never);
+      await sendRequestNotification('approved', formatted, user);
     } catch (error) {
       logger.warn({ error }, 'Failed to send approved notification');
     }

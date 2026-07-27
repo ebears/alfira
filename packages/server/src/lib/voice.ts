@@ -1,8 +1,8 @@
 import { createPlayer, getPlayer } from '../manager';
 import { logger } from '../shared/logger';
+import { elysiaJson as json } from './apiResponse';
 import { getGuildId } from './config';
 import { connectToVoice, getClient, getUserVoiceChannel } from './gatewayState';
-import { json } from './json';
 import { lavalink } from './lavalink';
 
 /**

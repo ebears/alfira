@@ -6,7 +6,7 @@ import {
   isPlaylistUrl,
   isValidSourceUrl,
 } from '../startDiscord';
-import { json } from './json';
+import { elysiaJson as json } from './apiResponse';
 
 const MAX_URL_LENGTH = 2000;
 

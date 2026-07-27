@@ -15,7 +15,7 @@ Replace the homegrown HTTP framework (`routeTable`, `matchPath`, `RouteContext`,
 - **Sub-apps for route groups.** Each route group (tags, songs, player, etc.) becomes an Elysia plugin that registers on the main app. This keeps route files self-contained.
 - **Auth via `.derive()`.** The cookie → JWT → user pipeline runs once per request in Elysia's `derive`, replacing `createContext()`. Guards (`requireAuth`, `requireAdminOrPermission`) are called explicitly in handlers — a future pass could move them into Elysia guard plugins.
 - **Static files and SPA fallback stay on the main app.** The `/*` catch-all serves `packages/web/dist/` with SPA fallback.
-- **Security headers are per-layer, not lifecycle hooks.** Lifecycle hooks (`onAfterHandle`, `mapResponse`) interfere with legacy handlers that return pre-constructed `Response` objects. Instead: legacy handlers use `lib/json.ts` (already includes `SECURITY_HEADERS`), native Elysia plugins use `elysiaJson()` from `lib/elysia-adapter.ts` (includes `API_SECURITY_HEADERS`), and static files get no security headers. No lifecycle hooks needed.
+- **Security headers are per-layer, not lifecycle hooks.** Lifecycle hooks (`onAfterHandle`, `mapResponse`) interfere with pre-constructed `Response` objects. Instead: API routes use `elysiaJson()` from `lib/apiResponse.ts` (includes `API_SECURITY_HEADERS`), and static files get no security headers. No lifecycle hooks needed.
 
 ## Completed
 
@@ -88,15 +88,6 @@ Six route groups migrated to native Elysia plugins. Auth (`/auth`) was deferred 
 - `packages/server/src/elysia-app.ts` — all 6 route groups removed from `API_LEGACY_ROUTES` and wired as native plugins on `apiApp`. `API_LEGACY_ROUTES` array and `registerLegacyRoutes()` function removed (no remaining legacy routes on `apiApp`).
 - `packages/server/src/lib/elysia-guards.ts` — added `requireSetupMode` and `requireUserInVoice` guards.
 
-**Files NOT deleted yet** (still used by `/auth` via `wrapLegacy`):
-
-- `packages/server/src/lib/context.ts` — `RouteContext` type used by `wrapLegacy()`
-- `packages/server/src/lib/routeTable.ts` — `routeTable()` used by `handleAuth`
-- `packages/server/src/lib/routeGuards.ts` — `checkGuards()` used by `handleAuth`
-- `packages/server/src/lib/guards.ts` — `requireAuth`, `requireAdmin` used by `checkGuards`
-- `packages/server/src/lib/json.ts` — `json()` used by `handleAuth`
-- `packages/server/src/routes/auth.ts` — legacy auth handler (wrapped via `wrapLegacy` in `elysia-app.ts`)
-
 ### Phase 4a — Migrate `/auth` (1 file, deferred)
 
 The `/auth` route group (login, callback, refresh, me, logout) has been migrated to a native Elysia plugin. All 5 endpoints are now Elysia-native handlers. The manual `Response` construction for cookie setting is preserved (it's well-tested and robust). The auth plugin uses `elysiaJson()` for JSON responses and reads cookies via the Elysia `deriveAuth` context.
@@ -109,20 +100,22 @@ The `/auth` route group (login, callback, refresh, me, logout) has been migrated
 
 - `packages/server/src/elysia-app.ts` — Replaced `wrapLegacy(handleAuth)` with native `authPlugin(authApp)`. Removed unused `wrapLegacy` import.
 
-**Files now eligible for deletion** (no longer used by any active code):
+**Deleted files** (cleanup phase):
 
 - `packages/server/src/lib/context.ts` — `RouteContext` type only used by legacy infrastructure
 - `packages/server/src/lib/routeTable.ts` — `routeTable()` only used by legacy route files
+- `packages/server/src/lib/routeTable.test.ts` — tests for deleted `routeTable`
 - `packages/server/src/lib/routeGuards.ts` — `checkGuards()` only used by legacy route files
 - `packages/server/src/lib/guards.ts` — `requireAuth`, `requireAdmin` only used by legacy route files
-- `packages/server/src/lib/json.ts` — `json()` still used by `elysia-app.ts` (`/api/version` and `/health`)
+- `packages/server/src/lib/json.ts` — replaced by `elysiaJson` from `lib/apiResponse.ts`
+- `packages/server/src/lib/elysia-adapter.ts` — `wrapLegacy` removed; `elysiaJson` + `API_SECURITY_HEADERS` extracted to `lib/apiResponse.ts`
 - `packages/server/src/routes/auth.ts` — Legacy auth handler, replaced by `auth.elysia.ts`
 - All legacy `.ts` route files that have `.elysia.ts` equivalents (tags, songs, player, playlists, requests, setup, permissions, compressor, equalizer, karaoke, lowPass, distortion, rotation, timescale, tremolo, vibrato, channelMix, filters, generalSettings)
 
 ### Pattern established
 
 1. **Extract drizzle queries into helper functions** with clean parameter types — `Record<string, unknown>` handler parameters cause tsgo inference failures on `.where()` calls. Helper functions with `string`/`number` parameters avoid this.
-2. **Handlers do: auth check → extract params → call query helpers → return `Response` objects.** Native plugins use the shared `elysiaJson()` helper from `lib/elysia-adapter.ts`, which includes `API_SECURITY_HEADERS` (CSP, X-Content-Type-Options, etc.). Legacy handlers continue using `lib/json.ts` which does the same.
+2. **Handlers do: auth check → extract params → call query helpers → return `Response` objects.** Native plugins use the shared `elysiaJson()` helper from `lib/apiResponse.ts`, which includes `API_SECURITY_HEADERS` (CSP, X-Content-Type-Options, etc.).
 3. **`as never`** for handler type compatibility with Elysia's complex generics. File-level `/* eslint-disable @typescript-eslint/no-unsafe-type-assertion */` suppresses the unavoidable type assertion warnings. Additional file-level disables for `no-unnecessary-condition` and `no-unnecessary-type-assertion` may be needed depending on tsgo's strictness with drizzle return types.
 4. **Route registration:** the plugin function takes an `Elysia` instance, calls `.get()` / `.patch()` / `.delete()`, returns `as unknown as Elysia`. Plugins are chained on `apiApp` with explicit `as unknown as Elysia` casts.
 5. **Guards:** `requireAdminOrPermission(ctx, permission?)` — no permission arg means super-admin only; with permission arg means super-admin OR has the granular permission. Voice check via `requireUserInVoice(ctx)`. Setup mode via `requireSetupMode(ctx)`.
@@ -136,21 +129,9 @@ The `/auth` route group (login, callback, refresh, me, logout) has been migrated
 - Update all web components to use Eden's typed proxy instead of shared API functions
 - Keep `client.ts` auth refresh logic wired into Eden's `fetcher` option
 
-### Cleanup (after Phase 4a)
-
-Now that `/auth` is migrated to a native Elysia plugin, the legacy infrastructure can be cleaned up:
-
-- Delete `lib/routeTable.ts`, `lib/context.ts`, `lib/guards.ts`, `lib/routeGuards.ts` (no longer used)
-- Delete `routes/auth.ts` and all legacy `.ts` route files that have `.elysia.ts` equivalents
-- Remove `RouteContext` re-export from `index.ts`
-- `lib/json.ts` — still used by `elysia-app.ts` for `/api/version` and `/health`. Can be replaced with `elysiaJson` from `lib/elysia-adapter.ts`.
-- `lib/elysia-adapter.ts` — `wrapLegacy` can be removed; `elysiaJson` and `API_SECURITY_HEADERS` should be extracted to a standalone helper (e.g., `lib/apiResponse.ts`)
-
 ## Known issues
 
 - **tsgo + drizzle + `Record<string, unknown>` incompatibility.** When a handler parameter is `Record<string, unknown>`, tsgo fails to resolve `.where()` overloads on drizzle query builders. Workaround: extract queries into helper functions with clean parameter types. A future tsgo update may fix this.
 - **Elysia sub-app type propagation.** `.derive()` on the parent app doesn't propagate types to sub-apps merged via `.use()`. Workaround: `as never` casts on handler registrations and `as unknown as Elysia` on plugin calls.
 - **Bun namespace errors.** Installing Elysia changes the TypeScript import graph in a way that surfaces pre-existing `Bun.spawn` / `Bun.CryptoHasher` type errors in `index.ts` and `jwt.ts`. Workaround: `@ts-expect-error` + eslint-disable blocks.
-- **Lifecycle hooks + legacy `Response` objects don't mix.** `onAfterHandle` and `mapResponse` hooks interfere with legacy handlers that return pre-constructed `Response` objects. The hooks either corrupt the body (JSON parse errors) or fail to merge headers. Do not use lifecycle hooks for header injection; embed headers in the response helper functions instead.
-- **`all()` vs explicit methods for legacy routes.** `all()` on Elysia sub-apps may behave differently than explicit `get()`/`post()`. Prefer explicit method registration for catch-all legacy route adapters.
 - **Concurrent refresh token race condition.** `generateRefreshToken()` used `sign()` with second-granularity `iat`, causing identical tokens (and thus identical DB hashes) when two refreshes fired in the same second. Fixed by adding `jti: crypto.randomUUID()` to the token payload.
