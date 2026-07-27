@@ -18,13 +18,13 @@ import { filtersPlugin } from './routes/filters.elysia';
 import { generalSettingsPlugin } from './routes/generalSettings.elysia';
 import { karaokePlugin } from './routes/karaoke.elysia';
 import { lowPassPlugin } from './routes/lowPass.elysia';
-import { handlePermissions } from './routes/permissions';
-import { handlePlayer } from './routes/player';
-import { handlePlaylists } from './routes/playlists';
-import { handleRequests } from './routes/requests';
+import { permissionsPlugin } from './routes/permissions.elysia';
+import { playerPlugin } from './routes/player.elysia';
+import { playlistsPlugin } from './routes/playlists.elysia';
+import { requestsPlugin } from './routes/requests.elysia';
 import { rotationPlugin } from './routes/rotation.elysia';
-import { handleSetup } from './routes/setup';
-import { handleSongs } from './routes/songs';
+import { setupPlugin } from './routes/setup.elysia';
+import { songsPlugin } from './routes/songs.elysia';
 import { tagsPlugin } from './routes/tags.elysia';
 import { timescalePlugin } from './routes/timescale.elysia';
 import { tremoloPlugin } from './routes/tremolo.elysia';
@@ -87,32 +87,8 @@ function isAssetPath(pathname: string): boolean {
   );
 }
 
-type LegacyHandler = ReturnType<typeof wrapLegacy>;
-
-const API_LEGACY_ROUTES: [string, LegacyHandler][] = [
-  ['/requests', wrapLegacy(handleRequests)],
-  ['/songs', wrapLegacy(handleSongs)],
-  ['/playlists', wrapLegacy(handlePlaylists)],
-  ['/player', wrapLegacy(handlePlayer)],
-  ['/permissions', wrapLegacy(handlePermissions)],
-  ['/setup', wrapLegacy(handleSetup)],
-];
-
-function registerLegacyRoutes<T extends Elysia>(app: T, routes: [string, LegacyHandler][]): T {
-  for (const [path, handler] of routes) {
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion
-    app.all(path, handler as unknown as Record<string, unknown>);
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion
-    app.all(`${path}/*`, handler as unknown as Record<string, unknown>);
-  }
-  return app;
-}
-
 export function createApp(): Elysia {
   const apiApp = new Elysia({ prefix: '/api' }).get('/version', () => json({ version: VERSION }));
-
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion
-  registerLegacyRoutes(apiApp as unknown as Elysia, API_LEGACY_ROUTES);
 
   // Native Elysia route groups
   // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion
@@ -141,6 +117,18 @@ export function createApp(): Elysia {
   tremoloPlugin(apiApp as unknown as Elysia);
   // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion
   vibratoPlugin(apiApp as unknown as Elysia);
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion
+  setupPlugin(apiApp as unknown as Elysia);
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion
+  permissionsPlugin(apiApp as unknown as Elysia);
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion
+  playerPlugin(apiApp as unknown as Elysia);
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion
+  songsPlugin(apiApp as unknown as Elysia);
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion
+  playlistsPlugin(apiApp as unknown as Elysia);
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion
+  requestsPlugin(apiApp as unknown as Elysia);
 
   const authApp = new Elysia({ prefix: '/auth' });
 

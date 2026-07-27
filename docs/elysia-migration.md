@@ -65,31 +65,55 @@ Replace the homegrown HTTP framework (`routeTable`, `matchPath`, `RouteContext`,
 
 - `packages/server/src/elysia-app.ts` — all 13 route groups removed from `API_LEGACY_ROUTES` and wired as native plugins on `apiApp`
 
+### Phase 4 — Remaining legacy route groups (6 of 7 migrated)
+
+Six route groups migrated to native Elysia plugins. Auth (`/auth`) deferred to a follow-up PR — it uses `wrapLegacy` registered directly on the `authApp` sub-app and continues to work correctly.
+
+**New files:**
+
+- `packages/server/src/routes/setup.elysia.ts` — 6 endpoints (GET status, GET guilds, GET roles, GET channels, POST complete). Uses new `requireSetupMode` guard.
+- `packages/server/src/routes/permissions.elysia.ts` — 3 endpoints (GET list, PATCH update, GET /me). Admin-guarded with Valibot body validation.
+- `packages/server/src/routes/player.elysia.ts` — 17 endpoints (play, skip, seek, pause, loop, shuffle, queue management, quick-add, override). Uses `requireAdminOrPermission` + `requireUserInVoice` guards.
+- `packages/server/src/routes/songs.elysia.ts` — 6 endpoints (GET list with search/sort/pagination, bulk-delete, bulk-tag, bulk-edit, DELETE, PATCH). Admin-guarded with granular permissions.
+- `packages/server/src/routes/playlists.elysia.ts` — 10 endpoints (CRUD, visibility, add/remove songs, bulk-remove, reorder). Auth-guarded with Valibot body validation.
+- `packages/server/src/routes/requests.elysia.ts` — 5 endpoints (preview, create, list, approve/deny, cancel). Auth-guarded with auto-approve for users with `requests.autoapprove` permission.
+
+**New guards added to `elysia-guards.ts`:**
+
+- `requireSetupMode(ctx)` — returns 401 if not authenticated, 403 if user lacks `isSetupAdmin` flag. Used by setup routes.
+- `requireUserInVoice(ctx)` — returns 503 if Discord bot not ready, 409 if user not in a voice channel. Used by player routes.
+
+**Modified files:**
+
+- `packages/server/src/elysia-app.ts` — all 6 route groups removed from `API_LEGACY_ROUTES` and wired as native plugins on `apiApp`. `API_LEGACY_ROUTES` array and `registerLegacyRoutes()` function removed (no remaining legacy routes on `apiApp`).
+- `packages/server/src/lib/elysia-guards.ts` — added `requireSetupMode` and `requireUserInVoice` guards.
+
+**Files NOT deleted yet** (still used by `/auth` via `wrapLegacy`):
+
+- `packages/server/src/lib/context.ts` — `RouteContext` type used by `wrapLegacy()`
+- `packages/server/src/lib/routeTable.ts` — `routeTable()` used by `handleAuth`
+- `packages/server/src/lib/routeGuards.ts` — `checkGuards()` used by `handleAuth`
+- `packages/server/src/lib/guards.ts` — `requireAuth`, `requireAdmin` used by `checkGuards`
+- `packages/server/src/lib/json.ts` — `json()` used by `handleAuth`
+- `packages/server/src/routes/auth.ts` — legacy auth handler (wrapped via `wrapLegacy` in `elysia-app.ts`)
+
 ### Pattern established
 
 1. **Extract drizzle queries into helper functions** with clean parameter types — `Record<string, unknown>` handler parameters cause tsgo inference failures on `.where()` calls. Helper functions with `string`/`number` parameters avoid this.
 2. **Handlers do: auth check → extract params → call query helpers → return `Response` objects.** Native plugins use the shared `elysiaJson()` helper from `lib/elysia-adapter.ts`, which includes `API_SECURITY_HEADERS` (CSP, X-Content-Type-Options, etc.). Legacy handlers continue using `lib/json.ts` which does the same.
-3. **`as never`** for handler type compatibility with Elysia's complex generics. Single `/* eslint-disable @typescript-eslint/no-unsafe-type-assertion */` at file level suppresses the unavoidable type assertion warnings.
+3. **`as never`** for handler type compatibility with Elysia's complex generics. File-level `/* eslint-disable @typescript-eslint/no-unsafe-type-assertion */` suppresses the unavoidable type assertion warnings. Additional file-level disables for `no-unnecessary-condition` and `no-unnecessary-type-assertion` may be needed depending on tsgo's strictness with drizzle return types.
 4. **Route registration:** the plugin function takes an `Elysia` instance, calls `.get()` / `.patch()` / `.delete()`, returns `as unknown as Elysia`. Plugins are chained on `apiApp` with explicit `as unknown as Elysia` casts.
-5. **Guards:** `requireAdminOrPermission(ctx, permission?)` — no permission arg means super-admin only; with permission arg means super-admin OR has the granular permission.
+5. **Guards:** `requireAdminOrPermission(ctx, permission?)` — no permission arg means super-admin only; with permission arg means super-admin OR has the granular permission. Voice check via `requireUserInVoice(ctx)`. Setup mode via `requireSetupMode(ctx)`.
 
 ## Remaining work
 
-### Phase 4 — Migrate remaining legacy route groups (6 files)
+### Phase 4a — Migrate `/auth` (1 file, deferred)
 
-Routes to migrate, roughly in order of complexity:
+The `/auth` route group (login, callback, refresh, me, logout) still uses `wrapLegacy(handleAuth)` registered directly on the `authApp` sub-app in `elysia-app.ts`. It works correctly through the adapter. Migrating it to a native Elysia plugin would allow full cleanup of the legacy infrastructure in Phase 5.
 
-| Route group        | Files | Complexity                                   |
-| ------------------ | ----- | -------------------------------------------- |
-| `/api/player`      | 1     | Medium — many endpoints, playback control    |
-| `/api/songs`       | 1     | Medium — search, pagination, bulk operations |
-| `/api/playlists`   | 1     | Medium — CRUD, reorder, import               |
-| `/api/requests`    | 1     | Medium — CRUD, preview, approve/deny         |
-| `/api/permissions` | 1     | Medium — role-based permission management    |
-| `/api/setup`       | 1     | Low — wizard endpoints                       |
-| `/auth`            | 1     | Medium — OAuth2 Discord login flow           |
-
-After each group is migrated, remove it from `API_LEGACY_ROUTES` in `elysia-app.ts`.
+| Route group | Files | Complexity                                       |
+| ----------- | ----- | ------------------------------------------------ |
+| `/auth`     | 1     | Medium — OAuth2 Discord login flow, cookies, JWT |
 
 ### Phase 5 — Eden treaty on the web client
 
@@ -98,15 +122,15 @@ After each group is migrated, remove it from `API_LEGACY_ROUTES` in `elysia-app.
 - Update all web components to use Eden's typed proxy instead of shared API functions
 - Keep `client.ts` auth refresh logic wired into Eden's `fetcher` option
 
-### Cleanup after all routes migrated
+### Cleanup after `/auth` is migrated
 
 - Delete `lib/routeTable.ts`, `lib/context.ts`, `lib/json.ts`, `lib/guards.ts`, `lib/routeGuards.ts`
-- Delete `lib/elysia-adapter.ts` (no more legacy handlers to wrap)
-- Remove `API_LEGACY_ROUTES` and `registerLegacyRoutes` from `elysia-app.ts`
-- Remove the legacy route handler imports from `elysia-app.ts`
-- Delete all old `routes/*.ts` files (replaced by `routes/*.elysia.ts`)
+- Delete `lib/elysia-adapter.ts` (`wrapLegacy` and `elysiaJson` no longer needed)
+- Remove `wrapLegacy` import and `authLegacy` registration from `elysia-app.ts`
+- Delete `routes/auth.ts`
+- Move `elysiaJson` to a standalone helper (or inline it) — it's currently in `elysia-adapter.ts` alongside `wrapLegacy`
 
-### Known issues
+## Known issues
 
 - **tsgo + drizzle + `Record<string, unknown>` incompatibility.** When a handler parameter is `Record<string, unknown>`, tsgo fails to resolve `.where()` overloads on drizzle query builders. Workaround: extract queries into helper functions with clean parameter types. A future tsgo update may fix this.
 - **Elysia sub-app type propagation.** `.derive()` on the parent app doesn't propagate types to sub-apps merged via `.use()`. Workaround: `as never` casts on handler registrations and `as unknown as Elysia` on plugin calls.

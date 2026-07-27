@@ -1,0 +1,818 @@
+import { eq } from 'drizzle-orm';
+import { type Elysia } from 'elysia';
+import * as v from 'valibot';
+/* eslint-disable @typescript-eslint/no-unsafe-type-assertion */
+
+import { type GuildPlayer } from '../GuildPlayer';
+import { getGuildId } from '../lib/config';
+import { elysiaJson as json } from '../lib/elysia-adapter';
+import { requireAdminOrPermission, requireAuth, requireUserInVoice } from '../lib/elysia-guards';
+import { lavalink } from '../lib/lavalink';
+import { requirePlayer, requirePlaying } from '../lib/player';
+import { canAccessPlaylist } from '../lib/playlistAccess';
+import {
+  clampMaxVideos,
+  fetchPlaylistMetadata,
+  fetchSourceMetadata,
+  validatePlaylistUrl,
+  validateSourceUrl,
+  youTubeUrl,
+} from '../lib/validation';
+import { resolveOrAutoJoinPlayer } from '../lib/voice';
+import { fisherYatesShuffle, type QueuedSong, toQueuedSong } from '../shared';
+import { db, findPlaylistWithSongs, tables } from '../shared/db';
+import { getPlayer } from '../startDiscord';
+
+const { song: songTable } = tables;
+
+// ---------------------------------------------------------------------------
+// Query helpers
+// ---------------------------------------------------------------------------
+
+function fetchSongById(songId: string) {
+  const [song] = db
+    .select()
+    .from(songTable)
+    .where(eq(songTable.id, songId))
+    .limit(1) as unknown as [typeof songTable.$inferSelect | undefined];
+  return song;
+}
+
+// ---------------------------------------------------------------------------
+// Handler helpers
+// ---------------------------------------------------------------------------
+
+function guardVoice(ctx: Record<string, unknown>): Response | null {
+  return requireUserInVoice({ user: ctx.user as never, isAdmin: ctx.isAdmin as boolean });
+}
+
+interface UrlTempSongOk {
+  ok: true;
+  player: GuildPlayer;
+  queuedSong: QueuedSong;
+  metadataTitle: string;
+}
+
+interface UrlTempSongErr {
+  ok: false;
+  response: Response;
+}
+
+async function resolveUrlTempSong(
+  ctx: Record<string, unknown>,
+  body: { url?: string }
+): Promise<UrlTempSongOk | UrlTempSongErr> {
+  const urlResult = validateSourceUrl(body.url);
+  if (!urlResult.ok) {
+    return { ok: false, response: urlResult.response };
+  }
+  const url = urlResult.value;
+
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion
+  const discordId = (ctx.user as { discordId: string }).discordId;
+  const playerResult = await resolveOrAutoJoinPlayer(discordId);
+  if (!playerResult.ok) {
+    return { ok: false, response: playerResult.response };
+  }
+  const player = playerResult.player;
+
+  const metadataResult = await fetchSourceMetadata(url);
+  if (!metadataResult.ok) {
+    return { ok: false, response: metadataResult.response };
+  }
+  const metadata = metadataResult.value;
+
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion
+  const username = (ctx.user as { username: string }).username;
+  const queuedSong: QueuedSong = {
+    id: `temp-${Date.now()}`,
+    title: metadata.title,
+    sourceUrl: url,
+    sourceId: metadata.sourceId,
+    duration: metadata.duration,
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+    thumbnailUrl: metadata.thumbnailUrl ?? '',
+    addedBy: discordId,
+    createdAt: new Date().toISOString(),
+    requestedBy: username,
+  };
+
+  return { ok: true, player, queuedSong, metadataTitle: metadata.title };
+}
+
+// ---------------------------------------------------------------------------
+// Schemas
+// ---------------------------------------------------------------------------
+
+const PlaySchema = v.object({
+  playlistId: v.optional(v.string()),
+  mode: v.optional(v.picklist(['sequential', 'random'])),
+  loop: v.optional(v.picklist(['off', 'song', 'queue'])),
+  startFromSongId: v.optional(v.string()),
+});
+
+const LoopSchema = v.object({
+  mode: v.picklist(['off', 'song', 'queue']),
+});
+
+const UrlSchema = v.object({
+  url: v.optional(v.string()),
+});
+
+const QuickAddPlaylistSchema = v.object({
+  url: v.optional(v.string()),
+  maxVideos: v.optional(v.number()),
+});
+
+const SeekSchema = v.object({
+  position: v.number(),
+});
+
+const SongIdSchema = v.object({
+  songId: v.string(),
+});
+
+const ReorderSchema = v.object({
+  songIds: v.array(v.string()),
+  target: v.optional(v.picklist(['queue', 'priority'])),
+});
+
+// ---------------------------------------------------------------------------
+// Handlers — GET /player/queue
+// ---------------------------------------------------------------------------
+
+function handleGetQueue(ctx: Record<string, unknown>): Response {
+  const authErr = requireAuth({ user: ctx.user as never, isAdmin: ctx.isAdmin as boolean });
+  if (authErr) {
+    return authErr;
+  }
+
+  const player = getPlayer(getGuildId());
+
+  if (!player) {
+    return json({
+      isPlaying: false,
+      isPaused: false,
+      isConnectedToVoice: lavalink.isGuildConnected(getGuildId()),
+      loopMode: 'off',
+      isShuffled: false,
+      currentSong: null,
+      priorityQueue: [],
+      queue: [],
+      trackStartedAt: null,
+      nextTrack: null,
+      timescaleSpeed: 1,
+      nodeLinkPosition: null,
+      nodeLinkTime: null,
+    });
+  }
+
+  return json(player.getQueueState());
+}
+
+// ---------------------------------------------------------------------------
+// Handlers — POST /player/play
+// ---------------------------------------------------------------------------
+
+async function handlePlay(ctx: Record<string, unknown>): Promise<Response> {
+  const authErr = requireAuth({ user: ctx.user as never, isAdmin: ctx.isAdmin as boolean });
+  if (authErr) {
+    return authErr;
+  }
+
+  const voiceErr = guardVoice(ctx);
+  if (voiceErr) {
+    return voiceErr;
+  }
+
+  const body = ctx.body as v.InferOutput<typeof PlaySchema>;
+  const { playlistId, mode, loop, startFromSongId } = body;
+
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion
+  const discordId = (ctx.user as { discordId: string }).discordId;
+  const playerResult = await resolveOrAutoJoinPlayer(discordId);
+  if (!playerResult.ok) {
+    return playerResult.response;
+  }
+  const player = playerResult.player;
+
+  let dbSongs: (typeof songTable.$inferSelect)[];
+
+  if (playlistId) {
+    const playlist = await findPlaylistWithSongs(playlistId);
+
+    if (!playlist) {
+      return json({ error: 'Playlist not found.' }, 404);
+    }
+
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion
+    const accessResult = canAccessPlaylist(playlist, ctx.user as never);
+    if (!accessResult.ok) {
+      return json({ error: accessResult.error }, 403);
+    }
+
+    dbSongs = playlist.songs.map((ps) => ps.song);
+  } else {
+    dbSongs = await db.select().from(songTable).orderBy(songTable.createdAt);
+  }
+
+  if (dbSongs.length === 0) {
+    return json({ error: 'No songs found to play.' }, 422);
+  }
+
+  if (startFromSongId) {
+    const startIndex = dbSongs.findIndex((s) => s.id === startFromSongId);
+
+    if (startIndex === -1) {
+      return json({ error: 'Start song not found in playlist.' }, 404);
+    }
+
+    dbSongs = [...dbSongs.slice(startIndex), ...dbSongs.slice(0, startIndex)];
+  }
+
+  if (mode === 'random') {
+    fisherYatesShuffle(dbSongs);
+  }
+
+  const targetLoopMode = loop ?? player.getLoopMode();
+  player.setLoopMode(targetLoopMode);
+
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion
+  const requestedBy = (ctx.user as { username: string }).username;
+  const queuedSongs = dbSongs.map((song) =>
+    toQueuedSong({ ...song, createdAt: song.createdAt.toISOString() }, requestedBy)
+  );
+
+  if (startFromSongId) {
+    await player.replaceQueueAndPlay(queuedSongs);
+  } else {
+    await player.addToQueue(queuedSongs);
+  }
+
+  return json({ message: `Queued ${queuedSongs.length} song(s).` });
+}
+
+// ---------------------------------------------------------------------------
+// Handlers — POST /player/skip
+// ---------------------------------------------------------------------------
+
+async function handleSkip(ctx: Record<string, unknown>): Promise<Response> {
+  const authErr = requireAuth({ user: ctx.user as never, isAdmin: ctx.isAdmin as boolean });
+  if (authErr) {
+    return authErr;
+  }
+
+  const voiceErr = guardVoice(ctx);
+  if (voiceErr) {
+    return voiceErr;
+  }
+
+  const playingResult = requirePlaying();
+  if (!playingResult.ok) {
+    return playingResult.response;
+  }
+
+  await playingResult.player.skip();
+  return json({ message: 'Skipped.' });
+}
+
+// ---------------------------------------------------------------------------
+// Handlers — POST /player/leave
+// ---------------------------------------------------------------------------
+
+function handleLeave(ctx: Record<string, unknown>): Response {
+  const authErr = requireAuth({ user: ctx.user as never, isAdmin: ctx.isAdmin as boolean });
+  if (authErr) {
+    return authErr;
+  }
+
+  const voiceErr = guardVoice(ctx);
+  if (voiceErr) {
+    return voiceErr;
+  }
+
+  const player = getPlayer(getGuildId());
+
+  if (!player && !lavalink.isGuildConnected(getGuildId())) {
+    return json({ error: 'The bot is not in a voice channel.' }, 409);
+  }
+
+  if (player) {
+    player.stop();
+  }
+
+  return json({ message: 'Left the voice channel.' });
+}
+
+// ---------------------------------------------------------------------------
+// Handlers — POST /player/loop
+// ---------------------------------------------------------------------------
+
+function handleLoop(ctx: Record<string, unknown>): Response {
+  const authErr = requireAuth({ user: ctx.user as never, isAdmin: ctx.isAdmin as boolean });
+  if (authErr) {
+    return authErr;
+  }
+
+  const voiceErr = guardVoice(ctx);
+  if (voiceErr) {
+    return voiceErr;
+  }
+
+  const { mode } = ctx.body as v.InferOutput<typeof LoopSchema>;
+  const playerResult = requirePlayer();
+  if (!playerResult.ok) {
+    return playerResult.response;
+  }
+
+  playerResult.player.setLoopMode(mode);
+  return json({ loopMode: mode });
+}
+
+// ---------------------------------------------------------------------------
+// Handlers — POST /player/shuffle
+// ---------------------------------------------------------------------------
+
+function handleShuffle(ctx: Record<string, unknown>): Response {
+  const adminErr = requireAdminOrPermission(
+    { user: ctx.user as never, isAdmin: ctx.isAdmin as boolean },
+    'queue.manage'
+  );
+  if (adminErr) {
+    return adminErr;
+  }
+
+  const voiceErr = guardVoice(ctx);
+  if (voiceErr) {
+    return voiceErr;
+  }
+
+  const player = getPlayer(getGuildId());
+
+  if (!player || player.getQueue().length === 0) {
+    return json({ error: 'No songs in the queue to shuffle.' }, 409);
+  }
+
+  player.shuffle();
+  return json({ message: 'Queue shuffled.' });
+}
+
+// ---------------------------------------------------------------------------
+// Handlers — POST /player/unshuffle
+// ---------------------------------------------------------------------------
+
+function handleUnshuffle(ctx: Record<string, unknown>): Response {
+  const adminErr = requireAdminOrPermission(
+    { user: ctx.user as never, isAdmin: ctx.isAdmin as boolean },
+    'queue.manage'
+  );
+  if (adminErr) {
+    return adminErr;
+  }
+
+  const voiceErr = guardVoice(ctx);
+  if (voiceErr) {
+    return voiceErr;
+  }
+
+  const playerResult = requirePlayer();
+  if (!playerResult.ok) {
+    return playerResult.response;
+  }
+
+  playerResult.player.unshuffle();
+  return json({ message: 'Queue order restored.' });
+}
+
+// ---------------------------------------------------------------------------
+// Handlers — POST /player/quick-add
+// ---------------------------------------------------------------------------
+
+async function handleQuickAdd(ctx: Record<string, unknown>): Promise<Response> {
+  const adminErr = requireAdminOrPermission(
+    { user: ctx.user as never, isAdmin: ctx.isAdmin as boolean },
+    'queue.quickadd'
+  );
+  if (adminErr) {
+    return adminErr;
+  }
+
+  const voiceErr = guardVoice(ctx);
+  if (voiceErr) {
+    return voiceErr;
+  }
+
+  const body = ctx.body as v.InferOutput<typeof UrlSchema>;
+  const result = await resolveUrlTempSong(ctx, body);
+  if (!result.ok) {
+    return result.response;
+  }
+  await result.player.addToPriorityQueue(result.queuedSong);
+  return json({
+    message: `Added "${result.metadataTitle}" to the queue.`,
+    song: result.queuedSong,
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Handlers — POST /player/quick-add-playlist
+// ---------------------------------------------------------------------------
+
+async function handleQuickAddPlaylist(ctx: Record<string, unknown>): Promise<Response> {
+  const adminErr = requireAdminOrPermission(
+    { user: ctx.user as never, isAdmin: ctx.isAdmin as boolean },
+    'queue.quickadd'
+  );
+  if (adminErr) {
+    return adminErr;
+  }
+
+  const voiceErr = guardVoice(ctx);
+  if (voiceErr) {
+    return voiceErr;
+  }
+
+  const body = ctx.body as v.InferOutput<typeof QuickAddPlaylistSchema>;
+  const maxVideos = clampMaxVideos(body.maxVideos);
+  const urlResult = validatePlaylistUrl(body.url);
+  if (!urlResult.ok) {
+    return urlResult.response;
+  }
+  const url = urlResult.value;
+
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion
+  const discordId = (ctx.user as { discordId: string }).discordId;
+  const playerResult = await resolveOrAutoJoinPlayer(discordId);
+  if (!playerResult.ok) {
+    return playerResult.response;
+  }
+  const player = playerResult.player;
+
+  const playlistResult = await fetchPlaylistMetadata(url, maxVideos);
+  if (!playlistResult.ok) {
+    return playlistResult.response;
+  }
+  const playlistMetadata = playlistResult.value;
+
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion
+  const requestedBy = (ctx.user as { username: string }).username;
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion
+  const addedBy = (ctx.user as { discordId: string }).discordId;
+  const queuedSongs = playlistMetadata.videos.map((video) => ({
+    id: `temp-${Date.now()}-${video.id}`,
+    title: video.title,
+    sourceUrl: youTubeUrl(video.id),
+    sourceId: video.id,
+    duration: video.duration,
+    thumbnailUrl: video.thumbnailUrl,
+    addedBy,
+    createdAt: new Date().toISOString(),
+    requestedBy,
+  }));
+
+  await player.addToQueue(queuedSongs);
+
+  return json({
+    message: `Added ${queuedSongs.length} song(s) from "${playlistMetadata.title}" to the queue.`,
+    playlistTitle: playlistMetadata.title,
+    totalVideos: playlistMetadata.videoCount,
+    queuedCount: queuedSongs.length,
+    songs: queuedSongs,
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Handlers — POST /player/pause-toggle
+// ---------------------------------------------------------------------------
+
+function handlePauseToggle(ctx: Record<string, unknown>): Response {
+  const authErr = requireAuth({ user: ctx.user as never, isAdmin: ctx.isAdmin as boolean });
+  if (authErr) {
+    return authErr;
+  }
+
+  const voiceErr = guardVoice(ctx);
+  if (voiceErr) {
+    return voiceErr;
+  }
+
+  const playingResult = requirePlaying();
+  if (!playingResult.ok) {
+    return playingResult.response;
+  }
+
+  const isPaused = playingResult.player.togglePause();
+  return json({ isPaused });
+}
+
+// ---------------------------------------------------------------------------
+// Handlers — POST /player/seek
+// ---------------------------------------------------------------------------
+
+async function handleSeek(ctx: Record<string, unknown>): Promise<Response> {
+  const authErr = requireAuth({ user: ctx.user as never, isAdmin: ctx.isAdmin as boolean });
+  if (authErr) {
+    return authErr;
+  }
+
+  const voiceErr = guardVoice(ctx);
+  if (voiceErr) {
+    return voiceErr;
+  }
+
+  const { position } = ctx.body as v.InferOutput<typeof SeekSchema>;
+
+  const playingResult = requirePlaying();
+  if (!playingResult.ok) {
+    return playingResult.response;
+  }
+
+  await playingResult.player.seek(position);
+  return json(playingResult.player.getQueueState());
+}
+
+// ---------------------------------------------------------------------------
+// Handlers — POST /player/clear
+// ---------------------------------------------------------------------------
+
+function handleClear(ctx: Record<string, unknown>): Response {
+  const adminErr = requireAdminOrPermission(
+    { user: ctx.user as never, isAdmin: ctx.isAdmin as boolean },
+    'queue.manage'
+  );
+  if (adminErr) {
+    return adminErr;
+  }
+
+  const voiceErr = guardVoice(ctx);
+  if (voiceErr) {
+    return voiceErr;
+  }
+
+  const playerResult = requirePlayer();
+  if (!playerResult.ok) {
+    return playerResult.response;
+  }
+
+  playerResult.player.clearQueue();
+  return json({ message: 'Queue cleared.' });
+}
+
+// ---------------------------------------------------------------------------
+// Handlers — POST /player/add-to-priority
+// ---------------------------------------------------------------------------
+
+async function handleAddToPriority(ctx: Record<string, unknown>): Promise<Response> {
+  const adminErr = requireAdminOrPermission(
+    { user: ctx.user as never, isAdmin: ctx.isAdmin as boolean },
+    'queue.manage'
+  );
+  if (adminErr) {
+    return adminErr;
+  }
+
+  const voiceErr = guardVoice(ctx);
+  if (voiceErr) {
+    return voiceErr;
+  }
+
+  const { songId } = ctx.body as v.InferOutput<typeof SongIdSchema>;
+
+  const song = fetchSongById(songId);
+  if (!song) {
+    return json({ error: 'Song not found.' }, 404);
+  }
+
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion
+  const discordId = (ctx.user as { discordId: string }).discordId;
+  const playerResult = await resolveOrAutoJoinPlayer(discordId);
+  if (!playerResult.ok) {
+    return playerResult.response;
+  }
+  const player = playerResult.player;
+
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion
+  const requestedBy = (ctx.user as { username: string }).username;
+  const queuedSong = toQueuedSong(
+    { ...song, createdAt: song.createdAt.toISOString() },
+    requestedBy
+  );
+  queuedSong.id = `queue-${Date.now()}-${song.id}`;
+
+  await player.addToPriorityQueue(queuedSong);
+
+  return json({
+    message: `Added "${song.nickname ?? song.title}" to Up Next.`,
+    song: queuedSong,
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Handlers — POST /player/override
+// ---------------------------------------------------------------------------
+
+async function handleOverride(ctx: Record<string, unknown>): Promise<Response> {
+  const adminErr = requireAdminOrPermission(
+    { user: ctx.user as never, isAdmin: ctx.isAdmin as boolean },
+    'queue.override'
+  );
+  if (adminErr) {
+    return adminErr;
+  }
+
+  const voiceErr = guardVoice(ctx);
+  if (voiceErr) {
+    return voiceErr;
+  }
+
+  const body = ctx.body as v.InferOutput<typeof UrlSchema>;
+  const result = await resolveUrlTempSong(ctx, body);
+  if (!result.ok) {
+    return result.response;
+  }
+  await result.player.replaceQueueAndPlay([result.queuedSong]);
+  return json({
+    message: `Now playing "${result.metadataTitle}".`,
+    song: result.queuedSong,
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Handlers — DELETE /player/queue/:songId
+// ---------------------------------------------------------------------------
+
+function handleRemoveFromQueue(ctx: Record<string, unknown>): Response {
+  const adminErr = requireAdminOrPermission(
+    { user: ctx.user as never, isAdmin: ctx.isAdmin as boolean },
+    'queue.manage'
+  );
+  if (adminErr) {
+    return adminErr;
+  }
+
+  const voiceErr = guardVoice(ctx);
+  if (voiceErr) {
+    return voiceErr;
+  }
+
+  const songId = (ctx.params as Record<string, string>).songId as string;
+  const playerResult = requirePlayer();
+  if (!playerResult.ok) {
+    return playerResult.response;
+  }
+
+  const removed = playerResult.player.removeSongById(songId);
+  if (!removed) {
+    return json({ error: 'Song not found in queue.' }, 404);
+  }
+
+  return json({ message: 'Song removed from queue.' });
+}
+
+// ---------------------------------------------------------------------------
+// Handlers — POST /player/queue/:songId/promote
+// ---------------------------------------------------------------------------
+
+function handlePromoteSong(ctx: Record<string, unknown>): Response {
+  const adminErr = requireAdminOrPermission(
+    { user: ctx.user as never, isAdmin: ctx.isAdmin as boolean },
+    'queue.manage'
+  );
+  if (adminErr) {
+    return adminErr;
+  }
+
+  const voiceErr = guardVoice(ctx);
+  if (voiceErr) {
+    return voiceErr;
+  }
+
+  const songId = (ctx.params as Record<string, string>).songId as string;
+  const playerResult = requirePlayer();
+  if (!playerResult.ok) {
+    return playerResult.response;
+  }
+
+  const promoted = playerResult.player.promoteSong(songId);
+  if (!promoted) {
+    return json({ error: 'Song not found in queue.' }, 404);
+  }
+
+  return json({ message: 'Song promoted to Up Next.' });
+}
+
+// ---------------------------------------------------------------------------
+// Handlers — POST /player/queue/:songId/demote
+// ---------------------------------------------------------------------------
+
+function handleDemoteSong(ctx: Record<string, unknown>): Response {
+  const adminErr = requireAdminOrPermission(
+    { user: ctx.user as never, isAdmin: ctx.isAdmin as boolean },
+    'queue.manage'
+  );
+  if (adminErr) {
+    return adminErr;
+  }
+
+  const voiceErr = guardVoice(ctx);
+  if (voiceErr) {
+    return voiceErr;
+  }
+
+  const songId = (ctx.params as Record<string, string>).songId as string;
+  const playerResult = requirePlayer();
+  if (!playerResult.ok) {
+    return playerResult.response;
+  }
+
+  const demoted = playerResult.player.demoteSong(songId);
+  if (!demoted) {
+    return json({ error: 'Song not found in Up Next.' }, 404);
+  }
+
+  return json({ message: 'Song moved to queue.' });
+}
+
+// ---------------------------------------------------------------------------
+// Handlers — PATCH /player/queue/reorder
+// ---------------------------------------------------------------------------
+
+function handleReorderQueue(ctx: Record<string, unknown>): Response {
+  const adminErr = requireAdminOrPermission(
+    { user: ctx.user as never, isAdmin: ctx.isAdmin as boolean },
+    'queue.manage'
+  );
+  if (adminErr) {
+    return adminErr;
+  }
+
+  const voiceErr = guardVoice(ctx);
+  if (voiceErr) {
+    return voiceErr;
+  }
+
+  const { songIds, target } = ctx.body as v.InferOutput<typeof ReorderSchema>;
+
+  if (songIds.length === 0) {
+    return json({ error: 'songIds must not be empty.' }, 400);
+  }
+
+  const playerResult = requirePlayer();
+  if (!playerResult.ok) {
+    return playerResult.response;
+  }
+
+  try {
+    if (target === 'priority') {
+      playerResult.player.reorderPriorityQueue(songIds);
+    } else {
+      playerResult.player.reorderQueue(songIds);
+    }
+  } catch (error) {
+    return json({ error: error instanceof Error ? error.message : 'Invalid reorder.' }, 422);
+  }
+
+  return json({ message: 'Queue reordered.' });
+}
+
+// ---------------------------------------------------------------------------
+// Plugin
+// ---------------------------------------------------------------------------
+
+export function playerPlugin(app: Elysia): Elysia {
+  return app
+    .get('/player/queue', handleGetQueue as never)
+    .patch('/player/queue/reorder', handleReorderQueue as never, {
+      body: ReorderSchema,
+    })
+    .post('/player/queue/:songId/promote', handlePromoteSong as never)
+    .post('/player/queue/:songId/demote', handleDemoteSong as never)
+    .delete('/player/queue/:songId', handleRemoveFromQueue as never)
+    .post('/player/add-to-priority', handleAddToPriority as never, {
+      body: SongIdSchema,
+    })
+    .post('/player/clear', handleClear as never)
+    .post('/player/leave', handleLeave as never)
+    .post('/player/loop', handleLoop as never, {
+      body: LoopSchema,
+    })
+    .post('/player/override', handleOverride as never, {
+      body: UrlSchema,
+    })
+    .post('/player/pause-toggle', handlePauseToggle as never)
+    .post('/player/play', handlePlay as never, {
+      body: PlaySchema,
+    })
+    .post('/player/quick-add', handleQuickAdd as never, {
+      body: UrlSchema,
+    })
+    .post('/player/quick-add-playlist', handleQuickAddPlaylist as never, {
+      body: QuickAddPlaylistSchema,
+    })
+    .post('/player/seek', handleSeek as never, {
+      body: SeekSchema,
+    })
+    .post('/player/shuffle', handleShuffle as never)
+    .post('/player/skip', handleSkip as never)
+    .post('/player/unshuffle', handleUnshuffle as never) as unknown as Elysia;
+}

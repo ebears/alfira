@@ -2,6 +2,7 @@ import { and, eq, inArray } from 'drizzle-orm';
 
 import { type PermissionAction } from '../shared';
 import { db, tables } from '../shared/db';
+import { getClient, getUserVoiceChannel } from './gatewayState';
 
 /**
  * Elysia context shape after the global auth derive.
@@ -115,4 +116,52 @@ export function requireAdminOrPermission(
   }
 
   return requireAdmin(ctx);
+}
+
+/** Returns 409 if the user is not in a voice channel, 503 if bot not ready. */
+export function requireUserInVoice(ctx: AuthContext): Response | null {
+  const gateway = getClient();
+  if (!gateway || !gateway.isReady()) {
+    return new Response(
+      JSON.stringify({ error: 'Discord bot is not ready yet.', code: 'BOT_NOT_READY' }),
+      {
+        status: 503,
+        headers: { 'Content-Type': 'application/json' },
+      }
+    );
+  }
+
+  const discordId = (ctx.user as { discordId: string } | null)?.discordId;
+  const voiceChannelId = getUserVoiceChannel(discordId ?? '');
+  if (!voiceChannelId) {
+    return new Response(
+      JSON.stringify({
+        error: 'You must be in a voice channel to control playback.',
+        code: 'NOT_IN_VOICE',
+      }),
+      {
+        status: 409,
+        headers: { 'Content-Type': 'application/json' },
+      }
+    );
+  }
+
+  return null;
+}
+
+/** Returns 401 if not authenticated, 403 if user lacks isSetupAdmin flag. */
+export function requireSetupMode(ctx: AuthContext): Response | null {
+  const authErr = requireAuth(ctx);
+  if (authErr) {
+    return authErr;
+  }
+
+  if (!(ctx.user as { isSetupAdmin?: boolean } | null)?.isSetupAdmin) {
+    return new Response(JSON.stringify({ error: 'Setup has already been completed.' }), {
+      status: 403,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  }
+
+  return null;
 }
