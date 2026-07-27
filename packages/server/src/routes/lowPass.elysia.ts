@@ -1,17 +1,15 @@
 import { eq } from 'drizzle-orm';
-import { Elysia } from 'elysia';
-import * as v from 'valibot';
+import { Elysia, t } from 'elysia';
 /* eslint-disable @typescript-eslint/no-unsafe-type-assertion */
 
-import { elysiaJson as json } from '../lib/apiResponse';
 import { requireAdminOrPermission, type AuthContext } from '../lib/elysia-guards';
 import { syncAllFilters } from '../lib/syncAllFilters';
 import { db, tables } from '../shared/db';
 import { DEFAULT_LOW_PASS } from '../shared/filterDefaults';
 
-const LowPassSchema = v.object({
-  enabled: v.boolean(),
-  smoothing: v.pipe(v.number(), v.minValue(0), v.maxValue(60)),
+const LowPassSchema = t.Object({
+  enabled: t.Boolean(),
+  smoothing: t.Number({ minimum: 0, maximum: 60 }),
 });
 
 function fetchLowPassSettings(): { enabled: boolean; smoothing: number } {
@@ -48,7 +46,7 @@ export const lowPassPlugin = new Elysia({ prefix: '/settings/lowpass' })
     if (guardErr) {
       return guardErr;
     }
-    return json(fetchLowPassSettings());
+    return fetchLowPassSettings();
   })
   .patch(
     '/',
@@ -59,11 +57,11 @@ export const lowPassPlugin = new Elysia({ prefix: '/settings/lowpass' })
         return guardErr;
       }
 
-      const body = ctx.body as v.InferOutput<typeof LowPassSchema>;
+      const body = ctx.body as typeof LowPassSchema.static;
       upsertLowPassSettings(body);
       await syncAllFilters();
 
-      return json(body);
+      return body;
     },
     { body: LowPassSchema }
   );

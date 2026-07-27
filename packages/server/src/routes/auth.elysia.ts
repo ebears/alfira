@@ -1,10 +1,8 @@
 import { and, eq, lt } from 'drizzle-orm';
-import { Elysia } from 'elysia';
+import { Elysia, t } from 'elysia';
 import crypto from 'node:crypto';
-import * as v from 'valibot';
 /* eslint-disable @typescript-eslint/no-unsafe-type-assertion */
 
-import { elysiaJson as json } from '../lib/apiResponse';
 import { getGuildId, refreshGuildId } from '../lib/config';
 import { sign, verify } from '../lib/jwt';
 import { getClientIp } from '../lib/rateLimit';
@@ -177,16 +175,16 @@ function authRateLimit(ip: string): boolean {
 // ---------------------------------------------------------------------------
 // Discord API response schemas
 // ---------------------------------------------------------------------------
-const DiscordMemberSchema = v.object({ roles: v.optional(v.array(v.string())) });
-const DiscordUserSchema = v.object({
-  username: v.string(),
-  avatar: v.nullable(v.string()),
+const DiscordMemberSchema = t.Object({ roles: t.Optional(t.Array(t.String())) });
+const DiscordUserSchema = t.Object({
+  username: t.String(),
+  avatar: t.Nullable(t.String()),
 });
-const DiscordTokenSchema = v.object({ access_token: v.optional(v.string()) });
-const DiscordIdentitySchema = v.object({
-  id: v.string(),
-  username: v.string(),
-  avatar: v.nullable(v.string()),
+const DiscordTokenSchema = t.Object({ access_token: t.Optional(t.String()) });
+const DiscordIdentitySchema = t.Object({
+  id: t.String(),
+  username: t.String(),
+  avatar: t.Nullable(t.String()),
 });
 
 // ---------------------------------------------------------------------------
@@ -212,7 +210,7 @@ async function fetchGuildMemberRoles(discordId: string): Promise<string[] | null
       throw new Error(`Discord API error: ${memberRes.status}`);
     }
     const raw: unknown = await memberRes.json();
-    const parsed = v.parse(DiscordMemberSchema, raw);
+    const parsed = raw as typeof DiscordMemberSchema.static;
     return parsed.roles ?? [];
   } catch (error: unknown) {
     logger.error(
@@ -238,7 +236,7 @@ async function fetchDiscordUserProfile(
       return null;
     }
     const raw: unknown = await res.json();
-    const parsed = v.parse(DiscordUserSchema, raw);
+    const parsed = raw as typeof DiscordUserSchema.static;
     return {
       username: parsed.username,
       avatar: parsed.avatar
@@ -262,7 +260,7 @@ async function fetchUserAdminStatus(
       throw new Error(`Discord API error: ${userRes.status}`);
     }
     const raw: unknown = await userRes.json();
-    const userData = v.parse(DiscordUserSchema, raw);
+    const userData = raw as typeof DiscordUserSchema.static;
     const { username, avatar } = userData;
 
     const roles = await fetchGuildMemberRoles(discordId);
@@ -306,7 +304,7 @@ async function exchangeAuthorizationCode(code: string): Promise<string | null> {
       return null;
     }
     const raw: unknown = await tokenRes.json();
-    const data = v.parse(DiscordTokenSchema, raw);
+    const data = raw as typeof DiscordTokenSchema.static;
     return data.access_token ?? null;
   } catch {
     return null;
@@ -328,7 +326,7 @@ async function fetchDiscordIdentity(
       return null;
     }
     const raw: unknown = await userRes.json();
-    return v.parse(DiscordIdentitySchema, raw);
+    return raw as typeof DiscordIdentitySchema.static;
   } catch {
     return null;
   }
@@ -405,9 +403,9 @@ function handleLogin(ctx: Record<string, unknown>): Response {
   const request = ctx.request as Request;
   const ip = getClientIp(request);
   if (!authRateLimit(ip)) {
-    return json(
+    return Response.json(
       { error: 'Too many authentication attempts. Please try again in 15 minutes.' },
-      429
+      { status: 429 }
     );
   }
   const params = new URLSearchParams({
@@ -424,26 +422,29 @@ async function handleCallback(ctx: Record<string, unknown>): Promise<Response> {
   const url = new URL(request.url);
   const ip = getClientIp(request);
   if (!authRateLimit(ip)) {
-    return json(
+    return Response.json(
       { error: 'Too many authentication attempts. Please try again in 15 minutes.' },
-      429
+      { status: 429 }
     );
   }
   const code = url.searchParams.get('code');
   if (!code) {
-    return json({ error: 'Missing authorization code.' }, 400);
+    return Response.json({ error: 'Missing authorization code.' }, { status: 400 });
   }
 
   // 1. Exchange code for Discord access token.
   const discordToken = await exchangeAuthorizationCode(code);
   if (!discordToken) {
-    return json({ error: 'Failed to exchange authorization code with Discord.' }, 502);
+    return Response.json(
+      { error: 'Failed to exchange authorization code with Discord.' },
+      { status: 502 }
+    );
   }
 
   // 2. Fetch Discord identity.
   const discordUser = await fetchDiscordIdentity(discordToken);
   if (!discordUser) {
-    return json({ error: 'Failed to fetch Discord user info.' }, 502);
+    return Response.json({ error: 'Failed to fetch Discord user info.' }, { status: 502 });
   }
 
   // 3. Check if setup has been completed.
@@ -499,7 +500,10 @@ async function handleCallback(ctx: Record<string, unknown>): Promise<Response> {
   // 4. Normal flow — verify guild membership and get member roles.
   const rolesResult = await fetchGuildMemberRoles(discordUser.id);
   if (rolesResult === null || rolesResult === 'not-in-guild') {
-    return json({ error: 'You must be a member of the server to use this app.' }, 403);
+    return Response.json(
+      { error: 'You must be a member of the server to use this app.' },
+      { status: 403 }
+    );
   }
   const memberRoles = rolesResult;
 
@@ -530,18 +534,18 @@ async function handleRefresh(ctx: Record<string, unknown>): Promise<Response> {
   const refreshToken = cookies[REFRESH_COOKIE_NAME];
   if (!refreshToken) {
     logger.warn('Auth refresh failed: no refresh token cookie present');
-    return json({ error: 'No refresh token provided.' }, 401);
+    return Response.json({ error: 'No refresh token provided.' }, { status: 401 });
   }
 
   // 1. Verify the refresh token signature and expiration.
   const decoded = verify<{ discordId: string; type: string }>(refreshToken, JWT_SECRET_);
   if (!decoded) {
     logger.warn('Auth refresh failed: JWT verification');
-    return json({ error: 'Invalid or expired refresh token.' }, 401);
+    return Response.json({ error: 'Invalid or expired refresh token.' }, { status: 401 });
   }
   if (decoded.type !== 'refresh') {
     logger.warn({ decodedType: decoded.type }, 'Auth refresh failed: invalid token type');
-    return json({ error: 'Invalid token type.' }, 401);
+    return Response.json({ error: 'Invalid token type.' }, { status: 401 });
   }
 
   // 2. Check if the refresh token exists in the database (not revoked).
@@ -556,7 +560,7 @@ async function handleRefresh(ctx: Record<string, unknown>): Promise<Response> {
       { discordId: decoded.discordId },
       'Auth refresh failed: token hash not found in DB (revoked or already burned)'
     );
-    return json({ error: 'Refresh token has been revoked.' }, 401);
+    return Response.json({ error: 'Refresh token has been revoked.' }, { status: 401 });
   }
 
   // 3. Check if the refresh token has expired.
@@ -566,7 +570,7 @@ async function handleRefresh(ctx: Record<string, unknown>): Promise<Response> {
       'Auth refresh failed: DB expiresAt has passed'
     );
     await db.delete(refreshTokenTable).where(eq(refreshTokenTable.id, storedToken.id));
-    return json({ error: 'Refresh token has expired.' }, 401);
+    return Response.json({ error: 'Refresh token has expired.' }, { status: 401 });
   }
 
   // 4. Clean up expired tokens for this user (lazy cleanup).
@@ -599,7 +603,10 @@ async function handleRefresh(ctx: Record<string, unknown>): Promise<Response> {
           { discordId: decoded.discordId },
           'Auth refresh failed: fetchDiscordUserProfile returned null (setup mode)'
         );
-        return json({ error: 'Unable to verify user identity. Please try again.' }, 503);
+        return Response.json(
+          { error: 'Unable to verify user identity. Please try again.' },
+          { status: 503 }
+        );
       }
       username = profile.username;
       avatar = profile.avatar;
@@ -613,7 +620,10 @@ async function handleRefresh(ctx: Record<string, unknown>): Promise<Response> {
         },
         'Auth refresh failed: Discord unreachable (setup mode)'
       );
-      return json({ error: 'Discord is temporarily unreachable. Please try again.' }, 503);
+      return Response.json(
+        { error: 'Discord is temporarily unreachable. Please try again.' },
+        { status: 503 }
+      );
     }
   } else {
     // Normal flow — verify guild membership and roles.
@@ -624,7 +634,10 @@ async function handleRefresh(ctx: Record<string, unknown>): Promise<Response> {
           { discordId: decoded.discordId },
           'Auth refresh failed: fetchUserAdminStatus returned null (not in guild or Discord error)'
         );
-        return json({ error: 'Unable to verify user membership. Please try again.' }, 503);
+        return Response.json(
+          { error: 'Unable to verify user membership. Please try again.' },
+          { status: 503 }
+        );
       }
       username = userInfo.username;
       avatar = userInfo.avatar;
@@ -638,7 +651,10 @@ async function handleRefresh(ctx: Record<string, unknown>): Promise<Response> {
         },
         'Auth refresh failed: Discord unreachable'
       );
-      return json({ error: 'Discord is temporarily unreachable. Please try again.' }, 503);
+      return Response.json(
+        { error: 'Discord is temporarily unreachable. Please try again.' },
+        { status: 503 }
+      );
     }
   }
 
@@ -701,16 +717,19 @@ function handleMe(ctx: Record<string, unknown>): Response {
     isSetupAdmin?: boolean;
   } | null;
   if (!user) {
-    return json({ error: 'Not authenticated. Please log in at /auth/login.' }, 401);
+    return Response.json(
+      { error: 'Not authenticated. Please log in at /auth/login.' },
+      { status: 401 }
+    );
   }
   // If setup hasn't been completed (e.g., DB was wiped), flag the user as
   // a setup admin so the frontend redirects to the setup wizard instead of
   // showing a broken main UI with a valid-but-stale session cookie.
   const setupDone = isSetupCompleted();
   if (!setupDone) {
-    return json({ user: { ...user, isSetupAdmin: true } });
+    return Response.json({ user: { ...user, isSetupAdmin: true } });
   }
-  return json({ user });
+  return Response.json({ user });
 }
 
 async function handleLogout(ctx: Record<string, unknown>): Promise<Response> {

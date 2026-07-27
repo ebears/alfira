@@ -2,7 +2,7 @@ import { sql } from 'drizzle-orm';
 import { Elysia, type Cookie } from 'elysia';
 import { join } from 'node:path';
 
-import { elysiaJson } from './lib/apiResponse';
+import { API_SECURITY_HEADERS } from './lib/apiResponse';
 import { VERSION } from './lib/config';
 import { parseCookies } from './lib/cookies';
 import { lavalink } from './lib/lavalink';
@@ -91,7 +91,10 @@ export type App = ReturnType<typeof createApp>;
 
 export function createApp() {
   const apiApp = new Elysia({ prefix: '/api' })
-    .get('/version', () => elysiaJson({ version: VERSION }))
+    .onAfterHandle(({ set }) => {
+      Object.assign(set.headers, API_SECURITY_HEADERS);
+    })
+    .get('/version', () => ({ version: VERSION }))
     .use(tagsPlugin)
     .use(channelMixPlugin)
     .use(compressorPlugin)
@@ -118,7 +121,7 @@ export function createApp() {
     .derive(deriveAuth)
     .use(apiApp)
     .use(authApp)
-    .get('/health', async () => {
+    .get('/health', async ({ set }) => {
       const checks: Record<string, string> = {};
 
       try {
@@ -146,10 +149,9 @@ export function createApp() {
       checks.discord = lavalink.getSessionId() ? 'ok' : 'disconnected';
 
       const allOk = Object.values(checks).every((v) => v === 'ok');
-      return elysiaJson(
-        { status: allOk ? 'ok' : 'degraded', version: VERSION, checks },
-        allOk ? 200 : 503
-      );
+      const statusCode = allOk ? 200 : 503;
+      set.status = statusCode;
+      return { status: allOk ? 'ok' : 'degraded', version: VERSION, checks };
     })
     .ws('/ws', {
       open(ws) {

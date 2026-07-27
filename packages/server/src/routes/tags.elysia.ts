@@ -1,9 +1,7 @@
 import { eq, inArray, sql } from 'drizzle-orm';
-import { Elysia } from 'elysia';
-import * as v from 'valibot';
+import { Elysia, t } from 'elysia';
 /* eslint-disable @typescript-eslint/no-unsafe-type-assertion */
 
-import { elysiaJson as json } from '../lib/apiResponse';
 import { requireAdminOrPermission, requireAuth, type AuthContext } from '../lib/elysia-guards';
 import { emitPlaylistUpdated } from '../lib/socket';
 import { db, tables } from '../shared/db';
@@ -12,10 +10,12 @@ const { tag: tagTable, song: songTable, playlist: playlistTable } = tables;
 
 const TAG_COLORS = ['orange', 'sky', 'emerald', 'amber', 'violet'] as const;
 
-const TagPatchSchema = v.partial(
-  v.object({
-    canonicalName: v.pipe(v.string(), v.minLength(1)),
-    color: v.nullable(v.picklist(TAG_COLORS)),
+const TAG_COLOR_UNION = t.Union(TAG_COLORS.map((c) => t.Literal(c)));
+
+const TagPatchSchema = t.Partial(
+  t.Object({
+    canonicalName: t.String({ minLength: 1 }),
+    color: t.Nullable(TAG_COLOR_UNION),
   })
 );
 
@@ -109,7 +109,7 @@ export const tagsPlugin = new Elysia({ prefix: '/tags' })
     if (authErr) {
       return authErr;
     }
-    return json({ tags: fetchTagList() });
+    return Response.json({ tags: fetchTagList() });
   })
   .get('/:nameLower', (ctx: Record<string, unknown>) => {
     const { user, isAdmin } = getAuth(ctx);
@@ -121,10 +121,10 @@ export const tagsPlugin = new Elysia({ prefix: '/tags' })
     const nameLower = (ctx.params as Record<string, string>).nameLower as string;
     const tag = fetchTag(nameLower);
     if (!tag) {
-      return json({ error: 'Tag not found.' }, 404);
+      return Response.json({ error: 'Tag not found.' }, { status: 404 });
     }
 
-    return json({ tag });
+    return Response.json({ tag });
   })
   .get('/:nameLower/songs', (ctx: Record<string, unknown>) => {
     const { user, isAdmin } = getAuth(ctx);
@@ -133,7 +133,7 @@ export const tagsPlugin = new Elysia({ prefix: '/tags' })
       return authErr;
     }
     const nameLower = (ctx.params as Record<string, string>).nameLower as string;
-    return json({ songs: fetchSongsByTag(nameLower) });
+    return Response.json({ songs: fetchSongsByTag(nameLower) });
   })
   .patch(
     '/:nameLower',
@@ -145,11 +145,11 @@ export const tagsPlugin = new Elysia({ prefix: '/tags' })
       }
 
       const nameLower = (ctx.params as Record<string, string>).nameLower as string;
-      const body = ctx.body as v.InferOutput<typeof TagPatchSchema>;
+      const body = ctx.body as typeof TagPatchSchema.static;
 
       const existing = fetchTag(nameLower);
       if (!existing) {
-        return json({ error: 'Tag not found.' }, 404);
+        return Response.json({ error: 'Tag not found.' }, { status: 404 });
       }
 
       const data: Record<string, unknown> = {};
@@ -163,11 +163,11 @@ export const tagsPlugin = new Elysia({ prefix: '/tags' })
       }
 
       if (Object.keys(data).length === 0) {
-        return json({ error: 'No valid fields to update.' }, 400);
+        return Response.json({ error: 'No valid fields to update.' }, { status: 400 });
       }
 
       const updated = await updateTagReturning(nameLower, data);
-      return json({ tag: updated });
+      return Response.json({ tag: updated });
     },
     { body: TagPatchSchema }
   )
@@ -182,7 +182,7 @@ export const tagsPlugin = new Elysia({ prefix: '/tags' })
 
     const existing = fetchTag(nameLower);
     if (!existing) {
-      return json({ error: 'Tag not found.' }, 404);
+      return Response.json({ error: 'Tag not found.' }, { status: 404 });
     }
 
     // Remove this tag from all songs that have it
@@ -209,5 +209,5 @@ export const tagsPlugin = new Elysia({ prefix: '/tags' })
 
     await deleteTagRow(nameLower);
 
-    return json({ success: true });
+    return Response.json({ success: true });
   });

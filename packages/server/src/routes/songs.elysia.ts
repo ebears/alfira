@@ -1,11 +1,9 @@
 import { eq, inArray, sql } from 'drizzle-orm';
-import { Elysia } from 'elysia';
-import * as v from 'valibot';
+import { Elysia, t } from 'elysia';
 /* eslint-disable @typescript-eslint/no-unsafe-type-assertion */
 /* eslint-disable @typescript-eslint/no-unnecessary-type-assertion */
 /* eslint-disable @typescript-eslint/no-unnecessary-condition */
 
-import { elysiaJson as json } from '../lib/apiResponse';
 import { getGuildId } from '../lib/config';
 import { getUserDisplayName, resolveDisplayNames } from '../lib/displayName';
 import { requireAdminOrPermission, requireAuth, type AuthContext } from '../lib/elysia-guards';
@@ -27,24 +25,24 @@ import { getPlayer } from '../startDiscord';
 
 const { song: songTable } = tables;
 
-const BulkDeleteSchema = v.object({
-  ids: v.pipe(v.array(v.string()), v.minLength(1), v.maxLength(5000)),
+const BulkDeleteSchema = t.Object({
+  ids: t.Array(t.String(), { minLength: 1, maxLength: 5000 }),
 });
 
-const BulkTagSchema = v.object({
-  ids: v.pipe(v.array(v.string()), v.minLength(1), v.maxLength(5000)),
-  tags: v.optional(v.array(v.string())),
-  mode: v.optional(v.pipe(v.string(), v.picklist(['add', 'set']))),
+const BulkTagSchema = t.Object({
+  ids: t.Array(t.String(), { minLength: 1, maxLength: 5000 }),
+  tags: t.Optional(t.Array(t.String())),
+  mode: t.Optional(t.Union([t.Literal('add'), t.Literal('set')])),
 });
 
-const SongPatchSchema = v.partial(
-  v.object({
-    nickname: v.unknown(),
-    artist: v.unknown(),
-    album: v.unknown(),
-    artwork: v.unknown(),
-    tags: v.unknown(),
-    volumeBoost: v.unknown(),
+const SongPatchSchema = t.Partial(
+  t.Object({
+    nickname: t.Unknown(),
+    artist: t.Unknown(),
+    album: t.Unknown(),
+    artwork: t.Unknown(),
+    tags: t.Unknown(),
+    volumeBoost: t.Unknown(),
   })
 );
 
@@ -199,7 +197,7 @@ export const songsPlugin = new Elysia({ prefix: '/songs' })
       addedByDisplayName: nameMap.get(s.addedBy) ?? s.addedBy,
     }));
 
-    return json({
+    return Response.json({
       items: songsWithNames,
       pagination: {
         page,
@@ -218,10 +216,10 @@ export const songsPlugin = new Elysia({ prefix: '/songs' })
         return guardErr;
       }
 
-      const { ids } = ctx.body as v.InferOutput<typeof BulkDeleteSchema>;
+      const { ids } = ctx.body as typeof BulkDeleteSchema.static;
       await deleteSongsByIds(ids);
 
-      return json({ deleted: ids.length });
+      return Response.json({ deleted: ids.length });
     },
     { body: BulkDeleteSchema }
   )
@@ -234,7 +232,7 @@ export const songsPlugin = new Elysia({ prefix: '/songs' })
         return guardErr;
       }
 
-      const body = ctx.body as v.InferOutput<typeof BulkTagSchema>;
+      const body = ctx.body as typeof BulkTagSchema.static;
       const { ids } = body;
 
       const tagsResult = validateTags(body.tags);
@@ -275,7 +273,7 @@ export const songsPlugin = new Elysia({ prefix: '/songs' })
         await reSyncPlaylistsForTags(newTags.map((t) => t.toLowerCase()));
       }
 
-      return json({ updated: updatedSongs.length, tags: newTags });
+      return Response.json({ updated: updatedSongs.length, tags: newTags });
     },
     { body: BulkTagSchema }
   )
@@ -297,7 +295,7 @@ export const songsPlugin = new Elysia({ prefix: '/songs' })
     const { data, processedTags, processedVolumeBoost } = fieldResult;
 
     if (Object.keys(data).length === 0) {
-      return json({ error: 'No fields to update.' }, 400);
+      return Response.json({ error: 'No fields to update.' }, { status: 400 });
     }
 
     updateSongsByIds(ids, data);
@@ -317,7 +315,7 @@ export const songsPlugin = new Elysia({ prefix: '/songs' })
 
     notifyPlayerOfMetadataChange(ids, data, processedVolumeBoost);
 
-    return json({ updated: ids.length });
+    return Response.json({ updated: ids.length });
   })
   .delete('/:id', (ctx: Record<string, unknown>) => {
     const { user, isAdmin } = getAuth(ctx);
@@ -329,7 +327,7 @@ export const songsPlugin = new Elysia({ prefix: '/songs' })
     const id = (ctx.params as Record<string, string>).id as string;
     const existing = fetchSongById(id);
     if (!existing) {
-      return json({ error: 'Song not found.' }, 404);
+      return Response.json({ error: 'Song not found.' }, { status: 404 });
     }
 
     deleteSongById(id);
@@ -347,11 +345,11 @@ export const songsPlugin = new Elysia({ prefix: '/songs' })
       }
 
       const id = (ctx.params as Record<string, string>).id as string;
-      const body = ctx.body as v.InferOutput<typeof SongPatchSchema>;
+      const body = ctx.body as typeof SongPatchSchema.static;
 
       const existing = fetchSongById(id);
       if (!existing) {
-        return json({ error: 'Song not found.' }, 404);
+        return Response.json({ error: 'Song not found.' }, { status: 404 });
       }
 
       const oldTagsLower = new Set((existing.tags ?? []).map((t) => t.toLowerCase()));
@@ -364,7 +362,7 @@ export const songsPlugin = new Elysia({ prefix: '/songs' })
 
       const updatedSong = await updateSongReturning(id, data);
       if (!updatedSong) {
-        return json({ error: 'Failed to update song.' }, 500);
+        return Response.json({ error: 'Failed to update song.' }, { status: 500 });
       }
 
       const patchedDisplayName = await getUserDisplayName(updatedSong.addedBy);
@@ -381,7 +379,7 @@ export const songsPlugin = new Elysia({ prefix: '/songs' })
 
       notifyPlayerOfMetadataChange([id], data, processedVolumeBoost);
 
-      return json(formatSong(updatedSong));
+      return Response.json(formatSong(updatedSong));
     },
     { body: SongPatchSchema }
   );

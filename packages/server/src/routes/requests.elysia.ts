@@ -1,11 +1,9 @@
 import { and, eq, inArray, or, sql } from 'drizzle-orm';
-import { Elysia } from 'elysia';
-import * as v from 'valibot';
+import { Elysia, t } from 'elysia';
 /* eslint-disable @typescript-eslint/no-unsafe-type-assertion */
 /* eslint-disable @typescript-eslint/no-unnecessary-condition */
 /* eslint-disable @typescript-eslint/no-unnecessary-type-assertion */
 
-import { elysiaJson as json } from '../lib/apiResponse';
 import { getUserDisplayName, resolveDisplayNames } from '../lib/displayName';
 import { requireAdmin, requireAuth, type AuthContext } from '../lib/elysia-guards';
 import { sendRequestDm, sendRequestNotification } from '../lib/notifications';
@@ -74,26 +72,26 @@ async function userCanAutoApprove(authCtx: AuthContext): Promise<boolean> {
 // Schemas
 // ---------------------------------------------------------------------------
 
-const PreviewRequestSchema = v.object({
-  url: v.string(),
+const PreviewRequestSchema = t.Object({
+  url: t.String(),
 });
 
-const CreateRequestSchema = v.partial(
-  v.object({
-    sourceUrl: v.unknown(),
-    notifyDm: v.unknown(),
-    nickname: v.unknown(),
-    artist: v.unknown(),
-    album: v.unknown(),
-    artwork: v.unknown(),
-    tags: v.unknown(),
-    volumeBoost: v.unknown(),
-    type: v.optional(v.union([v.literal('track'), v.literal('playlist')])),
+const CreateRequestSchema = t.Partial(
+  t.Object({
+    sourceUrl: t.Unknown(),
+    notifyDm: t.Unknown(),
+    nickname: t.Unknown(),
+    artist: t.Unknown(),
+    album: t.Unknown(),
+    artwork: t.Unknown(),
+    tags: t.Unknown(),
+    volumeBoost: t.Unknown(),
+    type: t.Optional(t.Union([t.Literal('track'), t.Literal('playlist')])),
   })
 );
 
-const PatchRequestSchema = v.object({
-  status: v.union([v.literal('approved'), v.literal('denied')]),
+const PatchRequestSchema = t.Object({
+  status: t.Union([t.Literal('approved'), t.Literal('denied')]),
 });
 
 // ---------------------------------------------------------------------------
@@ -114,7 +112,7 @@ export const requestsPlugin = new Elysia({ prefix: '/requests' })
         return authErr;
       }
 
-      const body = ctx.body as v.InferOutput<typeof PreviewRequestSchema>;
+      const body = ctx.body as typeof PreviewRequestSchema.static;
       const urlResult = validateSourceUrl(body.url);
       if (!urlResult.ok) {
         return urlResult.response;
@@ -140,7 +138,7 @@ export const requestsPlugin = new Elysia({ prefix: '/requests' })
         const pm = playlistResult.value;
 
         const playlistThumb = pm.videos[0]?.thumbnailUrl ?? '';
-        return json({
+        return Response.json({
           title: pm.title,
           sourceId: `playlist-${Date.now()}`,
           duration: pm.videos.reduce((sum, v) => sum + (v.duration || 0), 0),
@@ -178,7 +176,7 @@ export const requestsPlugin = new Elysia({ prefix: '/requests' })
         )
         .limit(1);
 
-      return json({
+      return Response.json({
         title: metadata.title,
         sourceId: metadata.sourceId,
         duration: metadata.duration,
@@ -245,7 +243,7 @@ export const requestsPlugin = new Elysia({ prefix: '/requests' })
       requestedByDisplayName: nameMap.get(r.requestedBy) ?? r.requestedBy,
     }));
 
-    return json({
+    return Response.json({
       items: formattedRequests,
       pagination: {
         page,
@@ -350,9 +348,9 @@ export const requestsPlugin = new Elysia({ prefix: '/requests' })
           const newVideos = videosWithUrls.filter((v) => !existingIdSet.has(v.id));
 
           if (newVideos.length === 0) {
-            return json(
+            return Response.json(
               { error: 'All songs from this playlist are already in your library.' },
-              409
+              { status: 409 }
             );
           }
 
@@ -434,7 +432,7 @@ export const requestsPlugin = new Elysia({ prefix: '/requests' })
             })();
           }
 
-          return json(
+          return Response.json(
             {
               autoApproved: true,
               songs: createdSongs.map(formatSong),
@@ -442,7 +440,7 @@ export const requestsPlugin = new Elysia({ prefix: '/requests' })
               skippedCount: pm.videos.length - newVideos.length,
               playlistTitle: pm.title,
             },
-            201
+            { status: 201 }
           );
         }
 
@@ -482,7 +480,7 @@ export const requestsPlugin = new Elysia({ prefix: '/requests' })
           .returning();
 
         if (!created) {
-          return json({ error: 'Failed to create request.' }, 500);
+          return Response.json({ error: 'Failed to create request.' }, { status: 500 });
         }
 
         const formatted = formatRequest(created);
@@ -492,7 +490,7 @@ export const requestsPlugin = new Elysia({ prefix: '/requests' })
           user as { discordId: string; username: string; isAdmin: boolean }
         );
 
-        return json({ request: formatted, autoApproved: false }, 201);
+        return Response.json({ request: formatted, autoApproved: false }, { status: 201 });
       }
 
       // --- Track request ---
@@ -509,9 +507,9 @@ export const requestsPlugin = new Elysia({ prefix: '/requests' })
         .limit(1);
 
       if (existingSong) {
-        return json(
+        return Response.json(
           { error: 'This song is already in your library.', song: formatSong(existingSong) },
-          409
+          { status: 409 }
         );
       }
 
@@ -524,7 +522,7 @@ export const requestsPlugin = new Elysia({ prefix: '/requests' })
         .limit(1);
 
       if (existingReq) {
-        return json({ error: 'This song has already been requested.' }, 409);
+        return Response.json({ error: 'This song has already been requested.' }, { status: 409 });
       }
 
       if (autoApprove) {
@@ -550,7 +548,7 @@ export const requestsPlugin = new Elysia({ prefix: '/requests' })
           .returning();
 
         if (!song) {
-          return json({ error: 'Failed to create song.' }, 500);
+          return Response.json({ error: 'Failed to create song.' }, { status: 500 });
         }
 
         const formatted = formatSong(song);
@@ -602,7 +600,7 @@ export const requestsPlugin = new Elysia({ prefix: '/requests' })
           }
         }
 
-        return json({ song: enriched, autoApproved: true }, 201);
+        return Response.json({ song: enriched, autoApproved: true }, { status: 201 });
       }
 
       // Pending track request
@@ -625,7 +623,7 @@ export const requestsPlugin = new Elysia({ prefix: '/requests' })
         .returning();
 
       if (!created) {
-        return json({ error: 'Failed to create request.' }, 500);
+        return Response.json({ error: 'Failed to create request.' }, { status: 500 });
       }
 
       const formatted = formatRequest(created);
@@ -635,7 +633,7 @@ export const requestsPlugin = new Elysia({ prefix: '/requests' })
         user as { discordId: string; username: string; isAdmin: boolean }
       );
 
-      return json({ request: formatted, autoApproved: false }, 201);
+      return Response.json({ request: formatted, autoApproved: false }, { status: 201 });
     },
     { body: CreateRequestSchema }
   )
@@ -649,7 +647,7 @@ export const requestsPlugin = new Elysia({ prefix: '/requests' })
       }
 
       const id = (ctx.params as Record<string, string>).id as string;
-      const body = ctx.body as v.InferOutput<typeof PatchRequestSchema>;
+      const body = ctx.body as typeof PatchRequestSchema.static;
 
       const [existing] = (await db
         .select()
@@ -658,11 +656,14 @@ export const requestsPlugin = new Elysia({ prefix: '/requests' })
         .limit(1)) as unknown as [typeof requestTable.$inferSelect | undefined];
 
       if (!existing) {
-        return json({ error: 'Request not found.' }, 404);
+        return Response.json({ error: 'Request not found.' }, { status: 404 });
       }
 
       if (existing.status !== 'pending') {
-        return json({ error: 'This request has already been processed.' }, 409);
+        return Response.json(
+          { error: 'This request has already been processed.' },
+          { status: 409 }
+        );
       }
 
       const newStatus = body.status;
@@ -698,7 +699,7 @@ export const requestsPlugin = new Elysia({ prefix: '/requests' })
           }
         }
 
-        return json({ request: formatted });
+        return Response.json({ request: formatted });
       }
 
       // Approve
@@ -719,7 +720,7 @@ export const requestsPlugin = new Elysia({ prefix: '/requests' })
         const videos = pd.videos ?? [];
 
         if (videos.length === 0) {
-          return json({ error: 'Playlist request has no videos.' }, 400);
+          return Response.json({ error: 'Playlist request has no videos.' }, { status: 400 });
         }
 
         const videoIds = videos.map((v) => v.id);
@@ -788,7 +789,7 @@ export const requestsPlugin = new Elysia({ prefix: '/requests' })
           }
         })();
 
-        return json({
+        return Response.json({
           request: formatted,
           songs: createdSongs.map(formatSong),
           importedCount: createdSongs.length,
@@ -812,7 +813,7 @@ export const requestsPlugin = new Elysia({ prefix: '/requests' })
         .returning();
 
       if (!newSong) {
-        return json({ error: 'Failed to create song from request.' }, 500);
+        return Response.json({ error: 'Failed to create song from request.' }, { status: 500 });
       }
 
       await db
@@ -849,7 +850,7 @@ export const requestsPlugin = new Elysia({ prefix: '/requests' })
         }
       })();
 
-      return json({
+      return Response.json({
         request: formatted,
         song: formatSong(newSong),
       });
@@ -872,16 +873,16 @@ export const requestsPlugin = new Elysia({ prefix: '/requests' })
       .limit(1)) as unknown as [typeof requestTable.$inferSelect | undefined];
 
     if (!existing) {
-      return json({ error: 'Request not found.' }, 404);
+      return Response.json({ error: 'Request not found.' }, { status: 404 });
     }
 
     if (existing.status !== 'pending') {
-      return json({ error: 'Only pending requests can be cancelled.' }, 409);
+      return Response.json({ error: 'Only pending requests can be cancelled.' }, { status: 409 });
     }
 
     const reqDiscordId = (user as { discordId: string }).discordId;
     if (existing.requestedBy !== reqDiscordId && !isAdmin) {
-      return json({ error: 'You can only cancel your own requests.' }, 403);
+      return Response.json({ error: 'You can only cancel your own requests.' }, { status: 403 });
     }
 
     await db.delete(requestTable).where(eq(requestTable.id, id));

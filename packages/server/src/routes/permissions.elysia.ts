@@ -1,18 +1,16 @@
 import { eq, inArray } from 'drizzle-orm';
-import { Elysia } from 'elysia';
-import * as v from 'valibot';
+import { Elysia, t } from 'elysia';
 /* eslint-disable @typescript-eslint/no-unsafe-type-assertion */
 
-import { elysiaJson as json } from '../lib/apiResponse';
 import { getGuildId } from '../lib/config';
 import { fetchGuildRoles } from '../lib/discordRoles';
 import { requireAdmin, requireAuth, type AuthContext } from '../lib/elysia-guards';
 import { PERMISSION_CATEGORIES, PERMISSION_LABELS, type PermissionAction } from '../shared';
 import { db, tables } from '../shared/db';
 
-const PermissionsPatchSchema = v.object({
-  action: v.string(),
-  roleIds: v.array(v.string()),
+const PermissionsPatchSchema = t.Object({
+  action: t.String(),
+  roleIds: t.Array(t.String()),
 });
 
 function isPermissionAction(value: string): value is PermissionAction {
@@ -74,7 +72,7 @@ export const permissionsPlugin = new Elysia({ prefix: '/permissions' })
 
     const userRoles = (user as { roles?: string[] } | null)?.roles ?? [];
     const permissions = fetchUserPermissions(userRoles);
-    return json({ permissions });
+    return Response.json({ permissions });
   })
   .get('/', async (ctx: Record<string, unknown>) => {
     const { user, isAdmin } = getAuth(ctx);
@@ -103,7 +101,7 @@ export const permissionsPlugin = new Elysia({ prefix: '/permissions' })
       (mapping[row.action] ??= []).push(row.roleId);
     }
 
-    return json({
+    return Response.json({
       mapping,
       roles: filteredRoles,
       categories: PERMISSION_CATEGORIES,
@@ -119,15 +117,15 @@ export const permissionsPlugin = new Elysia({ prefix: '/permissions' })
         return guardErr;
       }
 
-      const { action, roleIds } = ctx.body as v.InferOutput<typeof PermissionsPatchSchema>;
+      const { action, roleIds } = ctx.body as typeof PermissionsPatchSchema.static;
 
       if (!isPermissionAction(action)) {
-        return json({ error: `Unknown permission action: ${action}` }, 400);
+        return Response.json({ error: `Unknown permission action: ${action}` }, { status: 400 });
       }
 
       replacePermissionRoles(action, roleIds);
 
-      return json({ action, roleIds });
+      return Response.json({ action, roleIds });
     },
     { body: PermissionsPatchSchema }
   );

@@ -1,23 +1,21 @@
 import { eq } from 'drizzle-orm';
-import { Elysia } from 'elysia';
-import * as v from 'valibot';
+import { Elysia, t } from 'elysia';
 /* eslint-disable @typescript-eslint/no-unsafe-type-assertion */
 
-import { elysiaJson as json } from '../lib/apiResponse';
 import { requireAdminOrPermission, type AuthContext } from '../lib/elysia-guards';
 import { EQ_BAND_COLUMNS, eqBandsFromRow, eqBandValues } from '../lib/eqBands';
 import { syncAllFilters } from '../lib/syncAllFilters';
 import { db, tables } from '../shared/db';
 import { DEFAULT_EQUALIZER } from '../shared/filterDefaults';
 
-const eqBandValue = v.pipe(v.number(), v.integer(), v.minValue(0), v.maxValue(100));
+const eqBandValue = t.Integer({ minimum: 0, maximum: 100 });
 
-const EqualizerSchema = v.object({
-  bands: v.pipe(v.array(eqBandValue), v.length(15)),
-  enabled: v.boolean(),
+const EqualizerSchema = t.Object({
+  bands: t.Array(eqBandValue, { minLength: 15, maxLength: 15 }),
+  enabled: t.Boolean(),
 });
 
-type EqualizerSettings = v.InferOutput<typeof EqualizerSchema>;
+type EqualizerSettings = typeof EqualizerSchema.static;
 
 // ---------------------------------------------------------------------------
 // Query helpers
@@ -64,7 +62,7 @@ export const equalizerPlugin = new Elysia({ prefix: '/settings/equalizer' })
     if (guardErr) {
       return guardErr;
     }
-    return json(fetchEqualizerSettings());
+    return fetchEqualizerSettings();
   })
   .patch(
     '/',
@@ -79,7 +77,7 @@ export const equalizerPlugin = new Elysia({ prefix: '/settings/equalizer' })
       upsertEqualizerSettings(body);
       await syncAllFilters();
 
-      return json(body);
+      return body;
     },
     { body: EqualizerSchema }
   );

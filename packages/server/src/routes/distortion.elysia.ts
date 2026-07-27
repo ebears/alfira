@@ -1,27 +1,25 @@
 import { eq } from 'drizzle-orm';
-import { Elysia } from 'elysia';
-import * as v from 'valibot';
+import { Elysia, t } from 'elysia';
 /* eslint-disable @typescript-eslint/no-unsafe-type-assertion */
 
-import { elysiaJson as json } from '../lib/apiResponse';
 import { requireAdminOrPermission, type AuthContext } from '../lib/elysia-guards';
 import { syncAllFilters } from '../lib/syncAllFilters';
 import { db, tables } from '../shared/db';
 import { DEFAULT_DISTORTION } from '../shared/filterDefaults';
 
-const DistortionSchema = v.object({
-  enabled: v.boolean(),
-  sinOffset: v.pipe(v.number(), v.minValue(-1), v.maxValue(1)),
-  sinScale: v.pipe(v.number(), v.minValue(0), v.maxValue(5)),
-  cosOffset: v.pipe(v.number(), v.minValue(-1), v.maxValue(1)),
-  cosScale: v.pipe(v.number(), v.minValue(0), v.maxValue(5)),
-  tanOffset: v.pipe(v.number(), v.minValue(-1), v.maxValue(1)),
-  tanScale: v.pipe(v.number(), v.minValue(0), v.maxValue(5)),
-  offset: v.pipe(v.number(), v.minValue(-1), v.maxValue(1)),
-  scale: v.pipe(v.number(), v.minValue(0), v.maxValue(5)),
+const DistortionSchema = t.Object({
+  enabled: t.Boolean(),
+  sinOffset: t.Number({ minimum: -1, maximum: 1 }),
+  sinScale: t.Number({ minimum: 0, maximum: 5 }),
+  cosOffset: t.Number({ minimum: -1, maximum: 1 }),
+  cosScale: t.Number({ minimum: 0, maximum: 5 }),
+  tanOffset: t.Number({ minimum: -1, maximum: 1 }),
+  tanScale: t.Number({ minimum: 0, maximum: 5 }),
+  offset: t.Number({ minimum: -1, maximum: 1 }),
+  scale: t.Number({ minimum: 0, maximum: 5 }),
 });
 
-type DistortionSettings = v.InferOutput<typeof DistortionSchema>;
+type DistortionSettings = typeof DistortionSchema.static;
 
 // ---------------------------------------------------------------------------
 // Query helpers
@@ -89,7 +87,7 @@ export const distortionPlugin = new Elysia({ prefix: '/settings/distortion' })
     if (guardErr) {
       return guardErr;
     }
-    return json(fetchDistortionSettings());
+    return fetchDistortionSettings();
   })
   .patch(
     '/',
@@ -104,7 +102,7 @@ export const distortionPlugin = new Elysia({ prefix: '/settings/distortion' })
       upsertDistortionSettings(body);
       await syncAllFilters();
 
-      return json(body);
+      return body;
     },
     { body: DistortionSchema }
   );

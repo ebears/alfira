@@ -1,18 +1,16 @@
 import { eq } from 'drizzle-orm';
-import { Elysia } from 'elysia';
-import * as v from 'valibot';
+import { Elysia, t } from 'elysia';
 /* eslint-disable @typescript-eslint/no-unsafe-type-assertion */
 
-import { elysiaJson as json } from '../lib/apiResponse';
 import { requireAdminOrPermission, type AuthContext } from '../lib/elysia-guards';
 import { syncAllFilters } from '../lib/syncAllFilters';
 import { db, tables } from '../shared/db';
 import { DEFAULT_TREMOLO } from '../shared/filterDefaults';
 
-const TremoloSchema = v.object({
-  enabled: v.boolean(),
-  frequency: v.pipe(v.number(), v.minValue(0.1), v.maxValue(14)),
-  depth: v.pipe(v.number(), v.minValue(0), v.maxValue(1)),
+const TremoloSchema = t.Object({
+  enabled: t.Boolean(),
+  frequency: t.Number({ minimum: 0.1, maximum: 14 }),
+  depth: t.Number({ minimum: 0, maximum: 1 }),
 });
 
 function fetchTremoloSettings(): { enabled: boolean; frequency: number; depth: number } {
@@ -59,7 +57,7 @@ export const tremoloPlugin = new Elysia({ prefix: '/settings/tremolo' })
     if (guardErr) {
       return guardErr;
     }
-    return json(fetchTremoloSettings());
+    return fetchTremoloSettings();
   })
   .patch(
     '/',
@@ -70,11 +68,11 @@ export const tremoloPlugin = new Elysia({ prefix: '/settings/tremolo' })
         return guardErr;
       }
 
-      const body = ctx.body as v.InferOutput<typeof TremoloSchema>;
+      const body = ctx.body as typeof TremoloSchema.static;
       upsertTremoloSettings(body);
       await syncAllFilters();
 
-      return json(body);
+      return body;
     },
     { body: TremoloSchema }
   );

@@ -15,9 +15,7 @@
   },
   "dependencies": {
     "@elysia/eden": "^1.4.10",
-    "drizzle-valibot": "^0.4.2",
-    "elysia": "^1.4.29",
-    "valibot": "^1.4.2"
+    "elysia": "^1.4.29"
   },
   "devDependencies": {
     "drizzle-orm": "0.45.2"

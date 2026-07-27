@@ -1,23 +1,21 @@
 import { eq } from 'drizzle-orm';
-import { Elysia } from 'elysia';
-import * as v from 'valibot';
+import { Elysia, t } from 'elysia';
 /* eslint-disable @typescript-eslint/no-unsafe-type-assertion */
 
-import { elysiaJson as json } from '../lib/apiResponse';
 import { requireAdminOrPermission, type AuthContext } from '../lib/elysia-guards';
 import { syncAllFilters } from '../lib/syncAllFilters';
 import { db, tables } from '../shared/db';
 import { DEFAULT_CHANNEL_MIX } from '../shared/filterDefaults';
 
-const ChannelMixSchema = v.object({
-  enabled: v.boolean(),
-  leftToLeft: v.pipe(v.number(), v.minValue(0), v.maxValue(1)),
-  leftToRight: v.pipe(v.number(), v.minValue(0), v.maxValue(1)),
-  rightToLeft: v.pipe(v.number(), v.minValue(0), v.maxValue(1)),
-  rightToRight: v.pipe(v.number(), v.minValue(0), v.maxValue(1)),
+const ChannelMixSchema = t.Object({
+  enabled: t.Boolean(),
+  leftToLeft: t.Number({ minimum: 0, maximum: 1 }),
+  leftToRight: t.Number({ minimum: 0, maximum: 1 }),
+  rightToLeft: t.Number({ minimum: 0, maximum: 1 }),
+  rightToRight: t.Number({ minimum: 0, maximum: 1 }),
 });
 
-type ChannelMixSettings = v.InferOutput<typeof ChannelMixSchema>;
+type ChannelMixSettings = typeof ChannelMixSchema.static;
 
 // ---------------------------------------------------------------------------
 // Query helpers
@@ -73,7 +71,7 @@ export const channelMixPlugin = new Elysia({ prefix: '/settings/channelmix' })
     if (guardErr) {
       return guardErr;
     }
-    return json(fetchChannelMixSettings());
+    return fetchChannelMixSettings();
   })
   .patch(
     '/',
@@ -88,7 +86,7 @@ export const channelMixPlugin = new Elysia({ prefix: '/settings/channelmix' })
       upsertChannelMixSettings(body);
       await syncAllFilters();
 
-      return json(body);
+      return body;
     },
     { body: ChannelMixSchema }
   );

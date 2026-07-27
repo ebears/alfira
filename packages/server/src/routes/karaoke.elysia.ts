@@ -1,23 +1,21 @@
 import { eq } from 'drizzle-orm';
-import { Elysia } from 'elysia';
-import * as v from 'valibot';
+import { Elysia, t } from 'elysia';
 /* eslint-disable @typescript-eslint/no-unsafe-type-assertion */
 
-import { elysiaJson as json } from '../lib/apiResponse';
 import { requireAdminOrPermission, type AuthContext } from '../lib/elysia-guards';
 import { syncAllFilters } from '../lib/syncAllFilters';
 import { db, tables } from '../shared/db';
 import { DEFAULT_KARAOKE } from '../shared/filterDefaults';
 
-const KaraokeSchema = v.object({
-  enabled: v.boolean(),
-  level: v.pipe(v.number(), v.minValue(0), v.maxValue(1)),
-  monoLevel: v.pipe(v.number(), v.minValue(0), v.maxValue(1)),
-  filterBand: v.pipe(v.number(), v.minValue(50), v.maxValue(10000)),
-  filterWidth: v.pipe(v.number(), v.minValue(10), v.maxValue(10000)),
+const KaraokeSchema = t.Object({
+  enabled: t.Boolean(),
+  level: t.Number({ minimum: 0, maximum: 1 }),
+  monoLevel: t.Number({ minimum: 0, maximum: 1 }),
+  filterBand: t.Number({ minimum: 50, maximum: 10000 }),
+  filterWidth: t.Number({ minimum: 10, maximum: 10000 }),
 });
 
-type KaraokeSettings = v.InferOutput<typeof KaraokeSchema>;
+type KaraokeSettings = typeof KaraokeSchema.static;
 
 // ---------------------------------------------------------------------------
 // Query helpers
@@ -73,7 +71,7 @@ export const karaokePlugin = new Elysia({ prefix: '/settings/karaoke' })
     if (guardErr) {
       return guardErr;
     }
-    return json(fetchKaraokeSettings());
+    return fetchKaraokeSettings();
   })
   .patch(
     '/',
@@ -88,7 +86,7 @@ export const karaokePlugin = new Elysia({ prefix: '/settings/karaoke' })
       upsertKaraokeSettings(body);
       await syncAllFilters();
 
-      return json(body);
+      return body;
     },
     { body: KaraokeSchema }
   );

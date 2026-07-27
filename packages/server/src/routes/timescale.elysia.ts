@@ -1,9 +1,7 @@
 import { eq } from 'drizzle-orm';
-import { Elysia } from 'elysia';
-import * as v from 'valibot';
+import { Elysia, t } from 'elysia';
 /* eslint-disable @typescript-eslint/no-unsafe-type-assertion */
 
-import { elysiaJson as json } from '../lib/apiResponse';
 import { getGuildId } from '../lib/config';
 import { requireAdminOrPermission, type AuthContext } from '../lib/elysia-guards';
 import { emitPlayerUpdate } from '../lib/socket';
@@ -12,14 +10,14 @@ import { db, tables } from '../shared/db';
 import { DEFAULT_TIMESCALE } from '../shared/filterDefaults';
 import { getPlayer } from '../startDiscord';
 
-const TimescaleSchema = v.object({
-  enabled: v.boolean(),
-  speed: v.pipe(v.number(), v.minValue(0.5), v.maxValue(2)),
-  pitch: v.pipe(v.number(), v.minValue(0.5), v.maxValue(2)),
-  rate: v.pipe(v.number(), v.minValue(0.5), v.maxValue(2)),
+const TimescaleSchema = t.Object({
+  enabled: t.Boolean(),
+  speed: t.Number({ minimum: 0.5, maximum: 2 }),
+  pitch: t.Number({ minimum: 0.5, maximum: 2 }),
+  rate: t.Number({ minimum: 0.5, maximum: 2 }),
 });
 
-type TimescaleSettings = v.InferOutput<typeof TimescaleSchema>;
+type TimescaleSettings = typeof TimescaleSchema.static;
 
 // ---------------------------------------------------------------------------
 // Query helpers
@@ -72,7 +70,7 @@ export const timescalePlugin = new Elysia({ prefix: '/settings/timescale' })
     if (guardErr) {
       return guardErr;
     }
-    return json(fetchTimescaleSettings());
+    return fetchTimescaleSettings();
   })
   .patch(
     '/',
@@ -94,7 +92,7 @@ export const timescalePlugin = new Elysia({ prefix: '/settings/timescale' })
         emitPlayerUpdate(player.getQueueState());
       }
 
-      return json(body);
+      return body;
     },
     { body: TimescaleSchema }
   );

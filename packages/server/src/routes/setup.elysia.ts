@@ -1,9 +1,7 @@
 import { eq } from 'drizzle-orm';
-import { Elysia } from 'elysia';
-import * as v from 'valibot';
+import { Elysia, t } from 'elysia';
 /* eslint-disable @typescript-eslint/no-unsafe-type-assertion */
 
-import { elysiaJson as json } from '../lib/apiResponse';
 import { refreshGuildId } from '../lib/config';
 import { botHeaders, fetchGuildRoles } from '../lib/discordRoles';
 import { requireSetupMode, type AuthContext } from '../lib/elysia-guards';
@@ -26,14 +24,14 @@ const channelsCache = new Map<string, CacheEntry<SetupChannel[]>>();
 // ---------------------------------------------------------------------------
 // Request body schema for POST /api/setup/complete
 // ---------------------------------------------------------------------------
-const SetupCompleteSchema = v.object({
-  guildId: v.pipe(v.string(), v.minLength(1)),
-  adminRoleIds: v.pipe(v.string(), v.minLength(1)),
-  voiceIdleTimeoutMinutes: v.pipe(v.number(), v.integer(), v.minValue(1), v.maxValue(120)),
-  afkNotificationChannelId: v.optional(v.string()),
-  requestNotificationChannelId: v.optional(v.string()),
-  publicUrl: v.optional(v.string()),
-  enabledSources: v.optional(v.string()),
+const SetupCompleteSchema = t.Object({
+  guildId: t.String({ minLength: 1 }),
+  adminRoleIds: t.String({ minLength: 1 }),
+  voiceIdleTimeoutMinutes: t.Integer({ minimum: 1, maximum: 120 }),
+  afkNotificationChannelId: t.Optional(t.String()),
+  requestNotificationChannelId: t.Optional(t.String()),
+  publicUrl: t.Optional(t.String()),
+  enabledSources: t.Optional(t.String()),
 });
 
 // ---------------------------------------------------------------------------
@@ -126,7 +124,7 @@ async function fetchGuildChannels(guildId: string): Promise<SetupChannel[]> {
   return result;
 }
 
-function saveSetupConfig(data: v.InferOutput<typeof SetupCompleteSchema>): void {
+function saveSetupConfig(data: typeof SetupCompleteSchema.static): void {
   const { guildId, adminRoleIds, voiceIdleTimeoutMinutes: timeout } = data;
   const afkNotificationChannelId = data.afkNotificationChannelId ?? null;
   const requestNotificationChannelId = data.requestNotificationChannelId ?? null;
@@ -178,7 +176,7 @@ export const setupPlugin = new Elysia({ prefix: '/setup' })
       const row = fetchSetupStatus();
 
       if (!row) {
-        return json({
+        return Response.json({
           setupCompleted: false,
           guildName: null,
           clientId: process.env.DISCORD_CLIENT_ID ?? '',
@@ -190,13 +188,13 @@ export const setupPlugin = new Elysia({ prefix: '/setup' })
         guildName = await fetchGuildName(row.guildId);
       }
 
-      return json({
+      return Response.json({
         setupCompleted: row.setupCompleted,
         guildName,
         clientId: process.env.DISCORD_CLIENT_ID ?? '',
       });
     } catch {
-      return json({
+      return Response.json({
         setupCompleted: false,
         guildName: null,
         clientId: process.env.DISCORD_CLIENT_ID ?? '',
@@ -208,7 +206,7 @@ export const setupPlugin = new Elysia({ prefix: '/setup' })
       const row = fetchSetupStatus();
 
       if (!row) {
-        return json({
+        return Response.json({
           setupCompleted: false,
           guildName: null,
           clientId: process.env.DISCORD_CLIENT_ID ?? '',
@@ -220,13 +218,13 @@ export const setupPlugin = new Elysia({ prefix: '/setup' })
         guildName = await fetchGuildName(row.guildId);
       }
 
-      return json({
+      return Response.json({
         setupCompleted: row.setupCompleted,
         guildName,
         clientId: process.env.DISCORD_CLIENT_ID ?? '',
       });
     } catch {
-      return json({
+      return Response.json({
         setupCompleted: false,
         guildName: null,
         clientId: process.env.DISCORD_CLIENT_ID ?? '',
@@ -243,10 +241,10 @@ export const setupPlugin = new Elysia({ prefix: '/setup' })
     return (async (): Promise<Response> => {
       try {
         const guilds = await fetchBotGuilds();
-        return json({ guilds });
+        return Response.json({ guilds });
       } catch (error) {
         logger.error({ error }, 'Error fetching bot guilds');
-        return json({ error: 'Could not fetch guild list.' }, 502);
+        return Response.json({ error: 'Could not fetch guild list.' }, { status: 502 });
       }
     })();
   })
@@ -259,11 +257,11 @@ export const setupPlugin = new Elysia({ prefix: '/setup' })
 
     const guildId = (ctx.query as Record<string, string>).guildId;
     if (!guildId) {
-      return json({ error: 'guildId query parameter is required.' }, 400);
+      return Response.json({ error: 'guildId query parameter is required.' }, { status: 400 });
     }
 
     const roles = await fetchGuildRoles(guildId);
-    return json({ roles });
+    return Response.json({ roles });
   })
   .get('/channels', async (ctx: Record<string, unknown>) => {
     const { user, isAdmin } = getAuth(ctx);
@@ -274,15 +272,15 @@ export const setupPlugin = new Elysia({ prefix: '/setup' })
 
     const guildId = (ctx.query as Record<string, string>).guildId;
     if (!guildId) {
-      return json({ error: 'guildId query parameter is required.' }, 400);
+      return Response.json({ error: 'guildId query parameter is required.' }, { status: 400 });
     }
 
     try {
       const channels = await fetchGuildChannels(guildId);
-      return json({ channels });
+      return Response.json({ channels });
     } catch (error) {
       logger.error({ error }, 'Error fetching guild channels');
-      return json({ error: 'Could not fetch channels.' }, 502);
+      return Response.json({ error: 'Could not fetch channels.' }, { status: 502 });
     }
   })
   .post(
@@ -294,14 +292,14 @@ export const setupPlugin = new Elysia({ prefix: '/setup' })
         return guardErr;
       }
 
-      const body = ctx.body as v.InferOutput<typeof SetupCompleteSchema>;
+      const body = ctx.body as typeof SetupCompleteSchema.static;
 
       try {
         saveSetupConfig(body);
-        return json({ success: true });
+        return Response.json({ success: true });
       } catch (error) {
         logger.error({ error }, 'Failed to save setup configuration');
-        return json({ error: 'Could not save configuration.' }, 500);
+        return Response.json({ error: 'Could not save configuration.' }, { status: 500 });
       }
     },
     { body: SetupCompleteSchema }

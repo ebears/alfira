@@ -1,10 +1,8 @@
 import { eq } from 'drizzle-orm';
-import { Elysia } from 'elysia';
-import * as v from 'valibot';
+import { Elysia, t } from 'elysia';
 /* eslint-disable @typescript-eslint/no-unsafe-type-assertion */
 
 import { type GuildPlayer } from '../GuildPlayer';
-import { elysiaJson as json } from '../lib/apiResponse';
 import { getGuildId } from '../lib/config';
 import {
   requireAdminOrPermission,
@@ -113,37 +111,37 @@ async function resolveUrlTempSong(
 // Schemas
 // ---------------------------------------------------------------------------
 
-const PlaySchema = v.object({
-  playlistId: v.optional(v.string()),
-  mode: v.optional(v.picklist(['sequential', 'random'])),
-  loop: v.optional(v.picklist(['off', 'song', 'queue'])),
-  startFromSongId: v.optional(v.string()),
+const PlaySchema = t.Object({
+  playlistId: t.Optional(t.String()),
+  mode: t.Optional(t.Union([t.Literal('sequential'), t.Literal('random')])),
+  loop: t.Optional(t.Union([t.Literal('off'), t.Literal('song'), t.Literal('queue')])),
+  startFromSongId: t.Optional(t.String()),
 });
 
-const LoopSchema = v.object({
-  mode: v.picklist(['off', 'song', 'queue']),
+const LoopSchema = t.Object({
+  mode: t.Union([t.Literal('off'), t.Literal('song'), t.Literal('queue')]),
 });
 
-const UrlSchema = v.object({
-  url: v.optional(v.string()),
+const UrlSchema = t.Object({
+  url: t.Optional(t.String()),
 });
 
-const QuickAddPlaylistSchema = v.object({
-  url: v.optional(v.string()),
-  maxVideos: v.optional(v.number()),
+const QuickAddPlaylistSchema = t.Object({
+  url: t.Optional(t.String()),
+  maxVideos: t.Optional(t.Number()),
 });
 
-const SeekSchema = v.object({
-  position: v.number(),
+const SeekSchema = t.Object({
+  position: t.Number(),
 });
 
-const SongIdSchema = v.object({
-  songId: v.string(),
+const SongIdSchema = t.Object({
+  songId: t.String(),
 });
 
-const ReorderSchema = v.object({
-  songIds: v.array(v.string()),
-  target: v.optional(v.picklist(['queue', 'priority'])),
+const ReorderSchema = t.Object({
+  songIds: t.Array(t.String()),
+  target: t.Optional(t.Union([t.Literal('queue'), t.Literal('priority')])),
 });
 
 // ---------------------------------------------------------------------------
@@ -161,7 +159,7 @@ export const playerPlugin = new Elysia({ prefix: '/player' })
     const player = getPlayer(getGuildId());
 
     if (!player) {
-      return json({
+      return Response.json({
         isPlaying: false,
         isPaused: false,
         isConnectedToVoice: lavalink.isGuildConnected(getGuildId()),
@@ -178,7 +176,7 @@ export const playerPlugin = new Elysia({ prefix: '/player' })
       });
     }
 
-    return json(player.getQueueState());
+    return Response.json(player.getQueueState());
   })
   .patch(
     '/queue/reorder',
@@ -194,10 +192,10 @@ export const playerPlugin = new Elysia({ prefix: '/player' })
         return voiceErr;
       }
 
-      const { songIds, target } = ctx.body as v.InferOutput<typeof ReorderSchema>;
+      const { songIds, target } = ctx.body as typeof ReorderSchema.static;
 
       if (songIds.length === 0) {
-        return json({ error: 'songIds must not be empty.' }, 400);
+        return Response.json({ error: 'songIds must not be empty.' }, { status: 400 });
       }
 
       const playerResult = requirePlayer();
@@ -212,10 +210,13 @@ export const playerPlugin = new Elysia({ prefix: '/player' })
           playerResult.player.reorderQueue(songIds);
         }
       } catch (error) {
-        return json({ error: error instanceof Error ? error.message : 'Invalid reorder.' }, 422);
+        return Response.json(
+          { error: error instanceof Error ? error.message : 'Invalid reorder.' },
+          { status: 422 }
+        );
       }
 
-      return json({ message: 'Queue reordered.' });
+      return Response.json({ message: 'Queue reordered.' });
     },
     { body: ReorderSchema }
   )
@@ -239,10 +240,10 @@ export const playerPlugin = new Elysia({ prefix: '/player' })
 
     const promoted = playerResult.player.promoteSong(songId);
     if (!promoted) {
-      return json({ error: 'Song not found in queue.' }, 404);
+      return Response.json({ error: 'Song not found in queue.' }, { status: 404 });
     }
 
-    return json({ message: 'Song promoted to Up Next.' });
+    return Response.json({ message: 'Song promoted to Up Next.' });
   })
   .post('/queue/:songId/demote', (ctx: Record<string, unknown>) => {
     const { user, isAdmin } = getAuth(ctx);
@@ -264,10 +265,10 @@ export const playerPlugin = new Elysia({ prefix: '/player' })
 
     const demoted = playerResult.player.demoteSong(songId);
     if (!demoted) {
-      return json({ error: 'Song not found in Up Next.' }, 404);
+      return Response.json({ error: 'Song not found in Up Next.' }, { status: 404 });
     }
 
-    return json({ message: 'Song moved to queue.' });
+    return Response.json({ message: 'Song moved to queue.' });
   })
   .delete('/queue/:songId', (ctx: Record<string, unknown>) => {
     const { user, isAdmin } = getAuth(ctx);
@@ -289,10 +290,10 @@ export const playerPlugin = new Elysia({ prefix: '/player' })
 
     const removed = playerResult.player.removeSongById(songId);
     if (!removed) {
-      return json({ error: 'Song not found in queue.' }, 404);
+      return Response.json({ error: 'Song not found in queue.' }, { status: 404 });
     }
 
-    return json({ message: 'Song removed from queue.' });
+    return Response.json({ message: 'Song removed from queue.' });
   })
   .post(
     '/add-to-priority',
@@ -308,11 +309,11 @@ export const playerPlugin = new Elysia({ prefix: '/player' })
         return voiceErr;
       }
 
-      const { songId } = ctx.body as v.InferOutput<typeof SongIdSchema>;
+      const { songId } = ctx.body as typeof SongIdSchema.static;
 
       const song = fetchSongById(songId);
       if (!song) {
-        return json({ error: 'Song not found.' }, 404);
+        return Response.json({ error: 'Song not found.' }, { status: 404 });
       }
 
       const discordId = (user as { discordId: string }).discordId;
@@ -331,7 +332,7 @@ export const playerPlugin = new Elysia({ prefix: '/player' })
 
       await player.addToPriorityQueue(queuedSong);
 
-      return json({
+      return Response.json({
         message: `Added "${song.nickname ?? song.title}" to Up Next.`,
         song: queuedSong,
       });
@@ -356,7 +357,7 @@ export const playerPlugin = new Elysia({ prefix: '/player' })
     }
 
     playerResult.player.clearQueue();
-    return json({ message: 'Queue cleared.' });
+    return Response.json({ message: 'Queue cleared.' });
   })
   .post('/leave', (ctx: Record<string, unknown>) => {
     const { user, isAdmin } = getAuth(ctx);
@@ -373,14 +374,14 @@ export const playerPlugin = new Elysia({ prefix: '/player' })
     const player = getPlayer(getGuildId());
 
     if (!player && !lavalink.isGuildConnected(getGuildId())) {
-      return json({ error: 'The bot is not in a voice channel.' }, 409);
+      return Response.json({ error: 'The bot is not in a voice channel.' }, { status: 409 });
     }
 
     if (player) {
       player.stop();
     }
 
-    return json({ message: 'Left the voice channel.' });
+    return Response.json({ message: 'Left the voice channel.' });
   })
   .post(
     '/loop',
@@ -396,14 +397,14 @@ export const playerPlugin = new Elysia({ prefix: '/player' })
         return voiceErr;
       }
 
-      const { mode } = ctx.body as v.InferOutput<typeof LoopSchema>;
+      const { mode } = ctx.body as typeof LoopSchema.static;
       const playerResult = requirePlayer();
       if (!playerResult.ok) {
         return playerResult.response;
       }
 
       playerResult.player.setLoopMode(mode);
-      return json({ loopMode: mode });
+      return Response.json({ loopMode: mode });
     },
     { body: LoopSchema }
   )
@@ -421,13 +422,13 @@ export const playerPlugin = new Elysia({ prefix: '/player' })
         return voiceErr;
       }
 
-      const body = ctx.body as v.InferOutput<typeof UrlSchema>;
+      const body = ctx.body as typeof UrlSchema.static;
       const result = await resolveUrlTempSong(ctx, body);
       if (!result.ok) {
         return result.response;
       }
       await result.player.replaceQueueAndPlay([result.queuedSong]);
-      return json({
+      return Response.json({
         message: `Now playing "${result.metadataTitle}".`,
         song: result.queuedSong,
       });
@@ -452,7 +453,7 @@ export const playerPlugin = new Elysia({ prefix: '/player' })
     }
 
     const isPaused = playingResult.player.togglePause();
-    return json({ isPaused });
+    return Response.json({ isPaused });
   })
   .post(
     '/play',
@@ -468,7 +469,7 @@ export const playerPlugin = new Elysia({ prefix: '/player' })
         return voiceErr;
       }
 
-      const body = ctx.body as v.InferOutput<typeof PlaySchema>;
+      const body = ctx.body as typeof PlaySchema.static;
       const { playlistId, mode, loop, startFromSongId } = body;
 
       const discordId = (user as { discordId: string }).discordId;
@@ -484,12 +485,12 @@ export const playerPlugin = new Elysia({ prefix: '/player' })
         const playlist = await findPlaylistWithSongs(playlistId);
 
         if (!playlist) {
-          return json({ error: 'Playlist not found.' }, 404);
+          return Response.json({ error: 'Playlist not found.' }, { status: 404 });
         }
 
         const accessResult = canAccessPlaylist(playlist, user ?? undefined);
         if (!accessResult.ok) {
-          return json({ error: accessResult.error }, 403);
+          return Response.json({ error: accessResult.error }, { status: 403 });
         }
 
         dbSongs = playlist.songs.map((ps) => ps.song);
@@ -498,14 +499,14 @@ export const playerPlugin = new Elysia({ prefix: '/player' })
       }
 
       if (dbSongs.length === 0) {
-        return json({ error: 'No songs found to play.' }, 422);
+        return Response.json({ error: 'No songs found to play.' }, { status: 422 });
       }
 
       if (startFromSongId) {
         const startIndex = dbSongs.findIndex((s) => s.id === startFromSongId);
 
         if (startIndex === -1) {
-          return json({ error: 'Start song not found in playlist.' }, 404);
+          return Response.json({ error: 'Start song not found in playlist.' }, { status: 404 });
         }
 
         dbSongs = [...dbSongs.slice(startIndex), ...dbSongs.slice(0, startIndex)];
@@ -529,7 +530,7 @@ export const playerPlugin = new Elysia({ prefix: '/player' })
         await player.addToQueue(queuedSongs);
       }
 
-      return json({ message: `Queued ${queuedSongs.length} song(s).` });
+      return Response.json({ message: `Queued ${queuedSongs.length} song(s).` });
     },
     { body: PlaySchema }
   )
@@ -547,13 +548,13 @@ export const playerPlugin = new Elysia({ prefix: '/player' })
         return voiceErr;
       }
 
-      const body = ctx.body as v.InferOutput<typeof UrlSchema>;
+      const body = ctx.body as typeof UrlSchema.static;
       const result = await resolveUrlTempSong(ctx, body);
       if (!result.ok) {
         return result.response;
       }
       await result.player.addToPriorityQueue(result.queuedSong);
-      return json({
+      return Response.json({
         message: `Added "${result.metadataTitle}" to the queue.`,
         song: result.queuedSong,
       });
@@ -574,7 +575,7 @@ export const playerPlugin = new Elysia({ prefix: '/player' })
         return voiceErr;
       }
 
-      const body = ctx.body as v.InferOutput<typeof QuickAddPlaylistSchema>;
+      const body = ctx.body as typeof QuickAddPlaylistSchema.static;
       const maxVideos = clampMaxVideos(body.maxVideos);
       const urlResult = validatePlaylistUrl(body.url);
       if (!urlResult.ok) {
@@ -611,7 +612,7 @@ export const playerPlugin = new Elysia({ prefix: '/player' })
 
       await player.addToQueue(queuedSongs);
 
-      return json({
+      return Response.json({
         message: `Added ${queuedSongs.length} song(s) from "${playlistMetadata.title}" to the queue.`,
         playlistTitle: playlistMetadata.title,
         totalVideos: playlistMetadata.videoCount,
@@ -635,7 +636,7 @@ export const playerPlugin = new Elysia({ prefix: '/player' })
         return voiceErr;
       }
 
-      const { position } = ctx.body as v.InferOutput<typeof SeekSchema>;
+      const { position } = ctx.body as typeof SeekSchema.static;
 
       const playingResult = requirePlaying();
       if (!playingResult.ok) {
@@ -643,7 +644,7 @@ export const playerPlugin = new Elysia({ prefix: '/player' })
       }
 
       await playingResult.player.seek(position);
-      return json(playingResult.player.getQueueState());
+      return Response.json(playingResult.player.getQueueState());
     },
     { body: SeekSchema }
   )
@@ -662,11 +663,11 @@ export const playerPlugin = new Elysia({ prefix: '/player' })
     const player = getPlayer(getGuildId());
 
     if (!player || player.getQueue().length === 0) {
-      return json({ error: 'No songs in the queue to shuffle.' }, 409);
+      return Response.json({ error: 'No songs in the queue to shuffle.' }, { status: 409 });
     }
 
     player.shuffle();
-    return json({ message: 'Queue shuffled.' });
+    return Response.json({ message: 'Queue shuffled.' });
   })
   .post('/skip', async (ctx: Record<string, unknown>) => {
     const { user, isAdmin } = getAuth(ctx);
@@ -686,7 +687,7 @@ export const playerPlugin = new Elysia({ prefix: '/player' })
     }
 
     await playingResult.player.skip();
-    return json({ message: 'Skipped.' });
+    return Response.json({ message: 'Skipped.' });
   })
   .post('/unshuffle', (ctx: Record<string, unknown>) => {
     const { user, isAdmin } = getAuth(ctx);
@@ -706,5 +707,5 @@ export const playerPlugin = new Elysia({ prefix: '/player' })
     }
 
     playerResult.player.unshuffle();
-    return json({ message: 'Queue order restored.' });
+    return Response.json({ message: 'Queue order restored.' });
   });

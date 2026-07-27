@@ -1,9 +1,7 @@
 import { eq } from 'drizzle-orm';
-import { Elysia } from 'elysia';
-import * as v from 'valibot';
+import { Elysia, t } from 'elysia';
 /* eslint-disable @typescript-eslint/no-unsafe-type-assertion */
 
-import { elysiaJson as json } from '../lib/apiResponse';
 import { requireAdminOrPermission, type AuthContext } from '../lib/elysia-guards';
 import { type GeneralSettings } from '../shared';
 import { db, tables } from '../shared/db';
@@ -33,16 +31,16 @@ const SETTINGS_COLUMNS = {
   enabledSources: tables.guildSettings.enabledSources,
 };
 
-const GeneralSettingsPatchSchema = v.partial(
-  v.object({
-    adminRoleIds: v.pipe(v.string(), v.minLength(1)),
-    voiceIdleTimeoutMinutes: v.pipe(v.number(), v.integer(), v.minValue(1), v.maxValue(120)),
-    afkNotificationChannelId: v.nullable(v.string()),
-    requestNotificationChannelId: v.nullable(v.string()),
-    notifyOnApproved: v.boolean(),
-    notifyOnDenied: v.boolean(),
-    publicUrl: v.nullable(v.string()),
-    enabledSources: v.pipe(v.string(), v.minLength(1)),
+const GeneralSettingsPatchSchema = t.Partial(
+  t.Object({
+    adminRoleIds: t.String({ minLength: 1 }),
+    voiceIdleTimeoutMinutes: t.Integer({ minimum: 1, maximum: 120 }),
+    afkNotificationChannelId: t.Nullable(t.String()),
+    requestNotificationChannelId: t.Nullable(t.String()),
+    notifyOnApproved: t.Boolean(),
+    notifyOnDenied: t.Boolean(),
+    publicUrl: t.Nullable(t.String()),
+    enabledSources: t.String({ minLength: 1 }),
   })
 );
 
@@ -106,7 +104,7 @@ export const generalSettingsPlugin = new Elysia({ prefix: '/settings/general' })
     }
 
     const settings = fetchGeneralSettings();
-    return json(settings ?? defaultGeneralSettings());
+    return Response.json(settings ?? defaultGeneralSettings());
   })
   .patch(
     '/',
@@ -117,7 +115,7 @@ export const generalSettingsPlugin = new Elysia({ prefix: '/settings/general' })
         return guardErr;
       }
 
-      const body = ctx.body as v.InferOutput<typeof GeneralSettingsPatchSchema>;
+      const body = ctx.body as typeof GeneralSettingsPatchSchema.static;
 
       const updates: Record<string, unknown> = {};
 
@@ -154,7 +152,7 @@ export const generalSettingsPlugin = new Elysia({ prefix: '/settings/general' })
       }
 
       if (Object.keys(updates).length === 0) {
-        return json({ error: 'No fields to update' }, 400);
+        return Response.json({ error: 'No fields to update' }, { status: 400 });
       }
 
       upsertGeneralSettings(updates);
@@ -166,10 +164,10 @@ export const generalSettingsPlugin = new Elysia({ prefix: '/settings/general' })
 
       const settings = fetchGeneralSettings();
       if (!settings) {
-        return json({ error: 'Settings not found after update.' }, 500);
+        return Response.json({ error: 'Settings not found after update.' }, { status: 500 });
       }
 
-      return json(settings);
+      return settings;
     },
     { body: GeneralSettingsPatchSchema }
   );

@@ -2,7 +2,6 @@ import { eq } from 'drizzle-orm';
 import { Elysia } from 'elysia';
 /* eslint-disable @typescript-eslint/no-unsafe-type-assertion */
 
-import { elysiaJson as json } from '../lib/apiResponse';
 import { requireAdminOrPermission, type AuthContext } from '../lib/elysia-guards';
 import { EQ_BAND_COLUMNS, eqBandsFromRow } from '../lib/eqBands';
 import { db, tables } from '../shared/db';
@@ -153,6 +152,6 @@ export const filtersPlugin = new Elysia({ prefix: '/settings/filters' }).get(
     if (guardErr) {
       return guardErr;
     }
-    return json(fetchAllFilters());
+    return fetchAllFilters();
   }
 );
