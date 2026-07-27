@@ -1,10 +1,10 @@
 import { eq } from 'drizzle-orm';
-import { type Elysia } from 'elysia';
+import { Elysia } from 'elysia';
 import * as v from 'valibot';
 /* eslint-disable @typescript-eslint/no-unsafe-type-assertion */
 
 import { elysiaJson as json } from '../lib/apiResponse';
-import { requireAdminOrPermission } from '../lib/elysia-guards';
+import { requireAdminOrPermission, type AuthContext } from '../lib/elysia-guards';
 import { syncAllFilters } from '../lib/syncAllFilters';
 import { db, tables } from '../shared/db';
 import { DEFAULT_DISTORTION } from '../shared/filterDefaults';
@@ -75,45 +75,36 @@ function upsertDistortionSettings(data: DistortionSettings): void {
 }
 
 // ---------------------------------------------------------------------------
-// Handlers
-// ---------------------------------------------------------------------------
-
-function handleGet(ctx: Record<string, unknown>): Response {
-  const guardErr = requireAdminOrPermission(
-    { user: ctx.user as never, isAdmin: ctx.isAdmin as boolean },
-    'audio.manage'
-  );
-  if (guardErr) {
-    return guardErr;
-  }
-
-  return json(fetchDistortionSettings());
-}
-
-async function handlePatch(ctx: Record<string, unknown>): Promise<Response> {
-  const guardErr = requireAdminOrPermission(
-    { user: ctx.user as never, isAdmin: ctx.isAdmin as boolean },
-    'audio.manage'
-  );
-  if (guardErr) {
-    return guardErr;
-  }
-
-  const body = ctx.body as DistortionSettings;
-  upsertDistortionSettings(body);
-  await syncAllFilters();
-
-  return json(body);
-}
-
-// ---------------------------------------------------------------------------
 // Plugin
 // ---------------------------------------------------------------------------
 
-export function distortionPlugin(app: Elysia): Elysia {
-  return app
-    .get('/settings/distortion', handleGet as never)
-    .patch('/settings/distortion', handlePatch as never, {
-      body: DistortionSchema,
-    }) as unknown as Elysia;
+function getAuth(ctx: Record<string, unknown>): AuthContext {
+  return ctx as unknown as AuthContext;
 }
+
+export const distortionPlugin = new Elysia({ prefix: '/settings/distortion' })
+  .get('/', ((ctx: Record<string, unknown>) => {
+    const { user, isAdmin } = getAuth(ctx);
+    const guardErr = requireAdminOrPermission({ user, isAdmin }, 'audio.manage');
+    if (guardErr) {
+      return guardErr;
+    }
+    return json(fetchDistortionSettings());
+  }) as never)
+  .patch(
+    '/',
+    (async (ctx: Record<string, unknown>) => {
+      const { user, isAdmin } = getAuth(ctx);
+      const guardErr = requireAdminOrPermission({ user, isAdmin }, 'audio.manage');
+      if (guardErr) {
+        return guardErr;
+      }
+
+      const body = ctx.body as DistortionSettings;
+      upsertDistortionSettings(body);
+      await syncAllFilters();
+
+      return json(body);
+    }) as never,
+    { body: DistortionSchema }
+  ) as unknown as Elysia;

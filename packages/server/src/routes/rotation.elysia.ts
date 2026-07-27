@@ -1,10 +1,10 @@
 import { eq } from 'drizzle-orm';
-import { type Elysia } from 'elysia';
+import { Elysia } from 'elysia';
 import * as v from 'valibot';
 /* eslint-disable @typescript-eslint/no-unsafe-type-assertion */
 
 import { elysiaJson as json } from '../lib/apiResponse';
-import { requireAdminOrPermission } from '../lib/elysia-guards';
+import { requireAdminOrPermission, type AuthContext } from '../lib/elysia-guards';
 import { syncAllFilters } from '../lib/syncAllFilters';
 import { db, tables } from '../shared/db';
 import { DEFAULT_ROTATION } from '../shared/filterDefaults';
@@ -34,45 +34,36 @@ function upsertRotationSettings(data: { enabled: boolean; rotationHz: number }):
 }
 
 // ---------------------------------------------------------------------------
-// Handlers
-// ---------------------------------------------------------------------------
-
-function handleGet(ctx: Record<string, unknown>): Response {
-  const guardErr = requireAdminOrPermission(
-    { user: ctx.user as never, isAdmin: ctx.isAdmin as boolean },
-    'audio.manage'
-  );
-  if (guardErr) {
-    return guardErr;
-  }
-
-  return json(fetchRotationSettings());
-}
-
-async function handlePatch(ctx: Record<string, unknown>): Promise<Response> {
-  const guardErr = requireAdminOrPermission(
-    { user: ctx.user as never, isAdmin: ctx.isAdmin as boolean },
-    'audio.manage'
-  );
-  if (guardErr) {
-    return guardErr;
-  }
-
-  const body = ctx.body as v.InferOutput<typeof RotationSchema>;
-  upsertRotationSettings(body);
-  await syncAllFilters();
-
-  return json(body);
-}
-
-// ---------------------------------------------------------------------------
 // Plugin
 // ---------------------------------------------------------------------------
 
-export function rotationPlugin(app: Elysia): Elysia {
-  return app
-    .get('/settings/rotation', handleGet as never)
-    .patch('/settings/rotation', handlePatch as never, {
-      body: RotationSchema,
-    }) as unknown as Elysia;
+function getAuth(ctx: Record<string, unknown>): AuthContext {
+  return ctx as unknown as AuthContext;
 }
+
+export const rotationPlugin = new Elysia({ prefix: '/settings/rotation' })
+  .get('/', ((ctx: Record<string, unknown>) => {
+    const { user, isAdmin } = getAuth(ctx);
+    const guardErr = requireAdminOrPermission({ user, isAdmin }, 'audio.manage');
+    if (guardErr) {
+      return guardErr;
+    }
+    return json(fetchRotationSettings());
+  }) as never)
+  .patch(
+    '/',
+    (async (ctx: Record<string, unknown>) => {
+      const { user, isAdmin } = getAuth(ctx);
+      const guardErr = requireAdminOrPermission({ user, isAdmin }, 'audio.manage');
+      if (guardErr) {
+        return guardErr;
+      }
+
+      const body = ctx.body as v.InferOutput<typeof RotationSchema>;
+      upsertRotationSettings(body);
+      await syncAllFilters();
+
+      return json(body);
+    }) as never,
+    { body: RotationSchema }
+  ) as unknown as Elysia;

@@ -1,9 +1,9 @@
 import { eq } from 'drizzle-orm';
-import { type Elysia } from 'elysia';
+import { Elysia } from 'elysia';
 /* eslint-disable @typescript-eslint/no-unsafe-type-assertion */
 
 import { elysiaJson as json } from '../lib/apiResponse';
-import { requireAdminOrPermission } from '../lib/elysia-guards';
+import { requireAdminOrPermission, type AuthContext } from '../lib/elysia-guards';
 import { EQ_BAND_COLUMNS, eqBandsFromRow } from '../lib/eqBands';
 import { db, tables } from '../shared/db';
 import {
@@ -138,25 +138,20 @@ function fetchAllFilters() {
 }
 
 // ---------------------------------------------------------------------------
-// Handler
-// ---------------------------------------------------------------------------
-
-function handleGet(ctx: Record<string, unknown>): Response {
-  const guardErr = requireAdminOrPermission(
-    { user: ctx.user as never, isAdmin: ctx.isAdmin as boolean },
-    'audio.manage'
-  );
-  if (guardErr) {
-    return guardErr;
-  }
-
-  return json(fetchAllFilters());
-}
-
-// ---------------------------------------------------------------------------
 // Plugin
 // ---------------------------------------------------------------------------
 
-export function filtersPlugin(app: Elysia): Elysia {
-  return app.get('/settings/filters', handleGet as never) as unknown as Elysia;
+function getAuth(ctx: Record<string, unknown>): AuthContext {
+  return ctx as unknown as AuthContext;
 }
+
+export const filtersPlugin = new Elysia({ prefix: '/settings/filters' }).get('/', ((
+  ctx: Record<string, unknown>
+) => {
+  const { user, isAdmin } = getAuth(ctx);
+  const guardErr = requireAdminOrPermission({ user, isAdmin }, 'audio.manage');
+  if (guardErr) {
+    return guardErr;
+  }
+  return json(fetchAllFilters());
+}) as never) as unknown as Elysia;

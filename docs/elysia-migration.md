@@ -88,13 +88,11 @@ Six route groups migrated to native Elysia plugins. Auth (`/auth`) was deferred 
 - `packages/server/src/elysia-app.ts` — all 6 route groups removed from `API_LEGACY_ROUTES` and wired as native plugins on `apiApp`. `API_LEGACY_ROUTES` array and `registerLegacyRoutes()` function removed (no remaining legacy routes on `apiApp`).
 - `packages/server/src/lib/elysia-guards.ts` — added `requireSetupMode` and `requireUserInVoice` guards.
 
-### Phase 4a — Migrate `/auth` (1 file, deferred)
+### Phase 4a — Migrate `/auth` to native Elysia plugin
 
 The `/auth` route group (login, callback, refresh, me, logout) has been migrated to a native Elysia plugin. All 5 endpoints are now Elysia-native handlers. The manual `Response` construction for cookie setting is preserved (it's well-tested and robust). The auth plugin uses `elysiaJson()` for JSON responses and reads cookies via the Elysia `deriveAuth` context.
 
-**New files:**
-
-- `packages/server/src/routes/auth.elysia.ts` — 5 endpoints (GET login, GET callback, POST refresh, GET me, POST logout). All helper functions, rate limiting, OAuth2 flow, cookie management, and JWT logic preserved from `routes/auth.ts`.
+**Note:** The auth plugin still uses the original `function authPlugin(app: Elysia): Elysia` mutation pattern because it registers on `authApp` (a separate Elysia instance with `/auth` prefix), not `apiApp`. It can be converted to the `const` + `.use()` pattern as a follow-up.
 
 **Modified files:**
 
@@ -112,26 +110,93 @@ The `/auth` route group (login, callback, refresh, me, logout) has been migrated
 - `packages/server/src/routes/auth.ts` — Legacy auth handler, replaced by `auth.elysia.ts`
 - All legacy `.ts` route files that have `.elysia.ts` equivalents (tags, songs, player, playlists, requests, setup, permissions, compressor, equalizer, karaoke, lowPass, distortion, rotation, timescale, tremolo, vibrato, channelMix, filters, generalSettings)
 
-### Pattern established
+### Phase 5a — Convert all plugins to proper Elysia instances
 
-1. **Extract drizzle queries into helper functions** with clean parameter types — `Record<string, unknown>` handler parameters cause tsgo inference failures on `.where()` calls. Helper functions with `string`/`number` parameters avoid this.
-2. **Handlers do: auth check → extract params → call query helpers → return `Response` objects.** Native plugins use the shared `elysiaJson()` helper from `lib/apiResponse.ts`, which includes `API_SECURITY_HEADERS` (CSP, X-Content-Type-Options, etc.).
-3. **`as never`** for handler type compatibility with Elysia's complex generics. File-level `/* eslint-disable @typescript-eslint/no-unsafe-type-assertion */` suppresses the unavoidable type assertion warnings. Additional file-level disables for `no-unnecessary-condition` and `no-unnecessary-type-assertion` may be needed depending on tsgo's strictness with drizzle return types.
-4. **Route registration:** the plugin function takes an `Elysia` instance, calls `.get()` / `.patch()` / `.delete()`, returns `as unknown as Elysia`. Plugins are chained on `apiApp` with explicit `as unknown as Elysia` casts.
-5. **Guards:** `requireAdminOrPermission(ctx, permission?)` — no permission arg means super-admin only; with permission arg means super-admin OR has the granular permission. Voice check via `requireUserInVoice(ctx)`. Setup mode via `requireSetupMode(ctx)`.
+All 19 route plugins on `apiApp` (excluding `authPlugin` on `authApp`) were converted from the old `function xPlugin(app: Elysia): Elysia` mutation pattern to proper `const xPlugin = new Elysia()` instances composed via `.use()`. The old pattern mutates a passed-in `Elysia` argument; the new pattern creates a standalone Elysia instance with its own prefix and registers it with `apiApp.use(xPlugin)`.
+
+**Plugin pattern (before → after):**
+
+```ts
+// Before: mutation pattern
+export function tagsPlugin(app: Elysia): Elysia {
+  return app
+    .get('/tags', handleGet as never)
+    .get('/tags/:nameLower', handleGetSingle as never)
+    .patch('/tags/:nameLower', handlePatch as never, { body: TagPatchSchema })
+    .delete('/tags/:nameLower', handleDelete as never) as unknown as Elysia;
+}
+// Registration: tagsPlugin(apiApp as unknown as Elysia)
+
+// After: standalone instance with prefix
+export const tagsPlugin = new Elysia({ prefix: '/tags' })
+  .get('/', handleGet as never)
+  .get('/:nameLower', handleGetSingle as never)
+  .patch('/:nameLower', handlePatch as never, { body: TagPatchSchema })
+  .delete('/:nameLower', handleDelete as never) as unknown as Elysia;
+// Registration: apiApp.use(tagsPlugin)
+```
+
+**Auth access pattern (before → after):**
+
+```ts
+// Before: ad-hoc casts scattered throughout each handler
+const guardErr = requireAuth({ user: ctx.user as never, isAdmin: ctx.isAdmin as boolean });
+
+// After: single getAuth() helper per plugin, used at top of each handler
+function getAuth(ctx: Record<string, unknown>): AuthContext {
+  return ctx as unknown as AuthContext;
+}
+// In handler:
+const { user, isAdmin } = getAuth(ctx);
+const guardErr = requireAuth({ user, isAdmin });
+```
+
+**`elysia-app.ts` changes:**
+
+- All `xPlugin(apiApp as unknown as Elysia)` calls replaced with `apiApp.use(xPlugin)` (18 of 19 plugins — `authPlugin` still uses the function pattern on `authApp`)
+- Remaining `as unknown as Elysia` casts: only 4 at the top-level composition layer (`apiApp`, `authApp`, `authPlugin`, and `app` return)
+
+**Files changed:**
+All 19 `.elysia.ts` route files on `apiApp`: `tags`, `channelMix`, `compressor`, `distortion`, `equalizer`, `filters`, `generalSettings`, `karaoke`, `lowPass`, `permissions`, `player`, `playlists`, `requests`, `rotation`, `setup`, `songs`, `timescale`, `tremolo`, `vibrato`.
 
 ## Remaining work
 
-### Phase 5 — Eden treaty on the web client
+### Phase 5b — Eden treaty on the web client
 
-- Replace `web/src/api/client.ts` (~200 lines) + `web/src/api/api.ts` (~80 lines) with `treaty<App>()`
-- Delete `packages/server/src/shared/api.ts` (~400 lines)
-- Update all web components to use Eden's typed proxy instead of shared API functions
-- Keep `client.ts` auth refresh logic wired into Eden's `fetcher` option
+- Create `web/src/api/eden.ts` — Eden treaty client with auth refresh logic in the `fetcher` option and token refresh in `onResponse`
+- Replace `web/src/api/client.ts` (~200 lines) + `web/src/api/api.ts` (~80 lines) with the Eden-based client
+- Replace `packages/server/src/shared/api.ts` (~400 lines) — the typed API functions become thin wrappers calling Eden under the hood, or get replaced entirely once components use Eden directly
+- Update web components to use Eden's typed proxy instead of shared API functions
+- Delete `shared/api.ts` once no longer referenced
+
+### Phase 5c — Auth plugin conversion (optional)
+
+Convert `authPlugin` from the function pattern to a proper Elysia instance:
+
+```ts
+// Before
+export function authPlugin(app: Elysia): Elysia { ... }
+authPlugin(authApp as unknown as Elysia)
+
+// After
+export const authPlugin = new Elysia({ prefix: '/auth' }).get(...).post(...);
+authApp.use(authPlugin);
+```
+
+This is low priority — the auth plugin works correctly as-is and has a single consumer.
+
+### Future — Remove tsgo workarounds
+
+Once tsgo (the Go-based TypeScript compiler in oxlint) improves its handling of Elysia's deeply-nested generic types:
+
+- Remove `as never` casts from handler registrations
+- Remove `as unknown as Elysia` from plugin exports
+- Restore proper Elysia context destructuring (`{ user, isAdmin, params }`) in handlers
+- Enable full `treaty<App>()` type inference for Eden
 
 ## Known issues
 
+- **tsgo + Elysia type propagation.** tsgo does not resolve Elysia's deeply-nested generic types, including `.derive()` propagation through `.use()`. Workaround: `as never` casts on handler registrations, `as unknown as Elysia` on plugin exports, `getAuth(ctx)` helper that casts to `AuthContext`, and the inline `deriveAuth` on the main app (which tsgo can handle for the WebSocket context). A future tsgo/Elysia update may fix this. Note: Bun's native transpiler handles these types correctly — the issue is only at typecheck time.
 - **tsgo + drizzle + `Record<string, unknown>` incompatibility.** When a handler parameter is `Record<string, unknown>`, tsgo fails to resolve `.where()` overloads on drizzle query builders. Workaround: extract queries into helper functions with clean parameter types. A future tsgo update may fix this.
-- **Elysia sub-app type propagation.** `.derive()` on the parent app doesn't propagate types to sub-apps merged via `.use()`. Workaround: `as never` casts on handler registrations and `as unknown as Elysia` on plugin calls.
 - **Bun namespace errors.** Installing Elysia changes the TypeScript import graph in a way that surfaces pre-existing `Bun.spawn` / `Bun.CryptoHasher` type errors in `index.ts` and `jwt.ts`. Workaround: `@ts-expect-error` + eslint-disable blocks.
 - **Concurrent refresh token race condition.** `generateRefreshToken()` used `sign()` with second-granularity `iat`, causing identical tokens (and thus identical DB hashes) when two refreshes fired in the same second. Fixed by adding `jti: crypto.randomUUID()` to the token payload.

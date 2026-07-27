@@ -92,44 +92,25 @@ export function createApp(): Elysia {
   );
 
   // Native Elysia route groups
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion
-  tagsPlugin(apiApp as unknown as Elysia);
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion
-  channelMixPlugin(apiApp as unknown as Elysia);
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion
-  compressorPlugin(apiApp as unknown as Elysia);
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion
-  distortionPlugin(apiApp as unknown as Elysia);
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion
-  equalizerPlugin(apiApp as unknown as Elysia);
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion
-  filtersPlugin(apiApp as unknown as Elysia);
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion
-  generalSettingsPlugin(apiApp as unknown as Elysia);
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion
-  karaokePlugin(apiApp as unknown as Elysia);
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion
-  lowPassPlugin(apiApp as unknown as Elysia);
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion
-  rotationPlugin(apiApp as unknown as Elysia);
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion
-  timescalePlugin(apiApp as unknown as Elysia);
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion
-  tremoloPlugin(apiApp as unknown as Elysia);
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion
-  vibratoPlugin(apiApp as unknown as Elysia);
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion
-  setupPlugin(apiApp as unknown as Elysia);
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion
-  permissionsPlugin(apiApp as unknown as Elysia);
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion
-  playerPlugin(apiApp as unknown as Elysia);
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion
-  songsPlugin(apiApp as unknown as Elysia);
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion
-  playlistsPlugin(apiApp as unknown as Elysia);
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion
-  requestsPlugin(apiApp as unknown as Elysia);
+  apiApp.use(tagsPlugin);
+  apiApp.use(channelMixPlugin);
+  apiApp.use(compressorPlugin);
+  apiApp.use(distortionPlugin);
+  apiApp.use(equalizerPlugin);
+  apiApp.use(filtersPlugin);
+  apiApp.use(generalSettingsPlugin);
+  apiApp.use(karaokePlugin);
+  apiApp.use(lowPassPlugin);
+  apiApp.use(rotationPlugin);
+  apiApp.use(timescalePlugin);
+  apiApp.use(tremoloPlugin);
+  apiApp.use(vibratoPlugin);
+  apiApp.use(setupPlugin);
+  apiApp.use(permissionsPlugin);
+  apiApp.use(playerPlugin);
+  apiApp.use(songsPlugin);
+  apiApp.use(playlistsPlugin);
+  apiApp.use(requestsPlugin);
 
   const authApp = new Elysia({ prefix: '/auth' });
   // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion

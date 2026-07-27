@@ -1,11 +1,11 @@
 import { eq } from 'drizzle-orm';
-import { type Elysia } from 'elysia';
+import { Elysia } from 'elysia';
 import * as v from 'valibot';
 /* eslint-disable @typescript-eslint/no-unsafe-type-assertion */
 
 import { elysiaJson as json } from '../lib/apiResponse';
 import { getGuildId } from '../lib/config';
-import { requireAdminOrPermission } from '../lib/elysia-guards';
+import { requireAdminOrPermission, type AuthContext } from '../lib/elysia-guards';
 import { emitPlayerUpdate } from '../lib/socket';
 import { syncAllFilters } from '../lib/syncAllFilters';
 import { db, tables } from '../shared/db';
@@ -58,52 +58,43 @@ function upsertTimescaleSettings(data: TimescaleSettings): void {
 }
 
 // ---------------------------------------------------------------------------
-// Handlers
-// ---------------------------------------------------------------------------
-
-function handleGet(ctx: Record<string, unknown>): Response {
-  const guardErr = requireAdminOrPermission(
-    { user: ctx.user as never, isAdmin: ctx.isAdmin as boolean },
-    'audio.manage'
-  );
-  if (guardErr) {
-    return guardErr;
-  }
-
-  return json(fetchTimescaleSettings());
-}
-
-async function handlePatch(ctx: Record<string, unknown>): Promise<Response> {
-  const guardErr = requireAdminOrPermission(
-    { user: ctx.user as never, isAdmin: ctx.isAdmin as boolean },
-    'audio.manage'
-  );
-  if (guardErr) {
-    return guardErr;
-  }
-
-  const body = ctx.body as TimescaleSettings;
-  upsertTimescaleSettings(body);
-  await syncAllFilters();
-
-  // Broadcast updated timescaleSpeed so the client's progress bar
-  // immediately reflects the new playback rate.
-  const player = getPlayer(getGuildId());
-  if (player) {
-    emitPlayerUpdate(player.getQueueState());
-  }
-
-  return json(body);
-}
-
-// ---------------------------------------------------------------------------
 // Plugin
 // ---------------------------------------------------------------------------
 
-export function timescalePlugin(app: Elysia): Elysia {
-  return app
-    .get('/settings/timescale', handleGet as never)
-    .patch('/settings/timescale', handlePatch as never, {
-      body: TimescaleSchema,
-    }) as unknown as Elysia;
+function getAuth(ctx: Record<string, unknown>): AuthContext {
+  return ctx as unknown as AuthContext;
 }
+
+export const timescalePlugin = new Elysia({ prefix: '/settings/timescale' })
+  .get('/', ((ctx: Record<string, unknown>) => {
+    const { user, isAdmin } = getAuth(ctx);
+    const guardErr = requireAdminOrPermission({ user, isAdmin }, 'audio.manage');
+    if (guardErr) {
+      return guardErr;
+    }
+    return json(fetchTimescaleSettings());
+  }) as never)
+  .patch(
+    '/',
+    (async (ctx: Record<string, unknown>) => {
+      const { user, isAdmin } = getAuth(ctx);
+      const guardErr = requireAdminOrPermission({ user, isAdmin }, 'audio.manage');
+      if (guardErr) {
+        return guardErr;
+      }
+
+      const body = ctx.body as TimescaleSettings;
+      upsertTimescaleSettings(body);
+      await syncAllFilters();
+
+      // Broadcast updated timescaleSpeed so the client's progress bar
+      // immediately reflects the new playback rate.
+      const player = getPlayer(getGuildId());
+      if (player) {
+        emitPlayerUpdate(player.getQueueState());
+      }
+
+      return json(body);
+    }) as never,
+    { body: TimescaleSchema }
+  ) as unknown as Elysia;

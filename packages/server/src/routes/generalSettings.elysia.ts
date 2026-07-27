@@ -1,10 +1,10 @@
 import { eq } from 'drizzle-orm';
-import { type Elysia } from 'elysia';
+import { Elysia } from 'elysia';
 import * as v from 'valibot';
 /* eslint-disable @typescript-eslint/no-unsafe-type-assertion */
 
 import { elysiaJson as json } from '../lib/apiResponse';
-import { requireAdminOrPermission } from '../lib/elysia-guards';
+import { requireAdminOrPermission, type AuthContext } from '../lib/elysia-guards';
 import { type GeneralSettings } from '../shared';
 import { db, tables } from '../shared/db';
 import { refreshEnabledSources, SOURCE_DEFINITIONS } from '../startDiscord';
@@ -90,94 +90,86 @@ function upsertGeneralSettings(updates: Record<string, unknown>): void {
 }
 
 // ---------------------------------------------------------------------------
-// Handlers
-// ---------------------------------------------------------------------------
-
-function handleGet(ctx: Record<string, unknown>): Response {
-  const guardErr = requireAdminOrPermission({
-    user: ctx.user as never,
-    isAdmin: ctx.isAdmin as boolean,
-  });
-  if (guardErr) {
-    return guardErr;
-  }
-
-  const settings = fetchGeneralSettings();
-  return json(settings ?? defaultGeneralSettings());
-}
-
-function handlePatch(ctx: Record<string, unknown>): Response {
-  const guardErr = requireAdminOrPermission({
-    user: ctx.user as never,
-    isAdmin: ctx.isAdmin as boolean,
-  });
-  if (guardErr) {
-    return guardErr;
-  }
-
-  const body = ctx.body as v.InferOutput<typeof GeneralSettingsPatchSchema>;
-
-  const updates: Record<string, unknown> = {};
-
-  if (body.adminRoleIds !== undefined) {
-    updates.adminRoleIds = body.adminRoleIds;
-  }
-
-  if (body.voiceIdleTimeoutMinutes !== undefined) {
-    updates.voiceIdleTimeoutMinutes = body.voiceIdleTimeoutMinutes;
-  }
-
-  if (body.afkNotificationChannelId !== undefined) {
-    updates.afkNotificationChannelId = body.afkNotificationChannelId;
-  }
-
-  if (body.requestNotificationChannelId !== undefined) {
-    updates.requestNotificationChannelId = body.requestNotificationChannelId;
-  }
-
-  if (body.notifyOnApproved !== undefined) {
-    updates.notifyOnApproved = body.notifyOnApproved;
-  }
-
-  if (body.notifyOnDenied !== undefined) {
-    updates.notifyOnDenied = body.notifyOnDenied;
-  }
-
-  if (body.publicUrl !== undefined) {
-    updates.publicUrl = body.publicUrl;
-  }
-
-  if (body.enabledSources !== undefined) {
-    updates.enabledSources = body.enabledSources.trim();
-  }
-
-  if (Object.keys(updates).length === 0) {
-    return json({ error: 'No fields to update' }, 400);
-  }
-
-  upsertGeneralSettings(updates);
-
-  // Refresh the enabled sources cache if sources were updated.
-  if (body.enabledSources) {
-    refreshEnabledSources(body.enabledSources.trim());
-  }
-
-  const settings = fetchGeneralSettings();
-  if (!settings) {
-    return json({ error: 'Settings not found after update.' }, 500);
-  }
-
-  return json(settings);
-}
-
-// ---------------------------------------------------------------------------
 // Plugin
 // ---------------------------------------------------------------------------
 
-export function generalSettingsPlugin(app: Elysia): Elysia {
-  return app
-    .get('/settings/general', handleGet as never)
-    .patch('/settings/general', handlePatch as never, {
-      body: GeneralSettingsPatchSchema,
-    }) as unknown as Elysia;
+function getAuth(ctx: Record<string, unknown>): AuthContext {
+  return ctx as unknown as AuthContext;
 }
+
+export const generalSettingsPlugin = new Elysia({ prefix: '/settings/general' })
+  .get('/', ((ctx: Record<string, unknown>) => {
+    const { user, isAdmin } = getAuth(ctx);
+    const guardErr = requireAdminOrPermission({ user, isAdmin });
+    if (guardErr) {
+      return guardErr;
+    }
+
+    const settings = fetchGeneralSettings();
+    return json(settings ?? defaultGeneralSettings());
+  }) as never)
+  .patch(
+    '/',
+    ((ctx: Record<string, unknown>) => {
+      const { user, isAdmin } = getAuth(ctx);
+      const guardErr = requireAdminOrPermission({ user, isAdmin });
+      if (guardErr) {
+        return guardErr;
+      }
+
+      const body = ctx.body as v.InferOutput<typeof GeneralSettingsPatchSchema>;
+
+      const updates: Record<string, unknown> = {};
+
+      if (body.adminRoleIds !== undefined) {
+        updates.adminRoleIds = body.adminRoleIds;
+      }
+
+      if (body.voiceIdleTimeoutMinutes !== undefined) {
+        updates.voiceIdleTimeoutMinutes = body.voiceIdleTimeoutMinutes;
+      }
+
+      if (body.afkNotificationChannelId !== undefined) {
+        updates.afkNotificationChannelId = body.afkNotificationChannelId;
+      }
+
+      if (body.requestNotificationChannelId !== undefined) {
+        updates.requestNotificationChannelId = body.requestNotificationChannelId;
+      }
+
+      if (body.notifyOnApproved !== undefined) {
+        updates.notifyOnApproved = body.notifyOnApproved;
+      }
+
+      if (body.notifyOnDenied !== undefined) {
+        updates.notifyOnDenied = body.notifyOnDenied;
+      }
+
+      if (body.publicUrl !== undefined) {
+        updates.publicUrl = body.publicUrl;
+      }
+
+      if (body.enabledSources !== undefined) {
+        updates.enabledSources = body.enabledSources.trim();
+      }
+
+      if (Object.keys(updates).length === 0) {
+        return json({ error: 'No fields to update' }, 400);
+      }
+
+      upsertGeneralSettings(updates);
+
+      // Refresh the enabled sources cache if sources were updated.
+      if (body.enabledSources) {
+        refreshEnabledSources(body.enabledSources.trim());
+      }
+
+      const settings = fetchGeneralSettings();
+      if (!settings) {
+        return json({ error: 'Settings not found after update.' }, 500);
+      }
+
+      return json(settings);
+    }) as never,
+    { body: GeneralSettingsPatchSchema }
+  ) as unknown as Elysia;

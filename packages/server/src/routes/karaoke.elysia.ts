@@ -1,10 +1,10 @@
 import { eq } from 'drizzle-orm';
-import { type Elysia } from 'elysia';
+import { Elysia } from 'elysia';
 import * as v from 'valibot';
 /* eslint-disable @typescript-eslint/no-unsafe-type-assertion */
 
 import { elysiaJson as json } from '../lib/apiResponse';
-import { requireAdminOrPermission } from '../lib/elysia-guards';
+import { requireAdminOrPermission, type AuthContext } from '../lib/elysia-guards';
 import { syncAllFilters } from '../lib/syncAllFilters';
 import { db, tables } from '../shared/db';
 import { DEFAULT_KARAOKE } from '../shared/filterDefaults';
@@ -59,43 +59,36 @@ function upsertKaraokeSettings(data: KaraokeSettings): void {
 }
 
 // ---------------------------------------------------------------------------
-// Handlers
-// ---------------------------------------------------------------------------
-
-function handleGet(ctx: Record<string, unknown>): Response {
-  const guardErr = requireAdminOrPermission(
-    { user: ctx.user as never, isAdmin: ctx.isAdmin as boolean },
-    'audio.manage'
-  );
-  if (guardErr) {
-    return guardErr;
-  }
-
-  return json(fetchKaraokeSettings());
-}
-
-async function handlePatch(ctx: Record<string, unknown>): Promise<Response> {
-  const guardErr = requireAdminOrPermission(
-    { user: ctx.user as never, isAdmin: ctx.isAdmin as boolean },
-    'audio.manage'
-  );
-  if (guardErr) {
-    return guardErr;
-  }
-
-  const body = ctx.body as KaraokeSettings;
-  upsertKaraokeSettings(body);
-  await syncAllFilters();
-
-  return json(body);
-}
-
-// ---------------------------------------------------------------------------
 // Plugin
 // ---------------------------------------------------------------------------
 
-export function karaokePlugin(app: Elysia): Elysia {
-  return app
-    .get('/settings/karaoke', handleGet as never)
-    .patch('/settings/karaoke', handlePatch as never, { body: KaraokeSchema }) as unknown as Elysia;
+function getAuth(ctx: Record<string, unknown>): AuthContext {
+  return ctx as unknown as AuthContext;
 }
+
+export const karaokePlugin = new Elysia({ prefix: '/settings/karaoke' })
+  .get('/', ((ctx: Record<string, unknown>) => {
+    const { user, isAdmin } = getAuth(ctx);
+    const guardErr = requireAdminOrPermission({ user, isAdmin }, 'audio.manage');
+    if (guardErr) {
+      return guardErr;
+    }
+    return json(fetchKaraokeSettings());
+  }) as never)
+  .patch(
+    '/',
+    (async (ctx: Record<string, unknown>) => {
+      const { user, isAdmin } = getAuth(ctx);
+      const guardErr = requireAdminOrPermission({ user, isAdmin }, 'audio.manage');
+      if (guardErr) {
+        return guardErr;
+      }
+
+      const body = ctx.body as KaraokeSettings;
+      upsertKaraokeSettings(body);
+      await syncAllFilters();
+
+      return json(body);
+    }) as never,
+    { body: KaraokeSchema }
+  ) as unknown as Elysia;

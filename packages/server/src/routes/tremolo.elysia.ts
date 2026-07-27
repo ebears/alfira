@@ -1,10 +1,10 @@
 import { eq } from 'drizzle-orm';
-import { type Elysia } from 'elysia';
+import { Elysia } from 'elysia';
 import * as v from 'valibot';
 /* eslint-disable @typescript-eslint/no-unsafe-type-assertion */
 
 import { elysiaJson as json } from '../lib/apiResponse';
-import { requireAdminOrPermission } from '../lib/elysia-guards';
+import { requireAdminOrPermission, type AuthContext } from '../lib/elysia-guards';
 import { syncAllFilters } from '../lib/syncAllFilters';
 import { db, tables } from '../shared/db';
 import { DEFAULT_TREMOLO } from '../shared/filterDefaults';
@@ -45,43 +45,36 @@ function upsertTremoloSettings(data: { enabled: boolean; frequency: number; dept
 }
 
 // ---------------------------------------------------------------------------
-// Handlers
-// ---------------------------------------------------------------------------
-
-function handleGet(ctx: Record<string, unknown>): Response {
-  const guardErr = requireAdminOrPermission(
-    { user: ctx.user as never, isAdmin: ctx.isAdmin as boolean },
-    'audio.manage'
-  );
-  if (guardErr) {
-    return guardErr;
-  }
-
-  return json(fetchTremoloSettings());
-}
-
-async function handlePatch(ctx: Record<string, unknown>): Promise<Response> {
-  const guardErr = requireAdminOrPermission(
-    { user: ctx.user as never, isAdmin: ctx.isAdmin as boolean },
-    'audio.manage'
-  );
-  if (guardErr) {
-    return guardErr;
-  }
-
-  const body = ctx.body as v.InferOutput<typeof TremoloSchema>;
-  upsertTremoloSettings(body);
-  await syncAllFilters();
-
-  return json(body);
-}
-
-// ---------------------------------------------------------------------------
 // Plugin
 // ---------------------------------------------------------------------------
 
-export function tremoloPlugin(app: Elysia): Elysia {
-  return app
-    .get('/settings/tremolo', handleGet as never)
-    .patch('/settings/tremolo', handlePatch as never, { body: TremoloSchema }) as unknown as Elysia;
+function getAuth(ctx: Record<string, unknown>): AuthContext {
+  return ctx as unknown as AuthContext;
 }
+
+export const tremoloPlugin = new Elysia({ prefix: '/settings/tremolo' })
+  .get('/', ((ctx: Record<string, unknown>) => {
+    const { user, isAdmin } = getAuth(ctx);
+    const guardErr = requireAdminOrPermission({ user, isAdmin }, 'audio.manage');
+    if (guardErr) {
+      return guardErr;
+    }
+    return json(fetchTremoloSettings());
+  }) as never)
+  .patch(
+    '/',
+    (async (ctx: Record<string, unknown>) => {
+      const { user, isAdmin } = getAuth(ctx);
+      const guardErr = requireAdminOrPermission({ user, isAdmin }, 'audio.manage');
+      if (guardErr) {
+        return guardErr;
+      }
+
+      const body = ctx.body as v.InferOutput<typeof TremoloSchema>;
+      upsertTremoloSettings(body);
+      await syncAllFilters();
+
+      return json(body);
+    }) as never,
+    { body: TremoloSchema }
+  ) as unknown as Elysia;

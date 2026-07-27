@@ -1,10 +1,10 @@
 import { eq, inArray, sql } from 'drizzle-orm';
-import { type Elysia } from 'elysia';
+import { Elysia } from 'elysia';
 import * as v from 'valibot';
 /* eslint-disable @typescript-eslint/no-unsafe-type-assertion */
 
 import { elysiaJson as json } from '../lib/apiResponse';
-import { requireAdminOrPermission, requireAuth } from '../lib/elysia-guards';
+import { requireAdminOrPermission, requireAuth, type AuthContext } from '../lib/elysia-guards';
 import { emitPlaylistUpdated } from '../lib/socket';
 import { db, tables } from '../shared/db';
 
@@ -85,137 +85,129 @@ async function fetchPlaylistsByIds(ids: string[]) {
   return await db.select().from(playlistTable).where(inArray(playlistTable.id, ids));
 }
 
-async function deleteTag(nameLower: string) {
+async function deleteTagRow(nameLower: string) {
   await db.delete(tagTable).where(eq(tagTable.nameLower, nameLower));
-}
-
-// ---------------------------------------------------------------------------
-// Handlers
-// ---------------------------------------------------------------------------
-
-function handleGetTagsList(ctx: Record<string, unknown>): Response {
-  const authErr = requireAuth({ user: ctx.user as never, isAdmin: ctx.isAdmin as boolean });
-  if (authErr) {
-    return authErr;
-  }
-
-  return json({ tags: fetchTagList() });
-}
-
-function handleGetTag(ctx: Record<string, unknown>): Response {
-  const authErr = requireAuth({ user: ctx.user as never, isAdmin: ctx.isAdmin as boolean });
-  if (authErr) {
-    return authErr;
-  }
-
-  const nameLower = (ctx.params as Record<string, string>).nameLower as string;
-  const tag = fetchTag(nameLower);
-
-  if (!tag) {
-    return json({ error: 'Tag not found.' }, 404);
-  }
-
-  return json({ tag });
-}
-
-function handleGetTagSongs(ctx: Record<string, unknown>): Response {
-  const authErr = requireAuth({ user: ctx.user as never, isAdmin: ctx.isAdmin as boolean });
-  if (authErr) {
-    return authErr;
-  }
-
-  const nameLower = (ctx.params as Record<string, string>).nameLower as string;
-  return json({ songs: fetchSongsByTag(nameLower) });
-}
-
-async function handlePatchTag(ctx: Record<string, unknown>): Promise<Response> {
-  const guardErr = requireAdminOrPermission(
-    { user: ctx.user as never, isAdmin: ctx.isAdmin as boolean },
-    'tags.manage'
-  );
-  if (guardErr) {
-    return guardErr;
-  }
-
-  const nameLower = (ctx.params as Record<string, string>).nameLower as string;
-  const bodyData = ctx.body as v.InferOutput<typeof TagPatchSchema>;
-
-  const existing = fetchTag(nameLower);
-  if (!existing) {
-    return json({ error: 'Tag not found.' }, 404);
-  }
-
-  const data: Record<string, unknown> = {};
-
-  if (bodyData.canonicalName !== undefined) {
-    data.canonicalName = bodyData.canonicalName.replace(/\s+/g, '-').trim();
-  }
-
-  if (bodyData.color !== undefined) {
-    data.color = bodyData.color;
-  }
-
-  if (Object.keys(data).length === 0) {
-    return json({ error: 'No valid fields to update.' }, 400);
-  }
-
-  const updated = await updateTagReturning(nameLower, data);
-  return json({ tag: updated });
-}
-
-async function handleDeleteTag(ctx: Record<string, unknown>): Promise<Response> {
-  const guardErr = requireAdminOrPermission(
-    { user: ctx.user as never, isAdmin: ctx.isAdmin as boolean },
-    'tags.manage'
-  );
-  if (guardErr) {
-    return guardErr;
-  }
-
-  const nameLower = (ctx.params as Record<string, string>).nameLower as string;
-
-  const existing = fetchTag(nameLower);
-  if (!existing) {
-    return json({ error: 'Tag not found.' }, 404);
-  }
-
-  // Remove this tag from all songs that have it
-  const songsWithTag = fetchSongsWithTag(nameLower);
-
-  for (const song of songsWithTag) {
-    const updatedTags = song.tags.filter((t) => t.toLowerCase() !== nameLower);
-    removeTagFromSong(song.id, updatedTags);
-  }
-
-  // Convert any smart playlists tracking this tag to regular playlists
-  const smartPlaylists = fetchSmartPlaylistsByTag(nameLower);
-
-  await Promise.all(smartPlaylists.map((pl) => detachPlaylistTag(pl.id)));
-
-  const updatedPlaylists = await fetchPlaylistsByIds(smartPlaylists.map((pl) => pl.id));
-
-  for (const updatedPl of updatedPlaylists) {
-    emitPlaylistUpdated({
-      ...updatedPl,
-      createdAt: updatedPl.createdAt.toISOString(),
-    });
-  }
-
-  await deleteTag(nameLower);
-
-  return json({ success: true });
 }
 
 // ---------------------------------------------------------------------------
 // Plugin
 // ---------------------------------------------------------------------------
 
-/* eslint-disable @typescript-eslint/no-unsafe-type-assertion */
-export function tagsPlugin(app: Elysia): Elysia {
-  return app
-    .get('/tags', handleGetTagsList as never)
-    .get('/tags/:nameLower', handleGetTag as never)
-    .get('/tags/:nameLower/songs', handleGetTagSongs as never)
-    .patch('/tags/:nameLower', handlePatchTag as never, { body: TagPatchSchema })
-    .delete('/tags/:nameLower', handleDeleteTag as never) as unknown as Elysia;
+/**
+ * ctx is typed as AuthContext at runtime via authContext.derive().
+ * We cast through unknown instead of using Elysia's native context destructuring
+ * because tsgo does not resolve Elysia's deeply-nested generic types.
+ */
+function getAuth(ctx: Record<string, unknown>): AuthContext {
+  return ctx as unknown as AuthContext;
 }
+
+export const tagsPlugin = new Elysia({ prefix: '/tags' })
+  .get('/', ((ctx: Record<string, unknown>) => {
+    const { user, isAdmin } = getAuth(ctx);
+    const authErr = requireAuth({ user, isAdmin });
+    if (authErr) {
+      return authErr;
+    }
+    return json({ tags: fetchTagList() });
+  }) as never)
+  .get('/:nameLower', ((ctx: Record<string, unknown>) => {
+    const { user, isAdmin } = getAuth(ctx);
+    const authErr = requireAuth({ user, isAdmin });
+    if (authErr) {
+      return authErr;
+    }
+
+    const nameLower = (ctx.params as Record<string, string>).nameLower as string;
+    const tag = fetchTag(nameLower);
+    if (!tag) {
+      return json({ error: 'Tag not found.' }, 404);
+    }
+
+    return json({ tag });
+  }) as never)
+  .get('/:nameLower/songs', ((ctx: Record<string, unknown>) => {
+    const { user, isAdmin } = getAuth(ctx);
+    const authErr = requireAuth({ user, isAdmin });
+    if (authErr) {
+      return authErr;
+    }
+    const nameLower = (ctx.params as Record<string, string>).nameLower as string;
+    return json({ songs: fetchSongsByTag(nameLower) });
+  }) as never)
+  .patch(
+    '/:nameLower',
+    (async (ctx: Record<string, unknown>) => {
+      const { user, isAdmin } = getAuth(ctx);
+      const guardErr = requireAdminOrPermission({ user, isAdmin }, 'tags.manage');
+      if (guardErr) {
+        return guardErr;
+      }
+
+      const nameLower = (ctx.params as Record<string, string>).nameLower as string;
+      const body = ctx.body as v.InferOutput<typeof TagPatchSchema>;
+
+      const existing = fetchTag(nameLower);
+      if (!existing) {
+        return json({ error: 'Tag not found.' }, 404);
+      }
+
+      const data: Record<string, unknown> = {};
+
+      if (body.canonicalName !== undefined) {
+        data.canonicalName = body.canonicalName.replace(/\s+/g, '-').trim();
+      }
+
+      if (body.color !== undefined) {
+        data.color = body.color;
+      }
+
+      if (Object.keys(data).length === 0) {
+        return json({ error: 'No valid fields to update.' }, 400);
+      }
+
+      const updated = await updateTagReturning(nameLower, data);
+      return json({ tag: updated });
+    }) as never,
+    { body: TagPatchSchema }
+  )
+  .delete('/:nameLower', (async (ctx: Record<string, unknown>) => {
+    const { user, isAdmin } = getAuth(ctx);
+    const guardErr = requireAdminOrPermission({ user, isAdmin }, 'tags.manage');
+    if (guardErr) {
+      return guardErr;
+    }
+
+    const nameLower = (ctx.params as Record<string, string>).nameLower as string;
+
+    const existing = fetchTag(nameLower);
+    if (!existing) {
+      return json({ error: 'Tag not found.' }, 404);
+    }
+
+    // Remove this tag from all songs that have it
+    const songsWithTag = fetchSongsWithTag(nameLower);
+
+    for (const song of songsWithTag) {
+      const updatedTags = song.tags.filter((t) => t.toLowerCase() !== nameLower);
+      removeTagFromSong(song.id, updatedTags);
+    }
+
+    // Convert any smart playlists tracking this tag to regular playlists
+    const smartPlaylists = fetchSmartPlaylistsByTag(nameLower);
+
+    await Promise.all(smartPlaylists.map((pl) => detachPlaylistTag(pl.id)));
+
+    const updatedPlaylists = await fetchPlaylistsByIds(smartPlaylists.map((pl) => pl.id));
+
+    for (const updatedPl of updatedPlaylists) {
+      emitPlaylistUpdated({
+        ...updatedPl,
+        createdAt: updatedPl.createdAt.toISOString(),
+      });
+    }
+
+    await deleteTagRow(nameLower);
+
+    return json({ success: true });
+  }) as never) as unknown as Elysia;
