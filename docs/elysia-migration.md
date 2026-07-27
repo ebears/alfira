@@ -258,22 +258,22 @@ With oxlint v1.75.0 + tsgolint v7.0.2001, tsgo now resolves Elysia handler types
 
 ## Remaining work
 
-### Phase 6 — Wire up Eden's `treaty<App>()` with the server's app type
+### Phase 6b — Add response schemas to get full Eden type safety (remaining)
 
-Currently `eden.ts` calls `treaty('')` without a generic type parameter, so Eden has no type information about the server's routes. This forces `routes.ts` to use `const $ = api as any` and provides no type safety on API calls. The fix is to export the server's app type and pass it to Eden:
+Eden's proxy path resolution now works (routes like `api.api.songs.get()`, `api.auth.me.get()` resolve correctly), but response bodies are still typed as `Response` because the server routes don't have explicit `response` schemas. Without them, Eden can't infer the shape of the returned data. `routes.ts` still needs `$ = api as any` until response schemas are added to the 19 route groups.
+
+**What's needed:** Add `response` schemas to each route handler (using Valibot schemas via the Standard Schema spec). For example:
 
 ```ts
-// server — elysia-app.ts
-export type App = ReturnType<typeof createApp>;
-
-// client — eden.ts
-import type { App } from '@alfira/server';
-export const api = treaty<App>('', { keepDomain: true, fetcher });
+.get('/tags', (ctx) => { ... }, {
+  response: {
+    200: v.object({ tags: v.array(TagItemSchema) }),
+    401: v.object({ error: v.string() }),
+  },
+})
 ```
 
-Once this works, the manually-maintained `routes.ts` (~500 lines of wrapper functions) and `shared/api.ts` (~120 lines of type-only exports) can be deleted. Components would import API functions directly from Eden with full type inference on paths, params, request bodies, and response shapes.
-
-**Caveat:** Elysia's docs warn that the full app type can be large and slow for type checking. If that becomes an issue, we can export a sub-app type (just the `apiApp` routes) instead of the full `createApp()` return type.
+Once all route groups have response schemas, `routes.ts` and `shared/api.ts` can be deleted entirely — components would consume Eden directly with full type inference on paths, params, request bodies, AND response shapes.
 
 ### Phase 7 — Remove `Record<string, unknown>` + `getAuth()` pattern
 
@@ -289,15 +289,70 @@ This means `{ as: 'global' }` on the parent's derive, `.group()` vs `.use()`, an
 
 **Current approach:** The `Record<string, unknown>` + `getAuth()` pattern is the pragmatic choice for this architecture. It keeps plugins as standalone `new Elysia()` instances, preserves clean `.use()` composition, and provides type safety through the `getAuth()` helper. The verbosity is acceptable given the tradeoffs.
 
-### Phase 8 — Remove `deriveAuth` cast in `elysia-app.ts`
+### Phase 8 — Remove `deriveAuth` cast in `elysia-app.ts` ✅
 
-**Probably fixable now.** Elysia's context uses `Cookie<unknown>` but deriveAuth destructures `cookie` as `Record<string, { value?: string }>`. Matching Elysia's cookie type in the function signature (or importing Elysia's `Cookie` type) may eliminate the `as unknown as` cast. Needs investigation — the crux is whether Elysia exports a `Cookie` type that's compatible with our usage.
+**Fixed.** Imported `Cookie` from Elysia and used it in the `deriveAuth` parameter type (`Record<string, Cookie<unknown>>`). Used a type guard (`typeof raw === 'string'`) instead of an `as` assertion to narrow `cookie.session?.value` from `unknown` to `string | undefined`. This eliminated both the `as unknown as` cast on `.derive()` and the `as string | undefined` assertion on the token value.
+
+As a side effect, the `ws.data as { user: ... }` cast is no longer flagged by tsgo as an unsafe type assertion (the eslint-disable directive was removed).
+
+**Modified files:**
+
+- `packages/server/src/elysia-app.ts` — Import `Cookie` from Elysia, use `Cookie<unknown>` in deriveAuth param, type guard for token, remove derive cast, remove unnecessary eslint-disable on `ws.data`
+
+### Phase 9 — Chain `.use()` calls so types flow through Elysia composition ✅
+
+The `apiApp` and `authApp` variables used statement-style `.use()` calls (discarding the return value), which meant tsgo only saw the initial type — no plugin routes were visible. Converting to chained `.use()` calls lets the full composed type propagate through `createApp()` and into the exported `App` type.
+
+```ts
+// Before: mutation pattern — types discarded
+const apiApp = new Elysia({ prefix: '/api' }).get('/version', ...);
+apiApp.use(tagsPlugin);
+apiApp.use(songsPlugin);
+// ...
+
+// After: chained — full type flows through
+const apiApp = new Elysia({ prefix: '/api' })
+  .get('/version', ...)
+  .use(tagsPlugin)
+  .use(songsPlugin)
+  // ...
+```
+
+**Modified files:**
+
+- `packages/server/src/elysia-app.ts` — Chained all 19 `.use()` calls on `apiApp` and `authApp`
+
+### Phase 6a — Export App type and type Eden treaty ✅
+
+The server's `App` type is now exported and wired into Eden Treaty:
+
+- `packages/server/src/elysia-app.ts` — `export type App = ReturnType<typeof createApp>`
+- `packages/server/src/shared/index.ts` — `export type { App } from '../elysia-app'`
+- `packages/web/src/api/eden.ts` — `treaty<App>('', ...)` instead of untyped `treaty('', ...)`, `fetcher as typeof fetch` instead of `as unknown as typeof fetch`
+
+**Route properties now resolve correctly** — when tsgo processes `routes.ts`, `api.api.songs`, `api.auth.me`, `api.api.player.queue`, etc. all resolve to their correct proxy types. The 57 property-not-found errors from Phase 6 are gone.
+
+### Phase 6b — Add response schemas to get full Eden type safety (remaining)
+
+Eden's proxy path resolution now works, but response bodies are still typed as `Response` because the server routes don't have explicit `response` schemas. Without them, Eden can't infer the shape of the returned data. `routes.ts` still needs `$ = api as any` until response schemas are added to the 19 route groups.
+
+**What's needed:** Add `response` schemas to each route handler (using Valibot schemas via the Standard Schema spec). For example:
+
+```ts
+.get('/tags', (ctx) => { ... }, {
+  response: {
+    200: v.object({ tags: v.array(TagItemSchema) }),
+    401: v.object({ error: v.string() }),
+  },
+})
+```
+
+Once all route groups have response schemas, `routes.ts` and `shared/api.ts` can be deleted entirely — components would consume Eden directly with full type inference on paths, params, request bodies, AND response shapes.
 
 ## Known issues
 
-- **`deriveAuth` cast** — Elysia's derive callback expects `cookie: Record<string, Cookie<unknown>>` but deriveAuth uses `{ value?: string }`. Fixable by importing Elysia's Cookie type. Not attempted yet (Phase 8).
+- **Eden response types untyped** — Server routes lack `response` schemas, so Eden sees all responses as `Response`. `routes.ts` uses `as any` as a workaround. Fixing this requires adding Valibot response schemas to all 19 route groups (Phase 6b).
 - **`Record<string, unknown>` + `getAuth()` pattern** — Not a bug. TypeScript resolves plugin handler types at definition time, before the plugin is `.use()`d into a parent with `.derive()`. The `getAuth()` helper is the pragmatic solution for standalone plugin instances. See Phase 7 for alternatives.
-- **Eden `treaty` untyped** — `treaty('')` is called without a server type generic. Fixable by exporting the server's app type and passing it to treaty (Phase 6). Not a tooling limitation — the pattern just wasn't wired up.
 - **tsgo + drizzle + `Record<string, unknown>` incompatibility** — When a handler parameter is `Record<string, unknown>`, tsgo fails to resolve `.where()` overloads on drizzle query builders. Workaround: extract queries into helper functions with clean parameter types. A future tsgo update may fix this.
 - **Bun namespace errors** — Installing Elysia changes the TypeScript import graph in a way that surfaces pre-existing `Bun.spawn` / `Bun.CryptoHasher` type errors in `index.ts` and `jwt.ts`. Workaround: `@ts-expect-error` + eslint-disable blocks.
 - **Concurrent refresh token race condition** — `generateRefreshToken()` used `sign()` with second-granularity `iat`, causing identical tokens (and thus identical DB hashes) when two refreshes fired in the same second. Fixed by adding `jti: crypto.randomUUID()` to the token payload.

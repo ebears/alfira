@@ -12,6 +12,7 @@
 // - Rate limit header extraction
 // ---------------------------------------------------------------------------
 
+import { type App } from '@alfira/server/shared';
 import { treaty } from '@elysia/eden';
 
 import { updateRateLimit } from '../hooks/useRateLimit';
@@ -258,7 +259,7 @@ async function fetcher(url: string, init: RequestInit): Promise<Response> {
 // (api/player/queue, auth/me, etc.) and our custom fetcher resolves them
 // against the current origin.
 // ---------------------------------------------------------------------------
-export const api = treaty('', {
+export const api = treaty<App>('', {
   keepDomain: true,
-  fetcher: fetcher as unknown as typeof fetch,
+  fetcher: fetcher as typeof fetch,
 });

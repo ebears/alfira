@@ -1,3 +1,4 @@
+export type { App } from '../elysia-app';
 export type * from './api';
 export { formatDuration } from './format';
 export { toQueuedSong } from './queue';

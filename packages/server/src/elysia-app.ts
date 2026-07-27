@@ -1,5 +1,5 @@
 import { sql } from 'drizzle-orm';
-import { Elysia } from 'elysia';
+import { Elysia, type Cookie } from 'elysia';
 import { join } from 'node:path';
 
 import { elysiaJson } from './lib/apiResponse';
@@ -50,10 +50,11 @@ function deriveAuth({
   cookie,
   request,
 }: {
-  cookie: Record<string, { value?: string }>;
+  cookie: Record<string, Cookie<unknown>>;
   request: Request;
 }) {
-  const token = cookie.session?.value;
+  const raw = cookie.session?.value;
+  const token = typeof raw === 'string' ? raw : undefined;
   const user = token ? verifySessionToken(token) : null;
   const cookies = parseCookies(request.headers.get('cookie') ?? '');
   return { user, isAdmin: user?.isAdmin ?? false, cookies };
@@ -86,38 +87,35 @@ function isAssetPath(pathname: string): boolean {
   );
 }
 
+export type App = ReturnType<typeof createApp>;
+
 export function createApp() {
-  const apiApp = new Elysia({ prefix: '/api' }).get('/version', () =>
-    elysiaJson({ version: VERSION })
-  );
+  const apiApp = new Elysia({ prefix: '/api' })
+    .get('/version', () => elysiaJson({ version: VERSION }))
+    .use(tagsPlugin)
+    .use(channelMixPlugin)
+    .use(compressorPlugin)
+    .use(distortionPlugin)
+    .use(equalizerPlugin)
+    .use(filtersPlugin)
+    .use(generalSettingsPlugin)
+    .use(karaokePlugin)
+    .use(lowPassPlugin)
+    .use(rotationPlugin)
+    .use(timescalePlugin)
+    .use(tremoloPlugin)
+    .use(vibratoPlugin)
+    .use(setupPlugin)
+    .use(permissionsPlugin)
+    .use(playerPlugin)
+    .use(songsPlugin)
+    .use(playlistsPlugin)
+    .use(requestsPlugin);
 
-  // Native Elysia route groups
-  apiApp.use(tagsPlugin);
-  apiApp.use(channelMixPlugin);
-  apiApp.use(compressorPlugin);
-  apiApp.use(distortionPlugin);
-  apiApp.use(equalizerPlugin);
-  apiApp.use(filtersPlugin);
-  apiApp.use(generalSettingsPlugin);
-  apiApp.use(karaokePlugin);
-  apiApp.use(lowPassPlugin);
-  apiApp.use(rotationPlugin);
-  apiApp.use(timescalePlugin);
-  apiApp.use(tremoloPlugin);
-  apiApp.use(vibratoPlugin);
-  apiApp.use(setupPlugin);
-  apiApp.use(permissionsPlugin);
-  apiApp.use(playerPlugin);
-  apiApp.use(songsPlugin);
-  apiApp.use(playlistsPlugin);
-  apiApp.use(requestsPlugin);
-
-  const authApp = new Elysia({ prefix: '/auth' });
-  authApp.use(authPlugin);
+  const authApp = new Elysia({ prefix: '/auth' }).use(authPlugin);
 
   const app = new Elysia()
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion
-    .derive(deriveAuth as unknown as (ctx: Record<string, unknown>) => Record<string, unknown>)
+    .derive(deriveAuth)
     .use(apiApp)
     .use(authApp)
     .get('/health', async () => {
@@ -157,7 +155,6 @@ export function createApp() {
       open(ws) {
         // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion
         const wsc = ws as unknown as WsClient;
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion
         const data = ws.data as { user: ReturnType<typeof verifySessionToken> };
         logger.debug({ socketId: wsc.id }, 'WebSocket opened');
         if (data.user) {
