@@ -887,4 +887,4 @@ export const requestsPlugin = new Elysia({ prefix: '/requests' })
     await db.delete(requestTable).where(eq(requestTable.id, id));
 
     return new Response(null, { status: 204 });
-  }) as never) as unknown as Elysia;
+  }) as never);

@@ -66,4 +66,4 @@ export const rotationPlugin = new Elysia({ prefix: '/settings/rotation' })
       return json(body);
     }) as never,
     { body: RotationSchema }
-  ) as unknown as Elysia;
+  );

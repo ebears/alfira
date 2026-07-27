@@ -154,4 +154,4 @@ export const filtersPlugin = new Elysia({ prefix: '/settings/filters' }).get('/'
     return guardErr;
   }
   return json(fetchAllFilters());
-}) as never) as unknown as Elysia;
+}) as never);

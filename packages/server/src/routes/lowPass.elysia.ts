@@ -66,4 +66,4 @@ export const lowPassPlugin = new Elysia({ prefix: '/settings/lowpass' })
       return json(body);
     }) as never,
     { body: LowPassSchema }
-  ) as unknown as Elysia;
+  );

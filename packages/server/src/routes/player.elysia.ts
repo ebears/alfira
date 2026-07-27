@@ -707,4 +707,4 @@ export const playerPlugin = new Elysia({ prefix: '/player' })
 
     playerResult.player.unshuffle();
     return json({ message: 'Queue order restored.' });
-  }) as never) as unknown as Elysia;
+  }) as never);

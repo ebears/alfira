@@ -210,4 +210,4 @@ export const tagsPlugin = new Elysia({ prefix: '/tags' })
     await deleteTagRow(nameLower);
 
     return json({ success: true });
-  }) as never) as unknown as Elysia;
+  }) as never);

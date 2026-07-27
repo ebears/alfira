@@ -91,4 +91,4 @@ export const karaokePlugin = new Elysia({ prefix: '/settings/karaoke' })
       return json(body);
     }) as never,
     { body: KaraokeSchema }
-  ) as unknown as Elysia;
+  );

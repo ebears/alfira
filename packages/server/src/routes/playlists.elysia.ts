@@ -759,4 +759,4 @@ export const playlistsPlugin = new Elysia({ prefix: '/playlists' })
     await db.delete(playlistTable).where(eq(playlistTable.id, id));
 
     return new Response(null, { status: 204 });
-  }) as never) as unknown as Elysia;
+  }) as never);

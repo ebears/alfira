@@ -130,4 +130,4 @@ export const permissionsPlugin = new Elysia({ prefix: '/permissions' })
       return json({ action, roleIds });
     }) as never,
     { body: PermissionsPatchSchema }
-  ) as unknown as Elysia;
+  );

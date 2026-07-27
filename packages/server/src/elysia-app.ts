@@ -113,16 +113,13 @@ export function createApp(): Elysia {
   apiApp.use(requestsPlugin);
 
   const authApp = new Elysia({ prefix: '/auth' });
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion
-  authPlugin(authApp as unknown as Elysia);
+  authApp.use(authPlugin);
 
   const app = new Elysia()
     // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion
     .derive(deriveAuth as unknown as (ctx: Record<string, unknown>) => Record<string, unknown>)
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion
-    .use(apiApp as unknown as Elysia)
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion
-    .use(authApp as unknown as Elysia)
+    .use(apiApp)
+    .use(authApp)
     .get('/health', async () => {
       const checks: Record<string, string> = {};
 

@@ -77,4 +77,4 @@ export const vibratoPlugin = new Elysia({ prefix: '/settings/vibrato' })
       return json(body);
     }) as never,
     { body: VibratoSchema }
-  ) as unknown as Elysia;
+  );

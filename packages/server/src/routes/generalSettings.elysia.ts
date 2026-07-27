@@ -172,4 +172,4 @@ export const generalSettingsPlugin = new Elysia({ prefix: '/settings/general' })
       return json(settings);
     }) as never,
     { body: GeneralSettingsPatchSchema }
-  ) as unknown as Elysia;
+  );

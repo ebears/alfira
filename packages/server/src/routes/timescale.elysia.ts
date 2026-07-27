@@ -97,4 +97,4 @@ export const timescalePlugin = new Elysia({ prefix: '/settings/timescale' })
       return json(body);
     }) as never,
     { body: TimescaleSchema }
-  ) as unknown as Elysia;
+  );

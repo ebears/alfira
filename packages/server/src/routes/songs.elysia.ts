@@ -384,4 +384,4 @@ export const songsPlugin = new Elysia({ prefix: '/songs' })
       return json(formatSong(updatedSong));
     }) as never,
     { body: SongPatchSchema }
-  ) as unknown as Elysia;
+  );

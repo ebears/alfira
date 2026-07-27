@@ -305,4 +305,4 @@ export const setupPlugin = new Elysia({ prefix: '/setup' })
       }
     }) as never,
     { body: SetupCompleteSchema }
-  ) as unknown as Elysia;
+  );

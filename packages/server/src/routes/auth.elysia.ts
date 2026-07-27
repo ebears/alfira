@@ -1,5 +1,5 @@
 import { and, eq, lt } from 'drizzle-orm';
-import { type Elysia } from 'elysia';
+import { Elysia } from 'elysia';
 import crypto from 'node:crypto';
 import * as v from 'valibot';
 /* eslint-disable @typescript-eslint/no-unsafe-type-assertion */
@@ -735,11 +735,9 @@ async function handleLogout(ctx: Record<string, unknown>): Promise<Response> {
 // Plugin
 // ---------------------------------------------------------------------------
 
-export function authPlugin(app: Elysia): Elysia {
-  return app
-    .get('/login', handleLogin as never)
-    .get('/callback', handleCallback as never)
-    .post('/refresh', handleRefresh as never)
-    .get('/me', handleMe as never)
-    .post('/logout', handleLogout as never) as unknown as Elysia;
-}
+export const authPlugin = new Elysia()
+  .get('/login', handleLogin as never)
+  .get('/callback', handleCallback as never)
+  .post('/refresh', handleRefresh as never)
+  .get('/me', handleMe as never)
+  .post('/logout', handleLogout as never);

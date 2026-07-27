@@ -189,9 +189,24 @@ All 19 `.elysia.ts` route files on `apiApp`: `tags`, `channelMix`, `compressor`,
 
 **Net:** 771 lines deleted, 114 added (reduction of 657 lines).
 
-### Phase 5c — Auth plugin conversion (optional)
+### Phase 5c — Remove `as unknown as Elysia` from all plugin exports ✅
 
-Convert `authPlugin` from the function pattern to a proper Elysia instance:
+With oxlint v1.75.0 + tsgolint v7.0.2001, tsgo now resolves Elysia's generic types. `as unknown as Elysia` casts on plugin exports are no longer needed.
+
+**Removed `as unknown as Elysia` from 20 plugin exports across all route files** (19 on `apiApp` + `authPlugin` on `authApp`).
+
+**Removed `as unknown as Elysia` from `.use()` calls in `elysia-app.ts`** — `apiApp.use(plugin)` and `app.use(apiApp)` / `app.use(authApp)` work without casts.
+
+**Still needed:**
+
+- `as never` on handler registrations — Elysia's own type definitions don't propagate `.derive()` through `.use()` at the type level (not a tsgo issue). This is a fundamental Elysia type limitation.
+- `Record<string, unknown>` + `getAuth()` pattern — same reason.
+- `deriveAuth` cast in `elysia-app.ts` — Elysia's `Cookie<unknown>` type doesn't match the project's `{ value?: string }` cookie format.
+- `return app as unknown as Elysia` — the function's explicit `Elysia` return type annotation can't match the deeply-nested inferred type of the chained instance.
+
+### Phase 5d — Auth plugin conversion ✅
+
+Converted `authPlugin` from the function mutation pattern to a proper Elysia instance:
 
 ```ts
 // Before
@@ -199,15 +214,20 @@ export function authPlugin(app: Elysia): Elysia { ... }
 authPlugin(authApp as unknown as Elysia)
 
 // After
-export const authPlugin = new Elysia({ prefix: '/auth' }).get(...).post(...);
+export const authPlugin = new Elysia()
+  .get('/login', handleLogin as never)
+  ... as unknown as Elysia;
 authApp.use(authPlugin);
 ```
 
-This is low priority — the auth plugin works correctly as-is and has a single consumer.
+**Modified files:**
+
+- `packages/server/src/routes/auth.elysia.ts` — `function authPlugin(app: Elysia): Elysia` → `const authPlugin = new Elysia()`. Changed `import { type Elysia }` → `import { Elysia }` (needed for `new` expression).
+- `packages/server/src/elysia-app.ts` — `authPlugin(authApp as unknown as Elysia)` → `authApp.use(authPlugin)`. Removed one eslint-disable comment and one tsgo cast.
 
 ### Phase 6 — Remove `shared/api.ts` entirely
 
-Once tsgo supports Elysia's generic types, the web client can consume Eden's typed proxy directly. At that point:
+Once Elysia (or tsgo) fixes derive type propagation through `.use()` chains, the web client can consume Eden's typed proxy directly. At that point:
 
 - Components import from Eden's `treaty<App>()` directly, with full type inference on paths, params, request bodies, and response shapes.
 - `packages/web/src/api/routes.ts` is deleted — the typed wrappers are no longer needed.
@@ -216,20 +236,22 @@ Once tsgo supports Elysia's generic types, the web client can consume Eden's typ
 
 Until then, `shared/api.ts` remains as a type-only barrel and `routes.ts` provides the typed API surface that components consume.
 
-### Future — Remove tsgo workarounds
+### Future — Remove remaining type workarounds
 
-Once tsgo (the Go-based TypeScript compiler in oxlint) improves its handling of Elysia's deeply-nested generic types:
+Once Elysia's type definitions propagate `.derive()` through `.use()` chains:
 
 - Remove `as never` casts from handler registrations in `.elysia.ts` route files
-- Remove `as unknown as Elysia` from plugin exports in `.elysia.ts` files
+- Remove `Record<string, unknown>` + `getAuth()` pattern — use proper Elysia context destructuring (`{ user, isAdmin, params }`)
 - Remove `as any` cast on the Eden proxy (`$`) in `routes.ts`
-- Restore proper Elysia context destructuring (`{ user, isAdmin, params }`) in handlers
 - Remove oxlint overrides for `no-explicit-any`, `no-unsafe-*`, `promise/prefer-await-to-then` in `routes.ts`
 - Enable full `treaty<App>()` type inference for Eden (Phase 6)
 
+The `deriveAuth` cast and `return app` cast in `elysia-app.ts` may also be fixable with matching types (Elysia's `Cookie<unknown>` → `{ value?: string }`, and removing the explicit `Elysia` return type annotation).
+
 ## Known issues
 
-- **tsgo + Elysia type propagation.** tsgo does not resolve Elysia's deeply-nested generic types, including `.derive()` propagation through `.use()`. Workaround: `as never` casts on handler registrations, `as unknown as Elysia` on plugin exports, `getAuth(ctx)` helper that casts to `AuthContext`, and the inline `deriveAuth` on the main app (which tsgo can handle for the WebSocket context). A future tsgo/Elysia update may fix this. Note: Bun's native transpiler handles these types correctly — the issue is only at typecheck time.
+- **Elysia `derive()` type propagation through `.use()`.** Elysia's type definitions don't propagate `.derive()` context through `.use()` chains. At runtime this works correctly (Bun handles it), but at typecheck time the derived context (`{ user, isAdmin }`) is invisible to handlers in sub-apps. Workaround: `as never` casts on handler registrations, `Record<string, unknown>` + `getAuth(ctx)` pattern that casts to `AuthContext`. This is an Elysia type definition limitation, not a tsgo issue. A future Elysia release may fix this.
+- **Elysia `derive()` callback type mismatch.** Elysia's context uses `Cookie<unknown>` but the project uses `{ value?: string }` for cookies. Workaround: `deriveAuth as unknown as (ctx) => ...` cast.
 - **tsgo + drizzle + `Record<string, unknown>` incompatibility.** When a handler parameter is `Record<string, unknown>`, tsgo fails to resolve `.where()` overloads on drizzle query builders. Workaround: extract queries into helper functions with clean parameter types. A future tsgo update may fix this.
 - **Bun namespace errors.** Installing Elysia changes the TypeScript import graph in a way that surfaces pre-existing `Bun.spawn` / `Bun.CryptoHasher` type errors in `index.ts` and `jwt.ts`. Workaround: `@ts-expect-error` + eslint-disable blocks.
 - **Concurrent refresh token race condition.** `generateRefreshToken()` used `sign()` with second-granularity `iat`, causing identical tokens (and thus identical DB hashes) when two refreshes fired in the same second. Fixed by adding `jti: crypto.randomUUID()` to the token payload.

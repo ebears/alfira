@@ -82,4 +82,4 @@ export const equalizerPlugin = new Elysia({ prefix: '/settings/equalizer' })
       return json(body);
     }) as never,
     { body: EqualizerSchema }
-  ) as unknown as Elysia;
+  );

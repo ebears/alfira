@@ -107,4 +107,4 @@ export const distortionPlugin = new Elysia({ prefix: '/settings/distortion' })
       return json(body);
     }) as never,
     { body: DistortionSchema }
-  ) as unknown as Elysia;
+  );

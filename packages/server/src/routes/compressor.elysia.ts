@@ -95,4 +95,4 @@ export const compressorPlugin = new Elysia({ prefix: '/settings/compressor' })
       return json(body);
     }) as never,
     { body: CompressorSchema }
-  ) as unknown as Elysia;
+  );

@@ -77,4 +77,4 @@ export const tremoloPlugin = new Elysia({ prefix: '/settings/tremolo' })
       return json(body);
     }) as never,
     { body: TremoloSchema }
-  ) as unknown as Elysia;
+  );

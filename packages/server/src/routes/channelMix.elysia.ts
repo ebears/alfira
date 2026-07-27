@@ -91,4 +91,4 @@ export const channelMixPlugin = new Elysia({ prefix: '/settings/channelmix' })
       return json(body);
     }) as never,
     { body: ChannelMixSchema }
-  ) as unknown as Elysia;
+  );
