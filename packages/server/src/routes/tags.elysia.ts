@@ -3,6 +3,8 @@ import { Elysia, t } from 'elysia';
 
 import { deriveAuth } from '../lib/authDerive';
 import { authGuard, createAdminOrPermissionGuard } from '../lib/elysia-guards';
+import { ApiError } from '../lib/errors';
+import { TagItem } from '../lib/responseSchemas';
 import { emitPlaylistUpdated } from '../lib/socket';
 import { db, tables } from '../shared/db';
 
@@ -96,21 +98,25 @@ async function deleteTagRow(nameLower: string) {
 export const tagsPlugin = new Elysia({ prefix: '/tags' })
   .derive(deriveAuth)
   .use(authGuard)
-  .get('/', () => {
-    return Response.json({ tags: fetchTagList() });
-  })
+  .get(
+    '/',
+    () => {
+      return { tags: fetchTagList() };
+    },
+    { response: { 200: t.Object({ tags: t.Array(TagItem) }) } }
+  )
   .get('/:nameLower', ({ params }) => {
     const nameLower = (params as Record<string, string>).nameLower as string;
     const tag = fetchTag(nameLower);
     if (!tag) {
-      return Response.json({ error: 'Tag not found.' }, { status: 404 });
+      throw new ApiError(404, 'Tag not found.');
     }
 
-    return Response.json({ tag });
+    return { tag };
   })
   .get('/:nameLower/songs', ({ params }) => {
     const nameLower = (params as Record<string, string>).nameLower as string;
-    return Response.json({ songs: fetchSongsByTag(nameLower) });
+    return { songs: fetchSongsByTag(nameLower) };
   })
   .use(createAdminOrPermissionGuard('tags.manage'))
   .patch(
@@ -120,7 +126,7 @@ export const tagsPlugin = new Elysia({ prefix: '/tags' })
 
       const existing = fetchTag(nameLower);
       if (!existing) {
-        return Response.json({ error: 'Tag not found.' }, { status: 404 });
+        throw new ApiError(404, 'Tag not found.');
       }
 
       const data: Record<string, unknown> = {};
@@ -134,11 +140,11 @@ export const tagsPlugin = new Elysia({ prefix: '/tags' })
       }
 
       if (Object.keys(data).length === 0) {
-        return Response.json({ error: 'No valid fields to update.' }, { status: 400 });
+        throw new ApiError(400, 'No valid fields to update.');
       }
 
       const updated = await updateTagReturning(nameLower, data);
-      return Response.json({ tag: updated });
+      return { tag: updated };
     },
     { body: TagPatchSchema }
   )
@@ -147,7 +153,7 @@ export const tagsPlugin = new Elysia({ prefix: '/tags' })
 
     const existing = fetchTag(nameLower);
     if (!existing) {
-      return Response.json({ error: 'Tag not found.' }, { status: 404 });
+      throw new ApiError(404, 'Tag not found.');
     }
 
     // Remove this tag from all songs that have it
@@ -174,5 +180,5 @@ export const tagsPlugin = new Elysia({ prefix: '/tags' })
 
     await deleteTagRow(nameLower);
 
-    return Response.json({ success: true });
+    return { success: true };
   });

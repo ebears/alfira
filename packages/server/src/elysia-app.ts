@@ -5,6 +5,7 @@ import { join } from 'node:path';
 import { API_SECURITY_HEADERS } from './lib/apiResponse';
 import { deriveAuth } from './lib/authDerive';
 import { VERSION } from './lib/config';
+import { ApiError } from './lib/errors';
 import { lavalink } from './lib/lavalink';
 import { registerClient, unregisterClient, type WsClient } from './lib/socket';
 import { type verifySessionToken } from './middleware/requireAuth';
@@ -79,6 +80,19 @@ export function createApp() {
   const apiApp = new Elysia({ prefix: '/api' })
     .onAfterHandle(({ set }) => {
       Object.assign(set.headers, API_SECURITY_HEADERS);
+    })
+    .onError(({ error, set }) => {
+      if (error instanceof ApiError) {
+        set.status = error.status;
+        return { error: error.message };
+      }
+      // Unexpected error — log and return 500.
+      logger.error(
+        { err: error instanceof Error ? error.message : JSON.stringify(error) },
+        'Unhandled API error'
+      );
+      set.status = 500;
+      return { error: 'Internal server error.' };
     })
     .get('/version', () => ({ version: VERSION }))
     .use(tagsPlugin)

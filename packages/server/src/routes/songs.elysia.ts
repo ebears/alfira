@@ -5,6 +5,7 @@ import { deriveAuth } from '../lib/authDerive';
 import { getGuildId } from '../lib/config';
 import { getUserDisplayName, resolveDisplayNames } from '../lib/displayName';
 import { authGuard, createAdminOrPermissionGuard } from '../lib/elysia-guards';
+import { ApiError } from '../lib/errors';
 import { parsePagination } from '../lib/pagination';
 import {
   buildSongFilterClause,
@@ -187,7 +188,7 @@ export const songsPlugin = new Elysia({ prefix: '/songs' })
       addedByDisplayName: nameMap.get(s.addedBy) ?? s.addedBy,
     }));
 
-    return Response.json({
+    return {
       items: songsWithNames,
       pagination: {
         page,
@@ -195,7 +196,7 @@ export const songsPlugin = new Elysia({ prefix: '/songs' })
         total,
         totalPages: Math.ceil(total / limit),
       },
-    });
+    };
   })
   .guard({}, (app) =>
     app
@@ -206,7 +207,7 @@ export const songsPlugin = new Elysia({ prefix: '/songs' })
           const { ids } = body;
           await deleteSongsByIds(ids);
 
-          return Response.json({ deleted: ids.length });
+          return { deleted: ids.length };
         },
         { body: BulkDeleteSchema }
       )
@@ -214,7 +215,7 @@ export const songsPlugin = new Elysia({ prefix: '/songs' })
         const id = (params as Record<string, string>).id as string;
         const existing = fetchSongById(id);
         if (!existing) {
-          return Response.json({ error: 'Song not found.' }, { status: 404 });
+          throw new ApiError(404, 'Song not found.');
         }
 
         deleteSongById(id);
@@ -231,12 +232,7 @@ export const songsPlugin = new Elysia({ prefix: '/songs' })
         async ({ body }) => {
           const { ids } = body;
 
-          const tagsResult = validateTags(body.tags);
-          if (!tagsResult.ok) {
-            return tagsResult.response;
-          }
-
-          const newTags = await canonicalizeTags(tagsResult.value);
+          const newTags = await canonicalizeTags(validateTags(body.tags));
           const mode = body.mode ?? 'add';
 
           const existingSongs = fetchSongsByIds(ids);
@@ -269,7 +265,7 @@ export const songsPlugin = new Elysia({ prefix: '/songs' })
             await reSyncPlaylistsForTags(newTags.map((t) => t.toLowerCase()));
           }
 
-          return Response.json({ updated: updatedSongs.length, tags: newTags });
+          return { updated: updatedSongs.length, tags: newTags };
         },
         { body: BulkTagSchema }
       )
@@ -278,14 +274,13 @@ export const songsPlugin = new Elysia({ prefix: '/songs' })
         const ids = b.ids as string[];
         const clearFields = (b.clearFields as string[]) ?? [];
 
-        const fieldResult = await validateAndBuildSongFields(b, clearFields);
-        if (fieldResult instanceof Response) {
-          return fieldResult;
-        }
-        const { data, processedTags, processedVolumeBoost } = fieldResult;
+        const { data, processedTags, processedVolumeBoost } = await validateAndBuildSongFields(
+          b,
+          clearFields
+        );
 
         if (Object.keys(data).length === 0) {
-          return Response.json({ error: 'No fields to update.' }, { status: 400 });
+          throw new ApiError(400, 'No fields to update.');
         }
 
         updateSongsByIds(ids, data);
@@ -305,7 +300,7 @@ export const songsPlugin = new Elysia({ prefix: '/songs' })
 
         notifyPlayerOfMetadataChange(ids, data, processedVolumeBoost);
 
-        return Response.json({ updated: ids.length });
+        return { updated: ids.length };
       })
       .patch(
         '/:id',
@@ -314,20 +309,17 @@ export const songsPlugin = new Elysia({ prefix: '/songs' })
 
           const existing = fetchSongById(id);
           if (!existing) {
-            return Response.json({ error: 'Song not found.' }, { status: 404 });
+            throw new ApiError(404, 'Song not found.');
           }
 
           const oldTagsLower = new Set((existing.tags ?? []).map((t) => t.toLowerCase()));
 
-          const fieldResult = await validateAndBuildSongFields(body);
-          if (fieldResult instanceof Response) {
-            return fieldResult;
-          }
-          const { data, processedTags, processedVolumeBoost } = fieldResult;
+          const { data, processedTags, processedVolumeBoost } =
+            await validateAndBuildSongFields(body);
 
           const updatedSong = await updateSongReturning(id, data);
           if (!updatedSong) {
-            return Response.json({ error: 'Failed to update song.' }, { status: 500 });
+            throw new ApiError(500, 'Failed to update song.');
           }
 
           const patchedDisplayName = await getUserDisplayName(updatedSong.addedBy);
@@ -344,7 +336,7 @@ export const songsPlugin = new Elysia({ prefix: '/songs' })
 
           notifyPlayerOfMetadataChange([id], data, processedVolumeBoost);
 
-          return Response.json(formatSong(updatedSong));
+          return formatSong(updatedSong);
         },
         { body: SongPatchSchema }
       )

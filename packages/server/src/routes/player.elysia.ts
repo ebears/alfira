@@ -5,6 +5,7 @@ import { type GuildPlayer } from '../GuildPlayer';
 import { deriveAuth } from '../lib/authDerive';
 import { getGuildId } from '../lib/config';
 import { authGuard, createAdminOrPermissionGuard, voiceGuard } from '../lib/elysia-guards';
+import { ApiError } from '../lib/errors';
 import { lavalink } from '../lib/lavalink';
 import { requirePlayer, requirePlaying } from '../lib/player';
 import { canAccessPlaylist } from '../lib/playlistAccess';
@@ -40,40 +41,16 @@ function fetchSongById(songId: string) {
 // Plugin helpers
 // ---------------------------------------------------------------------------
 
-interface UrlTempSongOk {
-  ok: true;
-  player: GuildPlayer;
-  queuedSong: QueuedSong;
-  metadataTitle: string;
-}
-
-interface UrlTempSongErr {
-  ok: false;
-  response: Response;
-}
-
 async function resolveUrlTempSong(
   user: { discordId: string; username: string },
   body: { url?: string }
-): Promise<UrlTempSongOk | UrlTempSongErr> {
-  const urlResult = validateSourceUrl(body.url);
-  if (!urlResult.ok) {
-    return { ok: false, response: urlResult.response };
-  }
-  const url = urlResult.value;
+): Promise<{ player: GuildPlayer; queuedSong: QueuedSong; metadataTitle: string }> {
+  const url = validateSourceUrl(body.url);
 
   const discordId = user.discordId;
-  const playerResult = await resolveOrAutoJoinPlayer(discordId);
-  if (!playerResult.ok) {
-    return { ok: false, response: playerResult.response };
-  }
-  const player = playerResult.player;
+  const player = await resolveOrAutoJoinPlayer(discordId);
 
-  const metadataResult = await fetchSourceMetadata(url);
-  if (!metadataResult.ok) {
-    return { ok: false, response: metadataResult.response };
-  }
-  const metadata = metadataResult.value;
+  const metadata = await fetchSourceMetadata(url);
 
   const username = user.username;
   const queuedSong: QueuedSong = {
@@ -89,7 +66,7 @@ async function resolveUrlTempSong(
     requestedBy: username,
   };
 
-  return { ok: true, player, queuedSong, metadataTitle: metadata.title };
+  return { player, queuedSong, metadataTitle: metadata.title };
 }
 
 // ---------------------------------------------------------------------------
@@ -140,7 +117,7 @@ export const playerPlugin = new Elysia({ prefix: '/player' })
     const player = getPlayer(getGuildId());
 
     if (!player) {
-      return Response.json({
+      return {
         isPlaying: false,
         isPaused: false,
         isConnectedToVoice: lavalink.isGuildConnected(getGuildId()),
@@ -154,10 +131,10 @@ export const playerPlugin = new Elysia({ prefix: '/player' })
         timescaleSpeed: 1,
         nodeLinkPosition: null,
         nodeLinkTime: null,
-      });
+      };
     }
 
-    return Response.json(player.getQueueState());
+    return player.getQueueState();
   })
   .use(voiceGuard)
 
@@ -170,72 +147,56 @@ export const playerPlugin = new Elysia({ prefix: '/player' })
           const { songIds, target } = ctx.body as typeof ReorderSchema.static;
 
           if (songIds.length === 0) {
-            return Response.json({ error: 'songIds must not be empty.' }, { status: 400 });
-          }
-
-          const playerResult = requirePlayer();
-          if (!playerResult.ok) {
-            return playerResult.response;
+            throw new ApiError(400, 'songIds must not be empty.');
           }
 
           try {
+            const player = requirePlayer();
             if (target === 'priority') {
-              playerResult.player.reorderPriorityQueue(songIds);
+              player.reorderPriorityQueue(songIds);
             } else {
-              playerResult.player.reorderQueue(songIds);
+              player.reorderQueue(songIds);
             }
           } catch (error) {
-            return Response.json(
-              { error: error instanceof Error ? error.message : 'Invalid reorder.' },
-              { status: 422 }
-            );
+            throw new ApiError(422, error instanceof Error ? error.message : 'Invalid reorder.');
           }
 
-          return Response.json({ message: 'Queue reordered.' });
+          return { message: 'Queue reordered.' };
         },
         { body: ReorderSchema }
       )
       .post('/queue/:songId/promote', ({ ...ctx }) => {
         const songId = (ctx.params as Record<string, string>).songId as string;
-        const playerResult = requirePlayer();
-        if (!playerResult.ok) {
-          return playerResult.response;
-        }
+        const player = requirePlayer();
 
-        const promoted = playerResult.player.promoteSong(songId);
+        const promoted = player.promoteSong(songId);
         if (!promoted) {
-          return Response.json({ error: 'Song not found in queue.' }, { status: 404 });
+          throw new ApiError(404, 'Song not found in queue.');
         }
 
-        return Response.json({ message: 'Song promoted to Up Next.' });
+        return { message: 'Song promoted to Up Next.' };
       })
       .post('/queue/:songId/demote', ({ ...ctx }) => {
         const songId = (ctx.params as Record<string, string>).songId as string;
-        const playerResult = requirePlayer();
-        if (!playerResult.ok) {
-          return playerResult.response;
-        }
+        const player = requirePlayer();
 
-        const demoted = playerResult.player.demoteSong(songId);
+        const demoted = player.demoteSong(songId);
         if (!demoted) {
-          return Response.json({ error: 'Song not found in Up Next.' }, { status: 404 });
+          throw new ApiError(404, 'Song not found in Up Next.');
         }
 
-        return Response.json({ message: 'Song moved to queue.' });
+        return { message: 'Song moved to queue.' };
       })
       .delete('/queue/:songId', ({ ...ctx }) => {
         const songId = (ctx.params as Record<string, string>).songId as string;
-        const playerResult = requirePlayer();
-        if (!playerResult.ok) {
-          return playerResult.response;
-        }
+        const player = requirePlayer();
 
-        const removed = playerResult.player.removeSongById(songId);
+        const removed = player.removeSongById(songId);
         if (!removed) {
-          return Response.json({ error: 'Song not found in queue.' }, { status: 404 });
+          throw new ApiError(404, 'Song not found in queue.');
         }
 
-        return Response.json({ message: 'Song removed from queue.' });
+        return { message: 'Song removed from queue.' };
       })
       .post(
         '/add-to-priority',
@@ -244,15 +205,11 @@ export const playerPlugin = new Elysia({ prefix: '/player' })
 
           const song = fetchSongById(songId);
           if (!song) {
-            return Response.json({ error: 'Song not found.' }, { status: 404 });
+            throw new ApiError(404, 'Song not found.');
           }
 
           const discordId = (user as { discordId: string }).discordId;
-          const playerResult = await resolveOrAutoJoinPlayer(discordId);
-          if (!playerResult.ok) {
-            return playerResult.response;
-          }
-          const player = playerResult.player;
+          const player = await resolveOrAutoJoinPlayer(discordId);
 
           const requestedBy = (user as { username: string }).username;
           const queuedSong = toQueuedSong(
@@ -263,46 +220,40 @@ export const playerPlugin = new Elysia({ prefix: '/player' })
 
           await player.addToPriorityQueue(queuedSong);
 
-          return Response.json({
+          return {
             message: `Added "${song.nickname ?? song.title}" to Up Next.`,
             song: queuedSong,
-          });
+          };
         },
         { body: SongIdSchema }
       )
       .post('/clear', () => {
-        const playerResult = requirePlayer();
-        if (!playerResult.ok) {
-          return playerResult.response;
-        }
+        const player = requirePlayer();
 
-        playerResult.player.clearQueue();
-        return Response.json({ message: 'Queue cleared.' });
+        player.clearQueue();
+        return { message: 'Queue cleared.' };
       })
       .post('/leave', () => {
         const player = getPlayer(getGuildId());
 
         if (!player && !lavalink.isGuildConnected(getGuildId())) {
-          return Response.json({ error: 'The bot is not in a voice channel.' }, { status: 409 });
+          throw new ApiError(409, 'The bot is not in a voice channel.');
         }
 
         if (player) {
           player.stop();
         }
 
-        return Response.json({ message: 'Left the voice channel.' });
+        return { message: 'Left the voice channel.' };
       })
       .post(
         '/loop',
         ({ ...ctx }) => {
           const { mode } = ctx.body as typeof LoopSchema.static;
-          const playerResult = requirePlayer();
-          if (!playerResult.ok) {
-            return playerResult.response;
-          }
+          const player = requirePlayer();
 
-          playerResult.player.setLoopMode(mode);
-          return Response.json({ loopMode: mode });
+          player.setLoopMode(mode);
+          return { loopMode: mode };
         },
         { body: LoopSchema }
       )
@@ -317,14 +268,11 @@ export const playerPlugin = new Elysia({ prefix: '/player' })
           user as { discordId: string; username: string },
           body
         );
-        if (!result.ok) {
-          return result.response;
-        }
         await result.player.replaceQueueAndPlay([result.queuedSong]);
-        return Response.json({
+        return {
           message: `Now playing "${result.metadataTitle}".`,
           song: result.queuedSong,
-        });
+        };
       },
       { body: UrlSchema }
     )
@@ -334,13 +282,10 @@ export const playerPlugin = new Elysia({ prefix: '/player' })
     app
       .use(createAdminOrPermissionGuard('queue.manage'))
       .post('/pause-toggle', () => {
-        const playingResult = requirePlaying();
-        if (!playingResult.ok) {
-          return playingResult.response;
-        }
+        const player = requirePlaying();
 
-        const isPaused = playingResult.player.togglePause();
-        return Response.json({ isPaused });
+        const isPaused = player.togglePause();
+        return { isPaused };
       })
       .post(
         '/play',
@@ -349,11 +294,7 @@ export const playerPlugin = new Elysia({ prefix: '/player' })
           const { playlistId, mode, loop, startFromSongId } = body;
 
           const discordId = (user as { discordId: string }).discordId;
-          const playerResult = await resolveOrAutoJoinPlayer(discordId);
-          if (!playerResult.ok) {
-            return playerResult.response;
-          }
-          const player = playerResult.player;
+          const player = await resolveOrAutoJoinPlayer(discordId);
 
           let dbSongs: (typeof songTable.$inferSelect)[];
 
@@ -361,12 +302,12 @@ export const playerPlugin = new Elysia({ prefix: '/player' })
             const playlist = await findPlaylistWithSongs(playlistId);
 
             if (!playlist) {
-              return Response.json({ error: 'Playlist not found.' }, { status: 404 });
+              throw new ApiError(404, 'Playlist not found.');
             }
 
             const accessResult = canAccessPlaylist(playlist, user ?? undefined);
             if (!accessResult.ok) {
-              return Response.json({ error: accessResult.error }, { status: 403 });
+              throw new ApiError(403, accessResult.error);
             }
 
             dbSongs = playlist.songs.map((ps) => ps.song);
@@ -375,14 +316,14 @@ export const playerPlugin = new Elysia({ prefix: '/player' })
           }
 
           if (dbSongs.length === 0) {
-            return Response.json({ error: 'No songs found to play.' }, { status: 422 });
+            throw new ApiError(422, 'No songs found to play.');
           }
 
           if (startFromSongId) {
             const startIndex = dbSongs.findIndex((s) => s.id === startFromSongId);
 
             if (startIndex === -1) {
-              return Response.json({ error: 'Start song not found in playlist.' }, { status: 404 });
+              throw new ApiError(404, 'Start song not found in playlist.');
             }
 
             dbSongs = [...dbSongs.slice(startIndex), ...dbSongs.slice(0, startIndex)];
@@ -406,7 +347,7 @@ export const playerPlugin = new Elysia({ prefix: '/player' })
             await player.addToQueue(queuedSongs);
           }
 
-          return Response.json({ message: `Queued ${queuedSongs.length} song(s).` });
+          return { message: `Queued ${queuedSongs.length} song(s).` };
         },
         { body: PlaySchema }
       )
@@ -423,14 +364,11 @@ export const playerPlugin = new Elysia({ prefix: '/player' })
             user as { discordId: string; username: string },
             body
           );
-          if (!result.ok) {
-            return result.response;
-          }
           await result.player.addToPriorityQueue(result.queuedSong);
-          return Response.json({
+          return {
             message: `Added "${result.metadataTitle}" to the queue.`,
             song: result.queuedSong,
-          });
+          };
         },
         { body: UrlSchema }
       )
@@ -439,24 +377,12 @@ export const playerPlugin = new Elysia({ prefix: '/player' })
         async ({ user, ...ctx }) => {
           const body = ctx.body as typeof QuickAddPlaylistSchema.static;
           const maxVideos = clampMaxVideos(body.maxVideos);
-          const urlResult = validatePlaylistUrl(body.url);
-          if (!urlResult.ok) {
-            return urlResult.response;
-          }
-          const url = urlResult.value;
+          const url = validatePlaylistUrl(body.url);
 
           const discordId = (user as { discordId: string }).discordId;
-          const playerResult = await resolveOrAutoJoinPlayer(discordId);
-          if (!playerResult.ok) {
-            return playerResult.response;
-          }
-          const player = playerResult.player;
+          const player = await resolveOrAutoJoinPlayer(discordId);
 
-          const playlistResult = await fetchPlaylistMetadata(url, maxVideos);
-          if (!playlistResult.ok) {
-            return playlistResult.response;
-          }
-          const playlistMetadata = playlistResult.value;
+          const playlistMetadata = await fetchPlaylistMetadata(url, maxVideos);
 
           const requestedBy = (user as { username: string }).username;
           const addedBy = (user as { discordId: string }).discordId;
@@ -474,13 +400,13 @@ export const playerPlugin = new Elysia({ prefix: '/player' })
 
           await player.addToQueue(queuedSongs);
 
-          return Response.json({
+          return {
             message: `Added ${queuedSongs.length} song(s) from "${playlistMetadata.title}" to the queue.`,
             playlistTitle: playlistMetadata.title,
             totalVideos: playlistMetadata.videoCount,
             queuedCount: queuedSongs.length,
             songs: queuedSongs,
-          });
+          };
         },
         { body: QuickAddPlaylistSchema }
       )
@@ -494,13 +420,10 @@ export const playerPlugin = new Elysia({ prefix: '/player' })
         async ({ ...ctx }) => {
           const { position } = ctx.body as typeof SeekSchema.static;
 
-          const playingResult = requirePlaying();
-          if (!playingResult.ok) {
-            return playingResult.response;
-          }
+          const player = requirePlaying();
 
-          await playingResult.player.seek(position);
-          return Response.json(playingResult.player.getQueueState());
+          await player.seek(position);
+          return player.getQueueState();
         },
         { body: SeekSchema }
       )
@@ -508,28 +431,22 @@ export const playerPlugin = new Elysia({ prefix: '/player' })
         const player = getPlayer(getGuildId());
 
         if (!player || player.getQueue().length === 0) {
-          return Response.json({ error: 'No songs in the queue to shuffle.' }, { status: 409 });
+          throw new ApiError(409, 'No songs in the queue to shuffle.');
         }
 
         player.shuffle();
-        return Response.json({ message: 'Queue shuffled.' });
+        return { message: 'Queue shuffled.' };
       })
       .post('/skip', async () => {
-        const playingResult = requirePlaying();
-        if (!playingResult.ok) {
-          return playingResult.response;
-        }
+        const player = requirePlaying();
 
-        await playingResult.player.skip();
-        return Response.json({ message: 'Skipped.' });
+        await player.skip();
+        return { message: 'Skipped.' };
       })
       .post('/unshuffle', () => {
-        const playerResult = requirePlayer();
-        if (!playerResult.ok) {
-          return playerResult.response;
-        }
+        const player = requirePlayer();
 
-        playerResult.player.unshuffle();
-        return Response.json({ message: 'Queue order restored.' });
+        player.unshuffle();
+        return { message: 'Queue order restored.' };
       })
   );

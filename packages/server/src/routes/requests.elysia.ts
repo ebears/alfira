@@ -4,6 +4,7 @@ import { Elysia, t } from 'elysia';
 import { deriveAuth } from '../lib/authDerive';
 import { getUserDisplayName, resolveDisplayNames } from '../lib/displayName';
 import { adminGuard, authGuard, type AuthContext } from '../lib/elysia-guards';
+import { ApiError } from '../lib/errors';
 import { sendRequestDm, sendRequestNotification } from '../lib/notifications';
 import { parsePagination } from '../lib/pagination';
 import { formatSong } from '../lib/serialization';
@@ -103,11 +104,7 @@ export const requestsPlugin = new Elysia({ prefix: '/requests' })
     '/preview',
     async ({ ...ctx }) => {
       const body = ctx.body as typeof PreviewRequestSchema.static;
-      const urlResult = validateSourceUrl(body.url);
-      if (!urlResult.ok) {
-        return urlResult.response;
-      }
-      let url = urlResult.value;
+      let url = validateSourceUrl(body.url);
 
       // Strip any ?list=... query param
       try {
@@ -121,14 +118,10 @@ export const requestsPlugin = new Elysia({ prefix: '/requests' })
       const isPlaylist = isPlaylistUrl(url);
 
       if (isPlaylist) {
-        const playlistResult = await fetchPlaylistMetadata(url, 100);
-        if (!playlistResult.ok) {
-          return playlistResult.response;
-        }
-        const pm = playlistResult.value;
+        const pm = await fetchPlaylistMetadata(url, 100);
 
         const playlistThumb = pm.videos[0]?.thumbnailUrl ?? '';
-        return Response.json({
+        return {
           title: pm.title,
           sourceId: `playlist-${Date.now()}`,
           duration: pm.videos.reduce((sum, v) => sum + (v.duration || 0), 0),
@@ -143,14 +136,10 @@ export const requestsPlugin = new Elysia({ prefix: '/requests' })
             videoCount: pm.videoCount,
             thumbnailUrl: playlistThumb,
           },
-        });
+        };
       }
 
-      const metadataResult = await fetchSourceMetadata(url);
-      if (!metadataResult.ok) {
-        return metadataResult.response;
-      }
-      const metadata = metadataResult.value;
+      const metadata = await fetchSourceMetadata(url);
 
       const [existing] = await db
         .select()
@@ -166,7 +155,7 @@ export const requestsPlugin = new Elysia({ prefix: '/requests' })
         )
         .limit(1);
 
-      return Response.json({
+      return {
         title: metadata.title,
         sourceId: metadata.sourceId,
         duration: metadata.duration,
@@ -177,7 +166,7 @@ export const requestsPlugin = new Elysia({ prefix: '/requests' })
         alreadyExists: !!existing || !!existingReq,
         isPlaylist: false,
         playlistMeta: undefined,
-      });
+      };
     },
     { body: PreviewRequestSchema }
   )
@@ -227,7 +216,7 @@ export const requestsPlugin = new Elysia({ prefix: '/requests' })
       requestedByDisplayName: nameMap.get(r.requestedBy) ?? r.requestedBy,
     }));
 
-    return Response.json({
+    return {
       items: formattedRequests,
       pagination: {
         page,
@@ -235,7 +224,7 @@ export const requestsPlugin = new Elysia({ prefix: '/requests' })
         total,
         totalPages: Math.ceil(total / limit),
       },
-    });
+    };
   })
   .post(
     '/',
@@ -249,35 +238,19 @@ export const requestsPlugin = new Elysia({ prefix: '/requests' })
 
       const notifyDm = body.notifyDm === true;
 
-      const nicknameResult = validateNickname(body.nickname);
-      if (!nicknameResult.ok) {
-        return nicknameResult.response;
-      }
+      const nickname = validateNickname(body.nickname);
 
       const artist = validateOptionalString(body.artist);
       const album = validateOptionalString(body.album);
 
-      const artworkResult = validateArtworkUrl(body.artwork);
-      if (!artworkResult.ok) {
-        return artworkResult.response;
-      }
+      const artwork = validateArtworkUrl(body.artwork);
 
-      const tagsResult = validateTags(body.tags);
-      if (!tagsResult.ok) {
-        return tagsResult.response;
-      }
+      const rawTags = validateTags(body.tags);
 
-      const volumeBoostResult = validateVolumeBoost(body.volumeBoost);
-      if (!volumeBoostResult.ok) {
-        return volumeBoostResult.response;
-      }
-      const volumeBoost = volumeBoostResult.value !== undefined ? volumeBoostResult.value : null;
+      const volumeBoostValue = validateVolumeBoost(body.volumeBoost);
+      const volumeBoost = volumeBoostValue !== undefined ? volumeBoostValue : null;
 
-      const urlResult = validateSourceUrl(body.sourceUrl);
-      if (!urlResult.ok) {
-        return urlResult.response;
-      }
-      const originalUrl = urlResult.value;
+      const originalUrl = validateSourceUrl(body.sourceUrl);
 
       // Strip ?list= param unless explicit playlist type
       let url = originalUrl;
@@ -298,11 +271,7 @@ export const requestsPlugin = new Elysia({ prefix: '/requests' })
 
       // --- Playlist request ---
       if (isPlaylist) {
-        const playlistResult = await fetchPlaylistMetadata(url, 100);
-        if (!playlistResult.ok) {
-          return playlistResult.response;
-        }
-        const pm = playlistResult.value;
+        const pm = await fetchPlaylistMetadata(url, 100);
 
         if (autoApprove) {
           const videosWithUrls = pm.videos.map((v) => ({
@@ -326,10 +295,7 @@ export const requestsPlugin = new Elysia({ prefix: '/requests' })
           const newVideos = videosWithUrls.filter((v) => !existingIdSet.has(v.id));
 
           if (newVideos.length === 0) {
-            return Response.json(
-              { error: 'All songs from this playlist are already in your library.' },
-              { status: 409 }
-            );
+            throw new ApiError(409, 'All songs from this playlist are already in your library.');
           }
 
           const createdSongs = await db.transaction((tx) => {
@@ -410,16 +376,13 @@ export const requestsPlugin = new Elysia({ prefix: '/requests' })
             })();
           }
 
-          return Response.json(
-            {
-              autoApproved: true,
-              songs: createdSongs.map(formatSong),
-              importedCount: createdSongs.length,
-              skippedCount: pm.videos.length - newVideos.length,
-              playlistTitle: pm.title,
-            },
-            { status: 201 }
-          );
+          return {
+            autoApproved: true,
+            songs: createdSongs.map(formatSong),
+            importedCount: createdSongs.length,
+            skippedCount: pm.videos.length - newVideos.length,
+            playlistTitle: pm.title,
+          };
         }
 
         // Pending playlist request
@@ -458,7 +421,7 @@ export const requestsPlugin = new Elysia({ prefix: '/requests' })
           .returning();
 
         if (!created) {
-          return Response.json({ error: 'Failed to create request.' }, { status: 500 });
+          throw new ApiError(500, 'Failed to create request.');
         }
 
         const formatted = formatRequest(created);
@@ -468,15 +431,11 @@ export const requestsPlugin = new Elysia({ prefix: '/requests' })
           user as { discordId: string; username: string; isAdmin: boolean }
         );
 
-        return Response.json({ request: formatted, autoApproved: false }, { status: 201 });
+        return { request: formatted, autoApproved: false };
       }
 
       // --- Track request ---
-      const metadataResult = await fetchSourceMetadata(url);
-      if (!metadataResult.ok) {
-        return metadataResult.response;
-      }
-      const metadata = metadataResult.value;
+      const metadata = await fetchSourceMetadata(url);
 
       const [existingSong] = await db
         .select()
@@ -485,10 +444,7 @@ export const requestsPlugin = new Elysia({ prefix: '/requests' })
         .limit(1);
 
       if (existingSong) {
-        return Response.json(
-          { error: 'This song is already in your library.', song: formatSong(existingSong) },
-          { status: 409 }
-        );
+        throw new ApiError(409, 'This song is already in your library.');
       }
 
       const [existingReq] = await db
@@ -500,12 +456,11 @@ export const requestsPlugin = new Elysia({ prefix: '/requests' })
         .limit(1);
 
       if (existingReq) {
-        return Response.json({ error: 'This song has already been requested.' }, { status: 409 });
+        throw new ApiError(409, 'This song has already been requested.');
       }
 
       if (autoApprove) {
-        const tagValues =
-          tagsResult.value.length > 0 ? await canonicalizeTags(tagsResult.value) : [];
+        const tagValues = rawTags.length > 0 ? await canonicalizeTags(rawTags) : [];
 
         const [song] = await db
           .insert(songTable)
@@ -516,17 +471,17 @@ export const requestsPlugin = new Elysia({ prefix: '/requests' })
             duration: metadata.duration,
             thumbnailUrl: metadata.thumbnailUrl ?? '',
             addedBy: discordUser.discordId,
-            nickname: nicknameResult.value,
+            nickname,
             artist: artist ?? metadata.artist ?? null,
             album: album ?? null,
-            artwork: artworkResult.value ?? metadata.artworkUrl ?? null,
+            artwork: artwork ?? metadata.artworkUrl ?? null,
             tags: tagValues,
             volumeBoost,
           })
           .returning();
 
         if (!song) {
-          return Response.json({ error: 'Failed to create song.' }, { status: 500 });
+          throw new ApiError(500, 'Failed to create song.');
         }
 
         const formatted = formatSong(song);
@@ -578,7 +533,7 @@ export const requestsPlugin = new Elysia({ prefix: '/requests' })
           }
         }
 
-        return Response.json({ song: enriched, autoApproved: true }, { status: 201 });
+        return { song: enriched, autoApproved: true };
       }
 
       // Pending track request
@@ -601,7 +556,7 @@ export const requestsPlugin = new Elysia({ prefix: '/requests' })
         .returning();
 
       if (!created) {
-        return Response.json({ error: 'Failed to create request.' }, { status: 500 });
+        throw new ApiError(500, 'Failed to create request.');
       }
 
       const formatted = formatRequest(created);
@@ -611,7 +566,7 @@ export const requestsPlugin = new Elysia({ prefix: '/requests' })
         user as { discordId: string; username: string; isAdmin: boolean }
       );
 
-      return Response.json({ request: formatted, autoApproved: false }, { status: 201 });
+      return { request: formatted, autoApproved: false };
     },
     { body: CreateRequestSchema }
   )
@@ -629,14 +584,11 @@ export const requestsPlugin = new Elysia({ prefix: '/requests' })
           .limit(1)) as unknown as [typeof requestTable.$inferSelect | undefined];
 
         if (!existing) {
-          return Response.json({ error: 'Request not found.' }, { status: 404 });
+          throw new ApiError(404, 'Request not found.');
         }
 
         if (existing.status !== 'pending') {
-          return Response.json(
-            { error: 'This request has already been processed.' },
-            { status: 409 }
-          );
+          throw new ApiError(409, 'This request has already been processed.');
         }
 
         const newStatus = body.status;
@@ -672,7 +624,7 @@ export const requestsPlugin = new Elysia({ prefix: '/requests' })
             }
           }
 
-          return Response.json({ request: formatted });
+          return { request: formatted };
         }
 
         // Approve
@@ -693,7 +645,7 @@ export const requestsPlugin = new Elysia({ prefix: '/requests' })
           const videos = pd.videos ?? [];
 
           if (videos.length === 0) {
-            return Response.json({ error: 'Playlist request has no videos.' }, { status: 400 });
+            throw new ApiError(400, 'Playlist request has no videos.');
           }
 
           const videoIds = videos.map((v) => v.id);
@@ -764,12 +716,12 @@ export const requestsPlugin = new Elysia({ prefix: '/requests' })
             }
           })();
 
-          return Response.json({
+          return {
             request: formatted,
             songs: createdSongs.map(formatSong),
             importedCount: createdSongs.length,
             skippedCount: videos.length - newVideos.length,
-          });
+          };
         }
 
         // Track approval
@@ -788,7 +740,7 @@ export const requestsPlugin = new Elysia({ prefix: '/requests' })
           .returning();
 
         if (!newSong) {
-          return Response.json({ error: 'Failed to create song from request.' }, { status: 500 });
+          throw new ApiError(500, 'Failed to create song from request.');
         }
 
         await db
@@ -825,10 +777,10 @@ export const requestsPlugin = new Elysia({ prefix: '/requests' })
           }
         })();
 
-        return Response.json({
+        return {
           request: formatted,
           song: formatSong(newSong),
-        });
+        };
       },
       { body: PatchRequestSchema }
     )
@@ -843,16 +795,16 @@ export const requestsPlugin = new Elysia({ prefix: '/requests' })
       .limit(1)) as unknown as [typeof requestTable.$inferSelect | undefined];
 
     if (!existing) {
-      return Response.json({ error: 'Request not found.' }, { status: 404 });
+      throw new ApiError(404, 'Request not found.');
     }
 
     if (existing.status !== 'pending') {
-      return Response.json({ error: 'Only pending requests can be cancelled.' }, { status: 409 });
+      throw new ApiError(409, 'Only pending requests can be cancelled.');
     }
 
     const reqDiscordId = (user as { discordId: string }).discordId;
     if (existing.requestedBy !== reqDiscordId && !isAdmin) {
-      return Response.json({ error: 'You can only cancel your own requests.' }, { status: 403 });
+      throw new ApiError(403, 'You can only cancel your own requests.');
     }
 
     await db.delete(requestTable).where(eq(requestTable.id, id));

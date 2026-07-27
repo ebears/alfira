@@ -1,7 +1,7 @@
 import { count, eq } from 'drizzle-orm';
 
 import { db, tables } from '../shared/db';
-import { elysiaJson as json } from './apiResponse';
+import { ApiError } from './errors';
 
 const { playlist: playlistTable, playlistSong: playlistSongTable } = tables;
 
@@ -81,23 +81,23 @@ async function findPlaylistOr404(id: string, withCount = false): Promise<Playlis
 /**
  * Look up a playlist by ID and verify the user has access to it.
  * Combines findPlaylistOr404 (404 guard) and canAccessPlaylist (403 guard)
- * into a single call that mirrors the checkGuards pattern.
+ * into a single call.
  *
- * Returns the PlaylistRow if found and accessible, or a 404/403 Response.
+ * Returns the PlaylistRow if found and accessible, throws ApiError otherwise.
  */
 export async function requirePlaylist(
   id: string,
   user: UserContext,
   adminView?: boolean,
   withCount?: boolean
-): Promise<PlaylistRow | Response> {
+): Promise<PlaylistRow> {
   const playlist = await findPlaylistOr404(id, withCount);
   if (!playlist) {
-    return json({ error: 'Playlist not found.' }, 404);
+    throw new ApiError(404, 'Playlist not found.');
   }
   const accessResult = canAccessPlaylist(playlist, user, adminView);
   if (!accessResult.ok) {
-    return json({ error: accessResult.error }, 403);
+    throw new ApiError(403, accessResult.error);
   }
   return playlist;
 }

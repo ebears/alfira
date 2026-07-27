@@ -426,13 +426,79 @@ All guard functions converted from inline handler calls to Elysia `onBeforeHandl
 
 4. **`deriveAuth` per-plugin is still needed.** The guard plugins do NOT call `.derive(deriveAuth)` — they rely on the route plugin's derive to populate `{ user, isAdmin }` in the context. This works because Elysia merges context across `.use()` boundaries at runtime (only the TS types don't propagate). Guards access `user` and `isAdmin` via `ctx as unknown as { user, isAdmin }` casts.
 
+### Phase 8 — `ApiError` + `onError` hook replaces `Response`-returning helpers ✅
+
+All helper functions that returned `Response` objects on error (`requirePlayer()`, `requirePlaying()`, `resolveOrAutoJoinPlayer()`, `requirePlaylist()`, `validateSourceUrl()`, `validatePlaylistUrl()`, `fetchSourceMetadata()`, `fetchPlaylistMetadata()`, `validateNickname()`, `validateArtworkUrl()`, `validateTags()`, `validateVolumeBoost()`, `validateAndBuildSongFields()`, `validatePlaylistName()`) were refactored to throw `ApiError` instead. This eliminates `Response | data` unions from handler return types, unblocking response schemas (Phase 6b).
+
+**New files:**
+
+- `packages/server/src/lib/errors.ts` — `ApiError` class with `status` (number) and `message` (string).
+
+**Modified files:**
+
+- `packages/server/src/elysia-app.ts` — added `onError` hook on `apiApp` that catches `ApiError` and returns `{ error: message }` with the correct status. Non-`ApiError` errors are logged and returned as 500.
+- `packages/server/src/lib/player.ts` — `requirePlayer()` and `requirePlaying()` throw `ApiError` instead of returning `{ ok: false, response: Response }`.
+- `packages/server/src/lib/voice.ts` — `requireUserInVoice()` (dead code, replaced by `voiceGuard`) and `resolveOrAutoJoinPlayer()` throw `ApiError` instead of returning `Response` objects.
+- `packages/server/src/lib/playlistAccess.ts` — `requirePlaylist()` throws `ApiError` instead of returning `PlaylistRow | Response`.
+- `packages/server/src/lib/validation.ts` — all validation helpers (`validateSourceUrl`, `validatePlaylistUrl`, `validatePlaylistName`, `validateNickname`, `validateArtworkUrl`, `validateTags`, `validateVolumeBoost`, `fetchSourceMetadata`, `fetchPlaylistMetadata`) throw `ApiError` instead of returning `ValidationResult<T>` unions. `validateOptionalString`, `clampMaxVideos`, and `youTubeUrl` are unchanged (they never errored).
+- `packages/server/src/lib/songFieldValidation.ts` — `validateAndBuildSongFields()` throws `ApiError` (via the validators it calls) instead of returning `SongFieldOutput | Response`.
+- `packages/server/src/lib/validation.test.ts` — updated to use `expect(() => ...).toThrow()` instead of checking `.ok` / `.response` / `.value`.
+- All 6 remaining route files — all `Response.json()` success returns converted to plain `return { ... }`. All error paths converted from `return Response.json({ error }, { status })` to `throw new ApiError(status, msg)`. DELETE endpoints returning 204 keep `return new Response(null, { status: 204 })` (no body, no schema needed).
+
+**Helper pattern (before → after):**
+
+```ts
+// Before: return { ok, value } | { ok: false, response }
+export function requirePlayer():
+  { ok: true; player: GuildPlayer } | { ok: false; response: Response } {
+  const player = getPlayer(getGuildId());
+  if (!player) {
+    return { ok: false, response: json({ error: 'The bot is not connected.' }, 409) };
+  }
+  return { ok: true, player };
+}
+
+// After: return value or throw
+export function requirePlayer(): GuildPlayer {
+  const player = getPlayer(getGuildId());
+  if (!player) {
+    throw new ApiError(409, 'The bot is not connected.');
+  }
+  return player;
+}
+```
+
+**Handler call-site pattern (before → after):**
+
+```ts
+// Before: check .ok, return .response on error
+const playerResult = requirePlayer();
+if (!playerResult.ok) return playerResult.response;
+playerResult.player.clearQueue();
+return Response.json({ message: 'Queue cleared.' });
+
+// After: direct call, plain return
+const player = requirePlayer();
+player.clearQueue();
+return { message: 'Queue cleared.' };
+```
+
+**Design decisions:**
+
+- **`onError` hook catches `ApiError` only.** Non-`ApiError` errors are logged and returned as 500 Internal Server Error. This prevents accidental information leakage from unexpected exceptions.
+- **Error responses from `onError` bypass `onAfterHandle` security headers.** This matches the pre-existing behavior where `onBeforeHandle` guard short-circuits and inline error returns also skipped header injection. Error responses don't need CSP/X-Content-Type-Options headers.
+- **`elysiaJson` removed from helper files.** Helpers previously called `json(data, status)` to construct `Response` objects with security headers. Since `onError` returns plain objects (not `Response`), helpers no longer need the JSON utility.
+- **DELETE 204 responses kept as `new Response(null, { status: 204 })`.** These have no body and don't interact with response schemas. They are the only remaining `Response` returns in route handlers.
+
+**Stats:** 10+ helpers refactored. 6 route files updated. ~350 lines net reduction across the codebase.
+
 ## Remaining work
 
 ### Phase 6b — Add response schemas to get full Eden type safety
 
-**Status: In progress (13 of 20 route groups done)**
+**Status: Blocked on type alignment (13 of 20 route groups done, 1 partial)**
 
-Eden's proxy path resolution works, but response bodies are still typed as `Response` because the server routes don't have explicit `response` schemas. `routes.ts` still needs `$ = api as any` until response schemas are added to all endpoints.
+Eden's proxy path resolution works, but response bodies are still typed as `Response` because most server routes don't have explicit `response` schemas. `routes.ts` still needs `$ = api as any` until response schemas are added to all endpoints.
 
 **What's been done:**
 
@@ -442,23 +508,33 @@ Eden's proxy path resolution works, but response bodies are still typed as `Resp
   - `filters.elysia.ts` — batched GET
   - `generalSettings.elysia.ts` — GET + PATCH
   - `permissions.elysia.ts` — GET /, GET /me, PATCH /
+- **1 partial schema added:** `tags.elysia.ts` — GET `/` has `{ response: { 200: t.Object({ tags: t.Array(TagItem) }) } }` (the only handler that doesn't access params/body/derive context).
 - Handlers in these files return plain objects (not `Response.json()`) for success cases — Elysia serializes and `onAfterHandle` adds security headers.
-- Error responses (404, 400, etc.) keep `Response.json()` and bypass response schema validation.
+- Phase 8 ✅ eliminated all `Response | data` unions from the remaining route handlers — every handler now returns plain data or throws `ApiError`.
 
 **What's remaining:**
 
-7 route groups still need response schemas: `tags`, `songs`, `player`, `playlists`, `requests`, `setup`, `auth`.
+7 route groups still need response schemas: `tags` (4 of 5 endpoints), `songs`, `player`, `playlists`, `requests`, `setup`, `auth`.
 
-These routes have handlers that return `Response | data` unions (error paths use `Response.json()` via helper functions like `requirePlayer()`, `validateSourceUrl()`, etc.). Adding response schemas to these handlers causes tsgo TS2345 type errors because Elysia's handler type inference can't reconcile `Response | { data }` with a typed response schema.
+**Why they can't be added yet:**
 
-**Two approaches for the remaining routes:**
+Attempting to add response schemas to handlers that use Elysia's typed params (e.g., `/:nameLower`), destructure `.derive()` context, or return raw Drizzle query results causes tsgo TS2345 errors. There are three interacting issues:
 
-1. **`set.status` + plain return** — Convert error paths from `return Response.json({ error }, { status })` to `set.status = NNN; return { error }`. This eliminates the `Response | data` union. Works for simple error paths but requires refactoring for routes that use helper functions returning `Response`.
+1. **`.derive()` + response schemas don't mix with params destructuring.** Elysia wraps handler parameter types in `NoInfer<>` when a response schema is present. This breaks handlers that destructure `{ params }` or `{ body }` from the context — the inferred types become opaque and tsgo can't resolve them. This is the same `.use()` boundary issue from Phase 7: derive types don't propagate through schema-typed handler registrations. The 13 filter settings routes work because they don't destructure params or derive context — they use simple `() => data` handlers.
 
-2. **`as any` casts on handler functions** — Add `as any` to handler registrations: `.get('/', ((ctx) => { ... }) as any, { response: { 200: ... } })`. Bypasses tsgo's type checking while keeping runtime behavior and Eden type inference intact. Pragmatic but not type-safe at compile time.
+2. **DB row types don't match response schema types.** Handlers return raw Drizzle `$inferSelect` rows (e.g., `createdAt: Date`, `tags: string[] | null`) that don't match the Elysia schema types (e.g., `createdAt: t.String()`, `tags: t.Optional(t.Array(t.String()))`). The filter settings routes avoid this by returning explicitly-typed objects built from DB values (e.g., `fetchCompressorSettings()` returns `CompressorSettings` matching the schema). The remaining routes would need similar mapping through `formatSong()` / `formatPlaylist()` helpers.
+
+3. **Auth plugin uses raw `Response` objects.** Redirects (`Response.redirect()`), custom cookie headers, and `new Response(null, { status: 302 })` are fundamentally incompatible with response schemas. Auth should remain schema-free.
+
+**Path forward:**
+
+1. Map DB return values through formatting helpers so they match schema types.
+2. For handlers that need derive context (user/isAdmin) AND params/body AND a response schema, use Elysia's `.resolve()` or inline the derive logic as a fallback.
+3. Add response schemas incrementally, verifying each one before moving on.
+4. Skip auth — it's inherently response-schema-incompatible.
 
 **Web client cleanup (deferred until server schemas are complete):**
 
 After all response schemas are in place, `routes.ts` (~582 lines) and `shared/api.ts` (~120 lines) can be deleted — web components consume Eden directly with full type inference. The `$ = api as any` workaround is eliminated.
 
-**Prerequisite:** Phase 7b ✅ — guards now short-circuit in `onBeforeHandle`, so handlers no longer return `Response` for auth errors. Handlers may still return `Response.json()` for business-logic errors (404, 400, etc.) — those bypass response schema validation and Eden maps them to the `error` branch.
+**Prerequisites:** Phase 7b ✅ (guards in `onBeforeHandle`), Phase 8 ✅ (handlers return plain data, no `Response | data` unions).

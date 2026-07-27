@@ -1,30 +1,20 @@
 import { type GuildPlayer } from '../startDiscord';
 import { getPlayer } from '../startDiscord';
-import { elysiaJson as json } from './apiResponse';
 import { getGuildId } from './config';
+import { ApiError } from './errors';
 
-export function requirePlaying():
-  | { ok: true; player: GuildPlayer }
-  | { ok: false; response: Response } {
+export function requirePlaying(): GuildPlayer {
   const player = getPlayer(getGuildId());
   if (!player?.getCurrentSong()) {
-    return {
-      ok: false,
-      response: json({ error: 'Nothing is currently playing.' }, 409),
-    };
+    throw new ApiError(409, 'Nothing is currently playing.');
   }
-  return { ok: true, player };
+  return player;
 }
 
-export function requirePlayer():
-  | { ok: true; player: GuildPlayer }
-  | { ok: false; response: Response } {
+export function requirePlayer(): GuildPlayer {
   const player = getPlayer(getGuildId());
   if (!player) {
-    return {
-      ok: false,
-      response: json({ error: 'The bot is not connected.' }, 409),
-    };
+    throw new ApiError(409, 'The bot is not connected.');
   }
-  return { ok: true, player };
+  return player;
 }

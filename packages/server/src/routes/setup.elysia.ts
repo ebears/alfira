@@ -5,6 +5,7 @@ import { deriveAuth } from '../lib/authDerive';
 import { refreshGuildId } from '../lib/config';
 import { botHeaders, fetchGuildRoles } from '../lib/discordRoles';
 import { setupModeGuard } from '../lib/elysia-guards';
+import { ApiError } from '../lib/errors';
 import { type SetupChannel, type SetupGuild } from '../shared';
 import { db, tables } from '../shared/db';
 import { logger } from '../shared/logger';
@@ -169,98 +170,80 @@ function saveSetupConfig(data: typeof SetupCompleteSchema.static): void {
 export const setupPlugin = new Elysia({ prefix: '/setup' })
   .derive(deriveAuth)
   .get('/', async () => {
-    try {
-      const row = fetchSetupStatus();
+    const row = fetchSetupStatus();
 
-      if (!row) {
-        return Response.json({
-          setupCompleted: false,
-          guildName: null,
-          clientId: process.env.DISCORD_CLIENT_ID ?? '',
-        });
-      }
-
-      let guildName: string | null = null;
-      if (row.setupCompleted && row.guildId) {
-        guildName = await fetchGuildName(row.guildId);
-      }
-
-      return Response.json({
-        setupCompleted: row.setupCompleted,
-        guildName,
-        clientId: process.env.DISCORD_CLIENT_ID ?? '',
-      });
-    } catch {
-      return Response.json({
+    if (!row) {
+      return {
         setupCompleted: false,
         guildName: null,
         clientId: process.env.DISCORD_CLIENT_ID ?? '',
-      });
+      };
     }
+
+    let guildName: string | null = null;
+    if (row.setupCompleted && row.guildId) {
+      guildName = await fetchGuildName(row.guildId);
+    }
+
+    return {
+      setupCompleted: row.setupCompleted,
+      guildName,
+      clientId: process.env.DISCORD_CLIENT_ID ?? '',
+    };
   })
   .get('/status', async () => {
-    try {
-      const row = fetchSetupStatus();
+    const row = fetchSetupStatus();
 
-      if (!row) {
-        return Response.json({
-          setupCompleted: false,
-          guildName: null,
-          clientId: process.env.DISCORD_CLIENT_ID ?? '',
-        });
-      }
-
-      let guildName: string | null = null;
-      if (row.setupCompleted && row.guildId) {
-        guildName = await fetchGuildName(row.guildId);
-      }
-
-      return Response.json({
-        setupCompleted: row.setupCompleted,
-        guildName,
-        clientId: process.env.DISCORD_CLIENT_ID ?? '',
-      });
-    } catch {
-      return Response.json({
+    if (!row) {
+      return {
         setupCompleted: false,
         guildName: null,
         clientId: process.env.DISCORD_CLIENT_ID ?? '',
-      });
+      };
     }
+
+    let guildName: string | null = null;
+    if (row.setupCompleted && row.guildId) {
+      guildName = await fetchGuildName(row.guildId);
+    }
+
+    return {
+      setupCompleted: row.setupCompleted,
+      guildName,
+      clientId: process.env.DISCORD_CLIENT_ID ?? '',
+    };
   })
   .use(setupModeGuard)
-  .get('/guilds', () => {
-    return (async (): Promise<Response> => {
-      try {
-        const guilds = await fetchBotGuilds();
-        return Response.json({ guilds });
-      } catch (error) {
-        logger.error({ error }, 'Error fetching bot guilds');
-        return Response.json({ error: 'Could not fetch guild list.' }, { status: 502 });
-      }
-    })();
+  .get('/guilds', async () => {
+    try {
+      const guilds = await fetchBotGuilds();
+      return { guilds };
+    } catch (error) {
+      logger.error({ error }, 'Error fetching bot guilds');
+      throw new ApiError(502, 'Could not fetch guild list.');
+    }
   })
   .get('/roles', async ({ query }) => {
     const guildId = (query as Record<string, string>).guildId;
     if (!guildId) {
-      return Response.json({ error: 'guildId query parameter is required.' }, { status: 400 });
+      throw new ApiError(400, 'guildId query parameter is required.');
     }
 
     const roles = await fetchGuildRoles(guildId);
-    return Response.json({ roles });
+    return { roles };
   })
   .get('/channels', async ({ query }) => {
     const guildId = (query as Record<string, string>).guildId;
     if (!guildId) {
-      return Response.json({ error: 'guildId query parameter is required.' }, { status: 400 });
+      throw new ApiError(400, 'guildId query parameter is required.');
     }
 
     try {
       const channels = await fetchGuildChannels(guildId);
-      return Response.json({ channels });
+      return { channels };
     } catch (error) {
       logger.error({ error }, 'Error fetching guild channels');
-      return Response.json({ error: 'Could not fetch channels.' }, { status: 502 });
+      throw new ApiError(502, 'Could not fetch channels.');
     }
   })
   .post(
@@ -268,10 +251,10 @@ export const setupPlugin = new Elysia({ prefix: '/setup' })
     ({ body }) => {
       try {
         saveSetupConfig(body);
-        return Response.json({ success: true });
+        return { success: true };
       } catch (error) {
         logger.error({ error }, 'Failed to save setup configuration');
-        return Response.json({ error: 'Could not save configuration.' }, { status: 500 });
+        throw new ApiError(500, 'Could not save configuration.');
       }
     },
     { body: SetupCompleteSchema }

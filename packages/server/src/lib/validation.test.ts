@@ -12,9 +12,6 @@ void mock.module('../startDiscord', () => ({
   getMetadata: mock(() => Promise.resolve({})),
   getPlaylistMetadataWithVideos: mock(() => Promise.resolve({})),
 }));
-void mock.module('./json', () => ({
-  json: mock((data: unknown, status: number) => new Response(JSON.stringify(data), { status })),
-}));
 
 const {
   clampMaxVideos,
@@ -64,134 +61,96 @@ describe('youTubeUrl', () => {
 
 describe('validateSourceUrl', () => {
   test('rejects non-strings', () => {
-    const result = validateSourceUrl(123);
-    expect(result.ok).toBe(false);
+    expect(() => validateSourceUrl(123)).toThrow();
   });
 
   test('rejects empty string', () => {
-    const result = validateSourceUrl('');
-    expect(result.ok).toBe(false);
+    expect(() => validateSourceUrl('')).toThrow();
   });
 
   test('rejects null', () => {
-    const result = validateSourceUrl(null);
-    expect(result.ok).toBe(false);
+    expect(() => validateSourceUrl(null)).toThrow();
   });
 
   test('rejects sourceUrl that isValidSourceUrl rejects', () => {
-    const result = validateSourceUrl('ftp://not-https.com/video');
-    expect(result.ok).toBe(false);
+    expect(() => validateSourceUrl('ftp://not-https.com/video')).toThrow();
   });
 
   test('accepts valid HTTPS URL', () => {
-    const result = validateSourceUrl('https://youtube.com/watch?v=abc');
-    expect(result.ok).toBe(true);
-    if (result.ok) {
-      expect(result.value).toBe('https://youtube.com/watch?v=abc');
-    }
+    expect(validateSourceUrl('https://youtube.com/watch?v=abc')).toBe(
+      'https://youtube.com/watch?v=abc'
+    );
   });
 
   test('trims whitespace', () => {
-    const result = validateSourceUrl('  https://youtube.com/watch?v=abc  ');
-    expect(result.ok).toBe(true);
-    if (result.ok) {
-      expect(result.value).toBe('https://youtube.com/watch?v=abc');
-    }
+    expect(validateSourceUrl('  https://youtube.com/watch?v=abc  ')).toBe(
+      'https://youtube.com/watch?v=abc'
+    );
   });
 });
 
 describe('validatePlaylistUrl', () => {
   test('rejects non-strings', () => {
-    const result = validatePlaylistUrl(456);
-    expect(result.ok).toBe(false);
+    expect(() => validatePlaylistUrl(456)).toThrow();
   });
 
   test('rejects URL that isPlaylistUrl rejects', () => {
-    const result = validatePlaylistUrl('https://youtube.com/watch?v=abc');
-    expect(result.ok).toBe(false);
+    expect(() => validatePlaylistUrl('https://youtube.com/watch?v=abc')).toThrow();
   });
 
   test('accepts URL containing "playlist"', () => {
-    const result = validatePlaylistUrl('https://youtube.com/playlist?list=abc');
-    expect(result.ok).toBe(true);
+    expect(validatePlaylistUrl('https://youtube.com/playlist?list=abc')).toBe(
+      'https://youtube.com/playlist?list=abc'
+    );
   });
 });
 
 describe('validatePlaylistName', () => {
   test('rejects non-strings', () => {
-    const result = validatePlaylistName(123);
-    expect(result.ok).toBe(false);
+    expect(() => validatePlaylistName(123)).toThrow();
   });
 
   test('rejects empty string', () => {
-    const result = validatePlaylistName('');
-    expect(result.ok).toBe(false);
+    expect(() => validatePlaylistName('')).toThrow();
   });
 
   test('rejects whitespace-only string', () => {
-    const result = validatePlaylistName('   ');
-    expect(result.ok).toBe(false);
+    expect(() => validatePlaylistName('   ')).toThrow();
   });
 
   test('accepts valid name and trims', () => {
-    const result = validatePlaylistName('  My Playlist  ');
-    expect(result.ok).toBe(true);
-    if (result.ok) {
-      expect(result.value).toBe('My Playlist');
-    }
+    expect(validatePlaylistName('  My Playlist  ')).toBe('My Playlist');
   });
 
   test('rejects null', () => {
-    const result = validatePlaylistName(null);
-    expect(result.ok).toBe(false);
+    expect(() => validatePlaylistName(null)).toThrow();
   });
 });
 
 describe('validateNickname', () => {
   test('returns null for undefined', () => {
     // eslint-disable-next-line unicorn/no-useless-undefined
-    const result = validateNickname(undefined);
-    expect(result.ok).toBe(true);
-    if (result.ok) {
-      expect(result.value).toBeNull();
-    }
+    expect(validateNickname(undefined)).toBeNull();
   });
 
   test('returns null for null', () => {
-    const result = validateNickname(null);
-    expect(result.ok).toBe(true);
-    if (result.ok) {
-      expect(result.value).toBeNull();
-    }
+    expect(validateNickname(null)).toBeNull();
   });
 
   test('returns null for empty string', () => {
-    const result = validateNickname('');
-    expect(result.ok).toBe(true);
-    if (result.ok) {
-      expect(result.value).toBeNull();
-    }
+    expect(validateNickname('')).toBeNull();
   });
 
   test('returns null for whitespace-only', () => {
-    const result = validateNickname('   ');
-    expect(result.ok).toBe(true);
-    if (result.ok) {
-      expect(result.value).toBeNull();
-    }
+    expect(validateNickname('   ')).toBeNull();
   });
 
   test('trims and returns valid nickname', () => {
-    const result = validateNickname('  Cool Song  ');
-    expect(result.ok).toBe(true);
-    if (result.ok) {
-      expect(result.value).toBe('Cool Song');
-    }
+    expect(validateNickname('  Cool Song  ')).toBe('Cool Song');
   });
 
   test('rejects non-string values', () => {
-    const result = validateNickname(42);
-    expect(result.ok).toBe(false);
+    expect(() => validateNickname(42)).toThrow();
   });
 });
 
@@ -221,163 +180,98 @@ describe('validateOptionalString', () => {
 describe('validateArtworkUrl', () => {
   test('returns null for undefined', () => {
     // eslint-disable-next-line unicorn/no-useless-undefined
-    const result = validateArtworkUrl(undefined);
-    expect(result.ok).toBe(true);
-    if (result.ok) {
-      expect(result.value).toBeNull();
-    }
+    expect(validateArtworkUrl(undefined)).toBeNull();
   });
 
   test('returns null for null', () => {
-    const result = validateArtworkUrl(null);
-    expect(result.ok).toBe(true);
-    if (result.ok) {
-      expect(result.value).toBeNull();
-    }
+    expect(validateArtworkUrl(null)).toBeNull();
   });
 
   test('returns null for empty string', () => {
-    const result = validateArtworkUrl('');
-    expect(result.ok).toBe(true);
-    if (result.ok) {
-      expect(result.value).toBeNull();
-    }
+    expect(validateArtworkUrl('')).toBeNull();
   });
 
   test('rejects non-string values', () => {
-    const result = validateArtworkUrl(123);
-    expect(result.ok).toBe(false);
+    expect(() => validateArtworkUrl(123)).toThrow();
   });
 
   test('accepts and trims valid URL', () => {
-    const result = validateArtworkUrl('  https://example.com/art.jpg  ');
-    expect(result.ok).toBe(true);
-    if (result.ok) {
-      expect(result.value).toBe('https://example.com/art.jpg');
-    }
+    expect(validateArtworkUrl('  https://example.com/art.jpg  ')).toBe(
+      'https://example.com/art.jpg'
+    );
   });
 
   test('rejects invalid URL', () => {
-    const result = validateArtworkUrl('not-a-url');
-    expect(result.ok).toBe(false);
+    expect(() => validateArtworkUrl('not-a-url')).toThrow();
   });
 });
 
 describe('validateTags', () => {
   test('returns empty array for undefined', () => {
     // eslint-disable-next-line unicorn/no-useless-undefined
-    const result = validateTags(undefined);
-    expect(result.ok).toBe(true);
-    if (result.ok) {
-      expect(result.value).toEqual([]);
-    }
+    expect(validateTags(undefined)).toEqual([]);
   });
 
   test('returns empty array for null', () => {
-    const result = validateTags(null);
-    expect(result.ok).toBe(true);
-    if (result.ok) {
-      expect(result.value).toEqual([]);
-    }
+    expect(validateTags(null)).toEqual([]);
   });
 
   test('rejects non-array values', () => {
-    const result = validateTags('not-an-array');
-    expect(result.ok).toBe(false);
+    expect(() => validateTags('not-an-array')).toThrow();
   });
 
   test('filters non-strings and empty strings', () => {
-    const result = validateTags(['rock', '', 123, '  ', 'jazz']);
-    expect(result.ok).toBe(true);
-    if (result.ok) {
-      expect(result.value).toEqual(['rock', 'jazz']);
-    }
+    expect(validateTags(['rock', '', 123, '  ', 'jazz'])).toEqual(['rock', 'jazz']);
   });
 
   test('deduplicates tags', () => {
-    const result = validateTags(['rock', 'rock', 'jazz']);
-    expect(result.ok).toBe(true);
-    if (result.ok) {
-      expect(result.value).toEqual(['rock', 'jazz']);
-    }
+    expect(validateTags(['rock', 'rock', 'jazz'])).toEqual(['rock', 'jazz']);
   });
 
   test('replaces spaces with hyphens', () => {
-    const result = validateTags(['alt rock', 'drum and bass']);
-    expect(result.ok).toBe(true);
-    if (result.ok) {
-      expect(result.value).toEqual(['alt-rock', 'drum-and-bass']);
-    }
+    expect(validateTags(['alt rock', 'drum and bass'])).toEqual(['alt-rock', 'drum-and-bass']);
   });
 
   test('empty array returns empty', () => {
-    const result = validateTags([]);
-    expect(result.ok).toBe(true);
-    if (result.ok) {
-      expect(result.value).toEqual([]);
-    }
+    expect(validateTags([])).toEqual([]);
   });
 });
 
 describe('validateVolumeBoost', () => {
   test('returns undefined for undefined (PATCH skips)', () => {
     // eslint-disable-next-line unicorn/no-useless-undefined
-    const result = validateVolumeBoost(undefined);
-    expect(result.ok).toBe(true);
-    if (result.ok) {
-      expect(result.value).toBeUndefined();
-    }
+    expect(validateVolumeBoost(undefined)).toBeUndefined();
   });
 
   test('returns null for null (explicitly cleared)', () => {
-    const result = validateVolumeBoost(null);
-    expect(result.ok).toBe(true);
-    if (result.ok) {
-      expect(result.value).toBeNull();
-    }
+    expect(validateVolumeBoost(null)).toBeNull();
   });
 
   test('rejects non-integer numbers', () => {
-    const result = validateVolumeBoost(1.5);
-    expect(result.ok).toBe(false);
+    expect(() => validateVolumeBoost(1.5)).toThrow();
   });
 
   test('rejects non-numbers', () => {
-    const result = validateVolumeBoost('loud');
-    expect(result.ok).toBe(false);
+    expect(() => validateVolumeBoost('loud')).toThrow();
   });
 
   test('rejects below -100', () => {
-    const result = validateVolumeBoost(-101);
-    expect(result.ok).toBe(false);
+    expect(() => validateVolumeBoost(-101)).toThrow();
   });
 
   test('rejects above 200', () => {
-    const result = validateVolumeBoost(201);
-    expect(result.ok).toBe(false);
+    expect(() => validateVolumeBoost(201)).toThrow();
   });
 
   test('accepts -100', () => {
-    const result = validateVolumeBoost(-100);
-    expect(result.ok).toBe(true);
-    if (result.ok) {
-      expect(result.value).toBe(-100);
-    }
+    expect(validateVolumeBoost(-100)).toBe(-100);
   });
 
   test('accepts 0', () => {
-    const result = validateVolumeBoost(0);
-    expect(result.ok).toBe(true);
-    if (result.ok) {
-      expect(result.value).toBe(0);
-    }
+    expect(validateVolumeBoost(0)).toBe(0);
   });
 
   test('accepts 200', () => {
-    const result = validateVolumeBoost(200);
-    expect(result.ok).toBe(true);
-    if (result.ok) {
-      expect(result.value).toBe(200);
-    }
+    expect(validateVolumeBoost(200)).toBe(200);
   });
 });

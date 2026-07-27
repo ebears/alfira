@@ -6,90 +6,60 @@ import {
   isPlaylistUrl,
   isValidSourceUrl,
 } from '../startDiscord';
-import { elysiaJson as json } from './apiResponse';
+import { ApiError } from './errors';
 
 const MAX_URL_LENGTH = 2000;
 
-interface ValidationSuccess<T> {
-  ok: true;
-  value: T;
-}
-interface ValidationError {
-  ok: false;
-  response: Response;
-}
-type ValidationResult<T> = ValidationSuccess<T> | ValidationError;
-
 /**
- * Validates and trims a URL input. Returns null if validation fails.
+ * Validates and trims a URL input. Throws ApiError if validation fails.
  * Used by URL validators to avoid duplication.
  */
-function validateUrlInput(sourceUrl: unknown): ValidationResult<string> {
+function validateUrlInput(sourceUrl: unknown): string {
   if (typeof sourceUrl !== 'string' || sourceUrl.trim().length === 0) {
-    return { ok: false, response: json({ error: 'url is required.' }, 400) };
+    throw new ApiError(400, 'url is required.');
   }
 
   const url = sourceUrl.trim();
 
   if (url.length > MAX_URL_LENGTH) {
-    return {
-      ok: false,
-      response: json({ error: `URL must be ${MAX_URL_LENGTH} characters or less.` }, 400),
-    };
+    throw new ApiError(400, `URL must be ${MAX_URL_LENGTH} characters or less.`);
   }
 
-  return { ok: true, value: url };
+  return url;
 }
 
-/** Validates a source URL for single video endpoints. */
-export function validateSourceUrl(sourceUrl: unknown): ValidationResult<string> {
-  const result = validateUrlInput(sourceUrl);
-  if (!result.ok) {
-    return result;
-  }
+/** Validates a source URL for single video endpoints. Throws ApiError on failure. */
+export function validateSourceUrl(sourceUrl: unknown): string {
+  const url = validateUrlInput(sourceUrl);
 
-  if (!isValidSourceUrl(result.value)) {
+  if (!isValidSourceUrl(url)) {
     const names = getEnabledSourceDisplayNames();
     const list = names.length > 0 ? names.join(' and ') : 'no sources';
-    return {
-      ok: false,
-      response: json({ error: `Supported sources: ${list}. That URL doesn't look right.` }, 400),
-    };
+    throw new ApiError(400, `Supported sources: ${list}. That URL doesn't look right.`);
   }
 
-  return result;
+  return url;
 }
 
-/** Validates a playlist URL. */
-export function validatePlaylistUrl(playlistUrl: unknown): ValidationResult<string> {
-  const result = validateUrlInput(playlistUrl);
-  if (!result.ok) {
-    return result;
-  }
+/** Validates a playlist URL. Throws ApiError on failure. */
+export function validatePlaylistUrl(playlistUrl: unknown): string {
+  const url = validateUrlInput(playlistUrl);
 
-  if (!isPlaylistUrl(result.value)) {
+  if (!isPlaylistUrl(url)) {
     const names = getEnabledSourceDisplayNames();
     const list = names.length > 0 ? names.join(' and ') : 'no sources';
-    return {
-      ok: false,
-      response: json(
-        {
-          error: `That does not look like a valid playlist URL. Supported sources: ${list}.`,
-        },
-        400
-      ),
-    };
+    throw new ApiError(
+      400,
+      `That does not look like a valid playlist URL. Supported sources: ${list}.`
+    );
   }
 
-  return result;
+  return url;
 }
 
-async function wrapBotCall<T>(
-  fn: () => Promise<T>,
-  errorMsg: string
-): Promise<{ ok: true; value: T } | { ok: false; response: Response }> {
+async function wrapBotCall<T>(fn: () => Promise<T>, errorMsg: string): Promise<T> {
   try {
-    return { ok: true, value: await fn() };
+    return await fn();
   } catch (error) {
     logger.error({ err: error instanceof Error ? error : String(error) }, 'NodeLink call failed');
 
@@ -98,27 +68,23 @@ async function wrapBotCall<T>(
       const match = /NodeLink REST (\d+):/.exec(error.message);
       if (match?.[1]) {
         const status = Math.trunc(Number(match[1]));
-        return { ok: false, response: json({ error: error.message }, status) };
+        throw new ApiError(status, error.message);
       }
       // If regex didn't match but it's a NodeLink REST error, use 502
-      return { ok: false, response: json({ error: error.message }, 502) };
+      throw new ApiError(502, error.message);
     }
 
     // Return more specific error with the actual error message
     const message = error instanceof Error ? error.message : errorMsg;
-    return { ok: false, response: json({ error: message }, 422) };
+    throw new ApiError(422, message);
   }
 }
 
 /**
  * Fetches metadata for a single source URL.
- * Returns error Response if fetch fails.
+ * Throws ApiError if fetch fails.
  */
-export function fetchSourceMetadata(
-  url: string
-): Promise<
-  { ok: true; value: Awaited<ReturnType<typeof getMetadata>> } | { ok: false; response: Response }
-> {
+export function fetchSourceMetadata(url: string): Promise<Awaited<ReturnType<typeof getMetadata>>> {
   return wrapBotCall(
     () => getMetadata(url),
     'Could not fetch track info. The track may be private, age-restricted, or unavailable.'
@@ -127,15 +93,12 @@ export function fetchSourceMetadata(
 
 /**
  * Fetches playlist metadata with tracks.
- * Returns error Response if fetch fails.
+ * Throws ApiError if fetch fails.
  */
 export function fetchPlaylistMetadata(
   url: string,
   maxVideos?: number
-): Promise<
-  | { ok: true; value: Awaited<ReturnType<typeof getPlaylistMetadataWithVideos>> }
-  | { ok: false; response: Response }
-> {
+): Promise<Awaited<ReturnType<typeof getPlaylistMetadataWithVideos>>> {
   return wrapBotCall(
     () => getPlaylistMetadataWithVideos(url, maxVideos),
     'Could not fetch playlist info. The playlist may be private or unavailable.'
@@ -152,38 +115,32 @@ export function youTubeUrl(videoId: string): string {
   return `https://www.youtube.com/watch?v=${videoId}`;
 }
 
-/** Validates and trims a playlist name. */
-export function validatePlaylistName(name: unknown): ValidationResult<string> {
+/** Validates and trims a playlist name. Throws ApiError on failure. */
+export function validatePlaylistName(name: unknown): string {
   const MAX_NAME_LENGTH = 200;
   if (typeof name !== 'string' || name.trim().length === 0) {
-    return { ok: false, response: json({ error: 'name is required.' }, 400) };
+    throw new ApiError(400, 'name is required.');
   }
   if (name.length > MAX_NAME_LENGTH) {
-    return {
-      ok: false,
-      response: json({ error: `name must be ${MAX_NAME_LENGTH} characters or less.` }, 400),
-    };
+    throw new ApiError(400, `name must be ${MAX_NAME_LENGTH} characters or less.`);
   }
-  return { ok: true, value: name.trim() };
+  return name.trim();
 }
 
-/** Validates and trims a nickname. Returns null for empty/missing, error Response for invalid type/length. */
-export function validateNickname(nickname: unknown): ValidationResult<string | null> {
+/**
+ * Validates and trims a nickname.
+ * Returns null for empty/missing, throws ApiError for invalid type/length.
+ */
+export function validateNickname(nickname: unknown): string | null {
   const MAX_NICKNAME_LENGTH = 50;
   if (nickname !== undefined && nickname !== null && typeof nickname !== 'string') {
-    return { ok: false, response: json({ error: 'nickname must be a string.' }, 400) };
+    throw new ApiError(400, 'nickname must be a string.');
   }
   const trimmed = nickname ? nickname.trim() || null : null;
   if (trimmed && trimmed.length > MAX_NICKNAME_LENGTH) {
-    return {
-      ok: false,
-      response: json(
-        { error: `Nickname must be ${MAX_NICKNAME_LENGTH} characters or fewer.` },
-        400
-      ),
-    };
+    throw new ApiError(400, `Nickname must be ${MAX_NICKNAME_LENGTH} characters or fewer.`);
   }
-  return { ok: true, value: trimmed };
+  return trimmed;
 }
 
 /** Validates an optional string field. Trims and returns null if empty. */
@@ -198,70 +155,62 @@ export function validateOptionalString(value: unknown): string | null {
   return trimmed.length === 0 ? null : trimmed;
 }
 
-/** Validates an artwork URL. Trims and checks it's a valid URL if non-empty. */
-export function validateArtworkUrl(value: unknown): ValidationResult<string | null> {
+/** Validates an artwork URL. Trims and checks it's a valid URL if non-empty. Throws ApiError on failure. */
+export function validateArtworkUrl(value: unknown): string | null {
   if (value === undefined || value === null) {
-    return { ok: true, value: null };
+    return null;
   }
   if (typeof value !== 'string') {
-    return { ok: false, response: json({ error: 'artwork must be a string.' }, 400) };
+    throw new ApiError(400, 'artwork must be a string.');
   }
   const trimmed = value.trim();
   if (trimmed.length === 0) {
-    return { ok: true, value: null };
+    return null;
   }
   if (trimmed.length > MAX_URL_LENGTH) {
-    return { ok: false, response: json({ error: 'artwork URL is too long.' }, 400) };
+    throw new ApiError(400, 'artwork URL is too long.');
   }
   try {
     new URL(trimmed);
   } catch {
-    return { ok: false, response: json({ error: 'artwork must be a valid URL.' }, 400) };
+    throw new ApiError(400, 'artwork must be a valid URL.');
   }
-  return { ok: true, value: trimmed };
+  return trimmed;
 }
 
-/** Validates tags: ensure string[], trim each, deduplicate */
-export function validateTags(value: unknown): ValidationResult<string[]> {
+/** Validates tags: ensure string[], trim each, deduplicate. Throws ApiError on failure. */
+export function validateTags(value: unknown): string[] {
   if (value === undefined || value === null) {
-    return { ok: true, value: [] };
+    return [];
   }
   if (!Array.isArray(value)) {
-    return { ok: false, response: json({ error: 'tags must be an array.' }, 400) };
+    throw new ApiError(400, 'tags must be an array.');
   }
   const trimmed = value
     .filter((t): t is string => typeof t === 'string' && t.trim().length > 0)
     .map((t) => t.replace(/\s+/g, '-').trim());
-  return { ok: true, value: [...new Set(trimmed)] };
+  return [...new Set(trimmed)];
 }
 
 /**
  * Validates an optional volume boost (-100 to +200).
  * Returns `undefined` when absent (PATCH skips it),
  * `null` when explicitly cleared (maps to 0 at playback),
- * the integer when valid (-100 to +200),
- * error Response when invalid.
+ * the integer when valid (-100 to +200).
+ * Throws ApiError when invalid.
  */
-export function validateVolumeBoost(
-  value: unknown
-): { ok: true; value: number | null | undefined } | { ok: false; response: Response } {
+export function validateVolumeBoost(value: unknown): number | null | undefined {
   if (value === undefined) {
-    return { ok: true, value: undefined };
+    return undefined;
   }
   if (value === null) {
-    return { ok: true, value: null };
+    return null;
   }
   if (typeof value !== 'number' || !Number.isInteger(value)) {
-    return {
-      ok: false,
-      response: json({ error: 'volumeBoost must be an integer.' }, 400),
-    };
+    throw new ApiError(400, 'volumeBoost must be an integer.');
   }
   if (value < -100 || value > 200) {
-    return {
-      ok: false,
-      response: json({ error: 'volumeBoost must be between -100 and 200.' }, 400),
-    };
+    throw new ApiError(400, 'volumeBoost must be between -100 and 200.');
   }
-  return { ok: true, value };
+  return value;
 }

@@ -5,6 +5,7 @@ import { deriveAuth } from '../lib/authDerive';
 /* eslint-disable @typescript-eslint/no-unnecessary-condition */
 import { getUserDisplayName, resolveDisplayNames } from '../lib/displayName';
 import { authGuard } from '../lib/elysia-guards';
+import { ApiError } from '../lib/errors';
 import { parsePagination } from '../lib/pagination';
 import { canAccessPlaylist, getPlaylistSongCount, requirePlaylist } from '../lib/playlistAccess';
 import {
@@ -133,7 +134,7 @@ export const playlistsPlugin = new Elysia({ prefix: '/playlists' })
       }))
     );
 
-    return Response.json({
+    return {
       items: playlistsWithCreator,
       pagination: {
         page,
@@ -141,18 +142,14 @@ export const playlistsPlugin = new Elysia({ prefix: '/playlists' })
         total: totalCount,
         totalPages: Math.ceil(totalCount / limit),
       },
-    });
+    };
   })
   .post(
     '/',
     async ({ user, ...ctx }) => {
       const body = ctx.body as typeof PlaylistCreateSchema.static;
 
-      const nameResult = validatePlaylistName(body.name);
-      if (!nameResult.ok) {
-        return nameResult.response;
-      }
-      const trimmedName = nameResult.value;
+      const trimmedName = validatePlaylistName(body.name);
 
       const tagNameLower =
         typeof body.tagNameLower === 'string' && body.tagNameLower.trim().length > 0
@@ -170,7 +167,7 @@ export const playlistsPlugin = new Elysia({ prefix: '/playlists' })
         .returning();
 
       if (!playlist) {
-        return Response.json({ error: 'Failed to create playlist.' }, { status: 500 });
+        throw new ApiError(500, 'Failed to create playlist.');
       }
 
       if (tagNameLower) {
@@ -224,7 +221,7 @@ export const playlistsPlugin = new Elysia({ prefix: '/playlists' })
       const value = await getPlaylistSongCount(playlistId);
       emitPlaylistUpdated(formatPlaylist(playlist, value));
 
-      return Response.json({ removed: songIds.length });
+      return { removed: songIds.length };
     },
     { body: PlaylistRemoveSongsSchema }
   )
@@ -247,7 +244,7 @@ export const playlistsPlugin = new Elysia({ prefix: '/playlists' })
       .limit(1);
 
     if (!entry) {
-      return Response.json({ error: 'Song not found in playlist.' }, { status: 404 });
+      throw new ApiError(404, 'Song not found in playlist.');
     }
 
     await db.transaction(async (tx) => {
@@ -291,11 +288,9 @@ export const playlistsPlugin = new Elysia({ prefix: '/playlists' })
       }
 
       if (playlist.tagNameLower) {
-        return Response.json(
-          {
-            error: `This playlist automatically tracks the "${playlist.tagNameLower}" tag. Songs are added when tagged and cannot be added manually.`,
-          },
-          { status: 409 }
+        throw new ApiError(
+          409,
+          `This playlist automatically tracks the "${playlist.tagNameLower}" tag. Songs are added when tagged and cannot be added manually.`
         );
       }
 
@@ -305,7 +300,7 @@ export const playlistsPlugin = new Elysia({ prefix: '/playlists' })
         .where(eq(tables.song.id, songId))
         .limit(1)) as unknown as [typeof tables.song.$inferSelect | undefined];
       if (!song) {
-        return Response.json({ error: 'Song not found.' }, { status: 404 });
+        throw new ApiError(404, 'Song not found.');
       }
 
       const [existingEntry] = await db
@@ -317,7 +312,7 @@ export const playlistsPlugin = new Elysia({ prefix: '/playlists' })
         .limit(1);
 
       if (existingEntry) {
-        return Response.json({ error: 'This song is already in the playlist.' }, { status: 409 });
+        throw new ApiError(409, 'This song is already in the playlist.');
       }
 
       const [lastEntry] = await db
@@ -342,7 +337,7 @@ export const playlistsPlugin = new Elysia({ prefix: '/playlists' })
       const value = await getPlaylistSongCount(playlist.id);
       emitPlaylistUpdated(formatPlaylist(playlist, value));
 
-      return Response.json({ ...ps, song: songData }, { status: 201 });
+      return { ...ps, song: songData };
     },
     { body: PlaylistAddSongSchema }
   )
@@ -353,7 +348,7 @@ export const playlistsPlugin = new Elysia({ prefix: '/playlists' })
       const body = ctx.body as typeof PlaylistVisibilitySchema.static;
 
       if (body.isPrivate === undefined) {
-        return Response.json({ error: 'isPrivate (boolean) is required.' }, { status: 400 });
+        throw new ApiError(400, 'isPrivate (boolean) is required.');
       }
 
       const discordId = (user as { discordId: string }).discordId;
@@ -370,7 +365,7 @@ export const playlistsPlugin = new Elysia({ prefix: '/playlists' })
         .returning();
 
       if (!updatedPlaylist) {
-        return Response.json({ error: 'Failed to update playlist.' }, { status: 500 });
+        throw new ApiError(500, 'Failed to update playlist.');
       }
 
       const value = await getPlaylistSongCount(updatedPlaylist.id);
@@ -474,7 +469,7 @@ export const playlistsPlugin = new Elysia({ prefix: '/playlists' })
       const songs = rows.map((r) => r.Song);
       const nameMap = await resolveDisplayNames(songs);
 
-      return Response.json({
+      return {
         ...playlist,
         createdAt:
           playlist.createdAt instanceof Date
@@ -494,7 +489,7 @@ export const playlistsPlugin = new Elysia({ prefix: '/playlists' })
           total,
           totalPages: Math.ceil(total / limit),
         },
-      });
+      };
     }
 
     // ── Default path: position sort, search-only filter ──
@@ -507,7 +502,7 @@ export const playlistsPlugin = new Elysia({ prefix: '/playlists' })
         .limit(500);
       songIds = matching.map((s) => s.id);
       if (songIds.length === 0) {
-        return Response.json({
+        return {
           ...playlist,
           createdAt:
             playlist.createdAt instanceof Date
@@ -516,7 +511,7 @@ export const playlistsPlugin = new Elysia({ prefix: '/playlists' })
           songs: [],
           createdByDisplayName: await getUserDisplayName(playlist.createdBy),
           pagination: { page, limit, total: 0, totalPages: 0 },
-        });
+        };
       }
     }
 
@@ -551,7 +546,7 @@ export const playlistsPlugin = new Elysia({ prefix: '/playlists' })
 
     const nameMap = await resolveDisplayNames(songs);
 
-    return Response.json({
+    return {
       ...playlist,
       createdAt:
         playlist.createdAt instanceof Date ? playlist.createdAt.toISOString() : playlist.createdAt,
@@ -571,7 +566,7 @@ export const playlistsPlugin = new Elysia({ prefix: '/playlists' })
         total,
         totalPages: Math.ceil(total / limit),
       },
-    });
+    };
   })
   .patch(
     '/:id',
@@ -588,11 +583,7 @@ export const playlistsPlugin = new Elysia({ prefix: '/playlists' })
       const data: Record<string, unknown> = {};
 
       if (body.name !== undefined) {
-        const nameResult = validatePlaylistName(body.name);
-        if (!nameResult.ok) {
-          return nameResult.response;
-        }
-        data.name = nameResult.value;
+        data.name = validatePlaylistName(body.name);
       }
 
       if (body.tagNameLower !== undefined) {
@@ -604,7 +595,7 @@ export const playlistsPlugin = new Elysia({ prefix: '/playlists' })
       }
 
       if (Object.keys(data).length === 0) {
-        return Response.json({ error: 'No valid fields to update.' }, { status: 400 });
+        throw new ApiError(400, 'No valid fields to update.');
       }
 
       const [updatedPlaylist] = await db
@@ -614,7 +605,7 @@ export const playlistsPlugin = new Elysia({ prefix: '/playlists' })
         .returning();
 
       if (!updatedPlaylist) {
-        return Response.json({ error: 'Failed to update playlist.' }, { status: 500 });
+        throw new ApiError(500, 'Failed to update playlist.');
       }
 
       if ('tagNameLower' in data) {
@@ -640,10 +631,7 @@ export const playlistsPlugin = new Elysia({ prefix: '/playlists' })
       }
 
       if (playlist.tagNameLower) {
-        return Response.json(
-          { error: 'Cannot reorder a smart playlist. It is managed by its tag.' },
-          { status: 409 }
-        );
+        throw new ApiError(409, 'Cannot reorder a smart playlist. It is managed by its tag.');
       }
 
       const existing = await db
@@ -654,17 +642,15 @@ export const playlistsPlugin = new Elysia({ prefix: '/playlists' })
       const existingIds = new Set(existing.map((e) => e.songId));
 
       if (songIds.length !== existingIds.size) {
-        return Response.json(
-          {
-            error: `songIds count (${songIds.length}) does not match playlist song count (${existingIds.size}).`,
-          },
-          { status: 400 }
+        throw new ApiError(
+          400,
+          `songIds count (${songIds.length}) does not match playlist song count (${existingIds.size}).`
         );
       }
 
       for (const si of songIds) {
         if (!existingIds.has(si)) {
-          return Response.json({ error: `Song ${si} is not in this playlist.` }, { status: 400 });
+          throw new ApiError(400, `Song ${si} is not in this playlist.`);
         }
       }
 
@@ -683,7 +669,7 @@ export const playlistsPlugin = new Elysia({ prefix: '/playlists' })
       const value = await getPlaylistSongCount(playlistId);
       emitPlaylistUpdated(formatPlaylist(playlist, value));
 
-      return Response.json({ message: 'Playlist reordered.' });
+      return { message: 'Playlist reordered.' };
     },
     { body: PlaylistReorderSchema }
   )
