@@ -16,7 +16,7 @@ Replace the homegrown HTTP framework (`routeTable`, `matchPath`, `RouteContext`,
 - **Auth via `.derive()`.** The cookie → JWT → user pipeline runs once per request in Elysia's `derive`, replacing `createContext()`. Guards (`requireAuth`, `requireAdminOrPermission`) are called explicitly in handlers — a future pass could move them into Elysia guard plugins.
 - **Static files and SPA fallback stay on the main app.** The `/*` catch-all serves `packages/web/dist/` with SPA fallback. Security headers are applied only to `/api/*` and `/auth/*` routes via an `onAfterHandle` hook that inspects `request.url`.
 
-## Completed (Pass 1)
+## Completed
 
 ### Phase 1 — Elysia shell (replaces `Bun.serve()`)
 
@@ -43,34 +43,54 @@ Replace the homegrown HTTP framework (`routeTable`, `matchPath`, `RouteContext`,
 
 - `packages/server/src/elysia-app.ts` — `/tags` removed from legacy routes, replaced with `tagsPlugin()`
 
+### Phase 3 — Filter settings + general settings (13 route groups)
+
+**New files:**
+
+- `packages/server/src/routes/compressor.elysia.ts` — GET/PATCH with `CompressorSchema` body validation
+- `packages/server/src/routes/equalizer.elysia.ts` — GET/PATCH with `EqualizerSchema` (15-band + enabled)
+- `packages/server/src/routes/karaoke.elysia.ts` — GET/PATCH with `KaraokeSchema` body validation
+- `packages/server/src/routes/lowPass.elysia.ts` — GET/PATCH with `LowPassSchema` body validation
+- `packages/server/src/routes/distortion.elysia.ts` — GET/PATCH with `DistortionSchema` body validation
+- `packages/server/src/routes/rotation.elysia.ts` — GET/PATCH with `RotationSchema` body validation
+- `packages/server/src/routes/timescale.elysia.ts` — GET/PATCH with `TimescaleSchema` body validation + player update broadcast
+- `packages/server/src/routes/tremolo.elysia.ts` — GET/PATCH with `TremoloSchema` body validation
+- `packages/server/src/routes/vibrato.elysia.ts` — GET/PATCH with `VibratoSchema` body validation
+- `packages/server/src/routes/channelMix.elysia.ts` — GET/PATCH with `ChannelMixSchema` body validation
+- `packages/server/src/routes/filters.elysia.ts` — GET-only, returns all filter settings in one response
+- `packages/server/src/routes/generalSettings.elysia.ts` — GET/PATCH with `GeneralSettingsPatchSchema` (partial), attaches `availableSources`
+
+**Modified files:**
+
+- `packages/server/src/elysia-app.ts` — all 13 route groups removed from `API_LEGACY_ROUTES` and wired as native plugins on `apiApp`
+
 ### Pattern established
 
 1. **Extract drizzle queries into helper functions** with clean parameter types — `Record<string, unknown>` handler parameters cause tsgo inference failures on `.where()` calls. Helper functions with `string`/`number` parameters avoid this.
-2. **Handlers do: auth check → extract params → call query helpers → return plain objects.** Elysia serializes to JSON automatically.
-3. **`as never`** for handler type compatibility with Elysia's complex generics. Single `/* eslint-disable */` at file level suppresses the unavoidable type assertion warnings.
-4. **Route registration:** the plugin function takes an `Elysia` instance, calls `.get()` / `.patch()` / `.delete()`, returns it.
+2. **Handlers do: auth check → extract params → call query helpers → return `Response` objects.** A local `json()` helper (without security headers — Elysia's `onAfterHandle` adds them) keeps serialization explicit.
+3. **`as never`** for handler type compatibility with Elysia's complex generics. Single `/* eslint-disable @typescript-eslint/no-unsafe-type-assertion */` at file level suppresses the unavoidable type assertion warnings.
+4. **Route registration:** the plugin function takes an `Elysia` instance, calls `.get()` / `.patch()` / `.delete()`, returns `as unknown as Elysia`. Plugins are chained on `apiApp` with explicit `as unknown as Elysia` casts.
+5. **Guards:** `requireAdminOrPermission(ctx, permission?)` — no permission arg means super-admin only; with permission arg means super-admin OR has the granular permission.
 
 ## Remaining work
 
-### Phase 3 — Migrate remaining route groups (18 files)
+### Phase 4 — Migrate remaining legacy route groups (6 files)
 
 Routes to migrate, roughly in order of complexity:
 
-| Route group                                                                                                                       | Files | Complexity                                             |
-| --------------------------------------------------------------------------------------------------------------------------------- | ----- | ------------------------------------------------------ |
-| Filter settings (compressor, equalizer, karaoke, lowpass, distortion, rotation, timescale, tremolo, vibrato, channelmix, filters) | 11    | Low — each is GET + PATCH with a single Valibot schema |
-| `/api/player`                                                                                                                     | 1     | Medium — many endpoints, playback control              |
-| `/api/songs`                                                                                                                      | 1     | Medium — search, pagination, bulk operations           |
-| `/api/playlists`                                                                                                                  | 1     | Medium — CRUD, reorder, import                         |
-| `/api/requests`                                                                                                                   | 1     | Medium — CRUD, preview, approve/deny                   |
-| `/api/permissions`                                                                                                                | 1     | Medium — role-based permission management              |
-| `/api/settings/general`                                                                                                           | 1     | Low — GET + PATCH                                      |
-| `/api/setup`                                                                                                                      | 1     | Low — wizard endpoints                                 |
-| `/auth`                                                                                                                           | 1     | Medium — OAuth2 Discord login flow                     |
+| Route group        | Files | Complexity                                   |
+| ------------------ | ----- | -------------------------------------------- |
+| `/api/player`      | 1     | Medium — many endpoints, playback control    |
+| `/api/songs`       | 1     | Medium — search, pagination, bulk operations |
+| `/api/playlists`   | 1     | Medium — CRUD, reorder, import               |
+| `/api/requests`    | 1     | Medium — CRUD, preview, approve/deny         |
+| `/api/permissions` | 1     | Medium — role-based permission management    |
+| `/api/setup`       | 1     | Low — wizard endpoints                       |
+| `/auth`            | 1     | Medium — OAuth2 Discord login flow           |
 
 After each group is migrated, remove it from `API_LEGACY_ROUTES` in `elysia-app.ts`.
 
-### Phase 4 — Eden treaty on the web client
+### Phase 5 — Eden treaty on the web client
 
 - Replace `web/src/api/client.ts` (~200 lines) + `web/src/api/api.ts` (~80 lines) with `treaty<App>()`
 - Delete `packages/server/src/shared/api.ts` (~400 lines)

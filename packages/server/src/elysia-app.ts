@@ -10,25 +10,25 @@ import { lavalink } from './lib/lavalink';
 import { registerClient, unregisterClient, type WsClient } from './lib/socket';
 import { verifySessionToken } from './middleware/requireAuth';
 import { handleAuth } from './routes/auth';
-import { handleChannelMix } from './routes/channelMix';
-import { handleCompressor } from './routes/compressor';
-import { handleDistortion } from './routes/distortion';
-import { handleEqualizer } from './routes/equalizer';
-import { handleFilters } from './routes/filters';
-import { handleGeneralSettings } from './routes/generalSettings';
-import { handleKaraoke } from './routes/karaoke';
-import { handleLowPass } from './routes/lowPass';
+import { channelMixPlugin } from './routes/channelMix.elysia';
+import { compressorPlugin } from './routes/compressor.elysia';
+import { distortionPlugin } from './routes/distortion.elysia';
+import { equalizerPlugin } from './routes/equalizer.elysia';
+import { filtersPlugin } from './routes/filters.elysia';
+import { generalSettingsPlugin } from './routes/generalSettings.elysia';
+import { karaokePlugin } from './routes/karaoke.elysia';
+import { lowPassPlugin } from './routes/lowPass.elysia';
 import { handlePermissions } from './routes/permissions';
 import { handlePlayer } from './routes/player';
 import { handlePlaylists } from './routes/playlists';
 import { handleRequests } from './routes/requests';
-import { handleRotation } from './routes/rotation';
+import { rotationPlugin } from './routes/rotation.elysia';
 import { handleSetup } from './routes/setup';
 import { handleSongs } from './routes/songs';
 import { tagsPlugin } from './routes/tags.elysia';
-import { handleTimescale } from './routes/timescale';
-import { handleTremolo } from './routes/tremolo';
-import { handleVibrato } from './routes/vibrato';
+import { timescalePlugin } from './routes/timescale.elysia';
+import { tremoloPlugin } from './routes/tremolo.elysia';
+import { vibratoPlugin } from './routes/vibrato.elysia';
 import { db } from './shared/db';
 import { logger } from './shared/logger';
 
@@ -94,19 +94,7 @@ const API_LEGACY_ROUTES: [string, LegacyHandler][] = [
   ['/songs', wrapLegacy(handleSongs)],
   ['/playlists', wrapLegacy(handlePlaylists)],
   ['/player', wrapLegacy(handlePlayer)],
-  ['/settings/channelmix', wrapLegacy(handleChannelMix)],
-  ['/settings/compressor', wrapLegacy(handleCompressor)],
-  ['/settings/distortion', wrapLegacy(handleDistortion)],
-  ['/settings/equalizer', wrapLegacy(handleEqualizer)],
-  ['/settings/filters', wrapLegacy(handleFilters)],
-  ['/settings/karaoke', wrapLegacy(handleKaraoke)],
-  ['/settings/lowpass', wrapLegacy(handleLowPass)],
-  ['/settings/rotation', wrapLegacy(handleRotation)],
-  ['/settings/timescale', wrapLegacy(handleTimescale)],
-  ['/settings/tremolo', wrapLegacy(handleTremolo)],
-  ['/settings/vibrato', wrapLegacy(handleVibrato)],
   ['/permissions', wrapLegacy(handlePermissions)],
-  ['/settings/general', wrapLegacy(handleGeneralSettings)],
   ['/setup', wrapLegacy(handleSetup)],
 ];
 
@@ -126,9 +114,33 @@ export function createApp(): Elysia {
   // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion
   registerLegacyRoutes(apiApp as unknown as Elysia, API_LEGACY_ROUTES);
 
-  // Native Elysia routes — tagsPlugin registers /tags routes directly
+  // Native Elysia route groups
   // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion
   tagsPlugin(apiApp as unknown as Elysia);
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion
+  channelMixPlugin(apiApp as unknown as Elysia);
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion
+  compressorPlugin(apiApp as unknown as Elysia);
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion
+  distortionPlugin(apiApp as unknown as Elysia);
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion
+  equalizerPlugin(apiApp as unknown as Elysia);
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion
+  filtersPlugin(apiApp as unknown as Elysia);
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion
+  generalSettingsPlugin(apiApp as unknown as Elysia);
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion
+  karaokePlugin(apiApp as unknown as Elysia);
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion
+  lowPassPlugin(apiApp as unknown as Elysia);
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion
+  rotationPlugin(apiApp as unknown as Elysia);
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion
+  timescalePlugin(apiApp as unknown as Elysia);
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion
+  tremoloPlugin(apiApp as unknown as Elysia);
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion
+  vibratoPlugin(apiApp as unknown as Elysia);
 
   const authApp = new Elysia({ prefix: '/auth' });
 
