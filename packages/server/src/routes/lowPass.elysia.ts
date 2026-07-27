@@ -3,6 +3,7 @@ import { Elysia, t } from 'elysia';
 
 import { deriveAuth } from '../lib/authDerive';
 import { createAdminOrPermissionGuard } from '../lib/elysia-guards';
+import { LowPassSettings as LowPassSettingsSchema } from '../lib/responseSchemas';
 import { syncAllFilters } from '../lib/syncAllFilters';
 import { db, tables } from '../shared/db';
 import { DEFAULT_LOW_PASS } from '../shared/filterDefaults';
@@ -38,7 +39,9 @@ function upsertLowPassSettings(data: { enabled: boolean; smoothing: number }): v
 export const lowPassPlugin = new Elysia({ prefix: '/settings/lowpass' })
   .derive(deriveAuth)
   .use(createAdminOrPermissionGuard('audio.manage'))
-  .get('/', () => fetchLowPassSettings())
+  .get('/', () => fetchLowPassSettings(), {
+    response: { 200: LowPassSettingsSchema },
+  })
   .patch(
     '/',
     async ({ body }) => {
@@ -47,5 +50,5 @@ export const lowPassPlugin = new Elysia({ prefix: '/settings/lowpass' })
 
       return body;
     },
-    { body: LowPassSchema }
+    { body: LowPassSchema, response: { 200: LowPassSettingsSchema } }
   );

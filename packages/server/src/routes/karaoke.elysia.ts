@@ -3,6 +3,7 @@ import { Elysia, t } from 'elysia';
 
 import { deriveAuth } from '../lib/authDerive';
 import { createAdminOrPermissionGuard } from '../lib/elysia-guards';
+import { KaraokeSettings as KaraokeSettingsSchema } from '../lib/responseSchemas';
 import { syncAllFilters } from '../lib/syncAllFilters';
 import { db, tables } from '../shared/db';
 import { DEFAULT_KARAOKE } from '../shared/filterDefaults';
@@ -63,7 +64,9 @@ function upsertKaraokeSettings(data: KaraokeSettings): void {
 export const karaokePlugin = new Elysia({ prefix: '/settings/karaoke' })
   .derive(deriveAuth)
   .use(createAdminOrPermissionGuard('audio.manage'))
-  .get('/', () => fetchKaraokeSettings())
+  .get('/', () => fetchKaraokeSettings(), {
+    response: { 200: KaraokeSettingsSchema },
+  })
   .patch(
     '/',
     async ({ body }) => {
@@ -72,5 +75,5 @@ export const karaokePlugin = new Elysia({ prefix: '/settings/karaoke' })
 
       return body;
     },
-    { body: KaraokeSchema }
+    { body: KaraokeSchema, response: { 200: KaraokeSettingsSchema } }
   );

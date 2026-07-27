@@ -3,6 +3,7 @@ import { Elysia, t } from 'elysia';
 
 import { deriveAuth } from '../lib/authDerive';
 import { createAdminOrPermissionGuard } from '../lib/elysia-guards';
+import { VibratoSettings as VibratoSettingsSchema } from '../lib/responseSchemas';
 import { syncAllFilters } from '../lib/syncAllFilters';
 import { db, tables } from '../shared/db';
 import { DEFAULT_VIBRATO } from '../shared/filterDefaults';
@@ -49,7 +50,9 @@ function upsertVibratoSettings(data: { enabled: boolean; frequency: number; dept
 export const vibratoPlugin = new Elysia({ prefix: '/settings/vibrato' })
   .derive(deriveAuth)
   .use(createAdminOrPermissionGuard('audio.manage'))
-  .get('/', () => fetchVibratoSettings())
+  .get('/', () => fetchVibratoSettings(), {
+    response: { 200: VibratoSettingsSchema },
+  })
   .patch(
     '/',
     async ({ body }) => {
@@ -58,5 +61,5 @@ export const vibratoPlugin = new Elysia({ prefix: '/settings/vibrato' })
 
       return body;
     },
-    { body: VibratoSchema }
+    { body: VibratoSchema, response: { 200: VibratoSettingsSchema } }
   );

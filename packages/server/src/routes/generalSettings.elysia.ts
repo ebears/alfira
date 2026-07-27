@@ -3,6 +3,7 @@ import { Elysia, t } from 'elysia';
 
 import { deriveAuth } from '../lib/authDerive';
 import { createAdminOrPermissionGuard } from '../lib/elysia-guards';
+import { GeneralSettings as GeneralSettingsSchema } from '../lib/responseSchemas';
 import { type GeneralSettings } from '../shared';
 import { db, tables } from '../shared/db';
 import { refreshEnabledSources, SOURCE_DEFINITIONS } from '../startDiscord';
@@ -94,10 +95,16 @@ function upsertGeneralSettings(updates: Record<string, unknown>): void {
 export const generalSettingsPlugin = new Elysia({ prefix: '/settings/general' })
   .derive(deriveAuth)
   .use(createAdminOrPermissionGuard())
-  .get('/', () => {
-    const settings = fetchGeneralSettings();
-    return settings ?? defaultGeneralSettings();
-  })
+  .get(
+    '/',
+    () => {
+      const settings = fetchGeneralSettings();
+      return settings ?? defaultGeneralSettings();
+    },
+    {
+      response: { 200: GeneralSettingsSchema },
+    }
+  )
   .patch(
     '/',
     ({ body }) => {
@@ -153,5 +160,5 @@ export const generalSettingsPlugin = new Elysia({ prefix: '/settings/general' })
 
       return settings;
     },
-    { body: GeneralSettingsPatchSchema }
+    { body: GeneralSettingsPatchSchema, response: { 200: GeneralSettingsSchema } }
   );

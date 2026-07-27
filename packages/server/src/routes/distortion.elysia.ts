@@ -3,6 +3,7 @@ import { Elysia, t } from 'elysia';
 
 import { deriveAuth } from '../lib/authDerive';
 import { createAdminOrPermissionGuard } from '../lib/elysia-guards';
+import { DistortionSettings as DistortionSettingsSchema } from '../lib/responseSchemas';
 import { syncAllFilters } from '../lib/syncAllFilters';
 import { db, tables } from '../shared/db';
 import { DEFAULT_DISTORTION } from '../shared/filterDefaults';
@@ -79,7 +80,9 @@ function upsertDistortionSettings(data: DistortionSettings): void {
 export const distortionPlugin = new Elysia({ prefix: '/settings/distortion' })
   .derive(deriveAuth)
   .use(createAdminOrPermissionGuard('audio.manage'))
-  .get('/', () => fetchDistortionSettings())
+  .get('/', () => fetchDistortionSettings(), {
+    response: { 200: DistortionSettingsSchema },
+  })
   .patch(
     '/',
     async ({ body }) => {
@@ -88,5 +91,5 @@ export const distortionPlugin = new Elysia({ prefix: '/settings/distortion' })
 
       return body;
     },
-    { body: DistortionSchema }
+    { body: DistortionSchema, response: { 200: DistortionSettingsSchema } }
   );

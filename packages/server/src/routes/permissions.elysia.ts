@@ -108,5 +108,8 @@ export const permissionsPlugin = new Elysia({ prefix: '/permissions' })
 
       return { action, roleIds };
     },
-    { body: PermissionsPatchSchema }
+    {
+      body: PermissionsPatchSchema,
+      response: { 200: t.Object({ action: t.String(), roleIds: t.Array(t.String()) }) },
+    }
   );

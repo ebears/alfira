@@ -4,6 +4,7 @@ import { Elysia, t } from 'elysia';
 import { deriveAuth } from '../lib/authDerive';
 import { getGuildId } from '../lib/config';
 import { createAdminOrPermissionGuard } from '../lib/elysia-guards';
+import { TimescaleSettings as TimescaleSettingsSchema } from '../lib/responseSchemas';
 import { emitPlayerUpdate } from '../lib/socket';
 import { syncAllFilters } from '../lib/syncAllFilters';
 import { db, tables } from '../shared/db';
@@ -62,7 +63,9 @@ function upsertTimescaleSettings(data: TimescaleSettings): void {
 export const timescalePlugin = new Elysia({ prefix: '/settings/timescale' })
   .derive(deriveAuth)
   .use(createAdminOrPermissionGuard('audio.manage'))
-  .get('/', () => fetchTimescaleSettings())
+  .get('/', () => fetchTimescaleSettings(), {
+    response: { 200: TimescaleSettingsSchema },
+  })
   .patch(
     '/',
     async ({ body }) => {
@@ -78,5 +81,5 @@ export const timescalePlugin = new Elysia({ prefix: '/settings/timescale' })
 
       return body;
     },
-    { body: TimescaleSchema }
+    { body: TimescaleSchema, response: { 200: TimescaleSettingsSchema } }
   );

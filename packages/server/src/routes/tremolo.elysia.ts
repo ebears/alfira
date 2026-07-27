@@ -3,6 +3,7 @@ import { Elysia, t } from 'elysia';
 
 import { deriveAuth } from '../lib/authDerive';
 import { createAdminOrPermissionGuard } from '../lib/elysia-guards';
+import { TremoloSettings as TremoloSettingsSchema } from '../lib/responseSchemas';
 import { syncAllFilters } from '../lib/syncAllFilters';
 import { db, tables } from '../shared/db';
 import { DEFAULT_TREMOLO } from '../shared/filterDefaults';
@@ -49,7 +50,9 @@ function upsertTremoloSettings(data: { enabled: boolean; frequency: number; dept
 export const tremoloPlugin = new Elysia({ prefix: '/settings/tremolo' })
   .derive(deriveAuth)
   .use(createAdminOrPermissionGuard('audio.manage'))
-  .get('/', () => fetchTremoloSettings())
+  .get('/', () => fetchTremoloSettings(), {
+    response: { 200: TremoloSettingsSchema },
+  })
   .patch(
     '/',
     async ({ body }) => {
@@ -58,5 +61,5 @@ export const tremoloPlugin = new Elysia({ prefix: '/settings/tremolo' })
 
       return body;
     },
-    { body: TremoloSchema }
+    { body: TremoloSchema, response: { 200: TremoloSettingsSchema } }
   );

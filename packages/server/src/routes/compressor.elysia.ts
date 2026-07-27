@@ -3,6 +3,7 @@ import { Elysia, t } from 'elysia';
 
 import { deriveAuth } from '../lib/authDerive';
 import { createAdminOrPermissionGuard } from '../lib/elysia-guards';
+import { CompressorSettings as CompressorSettingsSchema } from '../lib/responseSchemas';
 import { syncAllFilters } from '../lib/syncAllFilters';
 import { db, tables } from '../shared/db';
 import { DEFAULT_COMPRESSOR } from '../shared/filterDefaults';
@@ -67,7 +68,9 @@ function upsertCompressorSettings(data: CompressorSettings): void {
 export const compressorPlugin = new Elysia({ prefix: '/settings/compressor' })
   .derive(deriveAuth)
   .use(createAdminOrPermissionGuard('audio.manage'))
-  .get('/', () => fetchCompressorSettings())
+  .get('/', () => fetchCompressorSettings(), {
+    response: { 200: CompressorSettingsSchema },
+  })
   .patch(
     '/',
     async ({ body }) => {
@@ -76,5 +79,5 @@ export const compressorPlugin = new Elysia({ prefix: '/settings/compressor' })
 
       return body;
     },
-    { body: CompressorSchema }
+    { body: CompressorSchema, response: { 200: CompressorSettingsSchema } }
   );

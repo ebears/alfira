@@ -430,24 +430,35 @@ All guard functions converted from inline handler calls to Elysia `onBeforeHandl
 
 ### Phase 6b — Add response schemas to get full Eden type safety
 
-Eden's proxy path resolution works, but response bodies are still typed as `Response` because the server routes don't have explicit `response` schemas. `routes.ts` still needs `$ = api as any` until response schemas are added.
+**Status: In progress (13 of 20 route groups done)**
 
-**What's needed:** Add `response` schemas to each route handler using Elysia `t`. For example:
+Eden's proxy path resolution works, but response bodies are still typed as `Response` because the server routes don't have explicit `response` schemas. `routes.ts` still needs `$ = api as any` until response schemas are added to all endpoints.
 
-```ts
-.get('/tags', () => fetchTagList(), {
-  response: {
-    200: t.Object({ tags: t.Array(TagItemSchema) }),
-    401: t.Object({ error: t.String() }),
-  },
-})
-```
+**What's been done:**
 
-Two changes per handler:
+- **New file:** `packages/server/src/lib/responseSchemas.ts` — shared Elysia `t` schemas for all response types (Song, QueuedSong, QueueState, User, TagItem, filter settings, GeneralSettings, PermissionsResponse, RequestPreview, Setup types, Playlist types, PaginationMeta).
+- **13 route files updated with response schemas:**
+  - All 10 audio filter settings routes (compressor, equalizer, karaoke, lowPass, distortion, rotation, timescale, tremolo, vibrato, channelMix) — GET + PATCH
+  - `filters.elysia.ts` — batched GET
+  - `generalSettings.elysia.ts` — GET + PATCH
+  - `permissions.elysia.ts` — GET /, GET /me, PATCH /
+- Handlers in these files return plain objects (not `Response.json()`) for success cases — Elysia serializes and `onAfterHandle` adds security headers.
+- Error responses (404, 400, etc.) keep `Response.json()` and bypass response schema validation.
 
-1. Add a `response` schema describing the success shape (and optionally error shapes)
-2. Replace `return Response.json(data)` with `return data` for success cases (error cases can keep `Response.json()` or use `set.status` + plain return)
+**What's remaining:**
 
-After response schemas, Eden infers full response types. `routes.ts` (~523 lines) and `shared/api.ts` (~120 lines) can be deleted — web components consume Eden directly with full type inference. The `$ = api as any` workaround is eliminated.
+7 route groups still need response schemas: `tags`, `songs`, `player`, `playlists`, `requests`, `setup`, `auth`.
+
+These routes have handlers that return `Response | data` unions (error paths use `Response.json()` via helper functions like `requirePlayer()`, `validateSourceUrl()`, etc.). Adding response schemas to these handlers causes tsgo TS2345 type errors because Elysia's handler type inference can't reconcile `Response | { data }` with a typed response schema.
+
+**Two approaches for the remaining routes:**
+
+1. **`set.status` + plain return** — Convert error paths from `return Response.json({ error }, { status })` to `set.status = NNN; return { error }`. This eliminates the `Response | data` union. Works for simple error paths but requires refactoring for routes that use helper functions returning `Response`.
+
+2. **`as any` casts on handler functions** — Add `as any` to handler registrations: `.get('/', ((ctx) => { ... }) as any, { response: { 200: ... } })`. Bypasses tsgo's type checking while keeping runtime behavior and Eden type inference intact. Pragmatic but not type-safe at compile time.
+
+**Web client cleanup (deferred until server schemas are complete):**
+
+After all response schemas are in place, `routes.ts` (~582 lines) and `shared/api.ts` (~120 lines) can be deleted — web components consume Eden directly with full type inference. The `$ = api as any` workaround is eliminated.
 
 **Prerequisite:** Phase 7b ✅ — guards now short-circuit in `onBeforeHandle`, so handlers no longer return `Response` for auth errors. Handlers may still return `Response.json()` for business-logic errors (404, 400, etc.) — those bypass response schema validation and Eden maps them to the `error` branch.

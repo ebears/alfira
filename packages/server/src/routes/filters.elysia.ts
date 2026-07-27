@@ -4,6 +4,7 @@ import { Elysia } from 'elysia';
 import { deriveAuth } from '../lib/authDerive';
 import { createAdminOrPermissionGuard } from '../lib/elysia-guards';
 import { EQ_BAND_COLUMNS, eqBandsFromRow } from '../lib/eqBands';
+import { FiltersData as FiltersDataSchema } from '../lib/responseSchemas';
 import { db, tables } from '../shared/db';
 import {
   DEFAULT_CHANNEL_MIX,
@@ -143,4 +144,6 @@ function fetchAllFilters() {
 export const filtersPlugin = new Elysia({ prefix: '/settings/filters' })
   .derive(deriveAuth)
   .use(createAdminOrPermissionGuard('audio.manage'))
-  .get('/', () => fetchAllFilters());
+  .get('/', () => fetchAllFilters(), {
+    response: { 200: FiltersDataSchema },
+  });

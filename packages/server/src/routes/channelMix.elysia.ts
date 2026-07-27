@@ -3,6 +3,7 @@ import { Elysia, t } from 'elysia';
 
 import { deriveAuth } from '../lib/authDerive';
 import { createAdminOrPermissionGuard } from '../lib/elysia-guards';
+import { ChannelMixSettings as ChannelMixSettingsSchema } from '../lib/responseSchemas';
 import { syncAllFilters } from '../lib/syncAllFilters';
 import { db, tables } from '../shared/db';
 import { DEFAULT_CHANNEL_MIX } from '../shared/filterDefaults';
@@ -63,7 +64,9 @@ function upsertChannelMixSettings(data: ChannelMixSettings): void {
 export const channelMixPlugin = new Elysia({ prefix: '/settings/channelmix' })
   .derive(deriveAuth)
   .use(createAdminOrPermissionGuard('audio.manage'))
-  .get('/', () => fetchChannelMixSettings())
+  .get('/', () => fetchChannelMixSettings(), {
+    response: { 200: ChannelMixSettingsSchema },
+  })
   .patch(
     '/',
     async ({ body }) => {
@@ -72,5 +75,5 @@ export const channelMixPlugin = new Elysia({ prefix: '/settings/channelmix' })
 
       return body;
     },
-    { body: ChannelMixSchema }
+    { body: ChannelMixSchema, response: { 200: ChannelMixSettingsSchema } }
   );

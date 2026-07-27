@@ -4,6 +4,7 @@ import { Elysia, t } from 'elysia';
 import { deriveAuth } from '../lib/authDerive';
 import { createAdminOrPermissionGuard } from '../lib/elysia-guards';
 import { EQ_BAND_COLUMNS, eqBandsFromRow, eqBandValues } from '../lib/eqBands';
+import { EqualizerSettings as EqualizerSettingsSchema } from '../lib/responseSchemas';
 import { syncAllFilters } from '../lib/syncAllFilters';
 import { db, tables } from '../shared/db';
 import { DEFAULT_EQUALIZER } from '../shared/filterDefaults';
@@ -54,7 +55,9 @@ function upsertEqualizerSettings(data: EqualizerSettings): void {
 export const equalizerPlugin = new Elysia({ prefix: '/settings/equalizer' })
   .derive(deriveAuth)
   .use(createAdminOrPermissionGuard('audio.manage'))
-  .get('/', () => fetchEqualizerSettings())
+  .get('/', () => fetchEqualizerSettings(), {
+    response: { 200: EqualizerSettingsSchema },
+  })
   .patch(
     '/',
     async ({ body }) => {
@@ -63,5 +66,5 @@ export const equalizerPlugin = new Elysia({ prefix: '/settings/equalizer' })
 
       return body;
     },
-    { body: EqualizerSchema }
+    { body: EqualizerSchema, response: { 200: EqualizerSettingsSchema } }
   );

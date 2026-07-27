@@ -3,6 +3,7 @@ import { Elysia, t } from 'elysia';
 
 import { deriveAuth } from '../lib/authDerive';
 import { createAdminOrPermissionGuard } from '../lib/elysia-guards';
+import { RotationSettings as RotationSettingsSchema } from '../lib/responseSchemas';
 import { syncAllFilters } from '../lib/syncAllFilters';
 import { db, tables } from '../shared/db';
 import { DEFAULT_ROTATION } from '../shared/filterDefaults';
@@ -38,7 +39,9 @@ function upsertRotationSettings(data: { enabled: boolean; rotationHz: number }):
 export const rotationPlugin = new Elysia({ prefix: '/settings/rotation' })
   .derive(deriveAuth)
   .use(createAdminOrPermissionGuard('audio.manage'))
-  .get('/', () => fetchRotationSettings())
+  .get('/', () => fetchRotationSettings(), {
+    response: { 200: RotationSettingsSchema },
+  })
   .patch(
     '/',
     async ({ body }) => {
@@ -47,5 +50,5 @@ export const rotationPlugin = new Elysia({ prefix: '/settings/rotation' })
 
       return body;
     },
-    { body: RotationSchema }
+    { body: RotationSchema, response: { 200: RotationSettingsSchema } }
   );
