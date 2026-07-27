@@ -28,23 +28,22 @@ import {
 
 import { api, ApiError } from './eden';
 
-// tsgo cannot resolve Eden's deeply-nested proxy types.
-// Bun's transpiler handles them correctly at runtime.
-const $ = api as any;
+const $ = api;
 
 // ---------------------------------------------------------------------------
 // Response unwrapping
 // ---------------------------------------------------------------------------
 
-function unwrap<T>(
-  result: { data: T; error: null } | { data: null; error: { status: number; value: unknown } }
-): T {
+// Explicit `any` — Elysia's TreatyResponse discriminated union type is not
+// compatible with a generic T parameter. The call site's return type annotation
+// provides the actual type safety.
+function unwrap(result: any): any {
+  // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
   if (result.error) {
-    const err = result.error;
+    const err = result.error as { status: number; value: unknown };
     const body = err.value as { error?: string; code?: string } | undefined;
     const message = body?.error ?? `API error: ${err.status}`;
-    const code = body?.code;
-    throw new ApiError(message, err.status, code);
+    throw new ApiError(message, err.status, body?.code);
   }
   return result.data;
 }
@@ -62,8 +61,7 @@ export function fetchVersion(): Promise<{ version: string }> {
 // ---------------------------------------------------------------------------
 
 export function fetchMe(): Promise<User> {
-  return $.auth.me.get().then((r: any) => {
-    // @ts-expect-error tsgo cannot resolve property access on unknown Eden response
+  return $.auth.me.get().then((r) => {
     return unwrap(r).user;
   });
 }
@@ -243,8 +241,7 @@ export interface TagItem {
 }
 
 export function fetchTags(): Promise<TagItem[]> {
-  return $.api.tags.get().then((r: any) => {
-    // @ts-expect-error tsgo cannot resolve property access on unknown Eden response
+  return $.api.tags.get().then((r) => {
     return unwrap(r).tags;
   });
 }
@@ -253,8 +250,7 @@ export function fetchTagSongs(nameLower: string): Promise<Song[]> {
   return $.api
     .tags({ nameLower })
     .songs.get()
-    .then((r: any) => {
-      // @ts-expect-error tsgo cannot resolve property access on unknown Eden response
+    .then((r) => {
       return unwrap(r).songs;
     });
 }
@@ -263,7 +259,10 @@ export function updateTag(
   nameLower: string,
   data: { canonicalName?: string; color?: string | null }
 ): Promise<{ tag: TagItem }> {
-  return $.api.tags({ nameLower }).patch(data).then(unwrap);
+  return $.api
+    .tags({ nameLower })
+    .patch(data as any)
+    .then(unwrap) as Promise<{ tag: TagItem }>;
 }
 
 export function deleteTag(nameLower: string): Promise<{ success: boolean }> {
@@ -327,7 +326,10 @@ export function renamePlaylist(id: string, name: string): Promise<Playlist> {
 }
 
 export function updatePlaylistTag(id: string, tagNameLower: string | null): Promise<Playlist> {
-  return $.api.playlists({ id }).patch({ tagNameLower }).then(unwrap);
+  return $.api
+    .playlists({ id })
+    .patch({ tagNameLower } as any)
+    .then(unwrap);
 }
 
 export function deletePlaylist(id: string): Promise<void> {
@@ -522,7 +524,7 @@ export interface CompleteSetupPayload {
 }
 
 export function completeSetup(data: CompleteSetupPayload): Promise<{ success: boolean }> {
-  return $.api.setup.complete.post(data).then(unwrap);
+  return $.api.setup.complete.post(data as any).then(unwrap) as Promise<{ success: boolean }>;
 }
 
 // ---------------------------------------------------------------------------

@@ -584,7 +584,7 @@ export const requestsPlugin = new Elysia({ prefix: '/requests' })
 
       return { request: formatted, autoApproved: false };
     },
-    { body: CreateRequestSchema }
+    { body: CreateRequestSchema, response: { 200: t.Unknown() } }
   )
   .guard({}, (app) =>
     app.use(adminGuard).patch(
@@ -798,7 +798,7 @@ export const requestsPlugin = new Elysia({ prefix: '/requests' })
           song: formatSong(newSong),
         };
       },
-      { body: PatchRequestSchema }
+      { body: PatchRequestSchema, response: { 200: t.Unknown() } }
     )
   )
   .delete('/:id', async ({ user, isAdmin, ...ctx }) => {

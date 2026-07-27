@@ -348,3 +348,140 @@ export const PlaylistDetail = t.Object({
   songs: t.Array(PlaylistSongEntry),
   pagination: PaginationMeta,
 });
+
+// ---------------------------------------------------------------------------
+// Common mutation responses (used across multiple route groups)
+// ---------------------------------------------------------------------------
+
+export const MessageResponse = t.Object({
+  message: t.String(),
+});
+
+export const SuccessResponse = t.Object({
+  success: t.Boolean(),
+});
+
+// ---------------------------------------------------------------------------
+// Player-specific mutation responses
+// ---------------------------------------------------------------------------
+
+export const PauseToggleResponse = t.Object({
+  isPaused: t.Boolean(),
+});
+
+export const LoopModeResponse = t.Object({
+  loopMode: t.Union([t.Literal('off'), t.Literal('song'), t.Literal('queue')]),
+});
+
+export const SongAddedResponse = t.Object({
+  message: t.String(),
+  song: QueuedSong,
+});
+
+export const PlaylistQueuedResponse = t.Object({
+  message: t.String(),
+  playlistTitle: t.String(),
+  totalVideos: t.Number(),
+  queuedCount: t.Number(),
+  songs: t.Array(QueuedSong),
+});
+
+// ---------------------------------------------------------------------------
+// Song bulk operation responses
+// ---------------------------------------------------------------------------
+
+export const BulkDeleteResponse = t.Object({
+  deleted: t.Number(),
+});
+
+export const BulkEditResponse = t.Object({
+  updated: t.Number(),
+});
+
+export const BulkTagResponse = t.Object({
+  updated: t.Number(),
+  tags: t.Array(t.String()),
+});
+
+export const BulkRemoveSongsResponse = t.Object({
+  removed: t.Number(),
+});
+
+// ---------------------------------------------------------------------------
+// Permissions response
+// ---------------------------------------------------------------------------
+
+export const PermissionUpdateResponse = t.Object({
+  action: t.String(),
+  roleIds: t.Array(t.String()),
+});
+
+export const MyPermissionsResponse = t.Object({
+  permissions: t.Array(t.String()),
+});
+
+// ---------------------------------------------------------------------------
+// SongRequest (for requests endpoints)
+// ---------------------------------------------------------------------------
+
+const PlaylistDataSchema = t.Object({
+  title: t.String(),
+  videoCount: t.Number(),
+  thumbnailUrl: t.Optional(t.Nullable(t.String())),
+  videos: t.Array(
+    t.Object({
+      id: t.String(),
+      title: t.String(),
+      duration: t.Number(),
+      thumbnailUrl: t.String(),
+    })
+  ),
+});
+
+export const SongRequest = t.Object({
+  id: t.String(),
+  sourceUrl: t.String(),
+  type: t.Union([t.Literal('track'), t.Literal('playlist')]),
+  status: t.Union([t.Literal('pending'), t.Literal('approved'), t.Literal('denied')]),
+  nickname: t.Nullable(t.String()),
+  artist: t.Nullable(t.String()),
+  album: t.Nullable(t.String()),
+  artwork: t.Nullable(t.String()),
+  tags: t.Optional(t.Array(t.String())),
+  volumeBoost: t.Nullable(t.Number()),
+  notifyDm: t.Boolean(),
+  requestedBy: t.String(),
+  requestedByDisplayName: t.Optional(t.String()),
+  reviewerId: t.Nullable(t.String()),
+  playlistData: t.Nullable(PlaylistDataSchema),
+  associatedSongId: t.Nullable(t.String()),
+  createdAt: t.String(),
+  closedAt: t.Nullable(t.String()),
+});
+
+export const CreateRequestResult = t.Object({
+  request: t.Optional(SongRequest),
+  song: t.Optional(Song),
+  songs: t.Optional(t.Array(Song)),
+  autoApproved: t.Boolean(),
+  importedCount: t.Optional(t.Number()),
+  skippedCount: t.Optional(t.Number()),
+  playlistTitle: t.Optional(t.String()),
+});
+
+export const ApproveRequestResponse = t.Object({
+  request: SongRequest,
+  songs: t.Optional(t.Array(Song)),
+});
+
+export const DenyRequestResponse = t.Object({
+  request: SongRequest,
+});
+
+// ---------------------------------------------------------------------------
+// Play count (for play endpoint)
+// ---------------------------------------------------------------------------
+
+export const PlayResponse = t.Object({
+  message: t.String(),
+});

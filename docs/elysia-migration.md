@@ -564,8 +564,47 @@ Eden's proxy path resolution works, but response bodies were typed as `Response`
 
 **Prerequisites:** Phase 7b ✅ (guards in `onBeforeHandle`), Phase 8 ✅ (handlers return plain data, no `Response | data` unions), Phase 9 ✅ (DB types match wire types).
 
+### Phase 6c — Expand response schemas to mutation endpoints ✅
+
+Extended response schemas from the original 28 read-heavy endpoints to cover mutation endpoints across `player`, `playlists`, `requests`, and `permissions`. Added 12 new shared schemas to `responseSchemas.ts` (`MessageResponse`, `SuccessResponse`, `PauseToggleResponse`, `LoopModeResponse`, `SongRequest`, `CreateRequestResult`, `BulkRemoveSongsResponse`, `BulkEditResponse`, `BulkTagResponse`, `BulkDeleteResponse`, `PermissionUpdateResponse`, `MyPermissionsResponse`).
+
+**Schemas added per route group:**
+
+- **`player.elysia.ts`** — 11 endpoints: POST `/pause-toggle`, POST `/skip`, POST `/shuffle`, POST `/unshuffle`, POST `/clear`, POST `/leave`, POST `/loop`, PATCH `/queue/reorder`, POST/`/queue/:songId/promote`, POST `/queue/:songId/demote`, DELETE `/queue/:songId`. Routes with both body and response schemas (POST `/play`, `/override`, `/quick-add`, `/quick-add-playlist`, `/add-to-priority`, `/seek`) kept `t.Unknown()` due to NoInfer.
+- **`playlists.elysia.ts`** — 5 endpoints: POST `/` (create → `Playlist`), POST `/:id/songs/bulk-remove` (→ `BulkRemoveSongsResponse`), PATCH `/:id/visibility` (→ `Playlist`), PATCH `/:id` (rename/tag → `Playlist`), PATCH `/:id/reorder` (→ `MessageResponse`). GET `/` schema upgraded from `t.Array(t.Unknown())` to `t.Array(Playlist)`.
+- **`requests.elysia.ts`** — 2 endpoints: POST `/` (create) and PATCH `/:id` (approve/deny) got `t.Unknown()` response schemas. Full schemas deferred due to multi-shape returns and NoInfer.
+- **`permissions.elysia.ts`** — 1 endpoint: GET `/me` (→ `MyPermissionsResponse`).
+
+**Bug fix:** `player.togglePause()` returns `Promise<boolean>` but the handler wasn't awaiting it — `isPaused` was `Promise<boolean>` instead of `boolean`. Adding the response schema surfaced this type-level bug; fixed by adding `await`.
+
+### Phase 11 — Remove `as any` from Eden client ✅
+
+With oxlint 1.75 / tsgolint 7.0.2001, tsgo (TypeScript 7) fully resolves Elysia's proxy chain types. The claim that "tsgo cannot resolve Eden's deeply-nested proxy types" was stale — it was true in earlier oxlint versions but is no longer the case. The `as any` workaround on `$ = api` was masking 15 real type mismatches, not a tsgo limitation.
+
+**Changes in `routes.ts`:**
+
+- **Removed `const $ = api as any`** → `const $ = api`. Eden proxy types resolve correctly at all nesting levels.
+- **Removed 3 `@ts-expect-error` comments** that claimed tsgo couldn't resolve property access on Eden responses. The types now resolve correctly.
+- **Changed `unwrap<T>()`** → `unwrap(any)`. Elysia's `TreatyResponse` is a discriminated union per status code (e.g. `{ data: Shape200; error: null } | { data: null; error: { status: 404; value: Shape404 } }`), which is not assignable to a single generic `T` parameter. The call site's explicit return type annotation (e.g. `Promise<QueueState>`) provides the actual type safety.
+- **3 targeted `as any` casts** on function arguments for routes where Elysia's NoInfer limitation prevents precise client–server type alignment (tag patch color union, playlist tag update null-vs-undefined, setup complete payload shape). These are local to specific arguments, not on the entire Eden client.
+
+**Key insight:** The `as any` was never masking a tooling limitation. It was masking real type gaps: missing server-side response schemas, `null` vs `undefined` mismatches, and Elysia's NoInfer wrapping of handler context types. Each category was addressed individually rather than papered over with a single escape hatch.
+
 ## Remaining work
 
-### Web client cleanup (deferred)
+### Complete response schemas on NoInfer-limited routes
 
-After all response schemas are in place, `routes.ts` (~582 lines) and `shared/api.ts` (~120 lines) can be deleted — web components consume Eden directly with full type inference. The `$ = api as any` workaround is eliminated.
+Routes that have both a `body` schema and a `response` schema trigger Elysia's NoInfer wrapping of handler context types, preventing destructuring of derived values (`user`, `isAdmin`). These routes currently use `t.Unknown()` for their response schemas. When Elysia lifts the NoInfer limitation (or provides an opt-out), these routes can get precise schemas:
+
+- **Player:** POST `/play`, `/override`, `/quick-add`, `/quick-add-playlist`, `/add-to-priority`, `/seek`
+- **Playlists:** POST `/:id/songs`
+- **Requests:** POST `/` (create), PATCH `/:id` (approve/deny)
+
+### Web client cleanup
+
+`routes.ts` (~570 lines) and `shared/api.ts` (~163 lines) contain duplicate interface definitions and wrapper functions that could be eliminated if components consumed Eden directly. However, direct Eden consumption would spread the `{ data, error }` unwrapping pattern and the 3 targeted `as any` casts to ~22 component files, which is currently worse than the centralized wrapper approach. This is blocked on:
+
+1. Elysia lifting the NoInfer limitation so all routes can have precise response schemas
+2. A cleaner pattern for TreatyResponse unwrapping in components (or an Eden API change)
+
+Until then, `routes.ts` provides genuine value: typed named functions, centralized error unwrapping, and localized workarounds.

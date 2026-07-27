@@ -5,6 +5,7 @@ import { deriveAuth } from '../lib/authDerive';
 import { getGuildId } from '../lib/config';
 import { fetchGuildRoles } from '../lib/discordRoles';
 import { adminGuard, authGuard } from '../lib/elysia-guards';
+import { MyPermissionsResponse } from '../lib/responseSchemas';
 import { PERMISSION_CATEGORIES, PERMISSION_LABELS, type PermissionAction } from '../shared';
 import { db, tables } from '../shared/db';
 
@@ -61,11 +62,15 @@ function fetchUserPermissions(userRoles: string[]): string[] {
 export const permissionsPlugin = new Elysia({ prefix: '/permissions' })
   .derive(deriveAuth)
   .use(authGuard)
-  .get('/me', ({ user }) => {
-    const userRoles = (user as { roles?: string[] } | null)?.roles ?? [];
-    const permissions = fetchUserPermissions(userRoles);
-    return { permissions };
-  })
+  .get(
+    '/me',
+    ({ user }) => {
+      const userRoles = (user as { roles?: string[] } | null)?.roles ?? [];
+      const permissions = fetchUserPermissions(userRoles);
+      return { permissions };
+    },
+    { response: { 200: MyPermissionsResponse } }
+  )
   .use(adminGuard)
   .get('/', async () => {
     const guildId = getGuildId();

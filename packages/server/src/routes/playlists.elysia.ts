@@ -8,7 +8,12 @@ import { authGuard } from '../lib/elysia-guards';
 import { ApiError } from '../lib/errors';
 import { parsePagination } from '../lib/pagination';
 import { canAccessPlaylist, getPlaylistSongCount, requirePlaylist } from '../lib/playlistAccess';
-import { PaginationMeta } from '../lib/responseSchemas';
+import {
+  BulkRemoveSongsResponse,
+  MessageResponse,
+  PaginationMeta,
+  Playlist,
+} from '../lib/responseSchemas';
 import {
   buildSongFilterClause,
   buildSongOrderBy,
@@ -48,6 +53,7 @@ function formatPlaylistSongWithSong(
 // ---------------------------------------------------------------------------
 // Schemas
 // ---------------------------------------------------------------------------
+
 const PlaylistCreateSchema = t.Object({
   name: t.Optional(t.String()),
   tagNameLower: t.Optional(t.String()),
@@ -146,7 +152,7 @@ export const playlistsPlugin = new Elysia({ prefix: '/playlists' })
         },
       };
     },
-    { response: { 200: t.Object({ items: t.Array(t.Unknown()), pagination: PaginationMeta }) } }
+    { response: { 200: t.Object({ items: t.Array(Playlist), pagination: PaginationMeta }) } }
   )
   .post(
     '/',
@@ -182,7 +188,7 @@ export const playlistsPlugin = new Elysia({ prefix: '/playlists' })
       emitPlaylistUpdated(formatPlaylist(playlist, songCount));
       return playlist;
     },
-    { body: PlaylistCreateSchema, response: { 200: t.Unknown() } }
+    { body: PlaylistCreateSchema, response: { 200: Playlist } }
   )
   .post(
     '/:id/songs/bulk-remove',
@@ -224,7 +230,7 @@ export const playlistsPlugin = new Elysia({ prefix: '/playlists' })
 
       return { removed: songIds.length };
     },
-    { body: PlaylistRemoveSongsSchema }
+    { body: PlaylistRemoveSongsSchema, response: { 200: BulkRemoveSongsResponse } }
   )
   .delete('/:id/songs/:songId', async ({ user, ...ctx }) => {
     const playlistId = (ctx.params as Record<string, string>).id as string;
@@ -275,11 +281,12 @@ export const playlistsPlugin = new Elysia({ prefix: '/playlists' })
   })
   .post(
     '/:id/songs',
-    async ({ user, ...ctx }) => {
+    async ({ ...ctx }) => {
+      const user = ctx.user as { discordId: string; username: string };
       const id = (ctx.params as Record<string, string>).id as string;
       const { songId } = ctx.body as typeof PlaylistAddSongSchema.static;
 
-      const discordId = (user as { discordId: string }).discordId;
+      const discordId = user.discordId;
       const playlist = await requirePlaylist(id, { discordId });
 
       if (playlist.tagNameLower) {
@@ -334,7 +341,7 @@ export const playlistsPlugin = new Elysia({ prefix: '/playlists' })
 
       return { ...ps, song: songData };
     },
-    { body: PlaylistAddSongSchema }
+    { body: PlaylistAddSongSchema, response: { 200: t.Unknown() } }
   )
   .patch(
     '/:id/visibility',
@@ -364,7 +371,7 @@ export const playlistsPlugin = new Elysia({ prefix: '/playlists' })
       emitPlaylistUpdated(formatPlaylist(updatedPlaylist, value));
       return updatedPlaylist;
     },
-    { body: PlaylistVisibilitySchema }
+    { body: PlaylistVisibilitySchema, response: { 200: Playlist } }
   )
   .get(
     '/:id',
@@ -596,7 +603,7 @@ export const playlistsPlugin = new Elysia({ prefix: '/playlists' })
       emitPlaylistUpdated(formatPlaylist(updatedPlaylist, value));
       return updatedPlaylist;
     },
-    { body: PlaylistCreateSchema }
+    { body: PlaylistCreateSchema, response: { 200: Playlist } }
   )
   .patch(
     '/:id/reorder',
@@ -648,7 +655,7 @@ export const playlistsPlugin = new Elysia({ prefix: '/playlists' })
 
       return { message: 'Playlist reordered.' };
     },
-    { body: PlaylistReorderSchema }
+    { body: PlaylistReorderSchema, response: { 200: MessageResponse } }
   )
   .delete('/:id', async ({ user, ...ctx }) => {
     const id = (ctx.params as Record<string, string>).id as string;
