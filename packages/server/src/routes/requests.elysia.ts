@@ -1,11 +1,9 @@
 import { and, eq, inArray, or, sql } from 'drizzle-orm';
 import { Elysia, t } from 'elysia';
-/* eslint-disable @typescript-eslint/no-unsafe-type-assertion */
-/* eslint-disable @typescript-eslint/no-unnecessary-condition */
-/* eslint-disable @typescript-eslint/no-unnecessary-type-assertion */
 
+import { deriveAuth } from '../lib/authDerive';
 import { getUserDisplayName, resolveDisplayNames } from '../lib/displayName';
-import { requireAdmin, requireAuth, type AuthContext } from '../lib/elysia-guards';
+import { adminGuard, authGuard, type AuthContext } from '../lib/elysia-guards';
 import { sendRequestDm, sendRequestNotification } from '../lib/notifications';
 import { parsePagination } from '../lib/pagination';
 import { formatSong } from '../lib/serialization';
@@ -98,20 +96,12 @@ const PatchRequestSchema = t.Object({
 // Plugin
 // ---------------------------------------------------------------------------
 
-function getAuth(ctx: Record<string, unknown>): AuthContext {
-  return ctx as unknown as AuthContext;
-}
-
 export const requestsPlugin = new Elysia({ prefix: '/requests' })
+  .derive(deriveAuth)
+  .use(authGuard)
   .post(
     '/preview',
-    async (ctx: Record<string, unknown>) => {
-      const { user, isAdmin } = getAuth(ctx);
-      const authErr = requireAuth({ user, isAdmin });
-      if (authErr) {
-        return authErr;
-      }
-
+    async ({ ...ctx }) => {
       const body = ctx.body as typeof PreviewRequestSchema.static;
       const urlResult = validateSourceUrl(body.url);
       if (!urlResult.ok) {
@@ -191,13 +181,7 @@ export const requestsPlugin = new Elysia({ prefix: '/requests' })
     },
     { body: PreviewRequestSchema }
   )
-  .get('/', async (ctx: Record<string, unknown>) => {
-    const { user, isAdmin } = getAuth(ctx);
-    const authErr = requireAuth({ user, isAdmin });
-    if (authErr) {
-      return authErr;
-    }
-
+  .get('/', async ({ user, isAdmin, ...ctx }) => {
     const url = new URL((ctx.request as Request).url);
     const { page, limit, skip } = parsePagination(url);
     const status = url.searchParams.get('status') ?? 'pending';
@@ -255,13 +239,7 @@ export const requestsPlugin = new Elysia({ prefix: '/requests' })
   })
   .post(
     '/',
-    async (ctx: Record<string, unknown>) => {
-      const { user, isAdmin } = getAuth(ctx);
-      const authErr = requireAuth({ user, isAdmin });
-      if (authErr) {
-        return authErr;
-      }
-
+    async ({ user, isAdmin, ...ctx }) => {
       const body = ctx.body as Record<string, unknown>;
       const discordUser = user as {
         discordId: string;
@@ -637,120 +615,180 @@ export const requestsPlugin = new Elysia({ prefix: '/requests' })
     },
     { body: CreateRequestSchema }
   )
-  .patch(
-    '/:id',
-    async (ctx: Record<string, unknown>) => {
-      const { user, isAdmin } = getAuth(ctx);
-      const guardErr = requireAdmin({ user, isAdmin });
-      if (guardErr) {
-        return guardErr;
-      }
+  .guard({}, (app) =>
+    app.use(adminGuard).patch(
+      '/:id',
+      async ({ user, ...ctx }) => {
+        const id = (ctx.params as Record<string, string>).id as string;
+        const body = ctx.body as typeof PatchRequestSchema.static;
 
-      const id = (ctx.params as Record<string, string>).id as string;
-      const body = ctx.body as typeof PatchRequestSchema.static;
+        const [existing] = (await db
+          .select()
+          .from(requestTable)
+          .where(eq(requestTable.id, id))
+          .limit(1)) as unknown as [typeof requestTable.$inferSelect | undefined];
 
-      const [existing] = (await db
-        .select()
-        .from(requestTable)
-        .where(eq(requestTable.id, id))
-        .limit(1)) as unknown as [typeof requestTable.$inferSelect | undefined];
-
-      if (!existing) {
-        return Response.json({ error: 'Request not found.' }, { status: 404 });
-      }
-
-      if (existing.status !== 'pending') {
-        return Response.json(
-          { error: 'This request has already been processed.' },
-          { status: 409 }
-        );
-      }
-
-      const newStatus = body.status;
-      const closedAt = new Date();
-      const reviewUser = user as { discordId: string; username: string; isAdmin: boolean };
-
-      if (newStatus === 'denied') {
-        await db
-          .update(requestTable)
-          .set({ status: 'denied', reviewedBy: reviewUser.discordId, closedAt })
-          .where(eq(requestTable.id, id));
-
-        const formatted = formatRequest({
-          ...existing,
-          status: 'denied',
-          reviewedBy: reviewUser.discordId,
-          closedAt,
-        });
-
-        void (async () => {
-          try {
-            await sendRequestNotification('denied', formatted, reviewUser);
-          } catch (error) {
-            logger.warn({ error }, 'Failed to send denied notification');
-          }
-        })();
-
-        if (existing.notifyDm) {
-          try {
-            await sendRequestDm(existing.requestedBy, 'denied', existing.title);
-          } catch (error) {
-            logger.warn({ error }, 'Failed to send denied DM');
-          }
+        if (!existing) {
+          return Response.json({ error: 'Request not found.' }, { status: 404 });
         }
 
-        return Response.json({ request: formatted });
-      }
-
-      // Approve
-      if (existing.type === 'playlist' && existing.playlistData) {
-        const pd = existing.playlistData as {
-          name: string;
-          videoCount: number;
-          thumbnailUrl: string | null;
-          videos: {
-            id: string;
-            title: string;
-            duration: number;
-            thumbnailUrl: string | null;
-            artist: string | null;
-            artworkUrl: string | null;
-          }[];
-        };
-        const videos = pd.videos ?? [];
-
-        if (videos.length === 0) {
-          return Response.json({ error: 'Playlist request has no videos.' }, { status: 400 });
+        if (existing.status !== 'pending') {
+          return Response.json(
+            { error: 'This request has already been processed.' },
+            { status: 409 }
+          );
         }
 
-        const videoIds = videos.map((v) => v.id);
-        const existingSourceIds = await db
-          .select({ sourceId: songTable.sourceId })
-          .from(songTable)
-          .where(videoIds.length > 0 ? inArray(songTable.sourceId, videoIds) : undefined);
+        const newStatus = body.status;
+        const closedAt = new Date();
+        const reviewUser = user as { discordId: string; username: string; isAdmin: boolean };
 
-        const existingIdSet = new Set(existingSourceIds.map((s) => s.sourceId));
-        const newVideos = videos.filter((v) => !existingIdSet.has(v.id));
+        if (newStatus === 'denied') {
+          await db
+            .update(requestTable)
+            .set({ status: 'denied', reviewedBy: reviewUser.discordId, closedAt })
+            .where(eq(requestTable.id, id));
 
-        let createdSongs: (typeof songTable.$inferSelect)[] = [];
-        if (newVideos.length > 0) {
-          createdSongs = await db.transaction((tx) => {
-            return tx
-              .insert(songTable)
-              .values(
-                newVideos.map((v) => ({
-                  title: v.title,
-                  sourceUrl: youTubeUrl(v.id),
-                  sourceId: v.id,
-                  duration: v.duration,
-                  thumbnailUrl: v.thumbnailUrl ?? '',
-                  addedBy: existing.requestedBy,
-                  artist: v.artist ?? null,
-                  artwork: v.artworkUrl ?? null,
-                }))
-              )
-              .returning();
+          const formatted = formatRequest({
+            ...existing,
+            status: 'denied',
+            reviewedBy: reviewUser.discordId,
+            closedAt,
           });
+
+          void (async () => {
+            try {
+              await sendRequestNotification('denied', formatted, reviewUser);
+            } catch (error) {
+              logger.warn({ error }, 'Failed to send denied notification');
+            }
+          })();
+
+          if (existing.notifyDm) {
+            try {
+              await sendRequestDm(existing.requestedBy, 'denied', existing.title);
+            } catch (error) {
+              logger.warn({ error }, 'Failed to send denied DM');
+            }
+          }
+
+          return Response.json({ request: formatted });
+        }
+
+        // Approve
+        if (existing.type === 'playlist' && existing.playlistData) {
+          const pd = existing.playlistData as {
+            name: string;
+            videoCount: number;
+            thumbnailUrl: string | null;
+            videos: {
+              id: string;
+              title: string;
+              duration: number;
+              thumbnailUrl: string | null;
+              artist: string | null;
+              artworkUrl: string | null;
+            }[];
+          };
+          const videos = pd.videos ?? [];
+
+          if (videos.length === 0) {
+            return Response.json({ error: 'Playlist request has no videos.' }, { status: 400 });
+          }
+
+          const videoIds = videos.map((v) => v.id);
+          const existingSourceIds = await db
+            .select({ sourceId: songTable.sourceId })
+            .from(songTable)
+            .where(videoIds.length > 0 ? inArray(songTable.sourceId, videoIds) : undefined);
+
+          const existingIdSet = new Set(existingSourceIds.map((s) => s.sourceId));
+          const newVideos = videos.filter((v) => !existingIdSet.has(v.id));
+
+          let createdSongs: (typeof songTable.$inferSelect)[] = [];
+          if (newVideos.length > 0) {
+            createdSongs = await db.transaction((tx) => {
+              return tx
+                .insert(songTable)
+                .values(
+                  newVideos.map((v) => ({
+                    title: v.title,
+                    sourceUrl: youTubeUrl(v.id),
+                    sourceId: v.id,
+                    duration: v.duration,
+                    thumbnailUrl: v.thumbnailUrl ?? '',
+                    addedBy: existing.requestedBy,
+                    artist: v.artist ?? null,
+                    artwork: v.artworkUrl ?? null,
+                  }))
+                )
+                .returning();
+            });
+          }
+
+          await db
+            .update(requestTable)
+            .set({ status: 'approved', reviewedBy: reviewUser.discordId, closedAt })
+            .where(eq(requestTable.id, id));
+
+          const nameMap = await resolveDisplayNames(
+            createdSongs as unknown as { addedBy: string }[]
+          );
+          for (const song of createdSongs) {
+            emitSongAdded({
+              ...formatSong(song),
+              addedByDisplayName: nameMap.get(song.addedBy) ?? song.addedBy,
+            });
+          }
+
+          if (existing.notifyDm) {
+            try {
+              await sendRequestDm(existing.requestedBy, 'approved', existing.title);
+            } catch (error) {
+              logger.warn({ error }, 'Failed to send approved DM');
+            }
+          }
+
+          const formatted = formatRequest({
+            ...existing,
+            status: 'approved',
+            reviewedBy: reviewUser.discordId,
+            closedAt,
+          });
+
+          void (async () => {
+            try {
+              await sendRequestNotification('approved', formatted, reviewUser);
+            } catch (error) {
+              logger.warn({ error }, 'Failed to send playlist approved notification');
+            }
+          })();
+
+          return Response.json({
+            request: formatted,
+            songs: createdSongs.map(formatSong),
+            importedCount: createdSongs.length,
+            skippedCount: videos.length - newVideos.length,
+          });
+        }
+
+        // Track approval
+        const [newSong] = await db
+          .insert(songTable)
+          .values({
+            title: existing.title,
+            sourceUrl: existing.sourceUrl,
+            sourceId: existing.sourceId,
+            duration: existing.duration,
+            thumbnailUrl: existing.thumbnailUrl,
+            addedBy: existing.requestedBy,
+            artist: existing.artist ?? null,
+            artwork: existing.artworkUrl ?? null,
+          })
+          .returning();
+
+        if (!newSong) {
+          return Response.json({ error: 'Failed to create song from request.' }, { status: 500 });
         }
 
         await db
@@ -758,13 +796,11 @@ export const requestsPlugin = new Elysia({ prefix: '/requests' })
           .set({ status: 'approved', reviewedBy: reviewUser.discordId, closedAt })
           .where(eq(requestTable.id, id));
 
-        const nameMap = await resolveDisplayNames(createdSongs as unknown as { addedBy: string }[]);
-        for (const song of createdSongs) {
-          emitSongAdded({
-            ...formatSong(song),
-            addedByDisplayName: nameMap.get(song.addedBy) ?? song.addedBy,
-          });
-        }
+        const displayName = await getUserDisplayName(existing.requestedBy);
+        emitSongAdded({
+          ...formatSong(newSong),
+          addedByDisplayName: displayName,
+        });
 
         if (existing.notifyDm) {
           try {
@@ -785,85 +821,19 @@ export const requestsPlugin = new Elysia({ prefix: '/requests' })
           try {
             await sendRequestNotification('approved', formatted, reviewUser);
           } catch (error) {
-            logger.warn({ error }, 'Failed to send playlist approved notification');
+            logger.warn({ error }, 'Failed to send approved notification');
           }
         })();
 
         return Response.json({
           request: formatted,
-          songs: createdSongs.map(formatSong),
-          importedCount: createdSongs.length,
-          skippedCount: videos.length - newVideos.length,
+          song: formatSong(newSong),
         });
-      }
-
-      // Track approval
-      const [newSong] = await db
-        .insert(songTable)
-        .values({
-          title: existing.title,
-          sourceUrl: existing.sourceUrl,
-          sourceId: existing.sourceId,
-          duration: existing.duration,
-          thumbnailUrl: existing.thumbnailUrl,
-          addedBy: existing.requestedBy,
-          artist: existing.artist ?? null,
-          artwork: existing.artworkUrl ?? null,
-        })
-        .returning();
-
-      if (!newSong) {
-        return Response.json({ error: 'Failed to create song from request.' }, { status: 500 });
-      }
-
-      await db
-        .update(requestTable)
-        .set({ status: 'approved', reviewedBy: reviewUser.discordId, closedAt })
-        .where(eq(requestTable.id, id));
-
-      const displayName = await getUserDisplayName(existing.requestedBy);
-      emitSongAdded({
-        ...formatSong(newSong),
-        addedByDisplayName: displayName,
-      });
-
-      if (existing.notifyDm) {
-        try {
-          await sendRequestDm(existing.requestedBy, 'approved', existing.title);
-        } catch (error) {
-          logger.warn({ error }, 'Failed to send approved DM');
-        }
-      }
-
-      const formatted = formatRequest({
-        ...existing,
-        status: 'approved',
-        reviewedBy: reviewUser.discordId,
-        closedAt,
-      });
-
-      void (async () => {
-        try {
-          await sendRequestNotification('approved', formatted, reviewUser);
-        } catch (error) {
-          logger.warn({ error }, 'Failed to send approved notification');
-        }
-      })();
-
-      return Response.json({
-        request: formatted,
-        song: formatSong(newSong),
-      });
-    },
-    { body: PatchRequestSchema }
+      },
+      { body: PatchRequestSchema }
+    )
   )
-  .delete('/:id', async (ctx: Record<string, unknown>) => {
-    const { user, isAdmin } = getAuth(ctx);
-    const authErr = requireAuth({ user, isAdmin });
-    if (authErr) {
-      return authErr;
-    }
-
+  .delete('/:id', async ({ user, isAdmin, ...ctx }) => {
     const id = (ctx.params as Record<string, string>).id as string;
 
     const [existing] = (await db

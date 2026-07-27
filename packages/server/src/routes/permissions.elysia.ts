@@ -1,10 +1,10 @@
 import { eq, inArray } from 'drizzle-orm';
 import { Elysia, t } from 'elysia';
-/* eslint-disable @typescript-eslint/no-unsafe-type-assertion */
 
+import { deriveAuth } from '../lib/authDerive';
 import { getGuildId } from '../lib/config';
 import { fetchGuildRoles } from '../lib/discordRoles';
-import { requireAdmin, requireAuth, type AuthContext } from '../lib/elysia-guards';
+import { adminGuard, authGuard } from '../lib/elysia-guards';
 import { PERMISSION_CATEGORIES, PERMISSION_LABELS, type PermissionAction } from '../shared';
 import { db, tables } from '../shared/db';
 
@@ -58,29 +58,16 @@ function fetchUserPermissions(userRoles: string[]): string[] {
 // Plugin
 // ---------------------------------------------------------------------------
 
-function getAuth(ctx: Record<string, unknown>): AuthContext {
-  return ctx as unknown as AuthContext;
-}
-
 export const permissionsPlugin = new Elysia({ prefix: '/permissions' })
-  .get('/me', (ctx: Record<string, unknown>) => {
-    const { user, isAdmin } = getAuth(ctx);
-    const authErr = requireAuth({ user, isAdmin });
-    if (authErr) {
-      return authErr;
-    }
-
+  .derive(deriveAuth)
+  .use(authGuard)
+  .get('/me', ({ user }) => {
     const userRoles = (user as { roles?: string[] } | null)?.roles ?? [];
     const permissions = fetchUserPermissions(userRoles);
-    return Response.json({ permissions });
+    return { permissions };
   })
-  .get('/', async (ctx: Record<string, unknown>) => {
-    const { user, isAdmin } = getAuth(ctx);
-    const guardErr = requireAdmin({ user, isAdmin });
-    if (guardErr) {
-      return guardErr;
-    }
-
+  .use(adminGuard)
+  .get('/', async () => {
     const guildId = getGuildId();
     const allRows = fetchAllRolePermissions();
     const adminRoleIds = fetchAdminRoleIds();
@@ -101,23 +88,17 @@ export const permissionsPlugin = new Elysia({ prefix: '/permissions' })
       (mapping[row.action] ??= []).push(row.roleId);
     }
 
-    return Response.json({
+    return {
       mapping,
       roles: filteredRoles,
       categories: PERMISSION_CATEGORIES,
       labels: PERMISSION_LABELS,
-    });
+    };
   })
   .patch(
     '/',
-    (ctx: Record<string, unknown>) => {
-      const { user, isAdmin } = getAuth(ctx);
-      const guardErr = requireAdmin({ user, isAdmin });
-      if (guardErr) {
-        return guardErr;
-      }
-
-      const { action, roleIds } = ctx.body as typeof PermissionsPatchSchema.static;
+    ({ body }) => {
+      const { action, roleIds } = body;
 
       if (!isPermissionAction(action)) {
         return Response.json({ error: `Unknown permission action: ${action}` }, { status: 400 });
@@ -125,7 +106,7 @@ export const permissionsPlugin = new Elysia({ prefix: '/permissions' })
 
       replacePermissionRoles(action, roleIds);
 
-      return Response.json({ action, roleIds });
+      return { action, roleIds };
     },
     { body: PermissionsPatchSchema }
   );

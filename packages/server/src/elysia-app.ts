@@ -1,13 +1,13 @@
 import { sql } from 'drizzle-orm';
-import { Elysia, type Cookie } from 'elysia';
+import { Elysia } from 'elysia';
 import { join } from 'node:path';
 
 import { API_SECURITY_HEADERS } from './lib/apiResponse';
+import { deriveAuth } from './lib/authDerive';
 import { VERSION } from './lib/config';
-import { parseCookies } from './lib/cookies';
 import { lavalink } from './lib/lavalink';
 import { registerClient, unregisterClient, type WsClient } from './lib/socket';
-import { verifySessionToken } from './middleware/requireAuth';
+import { type verifySessionToken } from './middleware/requireAuth';
 import { authPlugin } from './routes/auth.elysia';
 import { channelMixPlugin } from './routes/channelMix.elysia';
 import { compressorPlugin } from './routes/compressor.elysia';
@@ -45,20 +45,6 @@ const STATIC_EXTENSIONS: Record<string, string> = {
   '.webmanifest': 'application/manifest+json',
   '.woff2': 'font/woff2',
 };
-
-function deriveAuth({
-  cookie,
-  request,
-}: {
-  cookie: Record<string, Cookie<unknown>>;
-  request: Request;
-}) {
-  const raw = cookie.session?.value;
-  const token = typeof raw === 'string' ? raw : undefined;
-  const user = token ? verifySessionToken(token) : null;
-  const cookies = parseCookies(request.headers.get('cookie') ?? '');
-  return { user, isAdmin: user?.isAdmin ?? false, cookies };
-}
 
 function serveStatic(pathname: string): Response | undefined {
   const filePath = pathname === '/' ? join(WEB_DIST, 'index.html') : join(WEB_DIST, pathname);

@@ -1,8 +1,8 @@
 import { eq } from 'drizzle-orm';
 import { Elysia } from 'elysia';
-/* eslint-disable @typescript-eslint/no-unsafe-type-assertion */
 
-import { requireAdminOrPermission, type AuthContext } from '../lib/elysia-guards';
+import { deriveAuth } from '../lib/authDerive';
+import { createAdminOrPermissionGuard } from '../lib/elysia-guards';
 import { EQ_BAND_COLUMNS, eqBandsFromRow } from '../lib/eqBands';
 import { db, tables } from '../shared/db';
 import {
@@ -140,18 +140,7 @@ function fetchAllFilters() {
 // Plugin
 // ---------------------------------------------------------------------------
 
-function getAuth(ctx: Record<string, unknown>): AuthContext {
-  return ctx as unknown as AuthContext;
-}
-
-export const filtersPlugin = new Elysia({ prefix: '/settings/filters' }).get(
-  '/',
-  (ctx: Record<string, unknown>) => {
-    const { user, isAdmin } = getAuth(ctx);
-    const guardErr = requireAdminOrPermission({ user, isAdmin }, 'audio.manage');
-    if (guardErr) {
-      return guardErr;
-    }
-    return fetchAllFilters();
-  }
-);
+export const filtersPlugin = new Elysia({ prefix: '/settings/filters' })
+  .derive(deriveAuth)
+  .use(createAdminOrPermissionGuard('audio.manage'))
+  .get('/', () => fetchAllFilters());

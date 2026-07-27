@@ -1,8 +1,8 @@
 import { eq } from 'drizzle-orm';
 import { Elysia, t } from 'elysia';
-/* eslint-disable @typescript-eslint/no-unsafe-type-assertion */
 
-import { requireAdminOrPermission, type AuthContext } from '../lib/elysia-guards';
+import { deriveAuth } from '../lib/authDerive';
+import { createAdminOrPermissionGuard } from '../lib/elysia-guards';
 import { type GeneralSettings } from '../shared';
 import { db, tables } from '../shared/db';
 import { refreshEnabledSources, SOURCE_DEFINITIONS } from '../startDiscord';
@@ -91,32 +91,16 @@ function upsertGeneralSettings(updates: Record<string, unknown>): void {
 // Plugin
 // ---------------------------------------------------------------------------
 
-function getAuth(ctx: Record<string, unknown>): AuthContext {
-  return ctx as unknown as AuthContext;
-}
-
 export const generalSettingsPlugin = new Elysia({ prefix: '/settings/general' })
-  .get('/', (ctx: Record<string, unknown>) => {
-    const { user, isAdmin } = getAuth(ctx);
-    const guardErr = requireAdminOrPermission({ user, isAdmin });
-    if (guardErr) {
-      return guardErr;
-    }
-
+  .derive(deriveAuth)
+  .use(createAdminOrPermissionGuard())
+  .get('/', () => {
     const settings = fetchGeneralSettings();
-    return Response.json(settings ?? defaultGeneralSettings());
+    return settings ?? defaultGeneralSettings();
   })
   .patch(
     '/',
-    (ctx: Record<string, unknown>) => {
-      const { user, isAdmin } = getAuth(ctx);
-      const guardErr = requireAdminOrPermission({ user, isAdmin });
-      if (guardErr) {
-        return guardErr;
-      }
-
-      const body = ctx.body as typeof GeneralSettingsPatchSchema.static;
-
+    ({ body }) => {
       const updates: Record<string, unknown> = {};
 
       if (body.adminRoleIds !== undefined) {

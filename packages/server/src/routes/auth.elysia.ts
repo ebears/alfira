@@ -1,8 +1,8 @@
 import { and, eq, lt } from 'drizzle-orm';
 import { Elysia, t } from 'elysia';
 import crypto from 'node:crypto';
-/* eslint-disable @typescript-eslint/no-unsafe-type-assertion */
 
+import { deriveAuth } from '../lib/authDerive';
 import { getGuildId, refreshGuildId } from '../lib/config';
 import { sign, verify } from '../lib/jwt';
 import { getClientIp } from '../lib/rateLimit';
@@ -399,8 +399,7 @@ async function withRetry<T>(fn: () => Promise<T>, attempts = 3, baseDelayMs = 50
 // Handlers
 // ---------------------------------------------------------------------------
 
-function handleLogin(ctx: Record<string, unknown>): Response {
-  const request = ctx.request as Request;
+function handleLogin({ request }: { request: Request }): Response {
   const ip = getClientIp(request);
   if (!authRateLimit(ip)) {
     return Response.json(
@@ -417,8 +416,7 @@ function handleLogin(ctx: Record<string, unknown>): Response {
   return Response.redirect(`https://discord.com/oauth2/authorize?${params}`, 302);
 }
 
-async function handleCallback(ctx: Record<string, unknown>): Promise<Response> {
-  const request = ctx.request as Request;
+async function handleCallback({ request }: { request: Request }): Promise<Response> {
   const url = new URL(request.url);
   const ip = getClientIp(request);
   if (!authRateLimit(ip)) {
@@ -529,8 +527,7 @@ async function handleCallback(ctx: Record<string, unknown>): Promise<Response> {
   return new Response(null, { status: 302, headers });
 }
 
-async function handleRefresh(ctx: Record<string, unknown>): Promise<Response> {
-  const cookies = ctx.cookies as Record<string, string>;
+async function handleRefresh({ cookies }: { cookies: Record<string, string> }): Promise<Response> {
   const refreshToken = cookies[REFRESH_COOKIE_NAME];
   if (!refreshToken) {
     logger.warn('Auth refresh failed: no refresh token cookie present');
@@ -708,14 +705,17 @@ async function handleRefresh(ctx: Record<string, unknown>): Promise<Response> {
   return new Response(JSON.stringify({ user: payload }), { status: 200, headers });
 }
 
-function handleMe(ctx: Record<string, unknown>): Response {
-  const user = ctx.user as {
+function handleMe({
+  user,
+}: {
+  user: {
     discordId: string;
     username: string;
     avatar: string | null;
     isAdmin: boolean;
     isSetupAdmin?: boolean;
   } | null;
+}): Response {
   if (!user) {
     return Response.json(
       { error: 'Not authenticated. Please log in at /auth/login.' },
@@ -732,8 +732,7 @@ function handleMe(ctx: Record<string, unknown>): Response {
   return Response.json({ user });
 }
 
-async function handleLogout(ctx: Record<string, unknown>): Promise<Response> {
-  const cookies = ctx.cookies as Record<string, string>;
+async function handleLogout({ cookies }: { cookies: Record<string, string> }): Promise<Response> {
   const refreshToken = cookies[REFRESH_COOKIE_NAME];
   if (refreshToken) {
     try {
@@ -755,6 +754,7 @@ async function handleLogout(ctx: Record<string, unknown>): Promise<Response> {
 // ---------------------------------------------------------------------------
 
 export const authPlugin = new Elysia()
+  .derive(deriveAuth)
   .get('/login', handleLogin)
   .get('/callback', handleCallback)
   .post('/refresh', handleRefresh)

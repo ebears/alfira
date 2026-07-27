@@ -13,9 +13,10 @@ Replace the homegrown HTTP framework (`routeTable`, `matchPath`, `RouteContext`,
 
 - **Elysia `t` replaces Valibot.** Elysia's built-in TypeBox-based `t` system provides request/response validation and type inference without an external dependency. Valibot was removed in Phase 10 — the same `t` schemas will eventually power both request validation and response type inference for Eden.
 - **Sub-apps for route groups.** Each route group (tags, songs, player, etc.) becomes an Elysia plugin that registers on the main app. This keeps route files self-contained.
-- **Auth via `.derive()`.** The cookie → JWT → user pipeline runs once per request in Elysia's `derive`, replacing `createContext()`. Guards (`requireAuth`, `requireAdminOrPermission`) are called explicitly in handlers — a future pass could move them into Elysia guard plugins.
+- **Auth via `.derive()`.** The cookie → JWT → user pipeline runs once per request in Elysia's `derive`, replacing `createContext()`.
+- **Guards as `onBeforeHandle` hooks.** Auth, permission, and voice checks run in Elysia's `onBeforeHandle` lifecycle hook, short-circuiting with error responses before handlers execute. Guards are composed declaratively via `.use()` and scoped with `.guard()`. This replaces the old pattern of calling guard functions inline at the top of every handler body.
 - **Static files and SPA fallback stay on the main app.** The `/*` catch-all serves `packages/web/dist/` with SPA fallback.
-- **Security headers via `onAfterHandle` on `apiApp`.** An `onAfterHandle` hook on the `apiApp` sub-app injects `API_SECURITY_HEADERS` (CSP, X-Content-Type-Options, etc.) into all `/api/*` responses. This replaced the per-handler `elysiaJson()` helper from earlier phases. Since `apiApp` is scoped to API routes, static files on the root app are unaffected. Guard functions return pre-constructed `Response` objects as early returns — these bypass `onAfterHandle` header injection, but the guards include their own `Content-Type: application/json` header.
+- **Security headers via `onAfterHandle` on `apiApp`.** An `onAfterHandle` hook on the `apiApp` sub-app injects `API_SECURITY_HEADERS` (CSP, X-Content-Type-Options, etc.) into all `/api/*` responses. This replaced the per-handler `elysiaJson()` helper from earlier phases. Since `apiApp` is scoped to API routes, static files on the root app are unaffected. Guard `onBeforeHandle` short-circuits return `Response.json()` directly — these bypass `onAfterHandle` header injection, matching the pre-7b behavior where inline guards returned bare `Response` objects.
 
 ## Completed
 
@@ -295,6 +296,136 @@ Replaced Valibot with Elysia's built-in TypeBox-based `t` validation system acro
 
 **Files changed:** All 20 `.elysia.ts` route files + `elysia-app.ts` + `package.json`.
 
+## Completed
+
+### Phase 7 — Replace `Record<string, unknown>` + `getAuth()` with shared derive function ✅
+
+Every Elysia route plugin now calls `.derive(deriveAuth)` directly on its own instance. This gives handlers properly typed `{ user, isAdmin, cookies }` context instead of `Record<string, unknown>`, eliminating the `getAuth()` pattern (148 occurrences removed).
+
+**New files:**
+
+- `packages/server/src/lib/authDerive.ts` — shared `deriveAuth` function exported for use by all route plugins. The parameter is typed `any` because Elysia's internal derive generic does not accept explicitly-typed destructuring (tsgo reports TS2345). Removing the explicit return type lets tsgo infer derived property types via Elysia's own inference. The `no-unsafe-*` rules for this file are suppressed in `oxlint.config.ts`.
+
+**Plugin pattern (before → after):**
+
+```ts
+// Before: Record<string, unknown> + getAuth() cast
+function getAuth(ctx: Record<string, unknown>): AuthContext {
+  return ctx as unknown as AuthContext;
+}
+export const tagsPlugin = new Elysia({ prefix: '/tags' }).get(
+  '/',
+  (ctx: Record<string, unknown>) => {
+    const { user, isAdmin } = getAuth(ctx);
+    const authErr = requireAuth({ user, isAdmin });
+    if (authErr) return authErr;
+    return Response.json({ tags: fetchTagList() });
+  }
+);
+
+// After: .derive(deriveAuth) + typed destructuring
+export const tagsPlugin = new Elysia({ prefix: '/tags' })
+  .derive(deriveAuth)
+  .get('/', ({ user, isAdmin }) => {
+    const authErr = requireAuth({ user, isAdmin });
+    if (authErr) return authErr;
+    return Response.json({ tags: fetchTagList() });
+  });
+```
+
+**Handler context access patterns:**
+
+- **Auth-only handlers** — destructure `({ user, isAdmin })`
+- **Handlers needing body/params/query** — destructure `({ user, isAdmin, ...ctx })` to preserve `ctx.body`, `ctx.params`, etc.
+- **Auth plugin handlers** — destructure specific properties (`{ request }`, `{ cookies }`, `{ user }`) as needed
+
+**Key design decisions:**
+
+- **Per-plugin derive (option 3 from the plan).** `.derive()` is called directly on each plugin's Elysia instance, not wrapped in `.use()`. This is necessary because Elysia's derive types do not propagate through `.use()` boundaries — TypeScript resolves plugin handler types at definition time, before the plugin is composed into a parent.
+- **`.use(authDerive)` was tried and rejected.** Wrapping deriveAuth in a shared Elysia plugin instance and composing via `.use()` does not propagate derive types to handlers (same `.use()` boundary issue).
+- **Guard functions unchanged.** Guards (`requireAuth`, `requireAdmin`, etc.) still take `AuthContext` and return `Response | null`. They're called manually in handler bodies. Moving them to `beforeHandle` hooks is deferred to Phase 7b.
+- **`...ctx` rest spread for body/params access.** Handlers that need `ctx.body`, `ctx.params`, or `ctx.query` use `({ user, isAdmin, ...ctx })` so the remaining context properties are accessible. Handlers that only need auth use simple `({ user, isAdmin })`.
+
+**oxlint changes:**
+
+- Added override for `packages/server/src/routes/*.elysia.ts` — suppresses `no-unsafe-type-assertion` and `no-unnecessary-type-assertion` (route handlers use `as` casts for Drizzle query results, Discord API responses, and context narrowing).
+- Added `requests.elysia.ts` and `songs.elysia.ts` to existing `no-unnecessary-condition` override (defensive optional chains on Drizzle query results).
+- Added `authDerive.ts` override for `no-explicit-any`, `no-unsafe-assignment`, `no-unsafe-member-access`, `no-unsafe-call`, `no-unsafe-argument` (all from the `any` parameter).
+
+**Stats:** 148 → 0 `Record<string, unknown>` handler signatures. 11 remaining occurrences are legitimate data types (object builders like `const data: Record<string, unknown> = {}`, function parameters for generic DB helpers, and `ctx.body as Record<string, unknown>` for routes without body schemas).
+
+**Modified files:** All 20 `.elysia.ts` route files, `elysia-app.ts`, `oxlint.config.ts`.
+
+### Phase 7b — Move guards from inline calls to `beforeHandle` hooks ✅
+
+All guard functions converted from inline handler calls to Elysia `onBeforeHandle` hooks. Guards now short-circuit before handlers execute, so handlers no longer return `Response` for auth/permission/voice errors. This unblocks Phase 6b (response schemas).
+
+**Guard pattern (before → after):**
+
+```ts
+// Before: guards called inline in every handler, returning Response | null
+.get('/', ({ user, isAdmin }) => {
+  const authErr = requireAuth({ user, isAdmin });
+  if (authErr) return authErr;
+  return Response.json({ data });
+})
+.patch('/', ({ user, isAdmin, body }) => {
+  const guardErr = requireAdminOrPermission({ user, isAdmin }, 'audio.manage');
+  if (guardErr) return guardErr;
+  return body;
+})
+
+// After: guards composed declaratively, handlers return only data
+.use(authGuard)
+.get('/', () => ({ data }))
+.guard({}, (app) =>
+  app
+    .use(createAdminOrPermissionGuard('audio.manage'))
+    .patch('/', ({ body }) => body, { body: Schema })
+)
+```
+
+**New guard exports (in `elysia-guards.ts`):**
+
+| Export                             | Type             | Description                                                 |
+| ---------------------------------- | ---------------- | ----------------------------------------------------------- |
+| `authGuard`                        | Elysia plugin    | Short-circuits with 401 if not authenticated                |
+| `adminGuard`                       | Elysia plugin    | Short-circuits with 403 if not super-admin                  |
+| `createPermissionGuard(p)`         | Factory → Elysia | 403 if user lacks granular permission; super-admins bypass  |
+| `createAdminOrPermissionGuard(p?)` | Factory → Elysia | Combines auth + admin + optional granular permission        |
+| `voiceGuard`                       | Elysia plugin    | 503 if bot not ready, 409 if user not in voice channel      |
+| `setupModeGuard`                   | Elysia plugin    | 401/403 for setup-mode-only endpoints, composes `authGuard` |
+
+**Route-level guard composition patterns:**
+
+- **Simple uniform guard** (filter routes, playlists, generalSettings): `.use(authGuard)` or `.use(createAdminOrPermissionGuard('audio.manage'))` at the plugin level — applies to all routes.
+- **Mixed auth levels** (tags, permissions, setup): use `.use(authGuard)` at the plugin level, then `.use(adminGuard)` or `.use(createAdminOrPermissionGuard(...))` scoped after public routes.
+- **Multiple permission scopes** (player, songs): use `.guard({}, (app) => app.use(createPermissionGuard('x')).route(...))` closures — each closure gets its own permission check. The player plugin uses 5 `.guard()` blocks (3× `queue.manage`, 1× `queue.override`, 1× `queue.quickadd`).
+- **Routes without guards** (auth, setup GET): no `.use()` needed — `deriveAuth` still runs but no guard short-circuits.
+
+**Handler cleanup:**
+
+- Removed ~100 inline `requireAuth()` / `requireAdminOrPermission()` / `guardVoice()` call blocks across all 20 route files.
+- Removed `{ user, isAdmin }` destructuring from handlers that only used them for guards (keep them where `user` / `isAdmin` is used for business logic).
+- `guardVoice()` wrapper in `player.elysia.ts` deleted — voice checks now run via `.use(voiceGuard)`.
+- `AuthContext` interface retained in `elysia-guards.ts` — still used by route-internal helpers like `userCanAutoApprove()` in requests and `resolveUrlTempSong()` in player.
+
+**oxlint changes:**
+
+- Added override for `elysia-guards.ts`: `no-unsafe-type-assertion`, `no-unnecessary-type-assertion`, `consistent-return` — all from the `as unknown as` context casts and Elysia's `onBeforeHandle` short-circuit pattern.
+
+**Stats:** ~100 inline guard blocks removed. 20 route files updated. ~150 lines of guard composition added across routes.
+
+**Lessons learned:**
+
+1. **`.guard()` closures are the only way to scope hooks.** Elysia's `.use()` adds hooks permanently to all subsequent routes in the chain — there's no "remove hook" primitive. Different permissions on different routes within the same plugin require `.guard({}, (app) => ...)` closures. This creates indentation nesting, but extracting route groups into standalone `new Elysia()` instances composes cleanly without nesting (the `.use()` boundary issue doesn't affect hooks — only TS derive types).
+
+2. **TS doesn't narrow types after `onBeforeHandle` short-circuits.** Even though `onBeforeHandle` guarantees `user` is non-null at runtime (it short-circuits with 401 before the handler runs), TypeScript still sees `user: UserContext | null` in the handler. Handlers that access `user.properties` for business logic still need `(user as { ... }).property` casts. A future pass could add a lazy `.resolve()` to provide `currentUser: UserContext` (non-null) — the resolve would only execute when the handler actually accesses it, safely after the guard has run.
+
+3. **`Response.json()` in `onBeforeHandle` bypasses `onAfterHandle` security headers.** This matches the pre-7b behavior where inline guards returned bare `Response` objects with only `Content-Type` set. Error responses from guards don't need CSP/X-Content-Type-Options headers.
+
+4. **`deriveAuth` per-plugin is still needed.** The guard plugins do NOT call `.derive(deriveAuth)` — they rely on the route plugin's derive to populate `{ user, isAdmin }` in the context. This works because Elysia merges context across `.use()` boundaries at runtime (only the TS types don't propagate). Guards access `user` and `isAdmin` via `ctx as unknown as { user, isAdmin }` casts.
+
 ## Remaining work
 
 ### Phase 6b — Add response schemas to get full Eden type safety
@@ -304,7 +435,7 @@ Eden's proxy path resolution works, but response bodies are still typed as `Resp
 **What's needed:** Add `response` schemas to each route handler using Elysia `t`. For example:
 
 ```ts
-.get('/tags', (ctx) => { ... }, {
+.get('/tags', () => fetchTagList(), {
   response: {
     200: t.Object({ tags: t.Array(TagItemSchema) }),
     401: t.Object({ error: t.String() }),
@@ -312,28 +443,11 @@ Eden's proxy path resolution works, but response bodies are still typed as `Resp
 })
 ```
 
-**Blocked by Phase 7.** Response schemas cause `TS2345` type errors because handlers are typed as `Record<string, unknown>` (the return type includes `Response` from guard early-returns, which conflicts with Elysia's expectation that the handler returns only the schema type). Once Phase 7 resolves the handler type issue, response schemas can be added mechanically.
+Two changes per handler:
 
-After response schemas: `routes.ts` and `shared/api.ts` can be deleted — components would consume Eden directly with full type inference.
+1. Add a `response` schema describing the success shape (and optionally error shapes)
+2. Replace `return Response.json(data)` with `return data` for success cases (error cases can keep `Response.json()` or use `set.status` + plain return)
 
-### Phase 7 — Remove `Record<string, unknown>` + `getAuth()` pattern
+After response schemas, Eden infers full response types. `routes.ts` (~523 lines) and `shared/api.ts` (~120 lines) can be deleted — web components consume Eden directly with full type inference. The `$ = api as any` workaround is eliminated.
 
-**Not a bug — a TypeScript fundamental.** TypeScript resolves handler types at definition time. When we write `new Elysia({ prefix: '/tags' }).get('/', (ctx) => ...)`, the type of `ctx` is resolved against the bare Elysia instance — which has no knowledge of the parent app's `.derive()`. TypeScript cannot retroactively update these types when the plugin is later `.use()`d into a derived parent.
-
-This is also the root cause of Phase 6b being blocked — handlers returning `Response` from guards mixed with plain data returns create a union type that doesn't satisfy Elysia's response schema contracts.
-
-**Verified options that would work** (but change the architecture):
-
-1. **Guard-based auth** — use Elysia's `.guard()` with `beforeHandle` instead of `.derive()`. Auth would run as a guard at the parent level before any sub-app handler. Guards would return error responses that short-circuit, and the handler types would be clean (no `Response` in the return type). This is the most promising approach — it would resolve both Phase 7 AND unblock Phase 6b.
-2. **Function-based plugins** — instead of `const plugin = new Elysia()`, define plugins as functions that receive the parent: `function plugin(app: Elysia) { return app.group(...) }`. Handlers would see the parent's derive, but we'd lose the clean `.use()` composition.
-3. **Per-plugin derive** — have each plugin call `.derive()` itself to extract user/auth from cookies. Redundant but type-safe.
-
-**Current approach:** The `Record<string, unknown>` + `getAuth()` pattern is the pragmatic choice. It keeps plugins as standalone `new Elysia()` instances and preserves clean `.use()` composition. Option 1 (guard-based auth) is the recommended next step — it's the only approach that solves both problems at once.
-
-## Known issues
-
-- **Eden response types untyped** — Server routes lack `response` schemas, so Eden sees all responses as `Response`. `routes.ts` uses `$ = api as any` as a workaround. Blocked by Phase 7 (guard-based auth would let handlers return clean types).
-- **`Record<string, unknown>` + `getAuth()` pattern** — Not a bug. TypeScript resolves plugin handler types at definition time, before the plugin is `.use()`d into a parent with `.derive()`. Guard-based auth (Phase 7 option 1) would eliminate this.
-- **tsgo + drizzle + `Record<string, unknown>` incompatibility** — When a handler parameter is `Record<string, unknown>`, tsgo fails to resolve `.where()` overloads on drizzle query builders. Workaround: extract queries into helper functions with clean parameter types. A future tsgo update may fix this.
-- **Bun namespace errors** — Installing Elysia changes the TypeScript import graph in a way that surfaces pre-existing `Bun.spawn` / `Bun.CryptoHasher` type errors in `index.ts` and `jwt.ts`. Workaround: `@ts-expect-error` + eslint-disable blocks.
-- **Concurrent refresh token race condition** — `generateRefreshToken()` used `sign()` with second-granularity `iat`, causing identical tokens (and thus identical DB hashes) when two refreshes fired in the same second. Fixed by adding `jti: crypto.randomUUID()` to the token payload.
+**Prerequisite:** Phase 7b ✅ — guards now short-circuit in `onBeforeHandle`, so handlers no longer return `Response` for auth errors. Handlers may still return `Response.json()` for business-logic errors (404, 400, etc.) — those bypass response schema validation and Eden maps them to the `error` branch.

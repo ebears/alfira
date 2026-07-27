@@ -1,12 +1,10 @@
 import { eq, inArray, sql } from 'drizzle-orm';
 import { Elysia, t } from 'elysia';
-/* eslint-disable @typescript-eslint/no-unsafe-type-assertion */
-/* eslint-disable @typescript-eslint/no-unnecessary-type-assertion */
-/* eslint-disable @typescript-eslint/no-unnecessary-condition */
 
+import { deriveAuth } from '../lib/authDerive';
 import { getGuildId } from '../lib/config';
 import { getUserDisplayName, resolveDisplayNames } from '../lib/displayName';
-import { requireAdminOrPermission, requireAuth, type AuthContext } from '../lib/elysia-guards';
+import { authGuard, createAdminOrPermissionGuard } from '../lib/elysia-guards';
 import { parsePagination } from '../lib/pagination';
 import {
   buildSongFilterClause,
@@ -128,19 +126,11 @@ function notifyPlayerOfMetadataChange(
 // Plugin
 // ---------------------------------------------------------------------------
 
-function getAuth(ctx: Record<string, unknown>): AuthContext {
-  return ctx as unknown as AuthContext;
-}
-
 export const songsPlugin = new Elysia({ prefix: '/songs' })
-  .get('/', async (ctx: Record<string, unknown>) => {
-    const { user, isAdmin } = getAuth(ctx);
-    const authErr = requireAuth({ user, isAdmin });
-    if (authErr) {
-      return authErr;
-    }
-
-    const url = new URL((ctx.request as Request).url);
+  .derive(deriveAuth)
+  .use(authGuard)
+  .get('/', async ({ request }) => {
+    const url = new URL(request.url);
     const { page, limit, skip } = parsePagination(url);
     const search = url.searchParams.get('search')?.trim() ?? '';
 
@@ -207,179 +197,155 @@ export const songsPlugin = new Elysia({ prefix: '/songs' })
       },
     });
   })
-  .post(
-    '/bulk-delete',
-    async (ctx: Record<string, unknown>) => {
-      const { user, isAdmin } = getAuth(ctx);
-      const guardErr = requireAdminOrPermission({ user, isAdmin }, 'songs.delete');
-      if (guardErr) {
-        return guardErr;
-      }
+  .guard({}, (app) =>
+    app
+      .use(createAdminOrPermissionGuard('songs.delete'))
+      .post(
+        '/bulk-delete',
+        async ({ body }) => {
+          const { ids } = body;
+          await deleteSongsByIds(ids);
 
-      const { ids } = ctx.body as typeof BulkDeleteSchema.static;
-      await deleteSongsByIds(ids);
+          return Response.json({ deleted: ids.length });
+        },
+        { body: BulkDeleteSchema }
+      )
+      .delete('/:id', ({ params }) => {
+        const id = (params as Record<string, string>).id as string;
+        const existing = fetchSongById(id);
+        if (!existing) {
+          return Response.json({ error: 'Song not found.' }, { status: 404 });
+        }
 
-      return Response.json({ deleted: ids.length });
-    },
-    { body: BulkDeleteSchema }
+        deleteSongById(id);
+        emitSongDeleted(id);
+
+        return new Response(null, { status: 204 });
+      })
   )
-  .post(
-    '/bulk-tag',
-    async (ctx: Record<string, unknown>) => {
-      const { user, isAdmin } = getAuth(ctx);
-      const guardErr = requireAdminOrPermission({ user, isAdmin }, 'songs.edit');
-      if (guardErr) {
-        return guardErr;
-      }
+  .guard({}, (app) =>
+    app
+      .use(createAdminOrPermissionGuard('songs.edit'))
+      .post(
+        '/bulk-tag',
+        async ({ body }) => {
+          const { ids } = body;
 
-      const body = ctx.body as typeof BulkTagSchema.static;
-      const { ids } = body;
+          const tagsResult = validateTags(body.tags);
+          if (!tagsResult.ok) {
+            return tagsResult.response;
+          }
 
-      const tagsResult = validateTags(body.tags);
-      if (!tagsResult.ok) {
-        return tagsResult.response;
-      }
+          const newTags = await canonicalizeTags(tagsResult.value);
+          const mode = body.mode ?? 'add';
 
-      const newTags = await canonicalizeTags(tagsResult.value);
-      const mode = body.mode ?? 'add';
+          const existingSongs = fetchSongsByIds(ids);
+          const updatedIds: string[] = [];
 
-      const existingSongs = fetchSongsByIds(ids);
-      const updatedIds: string[] = [];
+          if (mode === 'set') {
+            updateSongsByIds(ids, { tags: newTags });
+            updatedIds.push(...ids);
+          } else {
+            await Promise.all(
+              existingSongs.map(async (song) => {
+                const existingTags = song.tags ?? [];
+                const merged = [...new Set([...existingTags, ...newTags])];
+                await db.update(songTable).set({ tags: merged }).where(eq(songTable.id, song.id));
+                updatedIds.push(song.id);
+              })
+            );
+          }
 
-      if (mode === 'set') {
-        updateSongsByIds(ids, { tags: newTags });
-        updatedIds.push(...ids);
-      } else {
-        await Promise.all(
-          existingSongs.map(async (song) => {
-            const existingTags = song.tags ?? [];
-            const merged = [...new Set([...existingTags, ...newTags])];
-            await db.update(songTable).set({ tags: merged }).where(eq(songTable.id, song.id));
-            updatedIds.push(song.id);
-          })
-        );
-      }
+          const updatedSongs = fetchSongsByIds(updatedIds);
+          const bulkTagNameMap = await resolveDisplayNames(updatedSongs as { addedBy: string }[]);
+          for (const s of updatedSongs) {
+            emitSongUpdated({
+              ...formatSong(s),
+              addedByDisplayName: bulkTagNameMap.get(s.addedBy) ?? s.addedBy,
+            });
+          }
 
-      const updatedSongs = fetchSongsByIds(updatedIds);
-      const bulkTagNameMap = await resolveDisplayNames(updatedSongs as { addedBy: string }[]);
-      for (const s of updatedSongs) {
-        emitSongUpdated({
-          ...formatSong(s),
-          addedByDisplayName: bulkTagNameMap.get(s.addedBy) ?? s.addedBy,
-        });
-      }
+          if (newTags.length > 0) {
+            await reSyncPlaylistsForTags(newTags.map((t) => t.toLowerCase()));
+          }
 
-      if (newTags.length > 0) {
-        await reSyncPlaylistsForTags(newTags.map((t) => t.toLowerCase()));
-      }
+          return Response.json({ updated: updatedSongs.length, tags: newTags });
+        },
+        { body: BulkTagSchema }
+      )
+      .post('/bulk-edit', async ({ body }) => {
+        const b = body as Record<string, unknown>;
+        const ids = b.ids as string[];
+        const clearFields = (b.clearFields as string[]) ?? [];
 
-      return Response.json({ updated: updatedSongs.length, tags: newTags });
-    },
-    { body: BulkTagSchema }
-  )
-  .post('/bulk-edit', async (ctx: Record<string, unknown>) => {
-    const { user, isAdmin } = getAuth(ctx);
-    const guardErr = requireAdminOrPermission({ user, isAdmin }, 'songs.edit');
-    if (guardErr) {
-      return guardErr;
-    }
+        const fieldResult = await validateAndBuildSongFields(b, clearFields);
+        if (fieldResult instanceof Response) {
+          return fieldResult;
+        }
+        const { data, processedTags, processedVolumeBoost } = fieldResult;
 
-    const body = ctx.body as Record<string, unknown>;
-    const ids = body.ids as string[];
-    const clearFields = (body.clearFields as string[]) ?? [];
+        if (Object.keys(data).length === 0) {
+          return Response.json({ error: 'No fields to update.' }, { status: 400 });
+        }
 
-    const fieldResult = await validateAndBuildSongFields(body, clearFields);
-    if (fieldResult instanceof Response) {
-      return fieldResult;
-    }
-    const { data, processedTags, processedVolumeBoost } = fieldResult;
+        updateSongsByIds(ids, data);
 
-    if (Object.keys(data).length === 0) {
-      return Response.json({ error: 'No fields to update.' }, { status: 400 });
-    }
+        const updatedSongs = fetchSongsByIds(ids);
+        const bulkEditNameMap = await resolveDisplayNames(updatedSongs as { addedBy: string }[]);
+        for (const s of updatedSongs) {
+          emitSongUpdated({
+            ...formatSong(s),
+            addedByDisplayName: bulkEditNameMap.get(s.addedBy) ?? s.addedBy,
+          });
+        }
 
-    updateSongsByIds(ids, data);
+        if (processedTags) {
+          await reSyncPlaylistsForTags(processedTags.map((t) => t.toLowerCase()));
+        }
 
-    const updatedSongs = fetchSongsByIds(ids);
-    const bulkEditNameMap = await resolveDisplayNames(updatedSongs as { addedBy: string }[]);
-    for (const s of updatedSongs) {
-      emitSongUpdated({
-        ...formatSong(s),
-        addedByDisplayName: bulkEditNameMap.get(s.addedBy) ?? s.addedBy,
-      });
-    }
+        notifyPlayerOfMetadataChange(ids, data, processedVolumeBoost);
 
-    if (processedTags) {
-      await reSyncPlaylistsForTags(processedTags.map((t) => t.toLowerCase()));
-    }
+        return Response.json({ updated: ids.length });
+      })
+      .patch(
+        '/:id',
+        async ({ params, body }) => {
+          const id = (params as Record<string, string>).id as string;
 
-    notifyPlayerOfMetadataChange(ids, data, processedVolumeBoost);
+          const existing = fetchSongById(id);
+          if (!existing) {
+            return Response.json({ error: 'Song not found.' }, { status: 404 });
+          }
 
-    return Response.json({ updated: ids.length });
-  })
-  .delete('/:id', (ctx: Record<string, unknown>) => {
-    const { user, isAdmin } = getAuth(ctx);
-    const guardErr = requireAdminOrPermission({ user, isAdmin }, 'songs.delete');
-    if (guardErr) {
-      return guardErr;
-    }
+          const oldTagsLower = new Set((existing.tags ?? []).map((t) => t.toLowerCase()));
 
-    const id = (ctx.params as Record<string, string>).id as string;
-    const existing = fetchSongById(id);
-    if (!existing) {
-      return Response.json({ error: 'Song not found.' }, { status: 404 });
-    }
+          const fieldResult = await validateAndBuildSongFields(body);
+          if (fieldResult instanceof Response) {
+            return fieldResult;
+          }
+          const { data, processedTags, processedVolumeBoost } = fieldResult;
 
-    deleteSongById(id);
-    emitSongDeleted(id);
+          const updatedSong = await updateSongReturning(id, data);
+          if (!updatedSong) {
+            return Response.json({ error: 'Failed to update song.' }, { status: 500 });
+          }
 
-    return new Response(null, { status: 204 });
-  })
-  .patch(
-    '/:id',
-    async (ctx: Record<string, unknown>) => {
-      const { user, isAdmin } = getAuth(ctx);
-      const guardErr = requireAdminOrPermission({ user, isAdmin }, 'songs.edit');
-      if (guardErr) {
-        return guardErr;
-      }
+          const patchedDisplayName = await getUserDisplayName(updatedSong.addedBy);
+          emitSongUpdated({
+            ...formatSong(updatedSong),
+            addedByDisplayName: patchedDisplayName,
+          });
 
-      const id = (ctx.params as Record<string, string>).id as string;
-      const body = ctx.body as typeof SongPatchSchema.static;
+          if (processedTags) {
+            const newTagsLower = new Set(processedTags.map((t) => t.toLowerCase()));
+            const affectedTags = [...new Set([...oldTagsLower, ...newTagsLower])];
+            await reSyncPlaylistsForTags(affectedTags);
+          }
 
-      const existing = fetchSongById(id);
-      if (!existing) {
-        return Response.json({ error: 'Song not found.' }, { status: 404 });
-      }
+          notifyPlayerOfMetadataChange([id], data, processedVolumeBoost);
 
-      const oldTagsLower = new Set((existing.tags ?? []).map((t) => t.toLowerCase()));
-
-      const fieldResult = await validateAndBuildSongFields(body);
-      if (fieldResult instanceof Response) {
-        return fieldResult;
-      }
-      const { data, processedTags, processedVolumeBoost } = fieldResult;
-
-      const updatedSong = await updateSongReturning(id, data);
-      if (!updatedSong) {
-        return Response.json({ error: 'Failed to update song.' }, { status: 500 });
-      }
-
-      const patchedDisplayName = await getUserDisplayName(updatedSong.addedBy);
-      emitSongUpdated({
-        ...formatSong(updatedSong),
-        addedByDisplayName: patchedDisplayName,
-      });
-
-      if (processedTags) {
-        const newTagsLower = new Set(processedTags.map((t) => t.toLowerCase()));
-        const affectedTags = [...new Set([...oldTagsLower, ...newTagsLower])];
-        await reSyncPlaylistsForTags(affectedTags);
-      }
-
-      notifyPlayerOfMetadataChange([id], data, processedVolumeBoost);
-
-      return Response.json(formatSong(updatedSong));
-    },
-    { body: SongPatchSchema }
+          return Response.json(formatSong(updatedSong));
+        },
+        { body: SongPatchSchema }
+      )
   );

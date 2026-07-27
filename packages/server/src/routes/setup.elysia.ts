@@ -1,10 +1,10 @@
 import { eq } from 'drizzle-orm';
 import { Elysia, t } from 'elysia';
-/* eslint-disable @typescript-eslint/no-unsafe-type-assertion */
 
+import { deriveAuth } from '../lib/authDerive';
 import { refreshGuildId } from '../lib/config';
 import { botHeaders, fetchGuildRoles } from '../lib/discordRoles';
-import { requireSetupMode, type AuthContext } from '../lib/elysia-guards';
+import { setupModeGuard } from '../lib/elysia-guards';
 import { type SetupChannel, type SetupGuild } from '../shared';
 import { db, tables } from '../shared/db';
 import { logger } from '../shared/logger';
@@ -166,11 +166,8 @@ function saveSetupConfig(data: typeof SetupCompleteSchema.static): void {
 // Plugin
 // ---------------------------------------------------------------------------
 
-function getAuth(ctx: Record<string, unknown>): AuthContext {
-  return ctx as unknown as AuthContext;
-}
-
 export const setupPlugin = new Elysia({ prefix: '/setup' })
+  .derive(deriveAuth)
   .get('/', async () => {
     try {
       const row = fetchSetupStatus();
@@ -231,13 +228,8 @@ export const setupPlugin = new Elysia({ prefix: '/setup' })
       });
     }
   })
-  .get('/guilds', (ctx: Record<string, unknown>) => {
-    const { user, isAdmin } = getAuth(ctx);
-    const guardErr = requireSetupMode({ user, isAdmin });
-    if (guardErr) {
-      return guardErr;
-    }
-
+  .use(setupModeGuard)
+  .get('/guilds', () => {
     return (async (): Promise<Response> => {
       try {
         const guilds = await fetchBotGuilds();
@@ -248,14 +240,8 @@ export const setupPlugin = new Elysia({ prefix: '/setup' })
       }
     })();
   })
-  .get('/roles', async (ctx: Record<string, unknown>) => {
-    const { user, isAdmin } = getAuth(ctx);
-    const guardErr = requireSetupMode({ user, isAdmin });
-    if (guardErr) {
-      return guardErr;
-    }
-
-    const guildId = (ctx.query as Record<string, string>).guildId;
+  .get('/roles', async ({ query }) => {
+    const guildId = (query as Record<string, string>).guildId;
     if (!guildId) {
       return Response.json({ error: 'guildId query parameter is required.' }, { status: 400 });
     }
@@ -263,14 +249,8 @@ export const setupPlugin = new Elysia({ prefix: '/setup' })
     const roles = await fetchGuildRoles(guildId);
     return Response.json({ roles });
   })
-  .get('/channels', async (ctx: Record<string, unknown>) => {
-    const { user, isAdmin } = getAuth(ctx);
-    const guardErr = requireSetupMode({ user, isAdmin });
-    if (guardErr) {
-      return guardErr;
-    }
-
-    const guildId = (ctx.query as Record<string, string>).guildId;
+  .get('/channels', async ({ query }) => {
+    const guildId = (query as Record<string, string>).guildId;
     if (!guildId) {
       return Response.json({ error: 'guildId query parameter is required.' }, { status: 400 });
     }
@@ -285,15 +265,7 @@ export const setupPlugin = new Elysia({ prefix: '/setup' })
   })
   .post(
     '/complete',
-    (ctx: Record<string, unknown>) => {
-      const { user, isAdmin } = getAuth(ctx);
-      const guardErr = requireSetupMode({ user, isAdmin });
-      if (guardErr) {
-        return guardErr;
-      }
-
-      const body = ctx.body as typeof SetupCompleteSchema.static;
-
+    ({ body }) => {
       try {
         saveSetupConfig(body);
         return Response.json({ success: true });

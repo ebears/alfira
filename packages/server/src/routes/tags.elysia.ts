@@ -1,8 +1,8 @@
 import { eq, inArray, sql } from 'drizzle-orm';
 import { Elysia, t } from 'elysia';
-/* eslint-disable @typescript-eslint/no-unsafe-type-assertion */
 
-import { requireAdminOrPermission, requireAuth, type AuthContext } from '../lib/elysia-guards';
+import { deriveAuth } from '../lib/authDerive';
+import { authGuard, createAdminOrPermissionGuard } from '../lib/elysia-guards';
 import { emitPlaylistUpdated } from '../lib/socket';
 import { db, tables } from '../shared/db';
 
@@ -93,32 +93,14 @@ async function deleteTagRow(nameLower: string) {
 // Plugin
 // ---------------------------------------------------------------------------
 
-/**
- * ctx is typed as AuthContext at runtime via authContext.derive().
- * We cast through unknown instead of using Elysia's native context destructuring
- * because tsgo does not resolve Elysia's deeply-nested generic types.
- */
-function getAuth(ctx: Record<string, unknown>): AuthContext {
-  return ctx as unknown as AuthContext;
-}
-
 export const tagsPlugin = new Elysia({ prefix: '/tags' })
-  .get('/', (ctx: Record<string, unknown>) => {
-    const { user, isAdmin } = getAuth(ctx);
-    const authErr = requireAuth({ user, isAdmin });
-    if (authErr) {
-      return authErr;
-    }
+  .derive(deriveAuth)
+  .use(authGuard)
+  .get('/', () => {
     return Response.json({ tags: fetchTagList() });
   })
-  .get('/:nameLower', (ctx: Record<string, unknown>) => {
-    const { user, isAdmin } = getAuth(ctx);
-    const authErr = requireAuth({ user, isAdmin });
-    if (authErr) {
-      return authErr;
-    }
-
-    const nameLower = (ctx.params as Record<string, string>).nameLower as string;
+  .get('/:nameLower', ({ params }) => {
+    const nameLower = (params as Record<string, string>).nameLower as string;
     const tag = fetchTag(nameLower);
     if (!tag) {
       return Response.json({ error: 'Tag not found.' }, { status: 404 });
@@ -126,26 +108,15 @@ export const tagsPlugin = new Elysia({ prefix: '/tags' })
 
     return Response.json({ tag });
   })
-  .get('/:nameLower/songs', (ctx: Record<string, unknown>) => {
-    const { user, isAdmin } = getAuth(ctx);
-    const authErr = requireAuth({ user, isAdmin });
-    if (authErr) {
-      return authErr;
-    }
-    const nameLower = (ctx.params as Record<string, string>).nameLower as string;
+  .get('/:nameLower/songs', ({ params }) => {
+    const nameLower = (params as Record<string, string>).nameLower as string;
     return Response.json({ songs: fetchSongsByTag(nameLower) });
   })
+  .use(createAdminOrPermissionGuard('tags.manage'))
   .patch(
     '/:nameLower',
-    async (ctx: Record<string, unknown>) => {
-      const { user, isAdmin } = getAuth(ctx);
-      const guardErr = requireAdminOrPermission({ user, isAdmin }, 'tags.manage');
-      if (guardErr) {
-        return guardErr;
-      }
-
-      const nameLower = (ctx.params as Record<string, string>).nameLower as string;
-      const body = ctx.body as typeof TagPatchSchema.static;
+    async ({ params, body }) => {
+      const nameLower = (params as Record<string, string>).nameLower as string;
 
       const existing = fetchTag(nameLower);
       if (!existing) {
@@ -171,14 +142,8 @@ export const tagsPlugin = new Elysia({ prefix: '/tags' })
     },
     { body: TagPatchSchema }
   )
-  .delete('/:nameLower', async (ctx: Record<string, unknown>) => {
-    const { user, isAdmin } = getAuth(ctx);
-    const guardErr = requireAdminOrPermission({ user, isAdmin }, 'tags.manage');
-    if (guardErr) {
-      return guardErr;
-    }
-
-    const nameLower = (ctx.params as Record<string, string>).nameLower as string;
+  .delete('/:nameLower', async ({ params }) => {
+    const nameLower = (params as Record<string, string>).nameLower as string;
 
     const existing = fetchTag(nameLower);
     if (!existing) {

@@ -1,12 +1,15 @@
 import { and, eq, inArray } from 'drizzle-orm';
+import { Elysia } from 'elysia';
 
 import { type PermissionAction } from '../shared';
 import { db, tables } from '../shared/db';
 import { getClient, getUserVoiceChannel } from './gatewayState';
 
-/**
- * Elysia context shape after the global auth derive.
- */
+// ---------------------------------------------------------------------------
+// Auth context type — used by route-internal helpers that need typed access
+// to the user/isAdmin derived by `deriveAuth`.
+// ---------------------------------------------------------------------------
+
 export interface AuthContext {
   user: {
     discordId: string;
@@ -20,147 +23,132 @@ export interface AuthContext {
 }
 
 // ---------------------------------------------------------------------------
-// Guard helpers
+// Auth guard — short-circuits with 401 if no authenticated user.
+// Compose with `.use(authGuard)` on any plugin that calls `.derive(deriveAuth)`.
 // ---------------------------------------------------------------------------
 
-/** Returns 401 if no authenticated user. */
-export function requireAuth(ctx: AuthContext): Response | null {
-  if (!ctx.user) {
-    return new Response(
-      JSON.stringify({ error: 'Not authenticated. Please log in at /auth/login.' }),
-      {
-        status: 401,
-        headers: { 'Content-Type': 'application/json' },
-      }
+export const authGuard = new Elysia().onBeforeHandle((ctx) => {
+  const { user } = ctx as unknown as { user: AuthContext['user'] };
+  if (!user) {
+    return Response.json(
+      { error: 'Not authenticated. Please log in at /auth/login.' },
+      { status: 401 }
     );
   }
-  return null;
-}
+});
 
-/** Returns 403 if user is not a super-admin. */
-export function requireAdmin(ctx: AuthContext): Response | null {
-  if (!ctx.isAdmin) {
-    return new Response(JSON.stringify({ error: 'Admin access required.' }), {
-      status: 403,
-      headers: { 'Content-Type': 'application/json' },
-    });
+// ---------------------------------------------------------------------------
+// Admin guard — short-circuits with 403 if user is not a super-admin.
+// Must be composed after authGuard.
+// ---------------------------------------------------------------------------
+
+export const adminGuard = new Elysia().onBeforeHandle((ctx) => {
+  const { isAdmin } = ctx as unknown as { isAdmin: boolean };
+  if (!isAdmin) {
+    return Response.json({ error: 'Admin access required.' }, { status: 403 });
   }
-  return null;
-}
+});
 
-/**
- * Returns 403 if the user is neither a super-admin nor has the given
- * granular permission via role assignments.
- */
-export function requirePermission(ctx: AuthContext, permission: PermissionAction): Response | null {
-  // Super-admin bypass
-  if (ctx.isAdmin) {
-    return null;
-  }
+// ---------------------------------------------------------------------------
+// Permission guard factory — returns a plugin that short-circuits with 403
+// if the user lacks the given granular permission. Super-admins bypass.
+// Must be composed after authGuard.
+// ---------------------------------------------------------------------------
 
-  if (!ctx.user) {
-    return new Response(JSON.stringify({ error: 'Not authenticated.' }), {
-      status: 401,
-      headers: { 'Content-Type': 'application/json' },
-    });
-  }
+export function createPermissionGuard(permission: PermissionAction): Elysia {
+  return new Elysia().onBeforeHandle((ctx) => {
+    const { user, isAdmin } = ctx as unknown as {
+      user: AuthContext['user'];
+      isAdmin: boolean;
+    };
 
-  const roles = ctx.user.roles ?? [];
-  if (roles.length === 0) {
-    return new Response(
-      JSON.stringify({ error: 'You do not have permission to perform this action.' }),
-      {
-        status: 403,
-        headers: { 'Content-Type': 'application/json' },
-      }
-    );
-  }
+    if (isAdmin) {
+      return; // super-admin bypass
+    }
 
-  const rows = db
-    .select({ roleId: tables.rolePermission.roleId })
-    .from(tables.rolePermission)
-    .where(
-      and(
-        eq(tables.rolePermission.action, permission),
-        inArray(tables.rolePermission.roleId, roles)
+    if (!user) {
+      return Response.json({ error: 'Not authenticated.' }, { status: 401 });
+    }
+
+    const roles = user.roles ?? [];
+    if (roles.length === 0) {
+      return Response.json(
+        { error: 'You do not have permission to perform this action.' },
+        { status: 403 }
+      );
+    }
+
+    const rows = db
+      .select({ roleId: tables.rolePermission.roleId })
+      .from(tables.rolePermission)
+      .where(
+        and(
+          eq(tables.rolePermission.action, permission),
+          inArray(tables.rolePermission.roleId, roles)
+        )
       )
-    )
-    .all();
+      .all();
 
-  if (rows.length === 0) {
-    return new Response(
-      JSON.stringify({ error: 'You do not have permission to perform this action.' }),
-      {
-        status: 403,
-        headers: { 'Content-Type': 'application/json' },
-      }
-    );
-  }
-
-  return null;
+    if (rows.length === 0) {
+      return Response.json(
+        { error: 'You do not have permission to perform this action.' },
+        { status: 403 }
+      );
+    }
+  }) as unknown as Elysia;
 }
 
-/** Combines auth + admin + optional granular permission. Returns null on success, Response on failure. */
-export function requireAdminOrPermission(
-  ctx: AuthContext,
-  permission?: PermissionAction
-): Response | null {
-  const authErr = requireAuth(ctx);
-  if (authErr) {
-    return authErr;
-  }
+// ---------------------------------------------------------------------------
+// Admin-or-permission guard factory — combines auth, admin, and optional
+// granular permission checks into a single composable plugin.
+//
+// Usage:
+//   .use(createAdminOrPermissionGuard())          → auth + admin
+//   .use(createAdminOrPermissionGuard('queue.manage')) → auth + (admin OR permission)
+// ---------------------------------------------------------------------------
 
+export function createAdminOrPermissionGuard(permission?: PermissionAction): Elysia {
   if (permission) {
-    return requirePermission(ctx, permission);
+    return new Elysia().use(authGuard).use(createPermissionGuard(permission)) as unknown as Elysia;
   }
-
-  return requireAdmin(ctx);
+  return new Elysia().use(authGuard).use(adminGuard) as unknown as Elysia;
 }
 
-/** Returns 409 if the user is not in a voice channel, 503 if bot not ready. */
-export function requireUserInVoice(ctx: AuthContext): Response | null {
+// ---------------------------------------------------------------------------
+// Voice guard — short-circuits with 503 if the Discord bot is not ready,
+// or 409 if the user is not in a voice channel.
+//
+// Must be composed after authGuard so `user` is guaranteed non-null.
+// ---------------------------------------------------------------------------
+
+export const voiceGuard = new Elysia().onBeforeHandle((ctx) => {
   const gateway = getClient();
   if (!gateway || !gateway.isReady()) {
-    return new Response(
-      JSON.stringify({ error: 'Discord bot is not ready yet.', code: 'BOT_NOT_READY' }),
-      {
-        status: 503,
-        headers: { 'Content-Type': 'application/json' },
-      }
+    return Response.json(
+      { error: 'Discord bot is not ready yet.', code: 'BOT_NOT_READY' },
+      { status: 503 }
     );
   }
 
-  const discordId = (ctx.user as { discordId: string } | null)?.discordId;
+  const { user } = ctx as unknown as { user: AuthContext['user'] };
+  const discordId = user?.discordId;
   const voiceChannelId = getUserVoiceChannel(discordId ?? '');
   if (!voiceChannelId) {
-    return new Response(
-      JSON.stringify({
-        error: 'You must be in a voice channel to control playback.',
-        code: 'NOT_IN_VOICE',
-      }),
-      {
-        status: 409,
-        headers: { 'Content-Type': 'application/json' },
-      }
+    return Response.json(
+      { error: 'You must be in a voice channel to control playback.', code: 'NOT_IN_VOICE' },
+      { status: 409 }
     );
   }
+});
 
-  return null;
-}
+// ---------------------------------------------------------------------------
+// Setup mode guard — short-circuits with 401 if not authenticated,
+// or 403 if the user lacks the isSetupAdmin flag.
+// ---------------------------------------------------------------------------
 
-/** Returns 401 if not authenticated, 403 if user lacks isSetupAdmin flag. */
-export function requireSetupMode(ctx: AuthContext): Response | null {
-  const authErr = requireAuth(ctx);
-  if (authErr) {
-    return authErr;
+export const setupModeGuard = new Elysia().use(authGuard).onBeforeHandle((ctx) => {
+  const { user } = ctx as unknown as { user: AuthContext['user'] };
+  if (!user?.isSetupAdmin) {
+    return Response.json({ error: 'Setup has already been completed.' }, { status: 403 });
   }
-
-  if (!(ctx.user as { isSetupAdmin?: boolean } | null)?.isSetupAdmin) {
-    return new Response(JSON.stringify({ error: 'Setup has already been completed.' }), {
-      status: 403,
-      headers: { 'Content-Type': 'application/json' },
-    });
-  }
-
-  return null;
-}
+});

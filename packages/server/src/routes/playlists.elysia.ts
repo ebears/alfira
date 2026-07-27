@@ -1,10 +1,10 @@
 import { and, count, desc, eq, inArray, sql } from 'drizzle-orm';
 import { Elysia, t } from 'elysia';
-/* eslint-disable @typescript-eslint/no-unsafe-type-assertion */
-/* eslint-disable @typescript-eslint/no-unnecessary-condition */
 
+import { deriveAuth } from '../lib/authDerive';
+/* eslint-disable @typescript-eslint/no-unnecessary-condition */
 import { getUserDisplayName, resolveDisplayNames } from '../lib/displayName';
-import { requireAuth, type AuthContext } from '../lib/elysia-guards';
+import { authGuard } from '../lib/elysia-guards';
 import { parsePagination } from '../lib/pagination';
 import { canAccessPlaylist, getPlaylistSongCount, requirePlaylist } from '../lib/playlistAccess';
 import {
@@ -73,18 +73,10 @@ const PlaylistReorderSchema = t.Object({
 // Plugin
 // ---------------------------------------------------------------------------
 
-function getAuth(ctx: Record<string, unknown>): AuthContext {
-  return ctx as unknown as AuthContext;
-}
-
 export const playlistsPlugin = new Elysia({ prefix: '/playlists' })
-  .get('/', async (ctx: Record<string, unknown>) => {
-    const { user, isAdmin } = getAuth(ctx);
-    const authErr = requireAuth({ user, isAdmin });
-    if (authErr) {
-      return authErr;
-    }
-
+  .derive(deriveAuth)
+  .use(authGuard)
+  .get('/', async ({ user, ...ctx }) => {
     const url = new URL((ctx.request as Request).url);
     const adminView = url.searchParams.get('adminView') === 'true';
     const { page, limit, skip } = parsePagination(url);
@@ -153,13 +145,7 @@ export const playlistsPlugin = new Elysia({ prefix: '/playlists' })
   })
   .post(
     '/',
-    async (ctx: Record<string, unknown>) => {
-      const { user, isAdmin } = getAuth(ctx);
-      const authErr = requireAuth({ user, isAdmin });
-      if (authErr) {
-        return authErr;
-      }
-
+    async ({ user, ...ctx }) => {
       const body = ctx.body as typeof PlaylistCreateSchema.static;
 
       const nameResult = validatePlaylistName(body.name);
@@ -199,13 +185,7 @@ export const playlistsPlugin = new Elysia({ prefix: '/playlists' })
   )
   .post(
     '/:id/songs/bulk-remove',
-    async (ctx: Record<string, unknown>) => {
-      const { user, isAdmin } = getAuth(ctx);
-      const authErr = requireAuth({ user, isAdmin });
-      if (authErr) {
-        return authErr;
-      }
-
+    async ({ user, ...ctx }) => {
       const playlistId = (ctx.params as Record<string, string>).id as string;
       const { songIds } = ctx.body as typeof PlaylistRemoveSongsSchema.static;
 
@@ -248,13 +228,7 @@ export const playlistsPlugin = new Elysia({ prefix: '/playlists' })
     },
     { body: PlaylistRemoveSongsSchema }
   )
-  .delete('/:id/songs/:songId', async (ctx: Record<string, unknown>) => {
-    const { user, isAdmin } = getAuth(ctx);
-    const authErr = requireAuth({ user, isAdmin });
-    if (authErr) {
-      return authErr;
-    }
-
+  .delete('/:id/songs/:songId', async ({ user, ...ctx }) => {
     const playlistId = (ctx.params as Record<string, string>).id as string;
     const songId = (ctx.params as Record<string, string>).songId as string;
 
@@ -306,13 +280,7 @@ export const playlistsPlugin = new Elysia({ prefix: '/playlists' })
   })
   .post(
     '/:id/songs',
-    async (ctx: Record<string, unknown>) => {
-      const { user, isAdmin } = getAuth(ctx);
-      const authErr = requireAuth({ user, isAdmin });
-      if (authErr) {
-        return authErr;
-      }
-
+    async ({ user, ...ctx }) => {
       const id = (ctx.params as Record<string, string>).id as string;
       const { songId } = ctx.body as typeof PlaylistAddSongSchema.static;
 
@@ -380,13 +348,7 @@ export const playlistsPlugin = new Elysia({ prefix: '/playlists' })
   )
   .patch(
     '/:id/visibility',
-    async (ctx: Record<string, unknown>) => {
-      const { user, isAdmin } = getAuth(ctx);
-      const authErr = requireAuth({ user, isAdmin });
-      if (authErr) {
-        return authErr;
-      }
-
+    async ({ user, ...ctx }) => {
       const id = (ctx.params as Record<string, string>).id as string;
       const body = ctx.body as typeof PlaylistVisibilitySchema.static;
 
@@ -417,13 +379,7 @@ export const playlistsPlugin = new Elysia({ prefix: '/playlists' })
     },
     { body: PlaylistVisibilitySchema }
   )
-  .get('/:id', async (ctx: Record<string, unknown>) => {
-    const { user, isAdmin } = getAuth(ctx);
-    const authErr = requireAuth({ user, isAdmin });
-    if (authErr) {
-      return authErr;
-    }
-
+  .get('/:id', async ({ user, ...ctx }) => {
     const id = (ctx.params as Record<string, string>).id as string;
     const url = new URL((ctx.request as Request).url);
     const adminView = url.searchParams.get('adminView') === 'true';
@@ -619,13 +575,7 @@ export const playlistsPlugin = new Elysia({ prefix: '/playlists' })
   })
   .patch(
     '/:id',
-    async (ctx: Record<string, unknown>) => {
-      const { user, isAdmin } = getAuth(ctx);
-      const authErr = requireAuth({ user, isAdmin });
-      if (authErr) {
-        return authErr;
-      }
-
+    async ({ user, ...ctx }) => {
       const id = (ctx.params as Record<string, string>).id as string;
       const body = ctx.body as typeof PlaylistCreateSchema.static;
 
@@ -679,13 +629,7 @@ export const playlistsPlugin = new Elysia({ prefix: '/playlists' })
   )
   .patch(
     '/:id/reorder',
-    async (ctx: Record<string, unknown>) => {
-      const { user, isAdmin } = getAuth(ctx);
-      const authErr = requireAuth({ user, isAdmin });
-      if (authErr) {
-        return authErr;
-      }
-
+    async ({ user, ...ctx }) => {
       const playlistId = (ctx.params as Record<string, string>).id as string;
       const { songIds } = ctx.body as typeof PlaylistReorderSchema.static;
 
@@ -743,13 +687,7 @@ export const playlistsPlugin = new Elysia({ prefix: '/playlists' })
     },
     { body: PlaylistReorderSchema }
   )
-  .delete('/:id', async (ctx: Record<string, unknown>) => {
-    const { user, isAdmin } = getAuth(ctx);
-    const authErr = requireAuth({ user, isAdmin });
-    if (authErr) {
-      return authErr;
-    }
-
+  .delete('/:id', async ({ user, ...ctx }) => {
     const id = (ctx.params as Record<string, string>).id as string;
     const discordId = (user as { discordId: string }).discordId;
     const existing = await requirePlaylist(id, { discordId });

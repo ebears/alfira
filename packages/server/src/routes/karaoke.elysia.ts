@@ -1,8 +1,8 @@
 import { eq } from 'drizzle-orm';
 import { Elysia, t } from 'elysia';
-/* eslint-disable @typescript-eslint/no-unsafe-type-assertion */
 
-import { requireAdminOrPermission, type AuthContext } from '../lib/elysia-guards';
+import { deriveAuth } from '../lib/authDerive';
+import { createAdminOrPermissionGuard } from '../lib/elysia-guards';
 import { syncAllFilters } from '../lib/syncAllFilters';
 import { db, tables } from '../shared/db';
 import { DEFAULT_KARAOKE } from '../shared/filterDefaults';
@@ -60,29 +60,13 @@ function upsertKaraokeSettings(data: KaraokeSettings): void {
 // Plugin
 // ---------------------------------------------------------------------------
 
-function getAuth(ctx: Record<string, unknown>): AuthContext {
-  return ctx as unknown as AuthContext;
-}
-
 export const karaokePlugin = new Elysia({ prefix: '/settings/karaoke' })
-  .get('/', (ctx: Record<string, unknown>) => {
-    const { user, isAdmin } = getAuth(ctx);
-    const guardErr = requireAdminOrPermission({ user, isAdmin }, 'audio.manage');
-    if (guardErr) {
-      return guardErr;
-    }
-    return fetchKaraokeSettings();
-  })
+  .derive(deriveAuth)
+  .use(createAdminOrPermissionGuard('audio.manage'))
+  .get('/', () => fetchKaraokeSettings())
   .patch(
     '/',
-    async (ctx: Record<string, unknown>) => {
-      const { user, isAdmin } = getAuth(ctx);
-      const guardErr = requireAdminOrPermission({ user, isAdmin }, 'audio.manage');
-      if (guardErr) {
-        return guardErr;
-      }
-
-      const body = ctx.body as KaraokeSettings;
+    async ({ body }) => {
       upsertKaraokeSettings(body);
       await syncAllFilters();
 

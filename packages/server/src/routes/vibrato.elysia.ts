@@ -1,8 +1,8 @@
 import { eq } from 'drizzle-orm';
 import { Elysia, t } from 'elysia';
-/* eslint-disable @typescript-eslint/no-unsafe-type-assertion */
 
-import { requireAdminOrPermission, type AuthContext } from '../lib/elysia-guards';
+import { deriveAuth } from '../lib/authDerive';
+import { createAdminOrPermissionGuard } from '../lib/elysia-guards';
 import { syncAllFilters } from '../lib/syncAllFilters';
 import { db, tables } from '../shared/db';
 import { DEFAULT_VIBRATO } from '../shared/filterDefaults';
@@ -46,29 +46,13 @@ function upsertVibratoSettings(data: { enabled: boolean; frequency: number; dept
 // Plugin
 // ---------------------------------------------------------------------------
 
-function getAuth(ctx: Record<string, unknown>): AuthContext {
-  return ctx as unknown as AuthContext;
-}
-
 export const vibratoPlugin = new Elysia({ prefix: '/settings/vibrato' })
-  .get('/', (ctx: Record<string, unknown>) => {
-    const { user, isAdmin } = getAuth(ctx);
-    const guardErr = requireAdminOrPermission({ user, isAdmin }, 'audio.manage');
-    if (guardErr) {
-      return guardErr;
-    }
-    return fetchVibratoSettings();
-  })
+  .derive(deriveAuth)
+  .use(createAdminOrPermissionGuard('audio.manage'))
+  .get('/', () => fetchVibratoSettings())
   .patch(
     '/',
-    async (ctx: Record<string, unknown>) => {
-      const { user, isAdmin } = getAuth(ctx);
-      const guardErr = requireAdminOrPermission({ user, isAdmin }, 'audio.manage');
-      if (guardErr) {
-        return guardErr;
-      }
-
-      const body = ctx.body as typeof VibratoSchema.static;
+    async ({ body }) => {
       upsertVibratoSettings(body);
       await syncAllFilters();
 

@@ -1,8 +1,8 @@
 import { eq } from 'drizzle-orm';
 import { Elysia, t } from 'elysia';
-/* eslint-disable @typescript-eslint/no-unsafe-type-assertion */
 
-import { requireAdminOrPermission, type AuthContext } from '../lib/elysia-guards';
+import { deriveAuth } from '../lib/authDerive';
+import { createAdminOrPermissionGuard } from '../lib/elysia-guards';
 import { EQ_BAND_COLUMNS, eqBandsFromRow, eqBandValues } from '../lib/eqBands';
 import { syncAllFilters } from '../lib/syncAllFilters';
 import { db, tables } from '../shared/db';
@@ -51,29 +51,13 @@ function upsertEqualizerSettings(data: EqualizerSettings): void {
 // Plugin
 // ---------------------------------------------------------------------------
 
-function getAuth(ctx: Record<string, unknown>): AuthContext {
-  return ctx as unknown as AuthContext;
-}
-
 export const equalizerPlugin = new Elysia({ prefix: '/settings/equalizer' })
-  .get('/', (ctx: Record<string, unknown>) => {
-    const { user, isAdmin } = getAuth(ctx);
-    const guardErr = requireAdminOrPermission({ user, isAdmin }, 'audio.manage');
-    if (guardErr) {
-      return guardErr;
-    }
-    return fetchEqualizerSettings();
-  })
+  .derive(deriveAuth)
+  .use(createAdminOrPermissionGuard('audio.manage'))
+  .get('/', () => fetchEqualizerSettings())
   .patch(
     '/',
-    async (ctx: Record<string, unknown>) => {
-      const { user, isAdmin } = getAuth(ctx);
-      const guardErr = requireAdminOrPermission({ user, isAdmin }, 'audio.manage');
-      if (guardErr) {
-        return guardErr;
-      }
-
-      const body = ctx.body as EqualizerSettings;
+    async ({ body }) => {
       upsertEqualizerSettings(body);
       await syncAllFilters();
 

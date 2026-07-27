@@ -1,9 +1,9 @@
 import { eq } from 'drizzle-orm';
 import { Elysia, t } from 'elysia';
-/* eslint-disable @typescript-eslint/no-unsafe-type-assertion */
 
+import { deriveAuth } from '../lib/authDerive';
 import { getGuildId } from '../lib/config';
-import { requireAdminOrPermission, type AuthContext } from '../lib/elysia-guards';
+import { createAdminOrPermissionGuard } from '../lib/elysia-guards';
 import { emitPlayerUpdate } from '../lib/socket';
 import { syncAllFilters } from '../lib/syncAllFilters';
 import { db, tables } from '../shared/db';
@@ -59,29 +59,13 @@ function upsertTimescaleSettings(data: TimescaleSettings): void {
 // Plugin
 // ---------------------------------------------------------------------------
 
-function getAuth(ctx: Record<string, unknown>): AuthContext {
-  return ctx as unknown as AuthContext;
-}
-
 export const timescalePlugin = new Elysia({ prefix: '/settings/timescale' })
-  .get('/', (ctx: Record<string, unknown>) => {
-    const { user, isAdmin } = getAuth(ctx);
-    const guardErr = requireAdminOrPermission({ user, isAdmin }, 'audio.manage');
-    if (guardErr) {
-      return guardErr;
-    }
-    return fetchTimescaleSettings();
-  })
+  .derive(deriveAuth)
+  .use(createAdminOrPermissionGuard('audio.manage'))
+  .get('/', () => fetchTimescaleSettings())
   .patch(
     '/',
-    async (ctx: Record<string, unknown>) => {
-      const { user, isAdmin } = getAuth(ctx);
-      const guardErr = requireAdminOrPermission({ user, isAdmin }, 'audio.manage');
-      if (guardErr) {
-        return guardErr;
-      }
-
-      const body = ctx.body as TimescaleSettings;
+    async ({ body }) => {
       upsertTimescaleSettings(body);
       await syncAllFilters();
 
