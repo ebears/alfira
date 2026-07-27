@@ -38,10 +38,13 @@ function parseExpiresIn(expiresIn: string): number {
 
 /** Compute HMAC-SHA256 and return the result as a base64url string. */
 function hmacSha256Base64url(key: string, data: string): string {
+  /* eslint-disable @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-return */
+  // @ts-expect-error Bun global
   const hasher = new Bun.CryptoHasher('sha256', key);
   hasher.update(data);
   // digest('base64') returns standard base64; convert to base64url
   return hasher.digest('base64').replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+  /* eslint-enable @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-return */
 }
 
 /**
