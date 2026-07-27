@@ -4,12 +4,11 @@ import { join } from 'node:path';
 
 import { VERSION } from './lib/config';
 import { parseCookies } from './lib/cookies';
-import { wrapLegacy } from './lib/elysia-adapter';
 import { json } from './lib/json';
 import { lavalink } from './lib/lavalink';
 import { registerClient, unregisterClient, type WsClient } from './lib/socket';
 import { verifySessionToken } from './middleware/requireAuth';
-import { handleAuth } from './routes/auth';
+import { authPlugin } from './routes/auth.elysia';
 import { channelMixPlugin } from './routes/channelMix.elysia';
 import { compressorPlugin } from './routes/compressor.elysia';
 import { distortionPlugin } from './routes/distortion.elysia';
@@ -131,14 +130,8 @@ export function createApp(): Elysia {
   requestsPlugin(apiApp as unknown as Elysia);
 
   const authApp = new Elysia({ prefix: '/auth' });
-
-  const authLegacy = wrapLegacy(handleAuth);
   // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion
-  const handler = authLegacy as unknown as Record<string, unknown>;
-  authApp.get('', handler);
-  authApp.post('', handler);
-  authApp.get('/*', handler);
-  authApp.post('/*', handler);
+  authPlugin(authApp as unknown as Elysia);
 
   const app = new Elysia()
     // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion

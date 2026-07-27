@@ -65,9 +65,9 @@ Replace the homegrown HTTP framework (`routeTable`, `matchPath`, `RouteContext`,
 
 - `packages/server/src/elysia-app.ts` — all 13 route groups removed from `API_LEGACY_ROUTES` and wired as native plugins on `apiApp`
 
-### Phase 4 — Remaining legacy route groups (6 of 7 migrated)
+### Phase 4 — Remaining legacy route groups (6 migrated, auth deferred)
 
-Six route groups migrated to native Elysia plugins. Auth (`/auth`) deferred to a follow-up PR — it uses `wrapLegacy` registered directly on the `authApp` sub-app and continues to work correctly.
+Six route groups migrated to native Elysia plugins. Auth (`/auth`) was deferred to Phase 4a — at the time it used `wrapLegacy` registered directly on the `authApp` sub-app.
 
 **New files:**
 
@@ -97,6 +97,28 @@ Six route groups migrated to native Elysia plugins. Auth (`/auth`) deferred to a
 - `packages/server/src/lib/json.ts` — `json()` used by `handleAuth`
 - `packages/server/src/routes/auth.ts` — legacy auth handler (wrapped via `wrapLegacy` in `elysia-app.ts`)
 
+### Phase 4a — Migrate `/auth` (1 file, deferred)
+
+The `/auth` route group (login, callback, refresh, me, logout) has been migrated to a native Elysia plugin. All 5 endpoints are now Elysia-native handlers. The manual `Response` construction for cookie setting is preserved (it's well-tested and robust). The auth plugin uses `elysiaJson()` for JSON responses and reads cookies via the Elysia `deriveAuth` context.
+
+**New files:**
+
+- `packages/server/src/routes/auth.elysia.ts` — 5 endpoints (GET login, GET callback, POST refresh, GET me, POST logout). All helper functions, rate limiting, OAuth2 flow, cookie management, and JWT logic preserved from `routes/auth.ts`.
+
+**Modified files:**
+
+- `packages/server/src/elysia-app.ts` — Replaced `wrapLegacy(handleAuth)` with native `authPlugin(authApp)`. Removed unused `wrapLegacy` import.
+
+**Files now eligible for deletion** (no longer used by any active code):
+
+- `packages/server/src/lib/context.ts` — `RouteContext` type only used by legacy infrastructure
+- `packages/server/src/lib/routeTable.ts` — `routeTable()` only used by legacy route files
+- `packages/server/src/lib/routeGuards.ts` — `checkGuards()` only used by legacy route files
+- `packages/server/src/lib/guards.ts` — `requireAuth`, `requireAdmin` only used by legacy route files
+- `packages/server/src/lib/json.ts` — `json()` still used by `elysia-app.ts` (`/api/version` and `/health`)
+- `packages/server/src/routes/auth.ts` — Legacy auth handler, replaced by `auth.elysia.ts`
+- All legacy `.ts` route files that have `.elysia.ts` equivalents (tags, songs, player, playlists, requests, setup, permissions, compressor, equalizer, karaoke, lowPass, distortion, rotation, timescale, tremolo, vibrato, channelMix, filters, generalSettings)
+
 ### Pattern established
 
 1. **Extract drizzle queries into helper functions** with clean parameter types — `Record<string, unknown>` handler parameters cause tsgo inference failures on `.where()` calls. Helper functions with `string`/`number` parameters avoid this.
@@ -107,14 +129,6 @@ Six route groups migrated to native Elysia plugins. Auth (`/auth`) deferred to a
 
 ## Remaining work
 
-### Phase 4a — Migrate `/auth` (1 file, deferred)
-
-The `/auth` route group (login, callback, refresh, me, logout) still uses `wrapLegacy(handleAuth)` registered directly on the `authApp` sub-app in `elysia-app.ts`. It works correctly through the adapter. Migrating it to a native Elysia plugin would allow full cleanup of the legacy infrastructure in Phase 5.
-
-| Route group | Files | Complexity                                       |
-| ----------- | ----- | ------------------------------------------------ |
-| `/auth`     | 1     | Medium — OAuth2 Discord login flow, cookies, JWT |
-
 ### Phase 5 — Eden treaty on the web client
 
 - Replace `web/src/api/client.ts` (~200 lines) + `web/src/api/api.ts` (~80 lines) with `treaty<App>()`
@@ -122,13 +136,15 @@ The `/auth` route group (login, callback, refresh, me, logout) still uses `wrapL
 - Update all web components to use Eden's typed proxy instead of shared API functions
 - Keep `client.ts` auth refresh logic wired into Eden's `fetcher` option
 
-### Cleanup after `/auth` is migrated
+### Cleanup (after Phase 4a)
 
-- Delete `lib/routeTable.ts`, `lib/context.ts`, `lib/json.ts`, `lib/guards.ts`, `lib/routeGuards.ts`
-- Delete `lib/elysia-adapter.ts` (`wrapLegacy` and `elysiaJson` no longer needed)
-- Remove `wrapLegacy` import and `authLegacy` registration from `elysia-app.ts`
-- Delete `routes/auth.ts`
-- Move `elysiaJson` to a standalone helper (or inline it) — it's currently in `elysia-adapter.ts` alongside `wrapLegacy`
+Now that `/auth` is migrated to a native Elysia plugin, the legacy infrastructure can be cleaned up:
+
+- Delete `lib/routeTable.ts`, `lib/context.ts`, `lib/guards.ts`, `lib/routeGuards.ts` (no longer used)
+- Delete `routes/auth.ts` and all legacy `.ts` route files that have `.elysia.ts` equivalents
+- Remove `RouteContext` re-export from `index.ts`
+- `lib/json.ts` — still used by `elysia-app.ts` for `/api/version` and `/health`. Can be replaced with `elysiaJson` from `lib/elysia-adapter.ts`.
+- `lib/elysia-adapter.ts` — `wrapLegacy` can be removed; `elysiaJson` and `API_SECURITY_HEADERS` should be extracted to a standalone helper (e.g., `lib/apiResponse.ts`)
 
 ## Known issues
 
