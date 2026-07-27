@@ -21,7 +21,7 @@ interface PlaylistRow {
   createdBy: string;
   isPrivate: boolean;
   tagNameLower: string | null;
-  createdAt: Date;
+  createdAt: string;
   _count?: { songs: number };
 }
 

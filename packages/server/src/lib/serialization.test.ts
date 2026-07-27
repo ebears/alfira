@@ -3,15 +3,9 @@ import { describe, expect, test } from 'bun:test';
 import { formatSong, type SerializedSong } from './serialization';
 
 describe('formatSong', () => {
-  test('converts Date createdAt to ISO string', () => {
-    const date = new Date('2024-06-15T12:00:00.000Z');
-    const result = formatSong({ createdAt: date });
+  test('passes through createdAt unchanged', () => {
+    const result = formatSong({ createdAt: '2024-06-15T12:00:00.000Z' });
     expect(result.createdAt).toBe('2024-06-15T12:00:00.000Z');
-  });
-
-  test('passes through string createdAt unchanged', () => {
-    const result = formatSong({ createdAt: '2024-01-01T00:00:00.000Z' });
-    expect(result.createdAt).toBe('2024-01-01T00:00:00.000Z');
   });
 
   test('defaults tags to empty array when null', () => {
@@ -34,7 +28,7 @@ describe('formatSong', () => {
 
   test('output satisfies SerializedSong type', () => {
     const result: SerializedSong = formatSong({
-      createdAt: new Date(),
+      createdAt: '2024-01-01T00:00:00.000Z',
     });
     expect(result).toHaveProperty('createdAt');
     expect(result).toHaveProperty('tags');

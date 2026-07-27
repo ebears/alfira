@@ -6,6 +6,12 @@ import { refreshGuildId } from '../lib/config';
 import { botHeaders, fetchGuildRoles } from '../lib/discordRoles';
 import { setupModeGuard } from '../lib/elysia-guards';
 import { ApiError } from '../lib/errors';
+import {
+  SetupChannel as SetupChannelSchema,
+  SetupGuild as SetupGuildSchema,
+  SetupRole as SetupRoleSchema,
+  SetupStatus as SetupStatusSchema,
+} from '../lib/responseSchemas';
 import { type SetupChannel, type SetupGuild } from '../shared';
 import { db, tables } from '../shared/db';
 import { logger } from '../shared/logger';
@@ -169,83 +175,103 @@ function saveSetupConfig(data: typeof SetupCompleteSchema.static): void {
 
 export const setupPlugin = new Elysia({ prefix: '/setup' })
   .derive(deriveAuth)
-  .get('/', async () => {
-    const row = fetchSetupStatus();
+  .get(
+    '/',
+    async () => {
+      const row = fetchSetupStatus();
 
-    if (!row) {
+      if (!row) {
+        return {
+          setupCompleted: false,
+          guildName: null,
+          clientId: process.env.DISCORD_CLIENT_ID ?? '',
+        };
+      }
+
+      let guildName: string | null = null;
+      if (row.setupCompleted && row.guildId) {
+        guildName = await fetchGuildName(row.guildId);
+      }
+
       return {
-        setupCompleted: false,
-        guildName: null,
+        setupCompleted: row.setupCompleted,
+        guildName,
         clientId: process.env.DISCORD_CLIENT_ID ?? '',
       };
-    }
+    },
+    { response: { 200: SetupStatusSchema } }
+  )
+  .get(
+    '/status',
+    async () => {
+      const row = fetchSetupStatus();
 
-    let guildName: string | null = null;
-    if (row.setupCompleted && row.guildId) {
-      guildName = await fetchGuildName(row.guildId);
-    }
+      if (!row) {
+        return {
+          setupCompleted: false,
+          guildName: null,
+          clientId: process.env.DISCORD_CLIENT_ID ?? '',
+        };
+      }
 
-    return {
-      setupCompleted: row.setupCompleted,
-      guildName,
-      clientId: process.env.DISCORD_CLIENT_ID ?? '',
-    };
-  })
-  .get('/status', async () => {
-    const row = fetchSetupStatus();
+      let guildName: string | null = null;
+      if (row.setupCompleted && row.guildId) {
+        guildName = await fetchGuildName(row.guildId);
+      }
 
-    if (!row) {
       return {
-        setupCompleted: false,
-        guildName: null,
+        setupCompleted: row.setupCompleted,
+        guildName,
         clientId: process.env.DISCORD_CLIENT_ID ?? '',
       };
-    }
-
-    let guildName: string | null = null;
-    if (row.setupCompleted && row.guildId) {
-      guildName = await fetchGuildName(row.guildId);
-    }
-
-    return {
-      setupCompleted: row.setupCompleted,
-      guildName,
-      clientId: process.env.DISCORD_CLIENT_ID ?? '',
-    };
-  })
+    },
+    { response: { 200: SetupStatusSchema } }
+  )
   .use(setupModeGuard)
-  .get('/guilds', async () => {
-    try {
-      const guilds = await fetchBotGuilds();
-      return { guilds };
-    } catch (error) {
-      logger.error({ error }, 'Error fetching bot guilds');
-      throw new ApiError(502, 'Could not fetch guild list.');
-    }
-  })
-  .get('/roles', async ({ query }) => {
-    const guildId = (query as Record<string, string>).guildId;
-    if (!guildId) {
-      throw new ApiError(400, 'guildId query parameter is required.');
-    }
+  .get(
+    '/guilds',
+    async () => {
+      try {
+        const guilds = await fetchBotGuilds();
+        return { guilds };
+      } catch (error) {
+        logger.error({ error }, 'Error fetching bot guilds');
+        throw new ApiError(502, 'Could not fetch guild list.');
+      }
+    },
+    { response: { 200: t.Object({ guilds: t.Array(SetupGuildSchema) }) } }
+  )
+  .get(
+    '/roles',
+    async ({ query }) => {
+      const guildId = (query as Record<string, string>).guildId;
+      if (!guildId) {
+        throw new ApiError(400, 'guildId query parameter is required.');
+      }
 
-    const roles = await fetchGuildRoles(guildId);
-    return { roles };
-  })
-  .get('/channels', async ({ query }) => {
-    const guildId = (query as Record<string, string>).guildId;
-    if (!guildId) {
-      throw new ApiError(400, 'guildId query parameter is required.');
-    }
+      const roles = await fetchGuildRoles(guildId);
+      return { roles };
+    },
+    { response: { 200: t.Object({ roles: t.Array(SetupRoleSchema) }) } }
+  )
+  .get(
+    '/channels',
+    async ({ query }) => {
+      const guildId = (query as Record<string, string>).guildId;
+      if (!guildId) {
+        throw new ApiError(400, 'guildId query parameter is required.');
+      }
 
-    try {
-      const channels = await fetchGuildChannels(guildId);
-      return { channels };
-    } catch (error) {
-      logger.error({ error }, 'Error fetching guild channels');
-      throw new ApiError(502, 'Could not fetch channels.');
-    }
-  })
+      try {
+        const channels = await fetchGuildChannels(guildId);
+        return { channels };
+      } catch (error) {
+        logger.error({ error }, 'Error fetching guild channels');
+        throw new ApiError(502, 'Could not fetch channels.');
+      }
+    },
+    { response: { 200: t.Object({ channels: t.Array(SetupChannelSchema) }) } }
+  )
   .post(
     '/complete',
     ({ body }) => {
@@ -257,5 +283,5 @@ export const setupPlugin = new Elysia({ prefix: '/setup' })
         throw new ApiError(500, 'Could not save configuration.');
       }
     },
-    { body: SetupCompleteSchema }
+    { body: SetupCompleteSchema, response: { 200: t.Object({ success: t.Literal(true) }) } }
   );

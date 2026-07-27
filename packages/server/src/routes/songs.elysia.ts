@@ -6,7 +6,6 @@ import { getGuildId } from '../lib/config';
 import { getUserDisplayName, resolveDisplayNames } from '../lib/displayName';
 import { authGuard, createAdminOrPermissionGuard } from '../lib/elysia-guards';
 import { ApiError } from '../lib/errors';
-import { parsePagination } from '../lib/pagination';
 import {
   buildSongFilterClause,
   buildSongOrderBy,
@@ -124,80 +123,112 @@ function notifyPlayerOfMetadataChange(
 }
 
 // ---------------------------------------------------------------------------
+// Route handler (extracted to avoid Elysia NoInfer type limitation)
+// ---------------------------------------------------------------------------
+
+async function handleGetSongs(q: Record<string, string>) {
+  const rawPage = Math.trunc(Number(q.page ?? '1')) || 1;
+  const page = Math.max(1, rawPage);
+  const rawLimit = Math.trunc(Number(q.limit ?? '30')) || 30;
+  const limit = Math.min(100, Math.max(1, rawLimit));
+  const skip = (page - 1) * limit;
+  const search = (q.search ?? '').trim();
+
+  // Sort
+  const sortRaw = q.sort ?? 'createdAt';
+  const sortField = parseSongSortField(sortRaw) ?? 'createdAt';
+  const sortOrder = q.order === 'asc' ? 'ASC' : 'DESC';
+
+  // Filters
+  const tagsParam = (q.tags ?? '').trim();
+  const sourcesParam = (q.source ?? '').trim();
+  const filterTags = tagsParam
+    ? tagsParam
+        .split(',')
+        .map((t) => t.trim())
+        .filter(Boolean)
+    : [];
+  const filterSources = sourcesParam
+    ? sourcesParam
+        .split(',')
+        .map((s) => s.trim().toLowerCase())
+        .filter(Boolean)
+    : [];
+
+  // Build WHERE clause
+  const searchClause = buildSongSearchClause(search || undefined);
+  const filterClause = buildSongFilterClause(filterTags, filterSources);
+
+  let where: ReturnType<typeof sql> | undefined;
+  if (searchClause && filterClause) {
+    where = sql`(${searchClause} AND ${filterClause})`;
+  } else if (searchClause) {
+    where = searchClause;
+  } else if (filterClause) {
+    where = filterClause;
+  }
+
+  const orderBy = buildSongOrderBy(sortField, sortOrder);
+
+  const [songs, countResult] = await Promise.all([
+    db.select().from(songTable).where(where).orderBy(orderBy).offset(skip).limit(limit),
+    db
+      .select({ count: sql<number>`count(*)` })
+      .from(songTable)
+      .where(where),
+  ]);
+  const total = Math.trunc(Number(String(countResult[0]?.count ?? 0)));
+
+  // Resolve Discord display names
+  const nameMap = await resolveDisplayNames(songs as { addedBy: string }[]);
+
+  const songsWithNames = songs.map((s) => ({
+    ...formatSong(s),
+    addedByDisplayName: nameMap.get(s.addedBy) ?? s.addedBy,
+  }));
+
+  return {
+    items: songsWithNames,
+    pagination: {
+      page,
+      limit,
+      total,
+      totalPages: Math.ceil(total / limit),
+    },
+  };
+}
+
+// ---------------------------------------------------------------------------
 // Plugin
 // ---------------------------------------------------------------------------
 
 export const songsPlugin = new Elysia({ prefix: '/songs' })
   .derive(deriveAuth)
   .use(authGuard)
-  .get('/', async ({ request }) => {
-    const url = new URL(request.url);
-    const { page, limit, skip } = parsePagination(url);
-    const search = url.searchParams.get('search')?.trim() ?? '';
-
-    // Sort
-    const sortRaw = url.searchParams.get('sort') ?? 'createdAt';
-    const sortField = parseSongSortField(sortRaw) ?? 'createdAt';
-    const sortOrder = url.searchParams.get('order') === 'asc' ? 'ASC' : 'DESC';
-
-    // Filters
-    const tagsParam = url.searchParams.get('tags')?.trim();
-    const sourcesParam = url.searchParams.get('source')?.trim();
-    const filterTags = tagsParam
-      ? tagsParam
-          .split(',')
-          .map((t) => t.trim())
-          .filter(Boolean)
-      : [];
-    const filterSources = sourcesParam
-      ? sourcesParam
-          .split(',')
-          .map((s) => s.trim().toLowerCase())
-          .filter(Boolean)
-      : [];
-
-    // Build WHERE clause
-    const searchClause = buildSongSearchClause(search || undefined);
-    const filterClause = buildSongFilterClause(filterTags, filterSources);
-
-    let where: ReturnType<typeof sql> | undefined;
-    if (searchClause && filterClause) {
-      where = sql`(${searchClause} AND ${filterClause})`;
-    } else if (searchClause) {
-      where = searchClause;
-    } else if (filterClause) {
-      where = filterClause;
-    }
-
-    const orderBy = buildSongOrderBy(sortField, sortOrder);
-
-    const [songs, countResult] = await Promise.all([
-      db.select().from(songTable).where(where).orderBy(orderBy).offset(skip).limit(limit),
-      db
-        .select({ count: sql<number>`count(*)` })
-        .from(songTable)
-        .where(where),
-    ]);
-    const total = Math.trunc(Number(String(countResult[0]?.count ?? 0)));
-
-    // Resolve Discord display names
-    const nameMap = await resolveDisplayNames(songs as { addedBy: string }[]);
-
-    const songsWithNames = songs.map((s) => ({
-      ...formatSong(s),
-      addedByDisplayName: nameMap.get(s.addedBy) ?? s.addedBy,
-    }));
-
-    return {
-      items: songsWithNames,
-      pagination: {
-        page,
-        limit,
-        total,
-        totalPages: Math.ceil(total / limit),
+  .get(
+    '/',
+    ({ request }) => {
+      const q: Record<string, string> = {};
+      const sp = new URL(request.url).searchParams;
+      for (const [k, v] of sp) {
+        q[k] = v;
+      }
+      return handleGetSongs(q);
+    },
+    {
+      response: {
+        200: t.Object({
+          items: t.Array(t.Unknown()),
+          pagination: t.Object({
+            page: t.Number(),
+            limit: t.Number(),
+            total: t.Number(),
+            totalPages: t.Number(),
+          }),
+        }),
       },
-    };
-  })
+    }
+  )
   .guard({}, (app) =>
     app
       .use(createAdminOrPermissionGuard('songs.delete'))
@@ -209,7 +240,7 @@ export const songsPlugin = new Elysia({ prefix: '/songs' })
 
           return { deleted: ids.length };
         },
-        { body: BulkDeleteSchema }
+        { body: BulkDeleteSchema, response: { 200: t.Object({ deleted: t.Number() }) } }
       )
       .delete('/:id', ({ params }) => {
         const id = (params as Record<string, string>).id as string;
@@ -267,41 +298,48 @@ export const songsPlugin = new Elysia({ prefix: '/songs' })
 
           return { updated: updatedSongs.length, tags: newTags };
         },
-        { body: BulkTagSchema }
+        {
+          body: BulkTagSchema,
+          response: { 200: t.Object({ updated: t.Number(), tags: t.Array(t.String()) }) },
+        }
       )
-      .post('/bulk-edit', async ({ body }) => {
-        const b = body as Record<string, unknown>;
-        const ids = b.ids as string[];
-        const clearFields = (b.clearFields as string[]) ?? [];
+      .post(
+        '/bulk-edit',
+        async ({ body }) => {
+          const b = body as Record<string, unknown>;
+          const ids = b.ids as string[];
+          const clearFields = (b.clearFields as string[]) ?? [];
 
-        const { data, processedTags, processedVolumeBoost } = await validateAndBuildSongFields(
-          b,
-          clearFields
-        );
+          const { data, processedTags, processedVolumeBoost } = await validateAndBuildSongFields(
+            b,
+            clearFields
+          );
 
-        if (Object.keys(data).length === 0) {
-          throw new ApiError(400, 'No fields to update.');
-        }
+          if (Object.keys(data).length === 0) {
+            throw new ApiError(400, 'No fields to update.');
+          }
 
-        updateSongsByIds(ids, data);
+          updateSongsByIds(ids, data);
 
-        const updatedSongs = fetchSongsByIds(ids);
-        const bulkEditNameMap = await resolveDisplayNames(updatedSongs as { addedBy: string }[]);
-        for (const s of updatedSongs) {
-          emitSongUpdated({
-            ...formatSong(s),
-            addedByDisplayName: bulkEditNameMap.get(s.addedBy) ?? s.addedBy,
-          });
-        }
+          const updatedSongs = fetchSongsByIds(ids);
+          const bulkEditNameMap = await resolveDisplayNames(updatedSongs as { addedBy: string }[]);
+          for (const s of updatedSongs) {
+            emitSongUpdated({
+              ...formatSong(s),
+              addedByDisplayName: bulkEditNameMap.get(s.addedBy) ?? s.addedBy,
+            });
+          }
 
-        if (processedTags) {
-          await reSyncPlaylistsForTags(processedTags.map((t) => t.toLowerCase()));
-        }
+          if (processedTags) {
+            await reSyncPlaylistsForTags(processedTags.map((t) => t.toLowerCase()));
+          }
 
-        notifyPlayerOfMetadataChange(ids, data, processedVolumeBoost);
+          notifyPlayerOfMetadataChange(ids, data, processedVolumeBoost);
 
-        return { updated: ids.length };
-      })
+          return { updated: ids.length };
+        },
+        { response: { 200: t.Object({ updated: t.Number() }) } }
+      )
       .patch(
         '/:id',
         async ({ params, body }) => {

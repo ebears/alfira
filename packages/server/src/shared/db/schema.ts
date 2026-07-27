@@ -1,4 +1,5 @@
 import {
+  customType,
   index,
   integer,
   primaryKey,
@@ -7,6 +8,26 @@ import {
   text,
   unique,
 } from 'drizzle-orm/sqlite-core';
+
+// ---------------------------------------------------------------------------
+// Custom timestamp type — stores as SQLite INTEGER (Unix ms) but returns
+// ISO 8601 strings. Eliminates Date → string conversion in formatting
+// helpers and aligns Drizzle's $inferSelect types with the JSON wire format.
+// ---------------------------------------------------------------------------
+const isoTimestamp = customType<{
+  data: string;
+  driverData: number;
+}>({
+  dataType() {
+    return 'integer';
+  },
+  fromDriver(value: number): string {
+    return new Date(value).toISOString();
+  },
+  toDriver(value: string): number {
+    return new Date(value).getTime();
+  },
+});
 
 export const song = sqliteTable('Song', {
   id: text('id')
@@ -24,9 +45,9 @@ export const song = sqliteTable('Song', {
   artwork: text('artwork'),
   tags: text('tags', { mode: 'json' }).$type<string[]>().notNull().default([]),
   volumeBoost: integer('volumeBoost'),
-  createdAt: integer('createdAt', { mode: 'timestamp_ms' })
+  createdAt: isoTimestamp('createdAt')
     .notNull()
-    .$defaultFn(() => new Date()),
+    .$defaultFn(() => new Date().toISOString()),
 });
 
 export const playlist = sqliteTable('Playlist', {
@@ -37,9 +58,9 @@ export const playlist = sqliteTable('Playlist', {
   createdBy: text('createdBy').notNull(),
   isPrivate: integer('isPrivate', { mode: 'boolean' }).default(false).notNull(),
   tagNameLower: text('tagNameLower'),
-  createdAt: integer('createdAt', { mode: 'timestamp_ms' })
+  createdAt: isoTimestamp('createdAt')
     .notNull()
-    .$defaultFn(() => new Date()),
+    .$defaultFn(() => new Date().toISOString()),
 });
 
 export const playlistSong = sqliteTable(
@@ -66,10 +87,10 @@ export const refreshToken = sqliteTable(
       .$defaultFn(() => crypto.randomUUID()),
     tokenHash: text('tokenHash').notNull().unique(),
     discordId: text('discordId').notNull(),
-    expiresAt: integer('expiresAt', { mode: 'timestamp_ms' }).notNull(),
-    createdAt: integer('createdAt', { mode: 'timestamp_ms' })
+    expiresAt: isoTimestamp('expiresAt').notNull(),
+    createdAt: isoTimestamp('createdAt')
       .notNull()
-      .$defaultFn(() => new Date()),
+      .$defaultFn(() => new Date().toISOString()),
   },
   (t) => [index('RefreshToken_discordId_idx').on(t.discordId)]
 );
@@ -81,9 +102,9 @@ export const tag = sqliteTable('Tag', {
   nameLower: text('nameLower').notNull().unique(),
   canonicalName: text('canonicalName').notNull(),
   color: text('color'),
-  createdAt: integer('createdAt', { mode: 'timestamp_ms' })
+  createdAt: isoTimestamp('createdAt')
     .notNull()
-    .$defaultFn(() => new Date()),
+    .$defaultFn(() => new Date().toISOString()),
 });
 
 export const guildSettings = sqliteTable('guildSettings', {
@@ -212,8 +233,8 @@ export const songRequest = sqliteTable('SongRequest', {
   }>(),
   status: text('status').notNull().default('pending'), // 'pending' | 'approved' | 'denied'
   reviewedBy: text('reviewedBy'),
-  createdAt: integer('createdAt', { mode: 'timestamp_ms' })
+  createdAt: isoTimestamp('createdAt')
     .notNull()
-    .$defaultFn(() => new Date()),
-  closedAt: integer('closedAt', { mode: 'timestamp_ms' }),
+    .$defaultFn(() => new Date().toISOString()),
+  closedAt: isoTimestamp('closedAt'),
 });

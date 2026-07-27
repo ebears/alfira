@@ -8,6 +8,7 @@ import { authGuard } from '../lib/elysia-guards';
 import { ApiError } from '../lib/errors';
 import { parsePagination } from '../lib/pagination';
 import { canAccessPlaylist, getPlaylistSongCount, requirePlaylist } from '../lib/playlistAccess';
+import { PaginationMeta } from '../lib/responseSchemas';
 import {
   buildSongFilterClause,
   buildSongOrderBy,
@@ -24,7 +25,6 @@ const { playlist: playlistTable, playlistSong: playlistSongTable } = tables;
 function formatPlaylist(pl: typeof playlistTable.$inferSelect, songCount?: number) {
   return {
     ...pl,
-    createdAt: pl.createdAt.toISOString(),
     ...(songCount !== undefined && { _count: { songs: songCount } }),
   };
 }
@@ -38,7 +38,7 @@ function formatPlaylistSongWithSong(
     ...ps,
     song: {
       ...song,
-      createdAt: song.createdAt.toISOString(),
+      createdAt: song.createdAt,
       tags: song.tags ?? [],
       addedByDisplayName,
     },
@@ -77,73 +77,77 @@ const PlaylistReorderSchema = t.Object({
 export const playlistsPlugin = new Elysia({ prefix: '/playlists' })
   .derive(deriveAuth)
   .use(authGuard)
-  .get('/', async ({ user, ...ctx }) => {
-    const url = new URL((ctx.request as Request).url);
-    const adminView = url.searchParams.get('adminView') === 'true';
-    const { page, limit, skip } = parsePagination(url);
+  .get(
+    '/',
+    async ({ user, ...ctx }) => {
+      const url = new URL((ctx.request as Request).url);
+      const adminView = url.searchParams.get('adminView') === 'true';
+      const { page, limit, skip } = parsePagination(url);
 
-    const [playlists, totalResult] = await Promise.all([
-      db.select().from(playlistTable).orderBy(playlistTable.createdAt).limit(limit).offset(skip),
-      db.select({ count: count() }).from(playlistTable),
-    ]);
-    const totalCount = totalResult[0]?.count ?? 0;
+      const [playlists, totalResult] = await Promise.all([
+        db.select().from(playlistTable).orderBy(playlistTable.createdAt).limit(limit).offset(skip),
+        db.select({ count: count() }).from(playlistTable),
+      ]);
+      const totalCount = totalResult[0]?.count ?? 0;
 
-    // Fetch song counts for each playlist
-    const playlistsWithCounts = await Promise.all(
-      playlists.map(async (pl) => {
-        const value = await getPlaylistSongCount(pl.id);
-        return formatPlaylist(pl, value);
-      })
-    );
-
-    // Filter private playlists
-    const filteredPlaylists = playlistsWithCounts.filter(
-      (pl) => canAccessPlaylist(pl, user as { discordId: string; isAdmin: boolean }, adminView).ok
-    );
-
-    // Batch-fetch cover artwork URLs
-    const playlistIds = filteredPlaylists.map((pl) => pl.id);
-    const coverMap = new Map<string, string[]>();
-    if (playlistIds.length > 0) {
-      const songRows = await db
-        .select({
-          playlistId: playlistSongTable.playlistId,
-          artwork: tables.song.artwork,
-          thumbnailUrl: tables.song.thumbnailUrl,
+      // Fetch song counts for each playlist
+      const playlistsWithCounts = await Promise.all(
+        playlists.map(async (pl) => {
+          const value = await getPlaylistSongCount(pl.id);
+          return formatPlaylist(pl, value);
         })
-        .from(playlistSongTable)
-        .innerJoin(tables.song, eq(playlistSongTable.songId, tables.song.id))
-        .where(inArray(playlistSongTable.playlistId, playlistIds))
-        .orderBy(playlistSongTable.playlistId, playlistSongTable.position);
+      );
 
-      for (const row of songRows) {
-        const urls = coverMap.get(row.playlistId);
-        if (!urls) {
-          coverMap.set(row.playlistId, [row.artwork ?? row.thumbnailUrl]);
-        } else if (urls.length < 4) {
-          urls.push(row.artwork ?? row.thumbnailUrl);
+      // Filter private playlists
+      const filteredPlaylists = playlistsWithCounts.filter(
+        (pl) => canAccessPlaylist(pl, user as { discordId: string; isAdmin: boolean }, adminView).ok
+      );
+
+      // Batch-fetch cover artwork URLs
+      const playlistIds = filteredPlaylists.map((pl) => pl.id);
+      const coverMap = new Map<string, string[]>();
+      if (playlistIds.length > 0) {
+        const songRows = await db
+          .select({
+            playlistId: playlistSongTable.playlistId,
+            artwork: tables.song.artwork,
+            thumbnailUrl: tables.song.thumbnailUrl,
+          })
+          .from(playlistSongTable)
+          .innerJoin(tables.song, eq(playlistSongTable.songId, tables.song.id))
+          .where(inArray(playlistSongTable.playlistId, playlistIds))
+          .orderBy(playlistSongTable.playlistId, playlistSongTable.position);
+
+        for (const row of songRows) {
+          const urls = coverMap.get(row.playlistId);
+          if (!urls) {
+            coverMap.set(row.playlistId, [row.artwork ?? row.thumbnailUrl]);
+          } else if (urls.length < 4) {
+            urls.push(row.artwork ?? row.thumbnailUrl);
+          }
         }
       }
-    }
 
-    const playlistsWithCreator = await Promise.all(
-      filteredPlaylists.map(async (pl) => ({
-        ...pl,
-        createdByDisplayName: await getUserDisplayName(pl.createdBy),
-        coverUrls: coverMap.get(pl.id),
-      }))
-    );
+      const playlistsWithCreator = await Promise.all(
+        filteredPlaylists.map(async (pl) => ({
+          ...pl,
+          createdByDisplayName: await getUserDisplayName(pl.createdBy),
+          coverUrls: coverMap.get(pl.id),
+        }))
+      );
 
-    return {
-      items: playlistsWithCreator,
-      pagination: {
-        page,
-        limit,
-        total: totalCount,
-        totalPages: Math.ceil(totalCount / limit),
-      },
-    };
-  })
+      return {
+        items: playlistsWithCreator,
+        pagination: {
+          page,
+          limit,
+          total: totalCount,
+          totalPages: Math.ceil(totalCount / limit),
+        },
+      };
+    },
+    { response: { 200: t.Object({ items: t.Array(t.Unknown()), pagination: PaginationMeta }) } }
+  )
   .post(
     '/',
     async ({ user, ...ctx }) => {
@@ -178,7 +182,7 @@ export const playlistsPlugin = new Elysia({ prefix: '/playlists' })
       emitPlaylistUpdated(formatPlaylist(playlist, songCount));
       return playlist;
     },
-    { body: PlaylistCreateSchema }
+    { body: PlaylistCreateSchema, response: { 200: t.Unknown() } }
   )
   .post(
     '/:id/songs/bulk-remove',
@@ -188,9 +192,6 @@ export const playlistsPlugin = new Elysia({ prefix: '/playlists' })
 
       const discordId = (user as { discordId: string }).discordId;
       const playlist = await requirePlaylist(playlistId, { discordId });
-      if (playlist instanceof Response) {
-        return playlist;
-      }
 
       await db.transaction(async (tx) => {
         await tx
@@ -231,9 +232,6 @@ export const playlistsPlugin = new Elysia({ prefix: '/playlists' })
 
     const discordId = (user as { discordId: string }).discordId;
     const playlist = await requirePlaylist(playlistId, { discordId });
-    if (playlist instanceof Response) {
-      return playlist;
-    }
 
     const [entry] = await db
       .select()
@@ -283,9 +281,6 @@ export const playlistsPlugin = new Elysia({ prefix: '/playlists' })
 
       const discordId = (user as { discordId: string }).discordId;
       const playlist = await requirePlaylist(id, { discordId });
-      if (playlist instanceof Response) {
-        return playlist;
-      }
 
       if (playlist.tagNameLower) {
         throw new ApiError(
@@ -333,7 +328,7 @@ export const playlistsPlugin = new Elysia({ prefix: '/playlists' })
         })
         .returning();
 
-      const songData = { ...song, createdAt: song.createdAt.toISOString(), tags: song.tags ?? [] };
+      const songData = { ...song, tags: song.tags ?? [] };
       const value = await getPlaylistSongCount(playlist.id);
       emitPlaylistUpdated(formatPlaylist(playlist, value));
 
@@ -353,10 +348,7 @@ export const playlistsPlugin = new Elysia({ prefix: '/playlists' })
 
       const discordId = (user as { discordId: string }).discordId;
       const adminView = body.adminView === true;
-      const existing = await requirePlaylist(id, { discordId }, adminView);
-      if (existing instanceof Response) {
-        return existing;
-      }
+      await requirePlaylist(id, { discordId }, adminView);
 
       const [updatedPlaylist] = await db
         .update(playlistTable)
@@ -374,114 +366,180 @@ export const playlistsPlugin = new Elysia({ prefix: '/playlists' })
     },
     { body: PlaylistVisibilitySchema }
   )
-  .get('/:id', async ({ user, ...ctx }) => {
-    const id = (ctx.params as Record<string, string>).id as string;
-    const url = new URL((ctx.request as Request).url);
-    const adminView = url.searchParams.get('adminView') === 'true';
-    const discordId = (user as { discordId: string }).discordId;
-    const { page, limit, skip } = parsePagination(url);
-    const search = url.searchParams.get('search')?.trim() ?? '';
+  .get(
+    '/:id',
+    async ({ user, ...ctx }) => {
+      const id = (ctx.params as Record<string, string>).id as string;
+      const url = new URL((ctx.request as Request).url);
+      const adminView = url.searchParams.get('adminView') === 'true';
+      const discordId = (user as { discordId: string }).discordId;
+      const { page, limit, skip } = parsePagination(url);
+      const search = url.searchParams.get('search')?.trim() ?? '';
 
-    // Sort & filter
-    const sortRaw = url.searchParams.get('sort') ?? 'position';
-    const sortField = ['position', 'title', 'artist', 'album', 'duration', 'createdAt'].includes(
-      sortRaw
-    )
-      ? sortRaw
-      : 'position';
-    const sortOrder = url.searchParams.get('order') === 'asc' ? 'ASC' : 'DESC';
+      // Sort & filter
+      const sortRaw = url.searchParams.get('sort') ?? 'position';
+      const sortField = ['position', 'title', 'artist', 'album', 'duration', 'createdAt'].includes(
+        sortRaw
+      )
+        ? sortRaw
+        : 'position';
+      const sortOrder = url.searchParams.get('order') === 'asc' ? 'ASC' : 'DESC';
 
-    const tagsParam = url.searchParams.get('tags')?.trim();
-    const sourcesParam = url.searchParams.get('source')?.trim();
-    const filterTags = tagsParam
-      ? tagsParam
-          .split(',')
-          .map((t) => t.trim())
-          .filter(Boolean)
-      : [];
-    const filterSources = sourcesParam
-      ? sourcesParam
-          .split(',')
-          .map((s) => s.trim().toLowerCase())
-          .filter(Boolean)
-      : [];
+      const tagsParam = url.searchParams.get('tags')?.trim();
+      const sourcesParam = url.searchParams.get('source')?.trim();
+      const filterTags = tagsParam
+        ? tagsParam
+            .split(',')
+            .map((t) => t.trim())
+            .filter(Boolean)
+        : [];
+      const filterSources = sourcesParam
+        ? sourcesParam
+            .split(',')
+            .map((s) => s.trim().toLowerCase())
+            .filter(Boolean)
+        : [];
 
-    const wantsCustomSort = sortField !== 'position';
+      const wantsCustomSort = sortField !== 'position';
 
-    const playlist = await requirePlaylist(id, { discordId }, adminView, true);
-    if (playlist instanceof Response) {
-      return playlist;
-    }
+      const playlist = await requirePlaylist(id, { discordId }, adminView, true);
 
-    // ── Custom sort path ──
-    if (wantsCustomSort || filterTags.length > 0 || filterSources.length > 0) {
-      const songFilterClauses: ReturnType<typeof sql>[] = [];
+      // ── Custom sort path ──
+      if (wantsCustomSort || filterTags.length > 0 || filterSources.length > 0) {
+        const songFilterClauses: ReturnType<typeof sql>[] = [];
 
+        if (search) {
+          const searchClause = buildSongSearchClause(search);
+          if (searchClause) {
+            songFilterClauses.push(searchClause);
+          }
+        }
+
+        const tagSourceFilter = buildSongFilterClause(filterTags, filterSources, {
+          tags: tables.song.tags,
+          sourceUrl: tables.song.sourceUrl,
+        });
+        if (tagSourceFilter) {
+          songFilterClauses.push(tagSourceFilter);
+        }
+
+        const joinWhere = and(
+          eq(playlistSongTable.playlistId, id),
+          ...(songFilterClauses.length > 0 ? [sql.join(songFilterClauses, sql` AND `)] : [])
+        );
+
+        const songSortField = wantsCustomSort ? parseSongSortField(sortField) : null;
+        const orderBy = songSortField
+          ? buildSongOrderBy(songSortField, sortOrder, {
+              title: tables.song.title,
+              nickname: tables.song.nickname,
+              artist: tables.song.artist,
+              album: tables.song.album,
+              duration: tables.song.duration,
+              createdAt: tables.song.createdAt,
+            })
+          : playlistSongTable.position;
+
+        const [rows, countResult] = await Promise.all([
+          db
+            .select()
+            .from(playlistSongTable)
+            .innerJoin(tables.song, eq(playlistSongTable.songId, tables.song.id))
+            .where(joinWhere)
+            .orderBy(orderBy)
+            .limit(limit)
+            .offset(skip),
+          db
+            .select({ count: count() })
+            .from(playlistSongTable)
+            .innerJoin(tables.song, eq(playlistSongTable.songId, tables.song.id))
+            .where(joinWhere),
+        ]);
+
+        const total = countResult[0]?.count ?? 0;
+        const songs = rows.map((r) => r.Song);
+        const nameMap = await resolveDisplayNames(songs);
+
+        return {
+          ...playlist,
+          songs: rows.map((r) =>
+            formatPlaylistSongWithSong(
+              r.PlaylistSong,
+              r.Song,
+              nameMap.get(r.Song.addedBy) ?? r.Song.addedBy
+            )
+          ),
+          createdByDisplayName: await getUserDisplayName(playlist.createdBy),
+          pagination: {
+            page,
+            limit,
+            total,
+            totalPages: Math.ceil(total / limit),
+          },
+        };
+      }
+
+      // ── Default path: position sort, search-only filter ──
+      let songIds: string[] = [];
       if (search) {
-        const searchClause = buildSongSearchClause(search);
-        if (searchClause) {
-          songFilterClauses.push(searchClause);
+        const matching = await db
+          .select({ id: tables.song.id })
+          .from(tables.song)
+          .where(buildSongSearchClause(search))
+          .limit(500);
+        songIds = matching.map((s) => s.id);
+        if (songIds.length === 0) {
+          return {
+            ...playlist,
+            songs: [],
+            createdByDisplayName: await getUserDisplayName(playlist.createdBy),
+            pagination: { page, limit, total: 0, totalPages: 0 },
+          };
         }
       }
 
-      const tagSourceFilter = buildSongFilterClause(filterTags, filterSources, {
-        tags: tables.song.tags,
-        sourceUrl: tables.song.sourceUrl,
-      });
-      if (tagSourceFilter) {
-        songFilterClauses.push(tagSourceFilter);
-      }
+      const whereCondition =
+        songIds.length > 0
+          ? and(eq(playlistSongTable.playlistId, id), inArray(playlistSongTable.songId, songIds))
+          : eq(playlistSongTable.playlistId, id);
 
-      const joinWhere = and(
-        eq(playlistSongTable.playlistId, id),
-        ...(songFilterClauses.length > 0 ? [sql.join(songFilterClauses, sql` AND `)] : [])
-      );
+      const countCondition =
+        songIds.length > 0
+          ? and(eq(playlistSongTable.playlistId, id), inArray(playlistSongTable.songId, songIds))
+          : eq(playlistSongTable.playlistId, id);
 
-      const songSortField = wantsCustomSort ? parseSongSortField(sortField) : null;
-      const orderBy = songSortField
-        ? buildSongOrderBy(songSortField, sortOrder, {
-            title: tables.song.title,
-            nickname: tables.song.nickname,
-            artist: tables.song.artist,
-            album: tables.song.album,
-            duration: tables.song.duration,
-            createdAt: tables.song.createdAt,
-          })
-        : playlistSongTable.position;
-
-      const [rows, countResult] = await Promise.all([
+      const [playlistSongs, totalResult] = await Promise.all([
         db
           .select()
           .from(playlistSongTable)
-          .innerJoin(tables.song, eq(playlistSongTable.songId, tables.song.id))
-          .where(joinWhere)
-          .orderBy(orderBy)
+          .where(whereCondition)
+          .orderBy(playlistSongTable.position)
           .limit(limit)
           .offset(skip),
-        db
-          .select({ count: count() })
-          .from(playlistSongTable)
-          .innerJoin(tables.song, eq(playlistSongTable.songId, tables.song.id))
-          .where(joinWhere),
+        db.select({ count: count() }).from(playlistSongTable).where(countCondition),
       ]);
+      const total = totalResult[0]?.count ?? 0;
 
-      const total = countResult[0]?.count ?? 0;
-      const songs = rows.map((r) => r.Song);
+      const playlistSongIds = playlistSongs.map((ps) => ps.songId);
+      const songs =
+        playlistSongIds.length > 0
+          ? await db.select().from(tables.song).where(inArray(tables.song.id, playlistSongIds))
+          : [];
+      const songMap = new Map(songs.map((s) => [s.id, s]));
+
       const nameMap = await resolveDisplayNames(songs);
 
       return {
         ...playlist,
-        createdAt:
-          playlist.createdAt instanceof Date
-            ? playlist.createdAt.toISOString()
-            : playlist.createdAt,
-        songs: rows.map((r) =>
-          formatPlaylistSongWithSong(
-            r.PlaylistSong,
-            r.Song,
-            nameMap.get(r.Song.addedBy) ?? r.Song.addedBy
-          )
-        ),
+        songs: playlistSongs
+          .map((ps) => {
+            const song = songMap.get(ps.songId);
+            if (!song) {
+              return null;
+            }
+            return formatPlaylistSongWithSong(ps, song, nameMap.get(song.addedBy) ?? song.addedBy);
+          })
+          .filter((x): x is NonNullable<typeof x> => x !== null),
         createdByDisplayName: await getUserDisplayName(playlist.createdBy),
         pagination: {
           page,
@@ -490,84 +548,9 @@ export const playlistsPlugin = new Elysia({ prefix: '/playlists' })
           totalPages: Math.ceil(total / limit),
         },
       };
-    }
-
-    // ── Default path: position sort, search-only filter ──
-    let songIds: string[] = [];
-    if (search) {
-      const matching = await db
-        .select({ id: tables.song.id })
-        .from(tables.song)
-        .where(buildSongSearchClause(search))
-        .limit(500);
-      songIds = matching.map((s) => s.id);
-      if (songIds.length === 0) {
-        return {
-          ...playlist,
-          createdAt:
-            playlist.createdAt instanceof Date
-              ? playlist.createdAt.toISOString()
-              : playlist.createdAt,
-          songs: [],
-          createdByDisplayName: await getUserDisplayName(playlist.createdBy),
-          pagination: { page, limit, total: 0, totalPages: 0 },
-        };
-      }
-    }
-
-    const whereCondition =
-      songIds.length > 0
-        ? and(eq(playlistSongTable.playlistId, id), inArray(playlistSongTable.songId, songIds))
-        : eq(playlistSongTable.playlistId, id);
-
-    const countCondition =
-      songIds.length > 0
-        ? and(eq(playlistSongTable.playlistId, id), inArray(playlistSongTable.songId, songIds))
-        : eq(playlistSongTable.playlistId, id);
-
-    const [playlistSongs, totalResult] = await Promise.all([
-      db
-        .select()
-        .from(playlistSongTable)
-        .where(whereCondition)
-        .orderBy(playlistSongTable.position)
-        .limit(limit)
-        .offset(skip),
-      db.select({ count: count() }).from(playlistSongTable).where(countCondition),
-    ]);
-    const total = totalResult[0]?.count ?? 0;
-
-    const playlistSongIds = playlistSongs.map((ps) => ps.songId);
-    const songs =
-      playlistSongIds.length > 0
-        ? await db.select().from(tables.song).where(inArray(tables.song.id, playlistSongIds))
-        : [];
-    const songMap = new Map(songs.map((s) => [s.id, s]));
-
-    const nameMap = await resolveDisplayNames(songs);
-
-    return {
-      ...playlist,
-      createdAt:
-        playlist.createdAt instanceof Date ? playlist.createdAt.toISOString() : playlist.createdAt,
-      songs: playlistSongs
-        .map((ps) => {
-          const song = songMap.get(ps.songId);
-          if (!song) {
-            return null;
-          }
-          return formatPlaylistSongWithSong(ps, song, nameMap.get(song.addedBy) ?? song.addedBy);
-        })
-        .filter((x): x is NonNullable<typeof x> => x !== null),
-      createdByDisplayName: await getUserDisplayName(playlist.createdBy),
-      pagination: {
-        page,
-        limit,
-        total,
-        totalPages: Math.ceil(total / limit),
-      },
-    };
-  })
+    },
+    { response: { 200: t.Unknown() } }
+  )
   .patch(
     '/:id',
     async ({ user, ...ctx }) => {
@@ -575,10 +558,7 @@ export const playlistsPlugin = new Elysia({ prefix: '/playlists' })
       const body = ctx.body as typeof PlaylistCreateSchema.static;
 
       const discordId = (user as { discordId: string }).discordId;
-      const existing = await requirePlaylist(id, { discordId });
-      if (existing instanceof Response) {
-        return existing;
-      }
+      await requirePlaylist(id, { discordId });
 
       const data: Record<string, unknown> = {};
 
@@ -626,9 +606,6 @@ export const playlistsPlugin = new Elysia({ prefix: '/playlists' })
 
       const discordId = (user as { discordId: string }).discordId;
       const playlist = await requirePlaylist(playlistId, { discordId });
-      if (playlist instanceof Response) {
-        return playlist;
-      }
 
       if (playlist.tagNameLower) {
         throw new ApiError(409, 'Cannot reorder a smart playlist. It is managed by its tag.');
@@ -676,10 +653,7 @@ export const playlistsPlugin = new Elysia({ prefix: '/playlists' })
   .delete('/:id', async ({ user, ...ctx }) => {
     const id = (ctx.params as Record<string, string>).id as string;
     const discordId = (user as { discordId: string }).discordId;
-    const existing = await requirePlaylist(id, { discordId });
-    if (existing instanceof Response) {
-      return existing;
-    }
+    await requirePlaylist(id, { discordId });
 
     await db.delete(playlistTable).where(eq(playlistTable.id, id));
 

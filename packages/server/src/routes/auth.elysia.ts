@@ -365,7 +365,7 @@ async function generateAndStoreTokens(
   const refreshToken = generateRefreshToken(discordUser.id);
 
   const refreshTokenHash = hashToken(refreshToken);
-  const refreshTokenExpiry = new Date(Date.now() + REFRESH_TOKEN_MAX_AGE);
+  const refreshTokenExpiry = new Date(Date.now() + REFRESH_TOKEN_MAX_AGE).toISOString();
   await db.insert(refreshTokenTable).values({
     tokenHash: refreshTokenHash,
     discordId: discordUser.id,
@@ -561,7 +561,7 @@ async function handleRefresh({ cookies }: { cookies: Record<string, string> }): 
   }
 
   // 3. Check if the refresh token has expired.
-  if (storedToken.expiresAt < new Date()) {
+  if (storedToken.expiresAt < new Date().toISOString()) {
     logger.warn(
       { discordId: decoded.discordId, expiresAt: storedToken.expiresAt, now: new Date() },
       'Auth refresh failed: DB expiresAt has passed'
@@ -576,7 +576,7 @@ async function handleRefresh({ cookies }: { cookies: Record<string, string> }): 
     .where(
       and(
         eq(refreshTokenTable.discordId, decoded.discordId),
-        lt(refreshTokenTable.expiresAt, new Date())
+        lt(refreshTokenTable.expiresAt, new Date().toISOString())
       )
     );
 
@@ -684,7 +684,7 @@ async function handleRefresh({ cookies }: { cookies: Record<string, string> }): 
 
   // 8. Store new refresh token.
   const newTokenHash = hashToken(newRefreshToken);
-  const newExpiry = new Date(Date.now() + REFRESH_TOKEN_MAX_AGE);
+  const newExpiry = new Date(Date.now() + REFRESH_TOKEN_MAX_AGE).toISOString();
   await db.insert(refreshTokenTable).values({
     tokenHash: newTokenHash,
     discordId: decoded.discordId,

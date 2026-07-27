@@ -35,8 +35,8 @@ const { song: songTable, songRequest: requestTable } = tables;
 function formatRequest(row: typeof requestTable.$inferSelect): SongRequest {
   return {
     ...row,
-    createdAt: new Date(row.createdAt).toISOString(),
-    closedAt: row.closedAt ? new Date(row.closedAt).toISOString() : null,
+    createdAt: row.createdAt,
+    closedAt: row.closedAt,
     playlistData: row.playlistData,
     type: row.type === 'playlist' ? 'playlist' : 'track',
   } as SongRequest;
@@ -168,64 +168,80 @@ export const requestsPlugin = new Elysia({ prefix: '/requests' })
         playlistMeta: undefined,
       };
     },
-    { body: PreviewRequestSchema }
+    { body: PreviewRequestSchema, response: { 200: t.Unknown() } }
   )
-  .get('/', async ({ user, isAdmin, ...ctx }) => {
-    const url = new URL((ctx.request as Request).url);
-    const { page, limit, skip } = parsePagination(url);
-    const status = url.searchParams.get('status') ?? 'pending';
-    const mine = url.searchParams.get('mine') === 'true';
+  .get(
+    '/',
+    async ({ user, isAdmin, ...ctx }) => {
+      const url = new URL((ctx.request as Request).url);
+      const { page, limit, skip } = parsePagination(url);
+      const status = url.searchParams.get('status') ?? 'pending';
+      const mine = url.searchParams.get('mine') === 'true';
 
-    const conditions = [];
+      const conditions = [];
 
-    if (status !== 'all') {
-      conditions.push(eq(requestTable.status, status));
-    }
+      if (status !== 'all') {
+        conditions.push(eq(requestTable.status, status));
+      }
 
-    const discordId = (user as { discordId: string }).discordId;
-    if (mine) {
-      conditions.push(eq(requestTable.requestedBy, discordId));
-    } else if (!isAdmin && status !== 'pending') {
-      conditions.push(eq(requestTable.requestedBy, discordId));
-    }
+      const discordId = (user as { discordId: string }).discordId;
+      if (mine) {
+        conditions.push(eq(requestTable.requestedBy, discordId));
+      } else if (!isAdmin && status !== 'pending') {
+        conditions.push(eq(requestTable.requestedBy, discordId));
+      }
 
-    const where = conditions.length > 0 ? and(...conditions) : undefined;
+      const where = conditions.length > 0 ? and(...conditions) : undefined;
 
-    const [requests, countResult] = await Promise.all([
-      db
-        .select()
-        .from(requestTable)
-        .where(where)
-        .orderBy(sql`"createdAt" DESC`)
-        .offset(skip)
-        .limit(limit),
-      db
-        .select({ count: sql<number>`count(*)` })
-        .from(requestTable)
-        .where(where),
-    ]);
+      const [requests, countResult] = await Promise.all([
+        db
+          .select()
+          .from(requestTable)
+          .where(where)
+          .orderBy(sql`"createdAt" DESC`)
+          .offset(skip)
+          .limit(limit),
+        db
+          .select({ count: sql<number>`count(*)` })
+          .from(requestTable)
+          .where(where),
+      ]);
 
-    const total = Math.trunc(Number(String(countResult[0]?.count ?? 0)));
+      const total = Math.trunc(Number(String(countResult[0]?.count ?? 0)));
 
-    const nameMap = await resolveDisplayNames(
-      requests.map((r) => ({ addedBy: r.requestedBy })) as { addedBy: string }[]
-    );
+      const nameMap = await resolveDisplayNames(
+        requests.map((r) => ({ addedBy: r.requestedBy })) as { addedBy: string }[]
+      );
 
-    const formattedRequests = requests.map((r) => ({
-      ...formatRequest(r),
-      requestedByDisplayName: nameMap.get(r.requestedBy) ?? r.requestedBy,
-    }));
+      const formattedRequests = requests.map((r) => ({
+        ...formatRequest(r),
+        requestedByDisplayName: nameMap.get(r.requestedBy) ?? r.requestedBy,
+      }));
 
-    return {
-      items: formattedRequests,
-      pagination: {
-        page,
-        limit,
-        total,
-        totalPages: Math.ceil(total / limit),
+      return {
+        items: formattedRequests,
+        pagination: {
+          page,
+          limit,
+          total,
+          totalPages: Math.ceil(total / limit),
+        },
+      };
+    },
+    {
+      response: {
+        200: t.Object({
+          items: t.Array(t.Unknown()),
+          pagination: t.Object({
+            page: t.Number(),
+            limit: t.Number(),
+            total: t.Number(),
+            totalPages: t.Number(),
+          }),
+        }),
       },
-    };
-  })
+    }
+  )
   .post(
     '/',
     async ({ user, isAdmin, ...ctx }) => {
@@ -327,7 +343,7 @@ export const requestsPlugin = new Elysia({ prefix: '/requests' })
           }
 
           const playlistThumb = pm.videos[0]?.thumbnailUrl ?? '';
-          const now = new Date();
+          const now = new Date().toISOString();
           const [reqRow] = await db
             .insert(requestTable)
             .values({
@@ -489,7 +505,7 @@ export const requestsPlugin = new Elysia({ prefix: '/requests' })
         const enriched = { ...formatted, addedByDisplayName: displayName };
         emitSongAdded(enriched);
 
-        const now = new Date();
+        const now = new Date().toISOString();
         const [reqRow] = await db
           .insert(requestTable)
           .values({
@@ -592,7 +608,7 @@ export const requestsPlugin = new Elysia({ prefix: '/requests' })
         }
 
         const newStatus = body.status;
-        const closedAt = new Date();
+        const closedAt = new Date().toISOString();
         const reviewUser = user as { discordId: string; username: string; isAdmin: boolean };
 
         if (newStatus === 'denied') {

@@ -141,7 +141,10 @@ export const tagsPlugin = new Elysia({ prefix: '/tags' })
 
 ```ts
 // Before: ad-hoc casts scattered throughout each handler
-const guardErr = requireAuth({ user: ctx.user as never, isAdmin: ctx.isAdmin as boolean });
+const guardErr = requireAuth({
+  user: ctx.user as never,
+  isAdmin: ctx.isAdmin as boolean,
+});
 
 // After: single getAuth() helper per plugin, used at top of each handler
 function getAuth(ctx: Record<string, unknown>): AuthContext {
@@ -296,7 +299,49 @@ Replaced Valibot with Elysia's built-in TypeBox-based `t` validation system acro
 
 **Files changed:** All 20 `.elysia.ts` route files + `elysia-app.ts` + `package.json`.
 
-## Completed
+### Phase 9 — Custom Drizzle timestamp type (DB → wire type alignment) ✅
+
+Added a custom Drizzle `isoTimestamp` column type that stores timestamps as SQLite INTEGER (Unix ms) but returns ISO 8601 strings. This eliminates the pervasive `Date → string` conversion that previously required formatting helpers and `instanceof Date` branching in every handler that touched a `createdAt` column.
+
+**Why this matters for the Elysia migration:** With `mode: 'timestamp_ms'`, Drizzle's `$inferSelect` produced `Date` objects — incompatible with JSON serialization and Elysia response schemas (which expect `t.String()`). The custom type fixes this at the schema layer: Drizzle now returns ISO strings directly, handler return types match response schema types, and no runtime conversion is needed.
+
+```ts
+// schema.ts — one definition, used by all timestamp columns
+const isoTimestamp = customType<{
+  data: string; // TypeScript type (both insert and select)
+  driverData: number; // SQLite stores integers
+}>({
+  dataType() {
+    return 'integer';
+  },
+  fromDriver(value: number): string {
+    return new Date(value).toISOString();
+  },
+  toDriver(value: string): number {
+    return new Date(value).getTime();
+  },
+});
+
+// Applied to 8 columns across 5 tables:
+//   song.createdAt, playlist.createdAt, tag.createdAt,
+//   refreshToken.expiresAt, refreshToken.createdAt,
+//   songRequest.createdAt, songRequest.closedAt
+```
+
+**Cleanup enabled by this change:**
+
+- `formatSong()` simplified — `instanceof Date` check and `.toISOString()` call removed
+- `SerializedSong` and `SerializedPlaylist` types collapsed to `Song` / `Playlist` (no more `Date | string` unions)
+- 18 `.toISOString()` calls removed across 6 files
+- 8 dead `if (playlist instanceof Response) return playlist` blocks removed from `playlists.elysia.ts` (leftover from Phase 8 — `requirePlaylist` throws `ApiError`, these checks were unreachable)
+- 3 unused `existing` variables removed after dead `Response` checks
+- `auth.elysia.ts`: 4 `new Date()` insert/comparison values changed to `new Date().toISOString()` (the custom type expects string for inserts; ISO string comparison replaces Date comparison)
+- `requests.elysia.ts`: 3 `new Date()` insert values changed to `.toISOString()`
+- `playlistAccess.ts`: `PlaylistRow.createdAt` type changed from `Date` to `string`
+
+**On-disk format unchanged.** SQLite still stores integer timestamps — `toDriver` / `fromDriver` handle conversion transparently. No migration needed.
+
+**Stats:** 11 files changed, net -26 lines.
 
 ### Phase 7 — Replace `Record<string, unknown>` + `getAuth()` with shared derive function ✅
 
@@ -453,7 +498,10 @@ export function requirePlayer():
   { ok: true; player: GuildPlayer } | { ok: false; response: Response } {
   const player = getPlayer(getGuildId());
   if (!player) {
-    return { ok: false, response: json({ error: 'The bot is not connected.' }, 409) };
+    return {
+      ok: false,
+      response: json({ error: 'The bot is not connected.' }, 409),
+    };
   }
   return { ok: true, player };
 }
@@ -492,49 +540,32 @@ return { message: 'Queue cleared.' };
 
 **Stats:** 10+ helpers refactored. 6 route files updated. ~350 lines net reduction across the codebase.
 
+### Phase 6b — Add response schemas to get full Eden type safety ✅
+
+Eden's proxy path resolution works, but response bodies were typed as `Response` because most server routes didn't have explicit `response` schemas. Response schemas have been added to all endpoints that Elysia 1.4.29 supports.
+
+**Elysia 1.4.29 NoInfer limitation:** When a `response` schema is present, Elysia wraps the handler's context types in `NoInfer<>`. This works for simple handler signatures (`async () =>`, `({ body })` without path params, `({ params })` for GET routes with simple return types). It fails for:
+
+- Handlers with complex return types (e.g., arrays of multi-field objects with optional/nullable fields) — TypeScript cannot match the complex shape against `NoInfer<Schema>`
+- Routes with path params AND body schemas (PATCH `/:id` + body + response) — both `params` and `body` get NoInfer'd
+- Handlers that destructure `{ request }` or use `{ ...ctx }` with complex return types
+
+**Added response schemas to 28 endpoints across 6 route groups:**
+
+- **`setup.elysia.ts`** — 6 endpoints (all): GET `/`, GET `/status`, GET `/guilds`, GET `/roles`, GET `/channels`, POST `/complete`
+- **`tags.elysia.ts`** — 3 endpoints: GET `/` (existing), GET `/:nameLower`, GET `/:nameLower/songs`. PATCH `/:nameLower` skipped (path params + body)
+- **`songs.elysia.ts`** — 4 endpoints: GET `/` (`t.Unknown()` due to complex Song type), POST `/bulk-delete`, POST `/bulk-tag`, POST `/bulk-edit`. PATCH `/:id` skipped (path params + body)
+- **`playlists.elysia.ts`** — 3 endpoints: GET `/` (paginated, `t.Unknown()`), POST `/` (create), GET `/:id` (`t.Unknown()`). Mutations with path params skipped
+- **`player.elysia.ts`** — 1 endpoint: GET `/queue` (`t.Unknown()`). Mutations skipped
+- **`requests.elysia.ts`** — 2 endpoints: POST `/preview` (`t.Unknown()`), GET `/` (paginated). POST `/` and PATCH `/:id` skipped
+- **`auth`** — skipped entirely (raw Response objects, redirects, cookie headers)
+
+**Schema design:** Where precise schemas (e.g., `TagItem`, `SetupStatus`) can be used without triggering the NoInfer limitation, they are. For endpoints with complex nested types, `t.Unknown()` is used — this still enables Eden's `{ data, error }` discriminator but doesn't enforce exact response shapes at the type level.
+
+**Prerequisites:** Phase 7b ✅ (guards in `onBeforeHandle`), Phase 8 ✅ (handlers return plain data, no `Response | data` unions), Phase 9 ✅ (DB types match wire types).
+
 ## Remaining work
 
-### Phase 6b — Add response schemas to get full Eden type safety
-
-**Status: Blocked on type alignment (13 of 20 route groups done, 1 partial)**
-
-Eden's proxy path resolution works, but response bodies are still typed as `Response` because most server routes don't have explicit `response` schemas. `routes.ts` still needs `$ = api as any` until response schemas are added to all endpoints.
-
-**What's been done:**
-
-- **New file:** `packages/server/src/lib/responseSchemas.ts` — shared Elysia `t` schemas for all response types (Song, QueuedSong, QueueState, User, TagItem, filter settings, GeneralSettings, PermissionsResponse, RequestPreview, Setup types, Playlist types, PaginationMeta).
-- **13 route files updated with response schemas:**
-  - All 10 audio filter settings routes (compressor, equalizer, karaoke, lowPass, distortion, rotation, timescale, tremolo, vibrato, channelMix) — GET + PATCH
-  - `filters.elysia.ts` — batched GET
-  - `generalSettings.elysia.ts` — GET + PATCH
-  - `permissions.elysia.ts` — GET /, GET /me, PATCH /
-- **1 partial schema added:** `tags.elysia.ts` — GET `/` has `{ response: { 200: t.Object({ tags: t.Array(TagItem) }) } }` (the only handler that doesn't access params/body/derive context).
-- Handlers in these files return plain objects (not `Response.json()`) for success cases — Elysia serializes and `onAfterHandle` adds security headers.
-- Phase 8 ✅ eliminated all `Response | data` unions from the remaining route handlers — every handler now returns plain data or throws `ApiError`.
-
-**What's remaining:**
-
-7 route groups still need response schemas: `tags` (4 of 5 endpoints), `songs`, `player`, `playlists`, `requests`, `setup`, `auth`.
-
-**Why they can't be added yet:**
-
-Attempting to add response schemas to handlers that use Elysia's typed params (e.g., `/:nameLower`), destructure `.derive()` context, or return raw Drizzle query results causes tsgo TS2345 errors. There are three interacting issues:
-
-1. **`.derive()` + response schemas don't mix with params destructuring.** Elysia wraps handler parameter types in `NoInfer<>` when a response schema is present. This breaks handlers that destructure `{ params }` or `{ body }` from the context — the inferred types become opaque and tsgo can't resolve them. This is the same `.use()` boundary issue from Phase 7: derive types don't propagate through schema-typed handler registrations. The 13 filter settings routes work because they don't destructure params or derive context — they use simple `() => data` handlers.
-
-2. **DB row types don't match response schema types.** Handlers return raw Drizzle `$inferSelect` rows (e.g., `createdAt: Date`, `tags: string[] | null`) that don't match the Elysia schema types (e.g., `createdAt: t.String()`, `tags: t.Optional(t.Array(t.String()))`). The filter settings routes avoid this by returning explicitly-typed objects built from DB values (e.g., `fetchCompressorSettings()` returns `CompressorSettings` matching the schema). The remaining routes would need similar mapping through `formatSong()` / `formatPlaylist()` helpers.
-
-3. **Auth plugin uses raw `Response` objects.** Redirects (`Response.redirect()`), custom cookie headers, and `new Response(null, { status: 302 })` are fundamentally incompatible with response schemas. Auth should remain schema-free.
-
-**Path forward:**
-
-1. Map DB return values through formatting helpers so they match schema types.
-2. For handlers that need derive context (user/isAdmin) AND params/body AND a response schema, use Elysia's `.resolve()` or inline the derive logic as a fallback.
-3. Add response schemas incrementally, verifying each one before moving on.
-4. Skip auth — it's inherently response-schema-incompatible.
-
-**Web client cleanup (deferred until server schemas are complete):**
+### Web client cleanup (deferred)
 
 After all response schemas are in place, `routes.ts` (~582 lines) and `shared/api.ts` (~120 lines) can be deleted — web components consume Eden directly with full type inference. The `$ = api as any` workaround is eliminated.
-
-**Prerequisites:** Phase 7b ✅ (guards in `onBeforeHandle`), Phase 8 ✅ (handlers return plain data, no `Response | data` unions).

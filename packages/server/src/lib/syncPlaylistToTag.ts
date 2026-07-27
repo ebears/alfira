@@ -92,7 +92,7 @@ export async function reSyncPlaylistsForTags(tagNamesLower: string[]): Promise<v
 
     emitPlaylistUpdated({
       ...updatedPl,
-      createdAt: updatedPl.createdAt.toISOString(),
+      createdAt: updatedPl.createdAt,
       _count: { songs: count ?? 0 },
     });
   }

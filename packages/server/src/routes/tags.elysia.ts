@@ -4,7 +4,7 @@ import { Elysia, t } from 'elysia';
 import { deriveAuth } from '../lib/authDerive';
 import { authGuard, createAdminOrPermissionGuard } from '../lib/elysia-guards';
 import { ApiError } from '../lib/errors';
-import { TagItem } from '../lib/responseSchemas';
+import { Song as SongSchema, TagItem } from '../lib/responseSchemas';
 import { emitPlaylistUpdated } from '../lib/socket';
 import { db, tables } from '../shared/db';
 
@@ -105,19 +105,27 @@ export const tagsPlugin = new Elysia({ prefix: '/tags' })
     },
     { response: { 200: t.Object({ tags: t.Array(TagItem) }) } }
   )
-  .get('/:nameLower', ({ params }) => {
-    const nameLower = (params as Record<string, string>).nameLower as string;
-    const tag = fetchTag(nameLower);
-    if (!tag) {
-      throw new ApiError(404, 'Tag not found.');
-    }
+  .get(
+    '/:nameLower',
+    ({ params }) => {
+      const nameLower = (params as Record<string, string>).nameLower as string;
+      const tag = fetchTag(nameLower);
+      if (!tag) {
+        throw new ApiError(404, 'Tag not found.');
+      }
 
-    return { tag };
-  })
-  .get('/:nameLower/songs', ({ params }) => {
-    const nameLower = (params as Record<string, string>).nameLower as string;
-    return { songs: fetchSongsByTag(nameLower) };
-  })
+      return { tag };
+    },
+    { response: { 200: t.Object({ tag: TagItem }) } }
+  )
+  .get(
+    '/:nameLower/songs',
+    ({ params }) => {
+      const nameLower = (params as Record<string, string>).nameLower as string;
+      return { songs: fetchSongsByTag(nameLower) };
+    },
+    { response: { 200: t.Object({ songs: t.Array(SongSchema) }) } }
+  )
   .use(createAdminOrPermissionGuard('tags.manage'))
   .patch(
     '/:nameLower',
@@ -174,7 +182,6 @@ export const tagsPlugin = new Elysia({ prefix: '/tags' })
     for (const updatedPl of updatedPlaylists) {
       emitPlaylistUpdated({
         ...updatedPl,
-        createdAt: updatedPl.createdAt.toISOString(),
       });
     }
 

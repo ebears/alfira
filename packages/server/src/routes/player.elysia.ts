@@ -113,29 +113,33 @@ const ReorderSchema = t.Object({
 export const playerPlugin = new Elysia({ prefix: '/player' })
   .derive(deriveAuth)
   .use(authGuard)
-  .get('/queue', () => {
-    const player = getPlayer(getGuildId());
+  .get(
+    '/queue',
+    () => {
+      const player = getPlayer(getGuildId());
 
-    if (!player) {
-      return {
-        isPlaying: false,
-        isPaused: false,
-        isConnectedToVoice: lavalink.isGuildConnected(getGuildId()),
-        loopMode: 'off',
-        isShuffled: false,
-        currentSong: null,
-        priorityQueue: [],
-        queue: [],
-        trackStartedAt: null,
-        nextTrack: null,
-        timescaleSpeed: 1,
-        nodeLinkPosition: null,
-        nodeLinkTime: null,
-      };
-    }
+      if (!player) {
+        return {
+          isPlaying: false,
+          isPaused: false,
+          isConnectedToVoice: lavalink.isGuildConnected(getGuildId()),
+          loopMode: 'off',
+          isShuffled: false,
+          currentSong: null,
+          priorityQueue: [],
+          queue: [],
+          trackStartedAt: null,
+          nextTrack: null,
+          timescaleSpeed: 1,
+          nodeLinkPosition: null,
+          nodeLinkTime: null,
+        };
+      }
 
-    return player.getQueueState();
-  })
+      return player.getQueueState();
+    },
+    { response: { 200: t.Unknown() } }
+  )
   .use(voiceGuard)
 
   .guard({}, (app) =>
@@ -212,10 +216,7 @@ export const playerPlugin = new Elysia({ prefix: '/player' })
           const player = await resolveOrAutoJoinPlayer(discordId);
 
           const requestedBy = (user as { username: string }).username;
-          const queuedSong = toQueuedSong(
-            { ...song, createdAt: song.createdAt.toISOString() },
-            requestedBy
-          );
+          const queuedSong = toQueuedSong({ ...song }, requestedBy);
           queuedSong.id = `queue-${Date.now()}-${song.id}`;
 
           await player.addToPriorityQueue(queuedSong);
@@ -337,9 +338,7 @@ export const playerPlugin = new Elysia({ prefix: '/player' })
           player.setLoopMode(targetLoopMode);
 
           const requestedBy = (user as { username: string }).username;
-          const queuedSongs = dbSongs.map((song) =>
-            toQueuedSong({ ...song, createdAt: song.createdAt.toISOString() }, requestedBy)
-          );
+          const queuedSongs = dbSongs.map((song) => toQueuedSong({ ...song }, requestedBy));
 
           if (startFromSongId) {
             await player.replaceQueueAndPlay(queuedSongs);
