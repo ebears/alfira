@@ -1,9 +1,9 @@
-import { configureApiClient } from '@alfira/server/shared/api';
-
-import { client } from './client';
-
-// Configure the shared API service with the web client
-configureApiClient(client);
+// ---------------------------------------------------------------------------
+// API barrel — everything components need to call the server.
+//
+// Runtime functions come from the Eden-backed routes module.
+// Types still come from the server's shared/api.ts (which is now type-only).
+// ---------------------------------------------------------------------------
 
 export type { GeneralSettings, SetupChannel, SetupGuild, SetupRole } from '@alfira/server/shared';
 
@@ -13,9 +13,9 @@ export type {
   MyPermissionsResponse,
   PermissionsResponse,
 } from '@alfira/server/shared/api';
-// ---------------------------------------------------------------------------
-// Re-export everything from shared API with web-compatible names
-// ---------------------------------------------------------------------------
+
+export { ApiError, trySilentRefresh } from './eden';
+
 export {
   addSongToPlaylist,
   addToPriorityQueue,
@@ -24,45 +24,65 @@ export {
   bulkEditSongs,
   bulkRemoveSongsFromPlaylist,
   bulkTagSongs,
-  type CreateRequestResult,
   cancelRequest,
+  clearQueue,
   completeSetup,
   createPlaylist,
   createRequest,
   deletePlaylist,
   deleteSong,
+  deleteTag,
+  demoteQueueSong,
   denyRequest,
-  type FetchRequestsResult,
   fetchGeneralSettings,
   fetchLogout as logout,
-  // Auth
   fetchMe as getMe,
   fetchMyPermissions,
   fetchPermissions,
   fetchPlaylistPage as getPlaylistPage,
-  // Playlists
   fetchPlaylistsPage as getPlaylistsPage,
-  // Requests
+  fetchQueueState,
   fetchRequests,
-  // Setup
   fetchSetupChannels,
   fetchSetupGuilds,
   fetchSetupRoles,
   fetchSetupStatus,
-  // Songs
   fetchSongsPage as getSongsPage,
-  // Version
+  fetchTagSongs,
+  fetchTags,
   fetchVersion,
+  leaveVoice,
   overridePlay,
   previewRequest,
+  promoteQueueSong,
   quickAddPlaylistToQueue,
   quickAddToQueue,
-  type RequestCreateData,
+  removeQueueSong,
   removeSongFromPlaylist,
   renamePlaylist,
   reorderPlaylistSongs,
+  reorderQueueSongs,
+  seek,
+  setLoopMode,
+  shuffleQueue,
+  skipTrack,
   startPlayback,
+  togglePause,
   togglePlaylistVisibility,
+  unshuffleQueue,
   updateGeneralSettings,
   updatePermission,
-} from '@alfira/server/shared/api';
+  updatePlaylistTag,
+  updateSong,
+  updateTag,
+} from './routes';
+
+export type {
+  CompleteSetupPayload,
+  CreateRequestResult,
+  FetchRequestsResult,
+  GeneralSettingsUpdate,
+  RequestCreateData,
+  SongUpdateData,
+  TagItem,
+} from './routes';

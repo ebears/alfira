@@ -161,13 +161,33 @@ All 19 `.elysia.ts` route files on `apiApp`: `tags`, `channelMix`, `compressor`,
 
 ## Remaining work
 
-### Phase 5b — Eden treaty on the web client
+### Phase 5b — Eden treaty on the web client ✅
 
-- Create `web/src/api/eden.ts` — Eden treaty client with auth refresh logic in the `fetcher` option and token refresh in `onResponse`
-- Replace `web/src/api/client.ts` (~200 lines) + `web/src/api/api.ts` (~80 lines) with the Eden-based client
-- Replace `packages/server/src/shared/api.ts` (~400 lines) — the typed API functions become thin wrappers calling Eden under the hood, or get replaced entirely once components use Eden directly
-- Update web components to use Eden's typed proxy instead of shared API functions
-- Delete `shared/api.ts` once no longer referenced
+**New files:**
+
+- `packages/web/src/api/eden.ts` — Eden Treaty client with custom `fetcher` that handles `credentials: 'include'`, 10-second timeout, auth token refresh on 401 with concurrent request queuing, rate limit header extraction, and redirect-to-login on hard failures. Exports `api` (the treaty client), `ApiError` class, and `trySilentRefresh()` for AuthContext's initial mount check.
+- `packages/web/src/api/routes.ts` — all typed API functions (~500 lines) moved from `shared/api.ts`, rewritten to use Eden's proxy chain (`$.api.player.queue.get()`) for URL construction. Each function unwraps the `{ data, error }` response shape, throwing `ApiError` on error.
+
+**Modified files:**
+
+- `packages/web/src/api/api.ts` — unified barrel: runtime functions from `./routes`, `ApiError`/`trySilentRefresh` from `./eden`, types from `@alfira/server/shared/api`.
+- `packages/server/src/shared/api.ts` — stripped to type-only exports (~120 lines of interfaces/types). All runtime functions removed.
+- `packages/server/src/shared/index.ts` — `export * from './api'` → `export type * from './api'` (only types remain).
+- `oxlint.config.ts` — added `routes.ts` overrides for tsgo workarounds (`no-explicit-any`, `no-unsafe-*`, `promise/prefer-await-to-then`). Updated `no-console`/`no-await-in-loop`/`no-unnecessary-condition` overrides from deleted `client.ts` → `eden.ts`.
+- 6 component/context files — import paths updated from `@alfira/server/shared/api` → `../api/api`:
+  - `pages/TagsPage.tsx`, `context/TagsContext.tsx`, `context/PlayerContext.tsx`
+  - `pages/PlaylistDetailPage.tsx`, `components/SongEditPanel.tsx`, `components/BulkEditModal.tsx`
+  - `pages/PlaylistsPage.tsx`
+- `utils/api.ts` + `utils/api.test.ts` — `ApiError` import from `../api/client` → `../api/eden`
+- `context/AuthContext.tsx` — `trySilentRefresh` import from `../api/client` → `../api/eden`
+
+**Deleted files:**
+
+- `packages/web/src/api/client.ts` (~285 lines) — hand-rolled fetch wrapper replaced by Eden's custom `fetcher`.
+
+**Test results:** 306 pass, 0 fail. Both packages build cleanly.
+
+**Net:** 771 lines deleted, 114 added (reduction of 657 lines).
 
 ### Phase 5c — Auth plugin conversion (optional)
 
@@ -185,14 +205,27 @@ authApp.use(authPlugin);
 
 This is low priority — the auth plugin works correctly as-is and has a single consumer.
 
+### Phase 6 — Remove `shared/api.ts` entirely
+
+Once tsgo supports Elysia's generic types, the web client can consume Eden's typed proxy directly. At that point:
+
+- Components import from Eden's `treaty<App>()` directly, with full type inference on paths, params, request bodies, and response shapes.
+- `packages/web/src/api/routes.ts` is deleted — the typed wrappers are no longer needed.
+- `packages/server/src/shared/api.ts` is deleted — type definitions live in their canonical locations (`types.ts`, or are inferred from Eden).
+- `packages/web/src/api/api.ts` simplifies to just re-exporting Eden types + `ApiError`.
+
+Until then, `shared/api.ts` remains as a type-only barrel and `routes.ts` provides the typed API surface that components consume.
+
 ### Future — Remove tsgo workarounds
 
 Once tsgo (the Go-based TypeScript compiler in oxlint) improves its handling of Elysia's deeply-nested generic types:
 
-- Remove `as never` casts from handler registrations
-- Remove `as unknown as Elysia` from plugin exports
+- Remove `as never` casts from handler registrations in `.elysia.ts` route files
+- Remove `as unknown as Elysia` from plugin exports in `.elysia.ts` files
+- Remove `as any` cast on the Eden proxy (`$`) in `routes.ts`
 - Restore proper Elysia context destructuring (`{ user, isAdmin, params }`) in handlers
-- Enable full `treaty<App>()` type inference for Eden
+- Remove oxlint overrides for `no-explicit-any`, `no-unsafe-*`, `promise/prefer-await-to-then` in `routes.ts`
+- Enable full `treaty<App>()` type inference for Eden (Phase 6)
 
 ## Known issues
 

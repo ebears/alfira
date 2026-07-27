@@ -1,13 +1,13 @@
 import { describe, expect, mock, test } from 'bun:test';
 
-// api.ts imports ApiError from ../api/client, which imports updateRateLimit
+// api.ts imports ApiError from ../api/eden, which imports updateRateLimit
 // from ../hooks/useRateLimit. Mock the hook to avoid pulling in React.
 void mock.module('../hooks/useRateLimit', () => ({
   updateRateLimit: mock(() => {}),
 }));
 
 const { apiErrorMessage, isRateLimitError, notifyUnlessRateLimit } = await import('./api');
-const { ApiError } = await import('../api/client');
+const { ApiError } = await import('../api/eden');
 
 describe('apiErrorMessage', () => {
   test('returns the message from an ApiError', () => {

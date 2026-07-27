@@ -1,4 +1,4 @@
-export * from './api';
+export type * from './api';
 export { formatDuration } from './format';
 export { toQueuedSong } from './queue';
 export { fisherYatesShuffle } from './shuffle';

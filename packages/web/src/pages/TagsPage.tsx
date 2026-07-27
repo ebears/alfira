@@ -1,8 +1,8 @@
-import { deleteTag, fetchTagSongs, fetchTags, updateTag } from '@alfira/server/shared/api';
 import { type Song } from '@alfira/server/shared/types';
 import { MagnifyingGlassIcon, TagIcon, TrashIcon } from '@phosphor-icons/react';
 import { memo, useCallback, useEffect, useMemo, useState } from 'react';
 
+import { deleteTag, fetchTagSongs, fetchTags, updateTag } from '../api/api';
 import ConfirmModal from '../components/ConfirmModal';
 import EmptyState from '../components/EmptyState';
 import TagTicker from '../components/TagTicker';
@@ -116,7 +116,7 @@ export default function TagsPage() {
       const newTags = (song.tags ?? []).filter(
         (t) => t.toLowerCase() !== selected.nameLower.toLowerCase()
       );
-      const updated = await import('@alfira/server/shared/api').then((m) =>
+      const updated = await import('../api/api').then((m) =>
         m.updateSong(song.id, { tags: newTags })
       );
       setTagSongs((prev) => prev.filter((s) => s.id !== updated.id));

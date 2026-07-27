@@ -1,6 +1,5 @@
 import { type Playlist, type PlaylistDetail, type Song, type TagItem } from '@alfira/server/shared';
 import { type BulkEditData, type FetchSongsOptions } from '@alfira/server/shared/api';
-import { fetchTags, updatePlaylistTag } from '@alfira/server/shared/api';
 import {
   BombIcon,
   CaretLeftIcon,
@@ -23,12 +22,14 @@ import {
   bulkEditSongs,
   bulkRemoveSongsFromPlaylist,
   deletePlaylist,
+  fetchTags,
   getPlaylistPage,
   removeSongFromPlaylist,
   renamePlaylist,
   reorderPlaylistSongs,
   startPlayback,
   togglePlaylistVisibility,
+  updatePlaylistTag,
 } from '../api/api';
 import AddSongsModal from '../components/AddSongsModal';
 import BulkActionBar from '../components/BulkActionBar';
