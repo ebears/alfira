@@ -67,17 +67,35 @@ Together with `oxlint --deny-warnings`, these create a ratchet: the bar never go
 
 ---
 
-## Validation: Valibot
+## Validation: Elysia `t` Type System
 
-Runtime schema validation uses **[Valibot](https://valibot.dev/)** via `drizzle-valibot` for API input validation. Valibot was chosen over [Zod](https://zod.dev/) for consistency with the project's dependency philosophy.
+API input validation uses **[Elysia's built-in `t` (TypeSystem)](https://elysiajs.com/patterns/type-system.html)** rather than a standalone validation library. Elysia's type system is inspired by TypeBox and provides a fluent API for defining schemas that are both runtime validators and TypeScript type providers.
 
-Zod is the more established choice, and its API reads well. But Valibot is:
+```typescript
+import { t } from 'elysia';
 
-- **Modular and tree-shakeable.** Valibot's design means unused validators are eliminated at bundle time. This matters more for the frontend (where the shared types are imported) than the server, but consistency across packages is valuable.
-- **Smaller.** A direct consequence of the modular design — Valibot ships less code.
-- **Philosophically aligned with Drizzle.** Both are tree-shakeable, TypeScript-first, and minimal. Using Zod alongside Drizzle would have felt like mixing two different dependency philosophies.
+// Input validation on a route — auto-rejects mismatches with 422
+app.post('/api/songs', ({ body }) => { ... }, {
+  body: t.Object({
+    sourceUrl: t.String(),
+    title: t.Optional(t.String()),
+  }),
+});
 
-This is a consistency choice more than a strong conviction — Zod would have worked fine. But in a project that's deliberate about every dependency, Valibot fits the pattern better.
+// Response schemas for Eden type inference
+app.get('/api/songs', () => { ... }, {
+  response: t.Object({
+    songs: t.Array(SongSchema),
+    meta: PaginationMeta,
+  }),
+});
+```
+
+The previous Valibot-based validation was replaced during the Elysia migration. Elysia's `t` system was chosen because:
+
+- **No separate validation dependency.** Validation is part of the framework — the same `t` schemas define runtime validation, TypeScript types, and Eden client inference.
+- **Single source of truth.** One schema definition covers three concerns (route validation, TypeScript types, client-side inference) — no duplication between Valibot schemas, TypeScript interfaces, and API documentation.
+- **Eden integration.** Response schemas flow through to the frontend Eden Treaty client, giving components fully typed API responses without manual type declarations.
 
 ---
 
@@ -170,23 +188,80 @@ Every cut follows the same principle: if Bun provides it or a small amount of cu
 
 ---
 
-## API Layer: Bun Native HTTP (No Framework)
+## API Layer: Elysia
 
-The API server is `Bun.serve()` with a single `fetch` handler that routes by URL prefix. No Express, Hono, or any HTTP framework — just 11 route handlers, each a plain async function:
+The API server uses **[Elysia](https://elysiajs.com/)**, a Bun-native web framework with first-class TypeScript support. Elysia wraps `Bun.serve()` and provides ergonomic routing, validation, middleware, and WebSocket handling — all with end-to-end type inference.
 
-```typescript
-(ctx: RouteContext, request: Request) => Promise<Response>;
+### Why Elysia over raw `Bun.serve()`?
+
+The project originally used `Bun.serve()` directly with prefix-based routing — no framework, just 11 async route handlers. That worked well at the start, but as the API grew, several pain points emerged:
+
+- **Manual routing.** Adding a route meant editing a monolithic `fetch` handler in `index.ts` and wiring up context, auth, and security headers by hand.
+- **No type-safe API contract.** Route handlers returned `Response` objects, which erased type information. The frontend client had to manually declare types for every endpoint.
+- **Ad-hoc validation.** Input validation used Valibot separately from route definitions — two places to update when schemas changed.
+- **Inconsistent error handling.** Some routes returned `json({ error }, status)`, others threw. No central error boundary.
+
+Elysia solved all of these:
+
+- **Plugin-based routing.** Routes are [Elysia plugins](https://elysiajs.com/essential/plugin.html) (`*.elysia.ts` files), each registering its own routes on a scoped instance. Adding a route means creating or extending a plugin — no central routing table.
+- **Eden Treaty.** The [Eden Treaty](https://elysiajs.com/eden/treaty/overview.html) client generates fully typed API functions from Elysia's route definitions. Frontend code gets autocomplete and type checking on every API call — no hand-written type declarations.
+- **Built-in validation via `t`.** Input schemas are defined inline with routes using Elysia's `t` type system. Invalid requests get 422 responses automatically. Response schemas provide runtime coercion and feed into Eden's type inference.
+- **Central error handling.** `ApiError` (a lightweight error class) is thrown from route handlers and caught by Elysia's `onError` hook — no `instanceof` checks, no manual status code management.
+
+### Architecture (`elysia-app.ts`)
+
+The HTTP layer is defined in `packages/server/src/elysia-app.ts` as a composition of three Elysia instances:
+
+```
+root app (port 3001)
+├── CORS middleware
+├── apiApp (prefix: /api)
+│   ├── onAfterHandle → security headers
+│   ├── onError → ApiError → JSON response
+│   ├── GET /api/version
+│   ├── tagsPlugin, songsPlugin, playlistsPlugin, …  (all route plugins)
+│   └── playerPlugin, setupPlugin, permissionsPlugin, …
+├── authApp (prefix: /auth)
+│   └── authPlugin (OAuth2 login/callback/logout)
+├── GET /health
+├── WS /ws (player state push)
+└── GET /* (static assets + SPA fallback)
 ```
 
-Bun's native `Request`/`Response` API is fully standards-compliant. At this scale (prefix-based routing, single middleware function for security headers), a framework would add abstraction without removing complexity.
+### Auth & Guards
+
+Authentication is handled by the `authPlugin` (`lib/elysia-guards.ts`) using Elysia's [macro system](https://elysiajs.com/patterns/macro.html). Guards are opt-in annotations on routes:
+
+```typescript
+// Route requires authentication
+.get('/profile', handler, { isAuth: true })
+// Route requires admin
+.get('/admin', handler, { isAdmin: true })
+// Route requires granular permission (super-admins bypass)
+.patch('/manage', handler, { hasPermission: 'queue.manage' })
+// Route requires user in a voice channel
+.post('/control', handler, { isVoiceChannel: true })
+```
+
+Each guard macro resolves the session cookie, verifies the JWT, and either populates `{ user }` into context or short-circuits with the appropriate 401/403/409 response. Macros compose — `isVoiceChannel` extends `isAuth`, so a route only needs to declare the most specific guard.
+
+For plugins where every route requires auth, `requireAuth` (a scoped `resolve`) applies auth to all routes at once:
+
+```typescript
+new Elysia()
+  .use(authPlugin)
+  .use(requireAuth)
+  .get('/songs', handler) // auth required (scoped)
+  .get('/playlists', handler); // auth required (scoped)
+```
 
 ### Real-Time Updates: Receive-Only WebSocket
 
-Player state changes are broadcast to the web UI via a WebSocket pipeline. The design is intentionally minimal:
+Player state changes are broadcast via Elysia's `.ws()` handler. The design remains intentionally minimal:
 
-- **The client never sends messages.** The WebSocket is a push channel for player state. All mutations go through REST. This keeps the protocol one-directional.
-- **Auth before upgrade.** The session cookie is validated before the WebSocket connection is accepted. Failures return 401 without an upgrade. No post-upgrade auth handshake.
-- **No external state store.** Player state lives in-process. When `GuildPlayer` fires an update, it pushes directly to connected WebSocket clients. No Redis, no pub/sub, no message queue. This is a deliberate tradeoff: the scope is one guild, one process — shared memory replaces infrastructure.
+- **The client never sends messages.** The WebSocket is a push channel for player state. All mutations go through REST.
+- **Auth before accept.** The session cookie is validated in the `open` handler. Unauthenticated connections are closed immediately.
+- **No external state store.** Player state lives in-process. When `GuildPlayer` fires an update, it pushes directly to connected WebSocket clients. No Redis, no pub/sub, no message queue.
 
 ---
 
@@ -258,7 +333,7 @@ These are the principles that drive every tool choice and architectural decision
 3. **Single-process by design.** Bot, API, and WebSocket share memory in one Bun process. Real-time updates reach the web UI without Redis, message queues, or inter-container networking. This is a deliberate tradeoff: the scope is a single self-hosted community, not multi-tenant SaaS.
 4. **Web UI as primary interface.** The Discord bot is the playback engine; the web app is the control plane. This avoids Discord's rate limits and UX constraints while enabling features that wouldn't be possible through chat commands alone.
 5. **Audio is audio — no assumptions about content.** Works equally as a music bot or tabletop audio player. The data model (songs, playlists, tags) is content-type-agnostic: a pop song and an hour-long dungeon ambience are the same shape.
-6. **Type safety end-to-end.** TypeScript from database schema to frontend components. Type-aware linting on every file. Shared types between packages. Runtime validation with Valibot. The type system is the first line of defense against bugs.
+6. **Type safety end-to-end.** TypeScript from database schema to frontend components. Type-aware linting on every file. Shared types between packages. Runtime validation with Elysia's built-in `t` type system. The type system is the first line of defense against bugs.
 7. **Quality ratchet.** Lint rules only get stricter. Warnings are errors. Stale suppressions fail the build. The bar never goes down.
 
 Here's how each principle maps to specific decisions in this document:
@@ -270,5 +345,5 @@ Here's how each principle maps to specific decisions in this document:
 | Single-process by design                | One Bun process for bot + API + WebSocket, shared memory for player state, no Redis                           |
 | Web UI as primary interface             | React SPA as the control plane, receive-only WebSocket, Discord bot as pure playback engine                   |
 | Audio is audio                          | Content-type-agnostic data model, source resolution delegated to NodeLink                                     |
-| Type safety end-to-end                  | oxlint with tsgo, Valibot, `@alfira/server/shared` cross-package type contracts                               |
+| Type safety end-to-end                  | oxlint with tsgo, Elysia `t` validation, `@alfira/server/shared` cross-package type contracts                 |
 | Quality ratchet                         | `--deny-warnings`, `reportUnusedDisableDirectives: 'error'`, ~120 lint rules                                  |
