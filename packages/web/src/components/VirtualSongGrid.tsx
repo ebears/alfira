@@ -44,6 +44,8 @@ interface GridSongItem {
   isPlaying: boolean;
   selectionMode: boolean;
   isSelected: boolean;
+  /** Included so masonic re-renders cards when admin view toggles. */
+  isAdminView: boolean;
 }
 
 // ---------------------------------------------------------------------------
@@ -162,6 +164,11 @@ export const VirtualSongGrid = memo(function VirtualSongGrid({
   // lets masonic detect changes and update cards in-place (same itemKey =
   // no unmount/remount flash). The GridCard render component stays
   // memoized with empty deps so its identity is stable across re-renders.
+  // isAdminView is included in GridSongItem so masonic re-renders cards
+  // when the admin/user view toggles. The gridItems array reference must
+  // change for masonic to detect the update (keys alone don't trigger
+  // re-renders). Card no longer changes element type when hoverable flips,
+  // so this re-render won't cause artwork flashes.
   const gridItems: GridSongItem[] = useMemo(
     () =>
       items.map((song) => ({
@@ -169,8 +176,9 @@ export const VirtualSongGrid = memo(function VirtualSongGrid({
         isPlaying: playingId === song.id,
         selectionMode,
         isSelected: isSelected?.(song.id) ?? false,
+        isAdminView,
       })),
-    [items, playingId, selectionMode, isSelected]
+    [items, playingId, selectionMode, isSelected, isAdminView]
   );
 
   // ── Grid card renderer (stable component identity via refs) ─────────
