@@ -117,7 +117,7 @@ export function createApp() {
 
   const authApp = new Elysia({ prefix: '/auth' }).use(authPlugin);
 
-  const app = new Elysia()
+  const app = new Elysia({ systemRouter: true, aot: true })
     .derive(deriveAuth)
     .use(apiApp)
     .use(authApp)

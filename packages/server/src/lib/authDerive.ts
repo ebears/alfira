@@ -2,21 +2,19 @@ import { verifySessionToken } from '../middleware/requireAuth';
 import { parseCookies } from './cookies';
 
 /**
- * Elysia derive function that adds user / isAdmin / cookies to the context.
+ * Elysia derive function that adds `user`, `isAdmin`, and `cookies` to context.
  *
  * Route plugins should call `.derive(deriveAuth)` directly so their handlers
- * receive typed `{ user, isAdmin, cookies }` destructuring.
+ * and composed guards receive `{ user, isAdmin, cookies }` at runtime.
  *
- * This must be called directly on the plugin's Elysia instance — NOT wrapped
- * in `.use()` — because Elysia's derive types do not propagate through
- * `.use()` boundaries (TypeScript resolves plugin handler types at definition
- * time, before the plugin is composed into a parent).
+ * The parameter is intentionally untyped (`any`) because an explicit Elysia
+ * `Context` annotation conflicts with Elysia's internal derive generic —
+ * tsgo reports TS2345. Removing the explicit type lets tsgo infer the
+ * derived property types via Elysia's own inference. The `no-unsafe-*` rules
+ * for this file are suppressed in oxlint.config.ts.
  *
- * The parameter is typed `any` because an explicit `{ cookie, request }`
- * annotation conflicts with Elysia's internal derive generic — tsgo reports
- * TS2345. Removing the explicit return type lets tsgo infer the derived
- * property types via Elysia's own inference. The `no-unsafe-*` rules for this
- * file are suppressed in oxlint.config.ts.
+ * Handlers that need typed access to user should cast ctx.user with the
+ * `User` type from `../shared` (which is the return type of verifySessionToken).
  */
 export function deriveAuth({ cookie, request }: any) {
   const raw = cookie.session?.value;

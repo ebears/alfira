@@ -1,7 +1,7 @@
 import { and, eq, inArray } from 'drizzle-orm';
 import { Elysia } from 'elysia';
 
-import { type PermissionAction } from '../shared';
+import { type PermissionAction, type User } from '../shared';
 import { db, tables } from '../shared/db';
 import { getClient, getUserVoiceChannel } from './gatewayState';
 
@@ -11,14 +11,7 @@ import { getClient, getUserVoiceChannel } from './gatewayState';
 // ---------------------------------------------------------------------------
 
 export interface AuthContext {
-  user: {
-    discordId: string;
-    username: string;
-    avatar: string | null;
-    isAdmin: boolean;
-    isSetupAdmin?: boolean;
-    roles?: string[];
-  } | null;
+  user: User | null;
   isAdmin: boolean;
 }
 
@@ -27,8 +20,8 @@ export interface AuthContext {
 // Compose with `.use(authGuard)` on any plugin that calls `.derive(deriveAuth)`.
 // ---------------------------------------------------------------------------
 
-export const authGuard = new Elysia({ seed: 'auth-guard' }).onBeforeHandle((ctx) => {
-  const { user } = ctx as unknown as { user: AuthContext['user'] };
+export const authGuard = new Elysia({ name: 'auth-guard' }).onBeforeHandle((ctx) => {
+  const { user } = ctx as unknown as { user: User | null };
   if (!user) {
     return Response.json(
       { error: 'Not authenticated. Please log in at /auth/login.' },
@@ -42,7 +35,7 @@ export const authGuard = new Elysia({ seed: 'auth-guard' }).onBeforeHandle((ctx)
 // Must be composed after authGuard.
 // ---------------------------------------------------------------------------
 
-export const adminGuard = new Elysia({ seed: 'admin-guard' }).onBeforeHandle((ctx) => {
+export const adminGuard = new Elysia({ name: 'admin-guard' }).onBeforeHandle((ctx) => {
   const { isAdmin } = ctx as unknown as { isAdmin: boolean };
   if (!isAdmin) {
     return Response.json({ error: 'Admin access required.' }, { status: 403 });
@@ -56,9 +49,9 @@ export const adminGuard = new Elysia({ seed: 'admin-guard' }).onBeforeHandle((ct
 // ---------------------------------------------------------------------------
 
 export function createPermissionGuard(permission: PermissionAction): Elysia {
-  return new Elysia({ seed: `perm-guard:${permission}` }).onBeforeHandle((ctx) => {
+  return new Elysia({ name: `perm-guard:${permission}` }).onBeforeHandle((ctx) => {
     const { user, isAdmin } = ctx as unknown as {
-      user: AuthContext['user'];
+      user: User | null;
       isAdmin: boolean;
     };
 
@@ -109,9 +102,13 @@ export function createPermissionGuard(permission: PermissionAction): Elysia {
 
 export function createAdminOrPermissionGuard(permission?: PermissionAction): Elysia {
   if (permission) {
-    return new Elysia().use(authGuard).use(createPermissionGuard(permission)) as unknown as Elysia;
+    return new Elysia({ name: `admin-or-perm:${permission}` })
+      .use(authGuard)
+      .use(createPermissionGuard(permission)) as unknown as Elysia;
   }
-  return new Elysia().use(authGuard).use(adminGuard) as unknown as Elysia;
+  return new Elysia({ name: 'admin-or-perm:admin' })
+    .use(authGuard)
+    .use(adminGuard) as unknown as Elysia;
 }
 
 // ---------------------------------------------------------------------------
@@ -121,7 +118,7 @@ export function createAdminOrPermissionGuard(permission?: PermissionAction): Ely
 // Must be composed after authGuard so `user` is guaranteed non-null.
 // ---------------------------------------------------------------------------
 
-export const voiceGuard = new Elysia({ seed: 'voice-guard' }).onBeforeHandle((ctx) => {
+export const voiceGuard = new Elysia({ name: 'voice-guard' }).onBeforeHandle((ctx) => {
   const gateway = getClient();
   if (!gateway || !gateway.isReady()) {
     return Response.json(
@@ -130,7 +127,7 @@ export const voiceGuard = new Elysia({ seed: 'voice-guard' }).onBeforeHandle((ct
     );
   }
 
-  const { user } = ctx as unknown as { user: AuthContext['user'] };
+  const { user } = ctx as unknown as { user: User | null };
   const discordId = user?.discordId;
   const voiceChannelId = getUserVoiceChannel(discordId ?? '');
   if (!voiceChannelId) {
@@ -146,10 +143,10 @@ export const voiceGuard = new Elysia({ seed: 'voice-guard' }).onBeforeHandle((ct
 // or 403 if the user lacks the isSetupAdmin flag.
 // ---------------------------------------------------------------------------
 
-export const setupModeGuard = new Elysia({ seed: 'setup-mode-guard' })
+export const setupModeGuard = new Elysia({ name: 'setup-mode-guard' })
   .use(authGuard)
   .onBeforeHandle((ctx) => {
-    const { user } = ctx as unknown as { user: AuthContext['user'] };
+    const { user } = ctx as unknown as { user: User | null };
     if (!user?.isSetupAdmin) {
       return Response.json({ error: 'Setup has already been completed.' }, { status: 403 });
     }
