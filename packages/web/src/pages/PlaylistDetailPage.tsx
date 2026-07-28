@@ -211,8 +211,8 @@ export default function PlaylistDetailPage() {
             dir * (new Date(a.song.createdAt).getTime() - new Date(b.song.createdAt).getTime())
           );
         default:
-          // position — lower position first for asc, higher first for desc
-          return dir * (a.position - b.position);
+          // position — always ascending (canonical playlist order)
+          return a.position - b.position;
       }
     };
   }, [sort, order]);
@@ -856,6 +856,7 @@ export default function PlaylistDetailPage() {
         onSortChange={handleSortChange}
         defaultSort='position'
         textSortFields={['title', 'artist', 'album']}
+        noOrderToggleFields={['position']}
         filterTags={filterTags}
         filterSources={filterSources}
         onAddTag={handleAddTag}
