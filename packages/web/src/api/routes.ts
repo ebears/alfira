@@ -394,31 +394,52 @@ export function startPlayback(opts: {
   loop: LoopMode;
   startFromSongId?: string;
 }): Promise<void> {
-  return $.api.player.play.post(opts).then(() => undefined);
+  return $.api.player.play
+    .post(opts)
+    .then(unwrap)
+    .then(() => undefined);
 }
 
 export function skipTrack(): Promise<void> {
-  return $.api.player.skip.post().then(() => undefined);
+  return $.api.player.skip
+    .post()
+    .then(unwrap)
+    .then(() => undefined);
 }
 
 export function leaveVoice(): Promise<void> {
-  return $.api.player.leave.post().then(() => undefined);
+  return $.api.player.leave
+    .post()
+    .then(unwrap)
+    .then(() => undefined);
 }
 
 export function setLoopMode(mode: LoopMode): Promise<void> {
-  return $.api.player.loop.post({ mode }).then(() => undefined);
+  return $.api.player.loop
+    .post({ mode })
+    .then(unwrap)
+    .then(() => undefined);
 }
 
 export function shuffleQueue(): Promise<void> {
-  return $.api.player.shuffle.post().then(() => undefined);
+  return $.api.player.shuffle
+    .post()
+    .then(unwrap)
+    .then(() => undefined);
 }
 
 export function unshuffleQueue(): Promise<void> {
-  return $.api.player.unshuffle.post().then(() => undefined);
+  return $.api.player.unshuffle
+    .post()
+    .then(unwrap)
+    .then(() => undefined);
 }
 
 export function clearQueue(): Promise<void> {
-  return $.api.player.clear.post().then(() => undefined);
+  return $.api.player.clear
+    .post()
+    .then(unwrap)
+    .then(() => undefined);
 }
 
 export function togglePause(): Promise<{ isPaused: boolean }> {
@@ -426,7 +447,10 @@ export function togglePause(): Promise<{ isPaused: boolean }> {
 }
 
 export function seek(positionMs: number): Promise<void> {
-  return $.api.player.seek.post({ position: positionMs }).then(() => undefined);
+  return $.api.player.seek
+    .post({ position: positionMs })
+    .then(unwrap)
+    .then(() => undefined);
 }
 
 export function quickAddToQueue(url: string): Promise<{
@@ -472,6 +496,7 @@ export function removeQueueSong(songId: string): Promise<void> {
   return $.api.player
     .queue({ songId: encodeURIComponent(songId) })
     .delete()
+    .then(unwrap)
     .then(() => undefined);
 }
 
@@ -479,6 +504,7 @@ export function promoteQueueSong(songId: string): Promise<void> {
   return $.api.player
     .queue({ songId: encodeURIComponent(songId) })
     .promote.post()
+    .then(unwrap)
     .then(() => undefined);
 }
 
@@ -486,11 +512,15 @@ export function demoteQueueSong(songId: string): Promise<void> {
   return $.api.player
     .queue({ songId: encodeURIComponent(songId) })
     .demote.post()
+    .then(unwrap)
     .then(() => undefined);
 }
 
 export function reorderQueueSongs(songIds: string[], target?: 'queue' | 'priority'): Promise<void> {
-  return $.api.player.queue.reorder.patch({ songIds, target }).then(() => undefined);
+  return $.api.player.queue.reorder
+    .patch({ songIds, target })
+    .then(unwrap)
+    .then(() => undefined);
 }
 
 // ---------------------------------------------------------------------------

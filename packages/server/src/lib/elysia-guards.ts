@@ -120,25 +120,28 @@ export function createAdminOrPermissionGuard(permission?: PermissionAction): Ely
 // Must be composed after authGuard so `user` is guaranteed non-null.
 // ---------------------------------------------------------------------------
 
-export const voiceGuard = new Elysia({ name: 'voice-guard' }).onBeforeHandle((ctx) => {
-  const gateway = getClient();
-  if (!gateway || !gateway.isReady()) {
-    return ctx.status(503, {
-      error: 'Discord bot is not ready yet.',
-      code: 'BOT_NOT_READY',
-    });
-  }
+export const voiceGuard = new Elysia({ name: 'voice-guard' }).onBeforeHandle(
+  { as: 'scoped' },
+  (ctx) => {
+    const gateway = getClient();
+    if (!gateway || !gateway.isReady()) {
+      return ctx.status(503, {
+        error: 'Discord bot is not ready yet.',
+        code: 'BOT_NOT_READY',
+      });
+    }
 
-  const { user } = ctx as unknown as { user: User | null };
-  const discordId = user?.discordId;
-  const voiceChannelId = getUserVoiceChannel(discordId ?? '');
-  if (!voiceChannelId) {
-    return ctx.status(409, {
-      error: 'You must be in a voice channel to control playback.',
-      code: 'NOT_IN_VOICE',
-    });
+    const { user } = ctx as unknown as { user: User | null };
+    const discordId = user?.discordId;
+    const voiceChannelId = getUserVoiceChannel(discordId ?? '');
+    if (!voiceChannelId) {
+      return ctx.status(409, {
+        error: 'You must be in a voice channel to control playback.',
+        code: 'NOT_IN_VOICE',
+      });
+    }
   }
-});
+);
 
 // ---------------------------------------------------------------------------
 // Setup mode guard — short-circuits with 401 if not authenticated,
