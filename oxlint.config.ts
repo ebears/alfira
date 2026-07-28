@@ -694,13 +694,11 @@ export default defineConfig({
       },
     },
 
-    // Valibot schemas: max-nested-calls fires on idiomatic v.pipe(v.array(...)) chains.
-    // The nesting is inherent to the declarative API and cannot be meaningfully flattened.
+    // requests.elysia.ts: Elysia t.* schema nesting (e.g. t.Partial(t.Object({
+    // ... t.Optional(t.Union([t.Literal('track'), t.Literal('playlist')])) ... })))
+    // triggers max-nested-calls. The nesting is inherent to the Elysia schema DSL.
     {
-      files: [
-        'packages/server/src/routes/equalizer.elysia.ts',
-        'packages/server/src/routes/requests.elysia.ts',
-      ],
+      files: ['packages/server/src/routes/requests.elysia.ts'],
       rules: {
         'unicorn/max-nested-calls': 'off',
       },
