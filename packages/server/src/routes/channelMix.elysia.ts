@@ -61,7 +61,10 @@ function upsertChannelMixSettings(data: ChannelMixSettings): void {
 // Plugin
 // ---------------------------------------------------------------------------
 
-export const channelMixPlugin = new Elysia({ prefix: '/settings/channelmix' })
+export const channelMixPlugin = new Elysia({
+  prefix: '/settings/channelmix',
+  name: 'settings-channelmix',
+})
   .derive(deriveAuth)
 
   .use(createAdminOrPermissionGuard('audio.manage'))

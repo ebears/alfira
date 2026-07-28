@@ -141,7 +141,7 @@ function fetchAllFilters() {
 // Plugin
 // ---------------------------------------------------------------------------
 
-export const filtersPlugin = new Elysia({ prefix: '/settings/filters' })
+export const filtersPlugin = new Elysia({ prefix: '/settings/filters', name: 'settings-filters' })
   .derive(deriveAuth)
 
   .use(createAdminOrPermissionGuard('audio.manage'))

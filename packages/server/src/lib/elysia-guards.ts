@@ -28,10 +28,9 @@ export interface AuthContext {
 export const authGuard = new Elysia({ name: 'auth-guard' }).onBeforeHandle((ctx) => {
   const { user } = ctx as unknown as { user: User | null };
   if (!user) {
-    return Response.json(
-      { error: 'Not authenticated. Please log in at /auth/login.' },
-      { status: 401 }
-    );
+    return ctx.status(401, {
+      error: 'Not authenticated. Please log in at /auth/login.',
+    });
   }
 });
 
@@ -43,7 +42,7 @@ export const authGuard = new Elysia({ name: 'auth-guard' }).onBeforeHandle((ctx)
 export const adminGuard = new Elysia({ name: 'admin-guard' }).onBeforeHandle((ctx) => {
   const { isAdmin } = ctx as unknown as { isAdmin: boolean };
   if (!isAdmin) {
-    return Response.json({ error: 'Admin access required.' }, { status: 403 });
+    return ctx.status(403, { error: 'Admin access required.' });
   }
 });
 
@@ -65,15 +64,14 @@ export function createPermissionGuard(permission: PermissionAction): Elysia {
     }
 
     if (!user) {
-      return Response.json({ error: 'Not authenticated.' }, { status: 401 });
+      return ctx.status(401, { error: 'Not authenticated.' });
     }
 
     const roles = user.roles ?? [];
     if (roles.length === 0) {
-      return Response.json(
-        { error: 'You do not have permission to perform this action.' },
-        { status: 403 }
-      );
+      return ctx.status(403, {
+        error: 'You do not have permission to perform this action.',
+      });
     }
 
     const rows = db
@@ -88,10 +86,9 @@ export function createPermissionGuard(permission: PermissionAction): Elysia {
       .all();
 
     if (rows.length === 0) {
-      return Response.json(
-        { error: 'You do not have permission to perform this action.' },
-        { status: 403 }
-      );
+      return ctx.status(403, {
+        error: 'You do not have permission to perform this action.',
+      });
     }
   }) as unknown as Elysia;
 }
@@ -126,20 +123,20 @@ export function createAdminOrPermissionGuard(permission?: PermissionAction): Ely
 export const voiceGuard = new Elysia({ name: 'voice-guard' }).onBeforeHandle((ctx) => {
   const gateway = getClient();
   if (!gateway || !gateway.isReady()) {
-    return Response.json(
-      { error: 'Discord bot is not ready yet.', code: 'BOT_NOT_READY' },
-      { status: 503 }
-    );
+    return ctx.status(503, {
+      error: 'Discord bot is not ready yet.',
+      code: 'BOT_NOT_READY',
+    });
   }
 
   const { user } = ctx as unknown as { user: User | null };
   const discordId = user?.discordId;
   const voiceChannelId = getUserVoiceChannel(discordId ?? '');
   if (!voiceChannelId) {
-    return Response.json(
-      { error: 'You must be in a voice channel to control playback.', code: 'NOT_IN_VOICE' },
-      { status: 409 }
-    );
+    return ctx.status(409, {
+      error: 'You must be in a voice channel to control playback.',
+      code: 'NOT_IN_VOICE',
+    });
   }
 });
 
@@ -153,6 +150,6 @@ export const setupModeGuard = new Elysia({ name: 'setup-mode-guard' })
   .onBeforeHandle((ctx) => {
     const { user } = ctx as unknown as { user: User | null };
     if (!user?.isSetupAdmin) {
-      return Response.json({ error: 'Setup has already been completed.' }, { status: 403 });
+      return ctx.status(403, { error: 'Setup has already been completed.' });
     }
   });

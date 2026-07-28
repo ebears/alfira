@@ -47,7 +47,7 @@ function upsertVibratoSettings(data: { enabled: boolean; frequency: number; dept
 // Plugin
 // ---------------------------------------------------------------------------
 
-export const vibratoPlugin = new Elysia({ prefix: '/settings/vibrato' })
+export const vibratoPlugin = new Elysia({ prefix: '/settings/vibrato', name: 'settings-vibrato' })
   .derive(deriveAuth)
 
   .use(createAdminOrPermissionGuard('audio.manage'))

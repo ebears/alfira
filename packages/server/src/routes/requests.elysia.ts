@@ -102,7 +102,7 @@ const PatchRequestSchema = t.Object({
 // Plugin
 // ---------------------------------------------------------------------------
 
-export const requestsPlugin = new Elysia({ prefix: '/requests' })
+export const requestsPlugin = new Elysia({ prefix: '/requests', name: 'requests' })
   .derive(deriveAuth)
 
   .use(authGuard)

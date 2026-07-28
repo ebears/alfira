@@ -1,3 +1,4 @@
+import { cors } from '@elysia/cors';
 import { sql } from 'drizzle-orm';
 import { Elysia } from 'elysia';
 import { join } from 'node:path';
@@ -76,9 +77,11 @@ function isAssetPath(pathname: string): boolean {
 export type App = ReturnType<typeof createApp>;
 
 export function createApp() {
-  const apiApp = new Elysia({ prefix: '/api' })
+  const apiApp = new Elysia({ prefix: '/api', name: 'api' })
     .onAfterHandle(({ set }) => {
-      Object.assign(set.headers, API_SECURITY_HEADERS);
+      for (const [key, value] of Object.entries(API_SECURITY_HEADERS)) {
+        set.headers[key] = value;
+      }
     })
     .onError(({ error, set }) => {
       if (error instanceof ApiError) {
@@ -114,9 +117,10 @@ export function createApp() {
     .use(playlistsPlugin)
     .use(requestsPlugin);
 
-  const authApp = new Elysia({ prefix: '/auth' }).use(authPlugin);
+  const authApp = new Elysia({ prefix: '/auth', name: 'auth-app' }).use(authPlugin);
 
-  const app = new Elysia({ systemRouter: true, aot: true })
+  const app = new Elysia({ systemRouter: true, aot: true, name: 'root' })
+    .use(cors())
     .use(apiApp)
     .use(authApp)
     .get('/health', async ({ set }) => {

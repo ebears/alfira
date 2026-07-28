@@ -36,7 +36,7 @@ function upsertLowPassSettings(data: { enabled: boolean; smoothing: number }): v
 // Plugin
 // ---------------------------------------------------------------------------
 
-export const lowPassPlugin = new Elysia({ prefix: '/settings/lowpass' })
+export const lowPassPlugin = new Elysia({ prefix: '/settings/lowpass', name: 'settings-lowpass' })
   .derive(deriveAuth)
 
   .use(createAdminOrPermissionGuard('audio.manage'))

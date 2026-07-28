@@ -82,7 +82,7 @@ const PlaylistReorderSchema = t.Object({
 // Plugin
 // ---------------------------------------------------------------------------
 
-export const playlistsPlugin = new Elysia({ prefix: '/playlists' })
+export const playlistsPlugin = new Elysia({ prefix: '/playlists', name: 'playlists' })
   .derive(deriveAuth)
 
   .use(authGuard)

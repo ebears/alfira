@@ -173,7 +173,7 @@ function saveSetupConfig(data: typeof SetupCompleteSchema.static): void {
 // Plugin
 // ---------------------------------------------------------------------------
 
-export const setupPlugin = new Elysia({ prefix: '/setup' })
+export const setupPlugin = new Elysia({ prefix: '/setup', name: 'setup' })
   .derive(deriveAuth)
 
   .get(

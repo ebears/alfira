@@ -60,7 +60,10 @@ function upsertTimescaleSettings(data: TimescaleSettings): void {
 // Plugin
 // ---------------------------------------------------------------------------
 
-export const timescalePlugin = new Elysia({ prefix: '/settings/timescale' })
+export const timescalePlugin = new Elysia({
+  prefix: '/settings/timescale',
+  name: 'settings-timescale',
+})
   .derive(deriveAuth)
 
   .use(createAdminOrPermissionGuard('audio.manage'))

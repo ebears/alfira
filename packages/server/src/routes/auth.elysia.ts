@@ -421,7 +421,7 @@ const DiscordIdentitySchema = t.Object({
 // Plugin
 // ---------------------------------------------------------------------------
 
-export const authPlugin = new Elysia()
+export const authPlugin = new Elysia({ name: 'auth' })
   .derive(deriveAuth)
   // ── /auth/login ── redirect to Discord OAuth
   .get('/login', ({ redirect, request }) => {

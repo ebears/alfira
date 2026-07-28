@@ -118,7 +118,7 @@ const ReorderSchema = t.Object({
 // Plugin
 // ---------------------------------------------------------------------------
 
-export const playerPlugin = new Elysia({ prefix: '/player' })
+export const playerPlugin = new Elysia({ prefix: '/player', name: 'player' })
   .derive(deriveAuth)
   .use(authGuard)
   .get(

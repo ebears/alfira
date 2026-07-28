@@ -77,7 +77,10 @@ function upsertDistortionSettings(data: DistortionSettings): void {
 // Plugin
 // ---------------------------------------------------------------------------
 
-export const distortionPlugin = new Elysia({ prefix: '/settings/distortion' })
+export const distortionPlugin = new Elysia({
+  prefix: '/settings/distortion',
+  name: 'settings-distortion',
+})
   .derive(deriveAuth)
 
   .use(createAdminOrPermissionGuard('audio.manage'))
