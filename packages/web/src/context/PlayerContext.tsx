@@ -1,6 +1,8 @@
 import type React from 'react';
 
 import { type LoopMode, type QueueState } from '@alfira/server/shared';
+import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
+
 import {
   clearQueue,
   demoteQueueSong,
@@ -15,9 +17,7 @@ import {
   skipTrack,
   togglePause,
   unshuffleQueue,
-} from '@alfira/server/shared/api';
-import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
-
+} from '../api/api';
 import { useProgressBar } from '../hooks/useProgressBar';
 import { disposeSocket, onSocketEvent, useConnectionStatus, useSocket } from '../hooks/useSocket';
 

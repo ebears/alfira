@@ -12,7 +12,7 @@ import {
 } from 'react';
 
 import { getMe, logout as logoutApi } from '../api/api';
-import { trySilentRefresh } from '../api/client';
+import { trySilentRefresh } from '../api/eden';
 
 interface AuthContextValue {
   user: User | null;

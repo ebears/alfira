@@ -14,8 +14,9 @@
     "test": "bun test"
   },
   "dependencies": {
-    "drizzle-valibot": "^0.4.2",
-    "valibot": "^1.4.2"
+    "@elysia/cors": "^1.4.2",
+    "@elysia/eden": "^1.4.10",
+    "elysia": "^1.4.29"
   },
   "devDependencies": {
     "drizzle-orm": "0.45.2"

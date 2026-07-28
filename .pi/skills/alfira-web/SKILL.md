@@ -136,18 +136,37 @@ description: React 19 + Tailwind CSS 4 web UI, component and page structure, API
 | `useWindowSize.ts`                | Reactive `[width, height]` window dimensions              |
 | `useVirtualizedInfiniteScroll.ts` | Virtual list with infinite scroll pagination              |
 
-## API Client (`packages/web/src/api/`) + Utils (`packages/web/src/utils/api.ts`)
+## API Client (`packages/web/src/api/`)
 
-Centralized API client. All frontend API calls go through this file. Provides typed functions for:
+All frontend API calls use **[Eden Treaty](https://elysiajs.com/eden/treaty/overview.html)**, a fully typed RPC-like client generated from Elysia's route definitions:
 
-- Song CRUD: `fetchSongs()`, `updateSong()`, `deleteSong()`
-- Song requests: `createRequest()`, `previewRequest()`, `fetchRequests()`, `approveRequest()`, `denyRequest()`, `cancelRequest()`
-- Playlist operations: `fetchPlaylists()`, `createPlaylist()`, `updatePlaylist()`, etc.
-- Player control: `play()`, `pause()`, `skip()`, `seek()`, `setVolume()`, etc.
-- Settings: compressor, equalizer, general, permissions
-- Authentication: login, logout, session check
+```typescript
+// Typed API calls — no hand-written response types needed
+const { data } = await api.songs.index.get({ query: { page: 1, limit: 50 } });
+// data.songs is Song[], data.meta is PaginationMeta — all inferred
 
-Uses the shared API service from `@alfira/server/shared/api` for type consistency. Always use this client — never raw `fetch` in components.
+const { data: playlist } = await api.playlists({ id }).get();
+// playlist is PlaylistDetail — inferred from response schema
+```
+
+### Key files
+
+| File        | Purpose                                                                                           |
+| ----------- | ------------------------------------------------------------------------------------------------- |
+| `eden.ts`   | Eden Treaty client with custom fetcher (credentials, timeout, 401 refresh, rate limit extraction) |
+| `api.ts`    | Legacy centralized API functions — being phased out in favor of direct Eden calls                 |
+| `routes.ts` | Typed route helper functions wrapping Eden calls for common patterns                              |
+
+### Custom fetcher (`eden.ts`)
+
+The Eden client uses a custom fetcher that handles:
+
+- `credentials: 'include'` for HttpOnly session cookie
+- 10-second request timeout
+- Automatic token refresh on 401 with concurrent request queuing
+- Rate limit header extraction (`X-RateLimit-*`) into the `useRateLimit` hook
+
+Always use the Eden Treaty client (`api` from `eden.ts`) for API calls rather than raw `fetch`.
 
 ## WebSocket Client
 
@@ -177,5 +196,5 @@ Shared constants used across the web UI. Common values like API base URLs, defau
 ## Build & Serve
 
 - `bun run web:build` — Builds to `packages/web/dist/`
-- Served by the Bun server as static files with SPA fallback (`index.html` for non-asset paths)
-- Static extensions mapped in `index.ts`: `.html`, `.js`, `.css`, `.png`, `.jpg`, `.svg`, `.ico`, `.webmanifest`, `.woff2`
+- Served by the Elysia server as static files with SPA fallback (`index.html` for non-asset paths)
+- Static extensions mapped in `elysia-app.ts`: `.html`, `.js`, `.css`, `.png`, `.jpg`, `.svg`, `.ico`, `.webmanifest`, `.woff2`

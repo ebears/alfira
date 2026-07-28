@@ -14,9 +14,10 @@ import {
 // duplicating ~50 lines of per-field validation logic.  Accepts a body
 // with optional song metadata fields and an optional clearFields array
 // (for bulk-edit null-outs).  Tags go through canonicalizeTags to ensure
-// consistent casing.  Returns either the built `data` record plus
-// `processedTags`/`processedVolumeBoost` for post-update work, or an
-// error Response.
+// consistent casing.
+//
+// Validation helpers throw ApiError on failure, which is caught by the
+// onError hook on apiApp.
 // ---------------------------------------------------------------------------
 
 export interface SongFieldInput {
@@ -37,18 +38,14 @@ export interface SongFieldOutput {
 export async function validateAndBuildSongFields(
   body: SongFieldInput,
   clearFields: string[] = []
-): Promise<SongFieldOutput | Response> {
+): Promise<SongFieldOutput> {
   const data: Record<string, unknown> = {};
   let processedTags: string[] | undefined;
   let processedVolumeBoost: number | null | undefined;
 
   // Nickname
   if (body.nickname !== undefined) {
-    const result = validateNickname(body.nickname);
-    if (!result.ok) {
-      return result.response;
-    }
-    data.nickname = result.value;
+    data.nickname = validateNickname(body.nickname);
   } else if (clearFields.includes('nickname')) {
     data.nickname = null;
   }
@@ -69,22 +66,14 @@ export async function validateAndBuildSongFields(
 
   // Artwork
   if (body.artwork !== undefined) {
-    const artworkResult = validateArtworkUrl(body.artwork);
-    if (!artworkResult.ok) {
-      return artworkResult.response;
-    }
-    data.artwork = artworkResult.value;
+    data.artwork = validateArtworkUrl(body.artwork);
   } else if (clearFields.includes('artwork')) {
     data.artwork = null;
   }
 
   // Tags
   if (body.tags !== undefined) {
-    const tagsResult = validateTags(body.tags);
-    if (!tagsResult.ok) {
-      return tagsResult.response;
-    }
-    processedTags = await canonicalizeTags(tagsResult.value);
+    processedTags = await canonicalizeTags(validateTags(body.tags));
     data.tags = processedTags;
   } else if (clearFields.includes('tags')) {
     data.tags = [];
@@ -93,11 +82,7 @@ export async function validateAndBuildSongFields(
 
   // Volume boost
   if (body.volumeBoost !== undefined) {
-    const volumeResult = validateVolumeBoost(body.volumeBoost);
-    if (!volumeResult.ok) {
-      return volumeResult.response;
-    }
-    processedVolumeBoost = volumeResult.value;
+    processedVolumeBoost = validateVolumeBoost(body.volumeBoost);
     data.volumeBoost = processedVolumeBoost;
   } else if (clearFields.includes('volumeBoost')) {
     data.volumeBoost = null;

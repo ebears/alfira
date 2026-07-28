@@ -17,7 +17,7 @@ The bot and API run in a **single Bun process**. For detailed architecture (star
 | Language     | TypeScript                                    |
 | Discord      | Custom gateway (WebSocket)                    |
 | Audio        | NodeLink (Lavalink v4)                        |
-| API          | Bun native HTTP + WebSocket                   |
+| API          | Elysia + WebSocket                            |
 | Database     | SQLite + Drizzle ORM                          |
 | Frontend     | React 19 + Tailwind CSS 4                     |
 | Linting      | oxlint + oxfmt                                |

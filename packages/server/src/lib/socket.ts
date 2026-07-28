@@ -5,9 +5,9 @@ import { db, tables } from '../shared/db';
 import { logger } from '../shared/logger';
 import { formatSong, type SerializedSong } from './serialization';
 
-// Accept both Date and string createdAt — Drizzle uses Date at the DB level,
-// but we serialize to ISO string for JSON serialization.
-type SerializedPlaylist = Omit<Playlist, 'createdAt'> & { createdAt: string | Date };
+// Drizzle's isoTimestamp custom type returns ISO strings directly — Playlist
+// already uses `createdAt: string`, so no bridging type is needed.
+type SerializedPlaylist = Playlist;
 
 // ---------------------------------------------------------------------------
 // WebSocket client registry
