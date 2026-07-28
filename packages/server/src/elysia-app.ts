@@ -119,7 +119,14 @@ export function createApp() {
 
   const authApp = new Elysia({ prefix: '/auth', name: 'auth-app' }).use(authPlugin);
 
-  const app = new Elysia({ systemRouter: true, aot: true, name: 'root' })
+  const app = new Elysia({
+    systemRouter: true,
+    aot: true,
+    name: 'root',
+    // Precompile routes at startup in production, eliminating cold-start
+    // latency on the first request to each route.
+    precompile: process.env.NODE_ENV === 'production',
+  })
     .use(cors())
     .use(apiApp)
     .use(authApp)

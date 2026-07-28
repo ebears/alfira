@@ -49,8 +49,9 @@ let server: ReturnType<typeof createApp> | undefined;
 function startServer(): void {
   const app = createApp();
   server = app;
-  app.listen(PORT);
-  logger.info({ port: PORT }, 'Elysia server listening');
+  app.listen(PORT, ({ hostname, port }) => {
+    logger.info({ hostname, port }, 'Elysia server listening');
+  });
 }
 
 // ---------------------------------------------------------------------------

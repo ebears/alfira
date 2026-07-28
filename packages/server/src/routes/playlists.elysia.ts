@@ -233,53 +233,58 @@ export const playlistsPlugin = new Elysia({ prefix: '/playlists', name: 'playlis
     },
     { body: PlaylistRemoveSongsSchema, response: { 200: BulkRemoveSongsResponse } }
   )
-  .delete('/:id/songs/:songId', async ({ user, params }) => {
-    const playlistId = params.id;
-    const songId = params.songId;
+  .delete(
+    '/:id/songs/:songId',
+    async ({ user, params, set }) => {
+      const playlistId = params.id;
+      const songId = params.songId;
 
-    const discordId = (user as { discordId: string }).discordId;
-    const playlist = await requirePlaylist(playlistId, { discordId });
+      const discordId = (user as { discordId: string }).discordId;
+      const playlist = await requirePlaylist(playlistId, { discordId });
 
-    const [entry] = await db
-      .select()
-      .from(playlistSongTable)
-      .where(
-        and(eq(playlistSongTable.playlistId, playlistId), eq(playlistSongTable.songId, songId))
-      )
-      .limit(1);
-
-    if (!entry) {
-      throw new ApiError(404, 'Song not found in playlist.');
-    }
-
-    await db.transaction(async (tx) => {
-      await tx
-        .delete(playlistSongTable)
-        .where(
-          and(eq(playlistSongTable.playlistId, playlistId), eq(playlistSongTable.songId, songId))
-        );
-
-      const remaining = await tx
+      const [entry] = await db
         .select()
         .from(playlistSongTable)
-        .where(eq(playlistSongTable.playlistId, playlistId))
-        .orderBy(playlistSongTable.position);
-
-      await Promise.all(
-        remaining.map((ps, index) =>
-          tx
-            .update(playlistSongTable)
-            .set({ position: index })
-            .where(eq(playlistSongTable.id, ps.id))
+        .where(
+          and(eq(playlistSongTable.playlistId, playlistId), eq(playlistSongTable.songId, songId))
         )
-      );
-    });
+        .limit(1);
 
-    const value = await getPlaylistSongCount(playlistId);
-    emitPlaylistUpdated(formatPlaylist(playlist, value));
+      if (!entry) {
+        throw new ApiError(404, 'Song not found in playlist.');
+      }
 
-    return new Response(null, { status: 204 });
-  })
+      await db.transaction(async (tx) => {
+        await tx
+          .delete(playlistSongTable)
+          .where(
+            and(eq(playlistSongTable.playlistId, playlistId), eq(playlistSongTable.songId, songId))
+          );
+
+        const remaining = await tx
+          .select()
+          .from(playlistSongTable)
+          .where(eq(playlistSongTable.playlistId, playlistId))
+          .orderBy(playlistSongTable.position);
+
+        await Promise.all(
+          remaining.map((ps, index) =>
+            tx
+              .update(playlistSongTable)
+              .set({ position: index })
+              .where(eq(playlistSongTable.id, ps.id))
+          )
+        );
+      });
+
+      const value = await getPlaylistSongCount(playlistId);
+      emitPlaylistUpdated(formatPlaylist(playlist, value));
+
+      set.status = 204;
+      return null;
+    },
+    { params: t.Object({ id: t.String(), songId: t.String() }), response: { 204: t.Void() } }
+  )
   .post(
     '/:id/songs',
     async ({ user, params, body }): Promise<typeof PlaylistSongEntry.static> => {
@@ -655,12 +660,17 @@ export const playlistsPlugin = new Elysia({ prefix: '/playlists', name: 'playlis
     },
     { body: PlaylistReorderSchema, response: { 200: MessageResponse } }
   )
-  .delete('/:id', async ({ user, params }) => {
-    const id = params.id;
-    const discordId = (user as { discordId: string }).discordId;
-    await requirePlaylist(id, { discordId });
+  .delete(
+    '/:id',
+    async ({ user, params, set }) => {
+      const id = params.id;
+      const discordId = (user as { discordId: string }).discordId;
+      await requirePlaylist(id, { discordId });
 
-    await db.delete(playlistTable).where(eq(playlistTable.id, id));
+      await db.delete(playlistTable).where(eq(playlistTable.id, id));
 
-    return new Response(null, { status: 204 });
-  });
+      set.status = 204;
+      return null;
+    },
+    { params: t.Object({ id: t.String() }), response: { 204: t.Void() } }
+  );

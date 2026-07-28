@@ -6,8 +6,8 @@ import { verifySessionToken } from '../middleware/requireAuth';
  * Route plugins should call `.derive(deriveAuth)` so their handlers
  * and composed guards receive `{ user, isAdmin }` at runtime.
  *
- * The parameter is intentionally untyped (`any`) because an explicit Elysia
- * `Context` annotation conflicts with Elysia's internal derive generic —
+ * The parameter is intentionally untyped (`any`) because an explicit
+ * type annotation conflicts with Elysia's internal derive generic —
  * tsgo reports TS2345. Removing the explicit type lets tsgo infer the
  * derived property types via Elysia's own inference.
  */

@@ -37,6 +37,10 @@ export const authGuard = new Elysia({ name: 'auth-guard' }).onBeforeHandle((ctx)
 // ---------------------------------------------------------------------------
 // Admin guard — short-circuits with 403 if user is not a super-admin.
 // Must be composed after authGuard.
+//
+// The `isAdmin` property is added by deriveAuth on the parent instance;
+// the `as unknown` cast is needed because Elysia's per-instance type
+// encapsulation doesn't propagate derived properties to child guards.
 // ---------------------------------------------------------------------------
 
 export const adminGuard = new Elysia({ name: 'admin-guard' }).onBeforeHandle((ctx) => {
@@ -50,6 +54,12 @@ export const adminGuard = new Elysia({ name: 'admin-guard' }).onBeforeHandle((ct
 // Permission guard factory — returns a plugin that short-circuits with 403
 // if the user lacks the given granular permission. Super-admins bypass.
 // Must be composed after authGuard.
+//
+// The `as unknown as Elysia` return cast is required because onBeforeHandle
+// narrows the instance type, which would break `.use()` composition with
+// other plugins. The inner `as unknown as { user, isAdmin }` cast follows
+// the same pattern as authGuard: derived properties aren't visible in
+// child instances due to Elysia's type encapsulation.
 // ---------------------------------------------------------------------------
 
 export function createPermissionGuard(permission: PermissionAction): Elysia {
@@ -100,6 +110,10 @@ export function createPermissionGuard(permission: PermissionAction): Elysia {
 // Usage:
 //   .use(createAdminOrPermissionGuard())              → auth + admin
 //   .use(createAdminOrPermissionGuard('queue.manage')) → auth + (admin OR permission)
+//
+// The `as unknown as Elysia` casts are required because composing guards
+// via `.use()` narrows the instance type, which would prevent further
+// `.use()` composition at call sites.
 // ---------------------------------------------------------------------------
 
 export function createAdminOrPermissionGuard(permission?: PermissionAction): Elysia {
@@ -118,6 +132,8 @@ export function createAdminOrPermissionGuard(permission?: PermissionAction): Ely
 // or 409 if the user is not in a voice channel.
 //
 // Must be composed after authGuard so `user` is guaranteed non-null.
+// The `as unknown` cast on `ctx` follows the same pattern as authGuard:
+// derived properties aren't visible in child instances.
 // ---------------------------------------------------------------------------
 
 export const voiceGuard = new Elysia({ name: 'voice-guard' }).onBeforeHandle(
@@ -146,6 +162,7 @@ export const voiceGuard = new Elysia({ name: 'voice-guard' }).onBeforeHandle(
 // ---------------------------------------------------------------------------
 // Setup mode guard — short-circuits with 401 if not authenticated,
 // or 403 if the user lacks the isSetupAdmin flag.
+// The `as unknown` cast on `ctx` follows the same pattern as authGuard.
 // ---------------------------------------------------------------------------
 
 export const setupModeGuard = new Elysia({ name: 'setup-mode-guard' })
