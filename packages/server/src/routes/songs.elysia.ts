@@ -238,18 +238,23 @@ export const songsPlugin = new Elysia({ prefix: '/songs' })
         },
         { body: BulkDeleteSchema, response: { 200: t.Object({ deleted: t.Number() }) } }
       )
-      .delete('/:id', ({ params }) => {
-        const id = (params as Record<string, string>).id as string;
-        const existing = fetchSongById(id);
-        if (!existing) {
-          throw new ApiError(404, 'Song not found.');
-        }
+      .delete(
+        '/:id',
+        ({ params, set }) => {
+          const id = params.id;
+          const existing = fetchSongById(id);
+          if (!existing) {
+            throw new ApiError(404, 'Song not found.');
+          }
 
-        deleteSongById(id);
-        emitSongDeleted(id);
+          deleteSongById(id);
+          emitSongDeleted(id);
 
-        return new Response(null, { status: 204 });
-      })
+          set.status = 204;
+          return null;
+        },
+        { params: t.Object({ id: t.String() }), response: { 204: t.Void() } }
+      )
   )
   .guard({}, (app) =>
     app
@@ -338,8 +343,8 @@ export const songsPlugin = new Elysia({ prefix: '/songs' })
       )
       .patch(
         '/:id',
-        async ({ params, body }) => {
-          const id = (params as Record<string, string>).id as string;
+        async ({ params, body }): Promise<typeof Song.static> => {
+          const id = params.id;
 
           const existing = fetchSongById(id);
           if (!existing) {
@@ -370,8 +375,8 @@ export const songsPlugin = new Elysia({ prefix: '/songs' })
 
           notifyPlayerOfMetadataChange([id], data, processedVolumeBoost);
 
-          return formatSong(updatedSong);
+          return formatSong(updatedSong) as unknown as typeof Song.static;
         },
-        { body: SongPatchSchema }
+        { params: t.Object({ id: t.String() }), body: SongPatchSchema, response: { 200: Song } }
       )
   );

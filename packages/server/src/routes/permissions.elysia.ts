@@ -5,6 +5,7 @@ import { deriveAuth } from '../lib/authDerive';
 import { getGuildId } from '../lib/config';
 import { fetchGuildRoles } from '../lib/discordRoles';
 import { adminGuard, authGuard } from '../lib/elysia-guards';
+import { ApiError } from '../lib/errors';
 import { MyPermissionsResponse } from '../lib/responseSchemas';
 import { PERMISSION_CATEGORIES, PERMISSION_LABELS, type PermissionAction } from '../shared';
 import { db, tables } from '../shared/db';
@@ -106,7 +107,7 @@ export const permissionsPlugin = new Elysia({ prefix: '/permissions' })
       const { action, roleIds } = body;
 
       if (!isPermissionAction(action)) {
-        return Response.json({ error: `Unknown permission action: ${action}` }, { status: 400 });
+        throw new ApiError(400, `Unknown permission action: ${action}`);
       }
 
       replacePermissionRoles(action, roleIds);

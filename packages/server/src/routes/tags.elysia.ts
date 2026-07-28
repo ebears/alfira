@@ -108,7 +108,7 @@ export const tagsPlugin = new Elysia({ prefix: '/tags' })
   .get(
     '/:nameLower',
     ({ params }) => {
-      const nameLower = (params as Record<string, string>).nameLower as string;
+      const nameLower = params.nameLower;
       const tag = fetchTag(nameLower);
       if (!tag) {
         throw new ApiError(404, 'Tag not found.');
@@ -116,21 +116,24 @@ export const tagsPlugin = new Elysia({ prefix: '/tags' })
 
       return { tag };
     },
-    { response: { 200: t.Object({ tag: TagItem }) } }
+    { params: t.Object({ nameLower: t.String() }), response: { 200: t.Object({ tag: TagItem }) } }
   )
   .get(
     '/:nameLower/songs',
     ({ params }) => {
-      const nameLower = (params as Record<string, string>).nameLower as string;
+      const nameLower = params.nameLower;
       return { songs: fetchSongsByTag(nameLower) };
     },
-    { response: { 200: t.Object({ songs: t.Array(SongSchema) }) } }
+    {
+      params: t.Object({ nameLower: t.String() }),
+      response: { 200: t.Object({ songs: t.Array(SongSchema) }) },
+    }
   )
   .use(createAdminOrPermissionGuard('tags.manage'))
   .patch(
     '/:nameLower',
-    async ({ params, body }) => {
-      const nameLower = (params as Record<string, string>).nameLower as string;
+    async ({ params, body }): Promise<{ tag: typeof TagItem.static }> => {
+      const nameLower = params.nameLower;
 
       const existing = fetchTag(nameLower);
       if (!existing) {
@@ -152,40 +155,51 @@ export const tagsPlugin = new Elysia({ prefix: '/tags' })
       }
 
       const updated = await updateTagReturning(nameLower, data);
-      return { tag: updated };
+      return { tag: updated as typeof TagItem.static };
     },
-    { body: TagPatchSchema }
+    {
+      params: t.Object({ nameLower: t.String() }),
+      body: TagPatchSchema,
+      response: { 200: t.Object({ tag: TagItem }) },
+    }
   )
-  .delete('/:nameLower', async ({ params }) => {
-    const nameLower = (params as Record<string, string>).nameLower as string;
+  .delete(
+    '/:nameLower',
+    async ({ params }) => {
+      const nameLower = params.nameLower;
 
-    const existing = fetchTag(nameLower);
-    if (!existing) {
-      throw new ApiError(404, 'Tag not found.');
+      const existing = fetchTag(nameLower);
+      if (!existing) {
+        throw new ApiError(404, 'Tag not found.');
+      }
+
+      // Remove this tag from all songs that have it
+      const songsWithTag = fetchSongsWithTag(nameLower);
+
+      for (const song of songsWithTag) {
+        const updatedTags = song.tags.filter((t) => t.toLowerCase() !== nameLower);
+        removeTagFromSong(song.id, updatedTags);
+      }
+
+      // Convert any smart playlists tracking this tag to regular playlists
+      const smartPlaylists = fetchSmartPlaylistsByTag(nameLower);
+
+      await Promise.all(smartPlaylists.map((pl) => detachPlaylistTag(pl.id)));
+
+      const updatedPlaylists = await fetchPlaylistsByIds(smartPlaylists.map((pl) => pl.id));
+
+      for (const updatedPl of updatedPlaylists) {
+        emitPlaylistUpdated({
+          ...updatedPl,
+        });
+      }
+
+      await deleteTagRow(nameLower);
+
+      return { success: true };
+    },
+    {
+      params: t.Object({ nameLower: t.String() }),
+      response: { 200: t.Object({ success: t.Literal(true) }) },
     }
-
-    // Remove this tag from all songs that have it
-    const songsWithTag = fetchSongsWithTag(nameLower);
-
-    for (const song of songsWithTag) {
-      const updatedTags = song.tags.filter((t) => t.toLowerCase() !== nameLower);
-      removeTagFromSong(song.id, updatedTags);
-    }
-
-    // Convert any smart playlists tracking this tag to regular playlists
-    const smartPlaylists = fetchSmartPlaylistsByTag(nameLower);
-
-    await Promise.all(smartPlaylists.map((pl) => detachPlaylistTag(pl.id)));
-
-    const updatedPlaylists = await fetchPlaylistsByIds(smartPlaylists.map((pl) => pl.id));
-
-    for (const updatedPl of updatedPlaylists) {
-      emitPlaylistUpdated({
-        ...updatedPl,
-      });
-    }
-
-    await deleteTagRow(nameLower);
-
-    return { success: true };
-  });
+  );

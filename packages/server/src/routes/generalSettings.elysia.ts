@@ -3,6 +3,7 @@ import { Elysia, t } from 'elysia';
 
 import { deriveAuth } from '../lib/authDerive';
 import { createAdminOrPermissionGuard } from '../lib/elysia-guards';
+import { ApiError } from '../lib/errors';
 import { GeneralSettings as GeneralSettingsSchema } from '../lib/responseSchemas';
 import { type GeneralSettings } from '../shared';
 import { db, tables } from '../shared/db';
@@ -143,7 +144,7 @@ export const generalSettingsPlugin = new Elysia({ prefix: '/settings/general' })
       }
 
       if (Object.keys(updates).length === 0) {
-        return Response.json({ error: 'No fields to update' }, { status: 400 });
+        throw new ApiError(400, 'No fields to update');
       }
 
       upsertGeneralSettings(updates);
@@ -155,7 +156,7 @@ export const generalSettingsPlugin = new Elysia({ prefix: '/settings/general' })
 
       const settings = fetchGeneralSettings();
       if (!settings) {
-        return Response.json({ error: 'Settings not found after update.' }, { status: 500 });
+        throw new ApiError(500, 'Settings not found after update.');
       }
 
       return settings;

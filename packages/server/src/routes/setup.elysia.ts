@@ -244,23 +244,20 @@ export const setupPlugin = new Elysia({ prefix: '/setup' })
   .get(
     '/roles',
     async ({ query }) => {
-      const guildId = (query as Record<string, string>).guildId;
-      if (!guildId) {
-        throw new ApiError(400, 'guildId query parameter is required.');
-      }
+      const guildId = query.guildId;
 
       const roles = await fetchGuildRoles(guildId);
       return { roles };
     },
-    { response: { 200: t.Object({ roles: t.Array(SetupRoleSchema) }) } }
+    {
+      query: t.Object({ guildId: t.String() }),
+      response: { 200: t.Object({ roles: t.Array(SetupRoleSchema) }) },
+    }
   )
   .get(
     '/channels',
     async ({ query }) => {
-      const guildId = (query as Record<string, string>).guildId;
-      if (!guildId) {
-        throw new ApiError(400, 'guildId query parameter is required.');
-      }
+      const guildId = query.guildId;
 
       try {
         const channels = await fetchGuildChannels(guildId);
@@ -270,7 +267,10 @@ export const setupPlugin = new Elysia({ prefix: '/setup' })
         throw new ApiError(502, 'Could not fetch channels.');
       }
     },
-    { response: { 200: t.Object({ channels: t.Array(SetupChannelSchema) }) } }
+    {
+      query: t.Object({ guildId: t.String() }),
+      response: { 200: t.Object({ channels: t.Array(SetupChannelSchema) }) },
+    }
   )
   .post(
     '/complete',

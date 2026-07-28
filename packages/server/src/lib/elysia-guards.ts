@@ -27,7 +27,7 @@ export interface AuthContext {
 // Compose with `.use(authGuard)` on any plugin that calls `.derive(deriveAuth)`.
 // ---------------------------------------------------------------------------
 
-export const authGuard = new Elysia().onBeforeHandle((ctx) => {
+export const authGuard = new Elysia({ seed: 'auth-guard' }).onBeforeHandle((ctx) => {
   const { user } = ctx as unknown as { user: AuthContext['user'] };
   if (!user) {
     return Response.json(
@@ -42,7 +42,7 @@ export const authGuard = new Elysia().onBeforeHandle((ctx) => {
 // Must be composed after authGuard.
 // ---------------------------------------------------------------------------
 
-export const adminGuard = new Elysia().onBeforeHandle((ctx) => {
+export const adminGuard = new Elysia({ seed: 'admin-guard' }).onBeforeHandle((ctx) => {
   const { isAdmin } = ctx as unknown as { isAdmin: boolean };
   if (!isAdmin) {
     return Response.json({ error: 'Admin access required.' }, { status: 403 });
@@ -56,7 +56,7 @@ export const adminGuard = new Elysia().onBeforeHandle((ctx) => {
 // ---------------------------------------------------------------------------
 
 export function createPermissionGuard(permission: PermissionAction): Elysia {
-  return new Elysia().onBeforeHandle((ctx) => {
+  return new Elysia({ seed: `perm-guard:${permission}` }).onBeforeHandle((ctx) => {
     const { user, isAdmin } = ctx as unknown as {
       user: AuthContext['user'];
       isAdmin: boolean;
@@ -121,7 +121,7 @@ export function createAdminOrPermissionGuard(permission?: PermissionAction): Ely
 // Must be composed after authGuard so `user` is guaranteed non-null.
 // ---------------------------------------------------------------------------
 
-export const voiceGuard = new Elysia().onBeforeHandle((ctx) => {
+export const voiceGuard = new Elysia({ seed: 'voice-guard' }).onBeforeHandle((ctx) => {
   const gateway = getClient();
   if (!gateway || !gateway.isReady()) {
     return Response.json(
@@ -146,9 +146,11 @@ export const voiceGuard = new Elysia().onBeforeHandle((ctx) => {
 // or 403 if the user lacks the isSetupAdmin flag.
 // ---------------------------------------------------------------------------
 
-export const setupModeGuard = new Elysia().use(authGuard).onBeforeHandle((ctx) => {
-  const { user } = ctx as unknown as { user: AuthContext['user'] };
-  if (!user?.isSetupAdmin) {
-    return Response.json({ error: 'Setup has already been completed.' }, { status: 403 });
-  }
-});
+export const setupModeGuard = new Elysia({ seed: 'setup-mode-guard' })
+  .use(authGuard)
+  .onBeforeHandle((ctx) => {
+    const { user } = ctx as unknown as { user: AuthContext['user'] };
+    if (!user?.isSetupAdmin) {
+      return Response.json({ error: 'Setup has already been completed.' }, { status: 403 });
+    }
+  });

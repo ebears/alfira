@@ -600,9 +600,8 @@ export const requestsPlugin = new Elysia({ prefix: '/requests' })
   .guard({}, (app) =>
     app.use(adminGuard).patch(
       '/:id',
-      async ({ user, ...ctx }) => {
-        const id = (ctx.params as Record<string, string>).id as string;
-        const body = ctx.body as typeof PatchRequestSchema.static;
+      async ({ user, params, body }) => {
+        const id = params.id;
 
         const [existing] = (await db
           .select()
@@ -809,32 +808,41 @@ export const requestsPlugin = new Elysia({ prefix: '/requests' })
           song: formatSong(newSong),
         };
       },
-      { body: PatchRequestSchema, response: { 200: t.Unknown() } }
+      {
+        params: t.Object({ id: t.String() }),
+        body: PatchRequestSchema,
+        response: { 200: t.Unknown() },
+      }
     )
   )
-  .delete('/:id', async ({ user, isAdmin, ...ctx }) => {
-    const id = (ctx.params as Record<string, string>).id as string;
+  .delete(
+    '/:id',
+    async ({ user, isAdmin, params, set }) => {
+      const id = params.id;
 
-    const [existing] = (await db
-      .select()
-      .from(requestTable)
-      .where(eq(requestTable.id, id))
-      .limit(1)) as unknown as [typeof requestTable.$inferSelect | undefined];
+      const [existing] = (await db
+        .select()
+        .from(requestTable)
+        .where(eq(requestTable.id, id))
+        .limit(1)) as unknown as [typeof requestTable.$inferSelect | undefined];
 
-    if (!existing) {
-      throw new ApiError(404, 'Request not found.');
-    }
+      if (!existing) {
+        throw new ApiError(404, 'Request not found.');
+      }
 
-    if (existing.status !== 'pending') {
-      throw new ApiError(409, 'Only pending requests can be cancelled.');
-    }
+      if (existing.status !== 'pending') {
+        throw new ApiError(409, 'Only pending requests can be cancelled.');
+      }
 
-    const reqDiscordId = (user as { discordId: string }).discordId;
-    if (existing.requestedBy !== reqDiscordId && !isAdmin) {
-      throw new ApiError(403, 'You can only cancel your own requests.');
-    }
+      const reqDiscordId = (user as { discordId: string }).discordId;
+      if (existing.requestedBy !== reqDiscordId && !isAdmin) {
+        throw new ApiError(403, 'You can only cancel your own requests.');
+      }
 
-    await db.delete(requestTable).where(eq(requestTable.id, id));
+      await db.delete(requestTable).where(eq(requestTable.id, id));
 
-    return new Response(null, { status: 204 });
-  });
+      set.status = 204;
+      return null;
+    },
+    { params: t.Object({ id: t.String() }), response: { 204: t.Void() } }
+  );

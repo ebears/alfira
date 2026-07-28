@@ -179,8 +179,8 @@ export const playerPlugin = new Elysia({ prefix: '/player' })
       )
       .post(
         '/queue/:songId/promote',
-        ({ ...ctx }) => {
-          const songId = (ctx.params as Record<string, string>).songId as string;
+        ({ params }) => {
+          const songId = params.songId;
           const player = requirePlayer();
 
           const promoted = player.promoteSong(songId);
@@ -190,12 +190,12 @@ export const playerPlugin = new Elysia({ prefix: '/player' })
 
           return { message: 'Song promoted to Up Next.' };
         },
-        { response: { 200: MessageResponse } }
+        { params: t.Object({ songId: t.String() }), response: { 200: MessageResponse } }
       )
       .post(
         '/queue/:songId/demote',
-        ({ ...ctx }) => {
-          const songId = (ctx.params as Record<string, string>).songId as string;
+        ({ params }) => {
+          const songId = params.songId;
           const player = requirePlayer();
 
           const demoted = player.demoteSong(songId);
@@ -205,12 +205,12 @@ export const playerPlugin = new Elysia({ prefix: '/player' })
 
           return { message: 'Song moved to queue.' };
         },
-        { response: { 200: MessageResponse } }
+        { params: t.Object({ songId: t.String() }), response: { 200: MessageResponse } }
       )
       .delete(
         '/queue/:songId',
-        ({ ...ctx }) => {
-          const songId = (ctx.params as Record<string, string>).songId as string;
+        ({ params }) => {
+          const songId = params.songId;
           const player = requirePlayer();
 
           const removed = player.removeSongById(songId);
@@ -220,7 +220,7 @@ export const playerPlugin = new Elysia({ prefix: '/player' })
 
           return { message: 'Song removed from queue.' };
         },
-        { response: { 200: MessageResponse } }
+        { params: t.Object({ songId: t.String() }), response: { 200: MessageResponse } }
       )
       .post(
         '/add-to-priority',
