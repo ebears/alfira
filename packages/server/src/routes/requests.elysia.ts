@@ -569,176 +569,110 @@ export const requestsPlugin = new Elysia({ prefix: '/requests', name: 'requests'
     },
     { body: CreateRequestSchema, response: { 200: CreateRequestResult } }
   )
-  .guard({}, (app) =>
-    app.patch(
-      '/:id',
-      async ({ user, params, body }) => {
-        const id = params.id;
+  .patch(
+    '/:id',
+    async ({ user, params, body }) => {
+      const id = params.id;
 
-        const [existing] = (await db
-          .select()
-          .from(requestTable)
-          .where(eq(requestTable.id, id))
-          .limit(1)) as unknown as [typeof requestTable.$inferSelect | undefined];
+      const [existing] = (await db
+        .select()
+        .from(requestTable)
+        .where(eq(requestTable.id, id))
+        .limit(1)) as unknown as [typeof requestTable.$inferSelect | undefined];
 
-        if (!existing) {
-          throw new ApiError(404, 'Request not found.');
-        }
+      if (!existing) {
+        throw new ApiError(404, 'Request not found.');
+      }
 
-        if (existing.status !== 'pending') {
-          throw new ApiError(409, 'This request has already been processed.');
-        }
+      if (existing.status !== 'pending') {
+        throw new ApiError(409, 'This request has already been processed.');
+      }
 
-        const newStatus = body.status;
-        const closedAt = new Date().toISOString();
-        const reviewUser = user as { discordId: string; username: string; isAdmin: boolean };
+      const newStatus = body.status;
+      const closedAt = new Date().toISOString();
+      const reviewUser = user as { discordId: string; username: string; isAdmin: boolean };
 
-        if (newStatus === 'denied') {
-          await db
-            .update(requestTable)
-            .set({ status: 'denied', reviewedBy: reviewUser.discordId, closedAt })
-            .where(eq(requestTable.id, id));
+      if (newStatus === 'denied') {
+        await db
+          .update(requestTable)
+          .set({ status: 'denied', reviewedBy: reviewUser.discordId, closedAt })
+          .where(eq(requestTable.id, id));
 
-          const formatted = formatRequest({
-            ...existing,
-            status: 'denied',
-            reviewedBy: reviewUser.discordId,
-            closedAt,
-          });
+        const formatted = formatRequest({
+          ...existing,
+          status: 'denied',
+          reviewedBy: reviewUser.discordId,
+          closedAt,
+        });
 
-          void (async () => {
-            try {
-              await sendRequestNotification('denied', formatted, reviewUser);
-            } catch (error) {
-              logger.warn({ error }, 'Failed to send denied notification');
-            }
-          })();
-
-          if (existing.notifyDm) {
-            try {
-              await sendRequestDm(existing.requestedBy, 'denied', existing.title);
-            } catch (error) {
-              logger.warn({ error }, 'Failed to send denied DM');
-            }
+        void (async () => {
+          try {
+            await sendRequestNotification('denied', formatted, reviewUser);
+          } catch (error) {
+            logger.warn({ error }, 'Failed to send denied notification');
           }
+        })();
 
-          return { request: formatted };
+        if (existing.notifyDm) {
+          try {
+            await sendRequestDm(existing.requestedBy, 'denied', existing.title);
+          } catch (error) {
+            logger.warn({ error }, 'Failed to send denied DM');
+          }
         }
 
-        // Approve
-        if (existing.type === 'playlist' && existing.playlistData) {
-          const pd = existing.playlistData as {
-            name: string;
-            videoCount: number;
+        return { request: formatted };
+      }
+
+      // Approve
+      if (existing.type === 'playlist' && existing.playlistData) {
+        const pd = existing.playlistData as {
+          name: string;
+          videoCount: number;
+          thumbnailUrl: string | null;
+          videos: {
+            id: string;
+            title: string;
+            duration: number;
             thumbnailUrl: string | null;
-            videos: {
-              id: string;
-              title: string;
-              duration: number;
-              thumbnailUrl: string | null;
-              artist: string | null;
-              artworkUrl: string | null;
-            }[];
-          };
-          const videos = pd.videos ?? [];
+            artist: string | null;
+            artworkUrl: string | null;
+          }[];
+        };
+        const videos = pd.videos ?? [];
 
-          if (videos.length === 0) {
-            throw new ApiError(400, 'Playlist request has no videos.');
-          }
-
-          const videoIds = videos.map((v) => v.id);
-          const existingSourceIds = await db
-            .select({ sourceId: songTable.sourceId })
-            .from(songTable)
-            .where(videoIds.length > 0 ? inArray(songTable.sourceId, videoIds) : undefined);
-
-          const existingIdSet = new Set(existingSourceIds.map((s) => s.sourceId));
-          const newVideos = videos.filter((v) => !existingIdSet.has(v.id));
-
-          let createdSongs: (typeof songTable.$inferSelect)[] = [];
-          if (newVideos.length > 0) {
-            createdSongs = await db.transaction((tx) => {
-              return tx
-                .insert(songTable)
-                .values(
-                  newVideos.map((v) => ({
-                    title: v.title,
-                    sourceUrl: youTubeUrl(v.id),
-                    sourceId: v.id,
-                    duration: v.duration,
-                    thumbnailUrl: v.thumbnailUrl ?? '',
-                    addedBy: existing.requestedBy,
-                    artist: v.artist ?? null,
-                    artwork: v.artworkUrl ?? null,
-                  }))
-                )
-                .returning();
-            });
-          }
-
-          await db
-            .update(requestTable)
-            .set({ status: 'approved', reviewedBy: reviewUser.discordId, closedAt })
-            .where(eq(requestTable.id, id));
-
-          const nameMap = await resolveDisplayNames(
-            createdSongs as unknown as { addedBy: string }[]
-          );
-          for (const song of createdSongs) {
-            emitSongAdded({
-              ...formatSong(song),
-              addedByDisplayName: nameMap.get(song.addedBy) ?? song.addedBy,
-            });
-          }
-
-          if (existing.notifyDm) {
-            try {
-              await sendRequestDm(existing.requestedBy, 'approved', existing.title);
-            } catch (error) {
-              logger.warn({ error }, 'Failed to send approved DM');
-            }
-          }
-
-          const formatted = formatRequest({
-            ...existing,
-            status: 'approved',
-            reviewedBy: reviewUser.discordId,
-            closedAt,
-          });
-
-          void (async () => {
-            try {
-              await sendRequestNotification('approved', formatted, reviewUser);
-            } catch (error) {
-              logger.warn({ error }, 'Failed to send playlist approved notification');
-            }
-          })();
-
-          return {
-            request: formatted,
-            songs: createdSongs.map(formatSong),
-            importedCount: createdSongs.length,
-            skippedCount: videos.length - newVideos.length,
-          };
+        if (videos.length === 0) {
+          throw new ApiError(400, 'Playlist request has no videos.');
         }
 
-        // Track approval
-        const [newSong] = await db
-          .insert(songTable)
-          .values({
-            title: existing.title,
-            sourceUrl: existing.sourceUrl,
-            sourceId: existing.sourceId,
-            duration: existing.duration,
-            thumbnailUrl: existing.thumbnailUrl,
-            addedBy: existing.requestedBy,
-            artist: existing.artist ?? null,
-            artwork: existing.artworkUrl ?? null,
-          })
-          .returning();
+        const videoIds = videos.map((v) => v.id);
+        const existingSourceIds = await db
+          .select({ sourceId: songTable.sourceId })
+          .from(songTable)
+          .where(videoIds.length > 0 ? inArray(songTable.sourceId, videoIds) : undefined);
 
-        if (!newSong) {
-          throw new ApiError(500, 'Failed to create song from request.');
+        const existingIdSet = new Set(existingSourceIds.map((s) => s.sourceId));
+        const newVideos = videos.filter((v) => !existingIdSet.has(v.id));
+
+        let createdSongs: (typeof songTable.$inferSelect)[] = [];
+        if (newVideos.length > 0) {
+          createdSongs = await db.transaction((tx) => {
+            return tx
+              .insert(songTable)
+              .values(
+                newVideos.map((v) => ({
+                  title: v.title,
+                  sourceUrl: youTubeUrl(v.id),
+                  sourceId: v.id,
+                  duration: v.duration,
+                  thumbnailUrl: v.thumbnailUrl ?? '',
+                  addedBy: existing.requestedBy,
+                  artist: v.artist ?? null,
+                  artwork: v.artworkUrl ?? null,
+                }))
+              )
+              .returning();
+          });
         }
 
         await db
@@ -746,11 +680,13 @@ export const requestsPlugin = new Elysia({ prefix: '/requests', name: 'requests'
           .set({ status: 'approved', reviewedBy: reviewUser.discordId, closedAt })
           .where(eq(requestTable.id, id));
 
-        const displayName = await getUserDisplayName(existing.requestedBy);
-        emitSongAdded({
-          ...formatSong(newSong),
-          addedByDisplayName: displayName,
-        });
+        const nameMap = await resolveDisplayNames(createdSongs as unknown as { addedBy: string }[]);
+        for (const song of createdSongs) {
+          emitSongAdded({
+            ...formatSong(song),
+            addedByDisplayName: nameMap.get(song.addedBy) ?? song.addedBy,
+          });
+        }
 
         if (existing.notifyDm) {
           try {
@@ -771,23 +707,84 @@ export const requestsPlugin = new Elysia({ prefix: '/requests', name: 'requests'
           try {
             await sendRequestNotification('approved', formatted, reviewUser);
           } catch (error) {
-            logger.warn({ error }, 'Failed to send approved notification');
+            logger.warn({ error }, 'Failed to send playlist approved notification');
           }
         })();
 
         return {
           request: formatted,
-          song: formatSong(newSong),
+          songs: createdSongs.map(formatSong),
+          importedCount: createdSongs.length,
+          skippedCount: videos.length - newVideos.length,
         };
-      },
-      {
-        isAdmin: true,
-        params: t.Object({ id: t.String() }),
-        body: PatchRequestSchema,
-        response: { 200: t.Unknown() },
       }
-    )
+
+      // Track approval
+      const [newSong] = await db
+        .insert(songTable)
+        .values({
+          title: existing.title,
+          sourceUrl: existing.sourceUrl,
+          sourceId: existing.sourceId,
+          duration: existing.duration,
+          thumbnailUrl: existing.thumbnailUrl,
+          addedBy: existing.requestedBy,
+          artist: existing.artist ?? null,
+          artwork: existing.artworkUrl ?? null,
+        })
+        .returning();
+
+      if (!newSong) {
+        throw new ApiError(500, 'Failed to create song from request.');
+      }
+
+      await db
+        .update(requestTable)
+        .set({ status: 'approved', reviewedBy: reviewUser.discordId, closedAt })
+        .where(eq(requestTable.id, id));
+
+      const displayName = await getUserDisplayName(existing.requestedBy);
+      emitSongAdded({
+        ...formatSong(newSong),
+        addedByDisplayName: displayName,
+      });
+
+      if (existing.notifyDm) {
+        try {
+          await sendRequestDm(existing.requestedBy, 'approved', existing.title);
+        } catch (error) {
+          logger.warn({ error }, 'Failed to send approved DM');
+        }
+      }
+
+      const formatted = formatRequest({
+        ...existing,
+        status: 'approved',
+        reviewedBy: reviewUser.discordId,
+        closedAt,
+      });
+
+      void (async () => {
+        try {
+          await sendRequestNotification('approved', formatted, reviewUser);
+        } catch (error) {
+          logger.warn({ error }, 'Failed to send approved notification');
+        }
+      })();
+
+      return {
+        request: formatted,
+        song: formatSong(newSong),
+      };
+    },
+    {
+      isAdmin: true,
+      params: t.Object({ id: t.String() }),
+      body: PatchRequestSchema,
+      response: { 200: t.Unknown() },
+    }
   )
+
   .delete(
     '/:id',
     async ({ user, params, set }) => {

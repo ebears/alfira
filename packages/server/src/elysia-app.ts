@@ -123,7 +123,7 @@ export function createApp() {
 
   const app = new Elysia({
     systemRouter: true,
-    aot: true,
+    normalize: true,
     name: 'root',
     // Precompile routes at startup in production, eliminating cold-start
     // latency on the first request to each route.

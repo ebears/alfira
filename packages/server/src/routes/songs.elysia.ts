@@ -225,170 +225,164 @@ export const songsPlugin = new Elysia({ prefix: '/songs', name: 'songs' })
       },
     }
   )
-  .guard({}, (app) =>
-    app
-      .post(
-        '/bulk-delete',
-        async ({ body }) => {
-          const { ids } = body;
-          await deleteSongsByIds(ids);
+  .post(
+    '/bulk-delete',
+    async ({ body }) => {
+      const { ids } = body;
+      await deleteSongsByIds(ids);
 
-          return { deleted: ids.length };
-        },
-        {
-          hasPermission: 'songs.delete',
-          body: BulkDeleteSchema,
-          response: { 200: t.Object({ deleted: t.Number() }) },
-        }
-      )
-      .delete(
-        '/:id',
-        ({ params, set }) => {
-          const id = params.id;
-          const existing = fetchSongById(id);
-          if (!existing) {
-            throw new ApiError(404, 'Song not found.');
-          }
-
-          deleteSongById(id);
-          emitSongDeleted(id);
-
-          set.status = 204;
-          return null;
-        },
-        {
-          hasPermission: 'songs.delete',
-          params: t.Object({ id: t.String() }),
-          response: { 204: t.Void() },
-        }
-      )
+      return { deleted: ids.length };
+    },
+    {
+      hasPermission: 'songs.delete',
+      body: BulkDeleteSchema,
+      response: { 200: t.Object({ deleted: t.Number() }) },
+    }
   )
-  .guard({}, (app) =>
-    app
-      .post(
-        '/bulk-tag',
-        async ({ body }) => {
-          const { ids } = body;
+  .delete(
+    '/:id',
+    ({ params, set }) => {
+      const id = params.id;
+      const existing = fetchSongById(id);
+      if (!existing) {
+        throw new ApiError(404, 'Song not found.');
+      }
 
-          const newTags = await canonicalizeTags(validateTags(body.tags));
-          const mode = body.mode ?? 'add';
+      deleteSongById(id);
+      emitSongDeleted(id);
 
-          const existingSongs = fetchSongsByIds(ids);
-          const updatedIds: string[] = [];
+      set.status = 204;
+      return null;
+    },
+    {
+      hasPermission: 'songs.delete',
+      params: t.Object({ id: t.String() }),
+      response: { 204: t.Void() },
+    }
+  )
 
-          if (mode === 'set') {
-            updateSongsByIds(ids, { tags: newTags });
-            updatedIds.push(...ids);
-          } else {
-            await Promise.all(
-              existingSongs.map(async (song) => {
-                const existingTags = song.tags ?? [];
-                const merged = [...new Set([...existingTags, ...newTags])];
-                await db.update(songTable).set({ tags: merged }).where(eq(songTable.id, song.id));
-                updatedIds.push(song.id);
-              })
-            );
-          }
+  .post(
+    '/bulk-tag',
+    async ({ body }) => {
+      const { ids } = body;
 
-          const updatedSongs = fetchSongsByIds(updatedIds);
-          const bulkTagNameMap = await resolveDisplayNames(updatedSongs as { addedBy: string }[]);
-          for (const s of updatedSongs) {
-            emitSongUpdated({
-              ...formatSong(s),
-              addedByDisplayName: bulkTagNameMap.get(s.addedBy) ?? s.addedBy,
-            });
-          }
+      const newTags = await canonicalizeTags(validateTags(body.tags));
+      const mode = body.mode ?? 'add';
 
-          if (newTags.length > 0) {
-            await reSyncPlaylistsForTags(newTags.map((t) => t.toLowerCase()));
-          }
+      const existingSongs = fetchSongsByIds(ids);
+      const updatedIds: string[] = [];
 
-          return { updated: updatedSongs.length, tags: newTags };
-        },
-        {
-          hasPermission: 'songs.edit',
-          body: BulkTagSchema,
-          response: { 200: t.Object({ updated: t.Number(), tags: t.Array(t.String()) }) },
-        }
-      )
-      .post(
-        '/bulk-edit',
-        async ({ body }) => {
-          const b = body as Record<string, unknown>;
-          const ids = b.ids as string[];
-          const clearFields = (b.clearFields as string[]) ?? [];
+      if (mode === 'set') {
+        updateSongsByIds(ids, { tags: newTags });
+        updatedIds.push(...ids);
+      } else {
+        await Promise.all(
+          existingSongs.map(async (song) => {
+            const existingTags = song.tags ?? [];
+            const merged = [...new Set([...existingTags, ...newTags])];
+            await db.update(songTable).set({ tags: merged }).where(eq(songTable.id, song.id));
+            updatedIds.push(song.id);
+          })
+        );
+      }
 
-          const { data, processedTags, processedVolumeBoost } = await validateAndBuildSongFields(
-            b,
-            clearFields
-          );
+      const updatedSongs = fetchSongsByIds(updatedIds);
+      const bulkTagNameMap = await resolveDisplayNames(updatedSongs as { addedBy: string }[]);
+      for (const s of updatedSongs) {
+        emitSongUpdated({
+          ...formatSong(s),
+          addedByDisplayName: bulkTagNameMap.get(s.addedBy) ?? s.addedBy,
+        });
+      }
 
-          if (Object.keys(data).length === 0) {
-            throw new ApiError(400, 'No fields to update.');
-          }
+      if (newTags.length > 0) {
+        await reSyncPlaylistsForTags(newTags.map((t) => t.toLowerCase()));
+      }
 
-          updateSongsByIds(ids, data);
+      return { updated: updatedSongs.length, tags: newTags };
+    },
+    {
+      hasPermission: 'songs.edit',
+      body: BulkTagSchema,
+      response: { 200: t.Object({ updated: t.Number(), tags: t.Array(t.String()) }) },
+    }
+  )
+  .post(
+    '/bulk-edit',
+    async ({ body }) => {
+      const b = body as Record<string, unknown>;
+      const ids = b.ids as string[];
+      const clearFields = (b.clearFields as string[]) ?? [];
 
-          const updatedSongs = fetchSongsByIds(ids);
-          const bulkEditNameMap = await resolveDisplayNames(updatedSongs as { addedBy: string }[]);
-          for (const s of updatedSongs) {
-            emitSongUpdated({
-              ...formatSong(s),
-              addedByDisplayName: bulkEditNameMap.get(s.addedBy) ?? s.addedBy,
-            });
-          }
+      const { data, processedTags, processedVolumeBoost } = await validateAndBuildSongFields(
+        b,
+        clearFields
+      );
 
-          if (processedTags) {
-            await reSyncPlaylistsForTags(processedTags.map((t) => t.toLowerCase()));
-          }
+      if (Object.keys(data).length === 0) {
+        throw new ApiError(400, 'No fields to update.');
+      }
 
-          notifyPlayerOfMetadataChange(ids, data, processedVolumeBoost);
+      updateSongsByIds(ids, data);
 
-          return { updated: ids.length };
-        },
-        { hasPermission: 'songs.edit', response: { 200: t.Object({ updated: t.Number() }) } }
-      )
-      .patch(
-        '/:id',
-        async ({ params, body }): Promise<typeof Song.static> => {
-          const id = params.id;
+      const updatedSongs = fetchSongsByIds(ids);
+      const bulkEditNameMap = await resolveDisplayNames(updatedSongs as { addedBy: string }[]);
+      for (const s of updatedSongs) {
+        emitSongUpdated({
+          ...formatSong(s),
+          addedByDisplayName: bulkEditNameMap.get(s.addedBy) ?? s.addedBy,
+        });
+      }
 
-          const existing = fetchSongById(id);
-          if (!existing) {
-            throw new ApiError(404, 'Song not found.');
-          }
+      if (processedTags) {
+        await reSyncPlaylistsForTags(processedTags.map((t) => t.toLowerCase()));
+      }
 
-          const oldTagsLower = new Set((existing.tags ?? []).map((t) => t.toLowerCase()));
+      notifyPlayerOfMetadataChange(ids, data, processedVolumeBoost);
 
-          const { data, processedTags, processedVolumeBoost } =
-            await validateAndBuildSongFields(body);
+      return { updated: ids.length };
+    },
+    { hasPermission: 'songs.edit', response: { 200: t.Object({ updated: t.Number() }) } }
+  )
+  .patch(
+    '/:id',
+    async ({ params, body }): Promise<typeof Song.static> => {
+      const id = params.id;
 
-          const updatedSong = await updateSongReturning(id, data);
-          if (!updatedSong) {
-            throw new ApiError(500, 'Failed to update song.');
-          }
+      const existing = fetchSongById(id);
+      if (!existing) {
+        throw new ApiError(404, 'Song not found.');
+      }
 
-          const patchedDisplayName = await getUserDisplayName(updatedSong.addedBy);
-          emitSongUpdated({
-            ...formatSong(updatedSong),
-            addedByDisplayName: patchedDisplayName,
-          });
+      const oldTagsLower = new Set((existing.tags ?? []).map((t) => t.toLowerCase()));
 
-          if (processedTags) {
-            const newTagsLower = new Set(processedTags.map((t) => t.toLowerCase()));
-            const affectedTags = [...new Set([...oldTagsLower, ...newTagsLower])];
-            await reSyncPlaylistsForTags(affectedTags);
-          }
+      const { data, processedTags, processedVolumeBoost } = await validateAndBuildSongFields(body);
 
-          notifyPlayerOfMetadataChange([id], data, processedVolumeBoost);
+      const updatedSong = await updateSongReturning(id, data);
+      if (!updatedSong) {
+        throw new ApiError(500, 'Failed to update song.');
+      }
 
-          return formatSong(updatedSong) as unknown as typeof Song.static;
-        },
-        {
-          hasPermission: 'songs.edit',
-          params: t.Object({ id: t.String() }),
-          body: SongPatchSchema,
-          response: { 200: Song },
-        }
-      )
+      const patchedDisplayName = await getUserDisplayName(updatedSong.addedBy);
+      emitSongUpdated({
+        ...formatSong(updatedSong),
+        addedByDisplayName: patchedDisplayName,
+      });
+
+      if (processedTags) {
+        const newTagsLower = new Set(processedTags.map((t) => t.toLowerCase()));
+        const affectedTags = [...new Set([...oldTagsLower, ...newTagsLower])];
+        await reSyncPlaylistsForTags(affectedTags);
+      }
+
+      notifyPlayerOfMetadataChange([id], data, processedVolumeBoost);
+
+      return formatSong(updatedSong) as unknown as typeof Song.static;
+    },
+    {
+      hasPermission: 'songs.edit',
+      params: t.Object({ id: t.String() }),
+      body: SongPatchSchema,
+      response: { 200: Song },
+    }
   );

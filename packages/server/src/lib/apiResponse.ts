@@ -6,14 +6,3 @@ for (const [key, value] of Object.entries(SECURITY_HEADERS)) {
     API_SECURITY_HEADERS[key] = value;
   }
 }
-
-/**
- * JSON response helper for native Elysia route handlers.
- * Includes API security headers (CSP, X-Content-Type-Options, etc.).
- */
-export function elysiaJson(data: unknown, status = 200): Response {
-  return new Response(JSON.stringify(data), {
-    status,
-    headers: { 'Content-Type': 'application/json', ...API_SECURITY_HEADERS },
-  });
-}
