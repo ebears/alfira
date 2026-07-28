@@ -13,6 +13,8 @@ import {
   MessageResponse,
   PaginationMeta,
   Playlist,
+  PlaylistDetail,
+  PlaylistSongEntry,
 } from '../lib/responseSchemas';
 import {
   buildSongFilterClause,
@@ -85,8 +87,8 @@ export const playlistsPlugin = new Elysia({ prefix: '/playlists' })
   .use(authGuard)
   .get(
     '/',
-    async ({ user, ...ctx }) => {
-      const url = new URL((ctx.request as Request).url);
+    async ({ user, request }) => {
+      const url = new URL(request.url);
       const adminView = url.searchParams.get('adminView') === 'true';
       const { page, limit, skip } = parsePagination(url);
 
@@ -281,7 +283,7 @@ export const playlistsPlugin = new Elysia({ prefix: '/playlists' })
   })
   .post(
     '/:id/songs',
-    async ({ ...ctx }) => {
+    async ({ ...ctx }): Promise<typeof PlaylistSongEntry.static> => {
       const user = ctx.user as { discordId: string; username: string };
       const id = (ctx.params as Record<string, string>).id as string;
       const { songId } = ctx.body as typeof PlaylistAddSongSchema.static;
@@ -339,9 +341,9 @@ export const playlistsPlugin = new Elysia({ prefix: '/playlists' })
       const value = await getPlaylistSongCount(playlist.id);
       emitPlaylistUpdated(formatPlaylist(playlist, value));
 
-      return { ...ps, song: songData };
+      return { ...ps, song: songData } as typeof PlaylistSongEntry.static;
     },
-    { body: PlaylistAddSongSchema, response: { 200: t.Unknown() } }
+    { body: PlaylistAddSongSchema, response: { 200: PlaylistSongEntry } }
   )
   .patch(
     '/:id/visibility',
@@ -375,9 +377,9 @@ export const playlistsPlugin = new Elysia({ prefix: '/playlists' })
   )
   .get(
     '/:id',
-    async ({ user, ...ctx }) => {
+    async ({ user, request, ...ctx }) => {
       const id = (ctx.params as Record<string, string>).id as string;
-      const url = new URL((ctx.request as Request).url);
+      const url = new URL(request.url);
       const adminView = url.searchParams.get('adminView') === 'true';
       const discordId = (user as { discordId: string }).discordId;
       const { page, limit, skip } = parsePagination(url);
@@ -556,7 +558,7 @@ export const playlistsPlugin = new Elysia({ prefix: '/playlists' })
         },
       };
     },
-    { response: { 200: t.Unknown() } }
+    { response: { 200: PlaylistDetail } }
   )
   .patch(
     '/:id',

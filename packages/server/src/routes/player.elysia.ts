@@ -9,7 +9,14 @@ import { ApiError } from '../lib/errors';
 import { lavalink } from '../lib/lavalink';
 import { requirePlayer, requirePlaying } from '../lib/player';
 import { canAccessPlaylist } from '../lib/playlistAccess';
-import { LoopModeResponse, MessageResponse, PauseToggleResponse } from '../lib/responseSchemas';
+import {
+  LoopModeResponse,
+  MessageResponse,
+  PauseToggleResponse,
+  PlaylistQueuedResponse,
+  QueueState,
+  SongAddedResponse,
+} from '../lib/responseSchemas';
 import {
   clampMaxVideos,
   fetchPlaylistMetadata,
@@ -116,7 +123,7 @@ export const playerPlugin = new Elysia({ prefix: '/player' })
   .use(authGuard)
   .get(
     '/queue',
-    () => {
+    (): typeof QueueState.static => {
       const player = getPlayer(getGuildId());
 
       if (!player) {
@@ -134,12 +141,12 @@ export const playerPlugin = new Elysia({ prefix: '/player' })
           timescaleSpeed: 1,
           nodeLinkPosition: null,
           nodeLinkTime: null,
-        };
+        } as typeof QueueState.static;
       }
 
-      return player.getQueueState();
+      return player.getQueueState() as typeof QueueState.static;
     },
-    { response: { 200: t.Unknown() } }
+    { response: { 200: QueueState } }
   )
   .use(voiceGuard)
 
@@ -217,7 +224,7 @@ export const playerPlugin = new Elysia({ prefix: '/player' })
       )
       .post(
         '/add-to-priority',
-        async ({ ...ctx }) => {
+        async ({ ...ctx }): Promise<typeof SongAddedResponse.static> => {
           const user = ctx.user as { discordId: string; username: string };
           const { songId } = ctx.body as typeof SongIdSchema.static;
 
@@ -235,9 +242,9 @@ export const playerPlugin = new Elysia({ prefix: '/player' })
           return {
             message: `Added "${song.nickname ?? song.title}" to Up Next.`,
             song: queuedSong,
-          };
+          } as typeof SongAddedResponse.static;
         },
-        { body: SongIdSchema, response: { 200: t.Unknown() } }
+        { body: SongIdSchema, response: { 200: SongAddedResponse } }
       )
       .post(
         '/clear',
@@ -282,7 +289,7 @@ export const playerPlugin = new Elysia({ prefix: '/player' })
   .guard({}, (app) =>
     app.use(createAdminOrPermissionGuard('queue.override')).post(
       '/override',
-      async ({ ...ctx }) => {
+      async ({ ...ctx }): Promise<typeof SongAddedResponse.static> => {
         const user = ctx.user as { discordId: string; username: string };
         const body = ctx.body as typeof UrlSchema.static;
         const result = await resolveUrlTempSong(user, body);
@@ -290,9 +297,9 @@ export const playerPlugin = new Elysia({ prefix: '/player' })
         return {
           message: `Now playing "${result.metadataTitle}".`,
           song: result.queuedSong,
-        };
+        } as typeof SongAddedResponse.static;
       },
-      { body: UrlSchema, response: { 200: t.Unknown() } }
+      { body: UrlSchema, response: { 200: SongAddedResponse } }
     )
   )
 
@@ -368,7 +375,7 @@ export const playerPlugin = new Elysia({ prefix: '/player' })
 
           return { message: `Queued ${queuedSongs.length} song(s).` };
         },
-        { body: PlaySchema, response: { 200: t.Unknown() } }
+        { body: PlaySchema, response: { 200: MessageResponse } }
       )
   )
 
@@ -377,7 +384,7 @@ export const playerPlugin = new Elysia({ prefix: '/player' })
       .use(createAdminOrPermissionGuard('queue.quickadd'))
       .post(
         '/quick-add',
-        async ({ ...ctx }) => {
+        async ({ ...ctx }): Promise<typeof SongAddedResponse.static> => {
           const user = ctx.user as { discordId: string; username: string };
           const body = ctx.body as typeof UrlSchema.static;
           const result = await resolveUrlTempSong(user, body);
@@ -385,13 +392,13 @@ export const playerPlugin = new Elysia({ prefix: '/player' })
           return {
             message: `Added "${result.metadataTitle}" to the queue.`,
             song: result.queuedSong,
-          };
+          } as typeof SongAddedResponse.static;
         },
-        { body: UrlSchema, response: { 200: t.Unknown() } }
+        { body: UrlSchema, response: { 200: SongAddedResponse } }
       )
       .post(
         '/quick-add-playlist',
-        async ({ ...ctx }) => {
+        async ({ ...ctx }): Promise<typeof PlaylistQueuedResponse.static> => {
           const user = ctx.user as { discordId: string; username: string };
           const body = ctx.body as typeof QuickAddPlaylistSchema.static;
           const maxVideos = clampMaxVideos(body.maxVideos);
@@ -423,9 +430,9 @@ export const playerPlugin = new Elysia({ prefix: '/player' })
             totalVideos: playlistMetadata.videoCount,
             queuedCount: queuedSongs.length,
             songs: queuedSongs,
-          };
+          } as typeof PlaylistQueuedResponse.static;
         },
-        { body: QuickAddPlaylistSchema, response: { 200: t.Unknown() } }
+        { body: QuickAddPlaylistSchema, response: { 200: PlaylistQueuedResponse } }
       )
   )
 
@@ -434,15 +441,15 @@ export const playerPlugin = new Elysia({ prefix: '/player' })
       .use(createAdminOrPermissionGuard('queue.manage'))
       .post(
         '/seek',
-        async ({ ...ctx }) => {
+        async ({ ...ctx }): Promise<typeof QueueState.static> => {
           const { position } = ctx.body as typeof SeekSchema.static;
 
           const player = requirePlaying();
 
           await player.seek(position);
-          return player.getQueueState();
+          return player.getQueueState() as typeof QueueState.static;
         },
-        { body: SeekSchema, response: { 200: t.Unknown() } }
+        { body: SeekSchema, response: { 200: QueueState } }
       )
       .post(
         '/shuffle',

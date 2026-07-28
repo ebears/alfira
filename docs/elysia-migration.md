@@ -590,42 +590,37 @@ With oxlint 1.75 / tsgolint 7.0.2001, tsgo (TypeScript 7) fully resolves Elysia'
 
 ## Remaining work
 
-### Replace remaining `t.Unknown()` response schemas with precise types
+### Replace remaining `t.Unknown()` response schemas with precise types ✅
 
-~12 endpoints still use `t.Unknown()` for their response schema. Precise schemas already exist in `responseSchemas.ts` for most of them. The fix is a two-step process per endpoint:
+All 12 `t.Unknown()` response schemas replaced with precise types from `responseSchemas.ts`. The `NoInfer<>` mechanism (Elysia wraps both schema and context types in `NoInfer<>` when a `response` schema is present) required explicit return type annotations on 6 handlers that build return values through helper functions or branching logic. Structural mismatches between Drizzle-inferred types and Elysia schema types (extra optional fields like `isSeekable` on `QueuedSong`, `compressorSettings` on `QueueState`) were resolved with `as` casts at return sites.
 
-1. **Add explicit return type annotation** — `(): typeof MessageResponse.static` etc. on the handler. This bypasses Elysia's `NoInfer<>` wrapping by giving TypeScript the schema type directly instead of relying on inference.
-2. **Fix any structural mismatches** — if the handler's return value doesn't structurally match the schema, align them (add/remove fields, fix optional vs required).
+**PATCH /requests/:id** kept `t.Unknown()` — it returns 3 genuinely different shapes (track approve, playlist approve, deny).
 
-**Routes needing this treatment:**
+**Handler annotation + cast patterns used:**
 
-| Route                             | Current                | Replacement              | Notes                                                              |
-| --------------------------------- | ---------------------- | ------------------------ | ------------------------------------------------------------------ |
-| `GET /player/queue`               | `t.Unknown()`          | `QueueState`             | Two return branches; `getQueueState()` return type needs alignment |
-| `POST /player/add-to-priority`    | `t.Unknown()`          | `SongAddedResponse`      |                                                                    |
-| `POST /player/override`           | `t.Unknown()`          | `SongAddedResponse`      |                                                                    |
-| `POST /player/play`               | `t.Unknown()`          | `MessageResponse`        | Confirmed working with annotation                                  |
-| `POST /player/quick-add`          | `t.Unknown()`          | `SongAddedResponse`      |                                                                    |
-| `POST /player/quick-add-playlist` | `t.Unknown()`          | `PlaylistQueuedResponse` |                                                                    |
-| `POST /player/seek`               | `t.Unknown()`          | `QueueState`             | Returns `getQueueState()`                                          |
-| `POST /playlists/:id/songs`       | `t.Unknown()`          | `PlaylistSongEntry`      |                                                                    |
-| `GET /playlists/:id`              | `t.Unknown()`          | `PlaylistDetail`         |                                                                    |
-| `POST /requests/preview`          | `t.Unknown()`          | `RequestPreview`         |                                                                    |
-| `POST /requests` (create)         | `t.Unknown()`          | `CreateRequestResult`    |                                                                    |
-| `GET /songs` (items)              | `t.Array(t.Unknown())` | `t.Array(Song)`          |                                                                    |
+```ts
+// Sync handler with two branches: annotation + cast on each return
+(): typeof QueueState.static => {
+  if (!player) return { ... } as typeof QueueState.static;
+  return player.getQueueState() as typeof QueueState.static;
+}
 
-**Multi-shape returns (genuinely needs `t.Unknown()` or a union):**
+// Async handler: annotation + cast on return
+async ({ ...ctx }): Promise<typeof SongAddedResponse.static> => {
+  return { message: '...', song: queuedSong } as typeof SongAddedResponse.static;
+}
+```
 
-- **`PATCH /requests/:id`** — returns `{ request, song }` (track approve), `{ request, songs, importedCount, skippedCount }` (playlist approve), or `{ request }` (deny). Elysia's `t.Union()` supports this cross-status-code discrimination, but it's awkward. `t.Unknown()` is reasonable here.
+### Tighten body schemas ✅
 
-### Tighten body schemas
+- **`songs.elysia.ts`:** `SongPatchSchema` — 6 `t.Unknown()` replaced with `t.Nullable(t.String())`, `t.Array(t.String())`, and `t.Nullable(t.Integer({ minimum: -100, maximum: 200 }))`.
+- **`requests.elysia.ts`:** `CreateRequestSchema` — 8 `t.Unknown()` replaced with `t.String()`, `t.Boolean()`, `t.Nullable(t.String())`, `t.Array(t.String())`, and `t.Nullable(t.Integer({ minimum: -100, maximum: 200 }))`.
 
-- **`songs.elysia.ts`:** `SongPatchSchema` uses `t.Unknown()` for 6 fields (`nickname`, `artist`, `album`, `artwork`, `tags`, `volumeBoost`). Replace with `t.Nullable(t.String())` / `t.Nullable(t.Number())` / `t.Array(t.String())`.
-- **`requests.elysia.ts`:** `CreateRequestSchema` uses `t.Unknown()` for 8 fields. Same treatment.
+### Reduce `as` casts in handlers (partial)
 
-### Reduce `as` casts in handlers
-
-Some handlers use `ctx.body as typeof Schema.static` and `ctx.user as { ... }` casts. When all routes have precise response schemas and explicit return type annotations, TypeScript may be able to infer body/params types from the schema, eliminating some casts. Assess after completing the `t.Unknown()` replacements.
+- **`ctx.request as Request`** — eliminated from 3 handlers by destructuring `request` directly from Elysia context (`async ({ user, request })`). Elysia types `request` natively as `Request`.
+- **`ctx.user as { ... }`** — cannot be eliminated. These are a fundamental TS limitation: `.derive(deriveAuth)` provides `user: UserContext | null`, and `onBeforeHandle` guards guarantee non-null at runtime, but TypeScript cannot narrow across lifecycle hooks. A future `.resolve()` to provide `currentUser: UserContext` (non-null) could eliminate these.
+- **`ctx.body as typeof Schema.static`** — cannot be eliminated without also fixing the user narrowing (handlers use `...ctx` rest spread to access body alongside user, losing the typed destructure).
 
 ### Web client
 

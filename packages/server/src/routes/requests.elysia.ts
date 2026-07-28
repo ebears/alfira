@@ -7,6 +7,7 @@ import { adminGuard, authGuard, type AuthContext } from '../lib/elysia-guards';
 import { ApiError } from '../lib/errors';
 import { sendRequestDm, sendRequestNotification } from '../lib/notifications';
 import { parsePagination } from '../lib/pagination';
+import { CreateRequestResult, RequestPreview } from '../lib/responseSchemas';
 import { formatSong } from '../lib/serialization';
 import { emitSongAdded } from '../lib/socket';
 import { canonicalizeTags } from '../lib/tagCanonicalization';
@@ -77,14 +78,14 @@ const PreviewRequestSchema = t.Object({
 
 const CreateRequestSchema = t.Partial(
   t.Object({
-    sourceUrl: t.Unknown(),
-    notifyDm: t.Unknown(),
-    nickname: t.Unknown(),
-    artist: t.Unknown(),
-    album: t.Unknown(),
-    artwork: t.Unknown(),
-    tags: t.Unknown(),
-    volumeBoost: t.Unknown(),
+    sourceUrl: t.String(),
+    notifyDm: t.Boolean(),
+    nickname: t.Nullable(t.String()),
+    artist: t.Nullable(t.String()),
+    album: t.Nullable(t.String()),
+    artwork: t.Nullable(t.String()),
+    tags: t.Array(t.String()),
+    volumeBoost: t.Nullable(t.Integer({ minimum: -100, maximum: 200 })),
     type: t.Optional(t.Union([t.Literal('track'), t.Literal('playlist')])),
   })
 );
@@ -168,12 +169,12 @@ export const requestsPlugin = new Elysia({ prefix: '/requests' })
         playlistMeta: undefined,
       };
     },
-    { body: PreviewRequestSchema, response: { 200: t.Unknown() } }
+    { body: PreviewRequestSchema, response: { 200: RequestPreview } }
   )
   .get(
     '/',
-    async ({ user, isAdmin, ...ctx }) => {
-      const url = new URL((ctx.request as Request).url);
+    async ({ user, isAdmin, request }) => {
+      const url = new URL(request.url);
       const { page, limit, skip } = parsePagination(url);
       const status = url.searchParams.get('status') ?? 'pending';
       const mine = url.searchParams.get('mine') === 'true';
@@ -244,7 +245,7 @@ export const requestsPlugin = new Elysia({ prefix: '/requests' })
   )
   .post(
     '/',
-    async ({ user, isAdmin, ...ctx }) => {
+    async ({ user, isAdmin, ...ctx }): Promise<typeof CreateRequestResult.static> => {
       const body = ctx.body as Record<string, unknown>;
       const discordUser = user as {
         discordId: string;
@@ -398,7 +399,7 @@ export const requestsPlugin = new Elysia({ prefix: '/requests' })
             importedCount: createdSongs.length,
             skippedCount: pm.videos.length - newVideos.length,
             playlistTitle: pm.title,
-          };
+          } as typeof CreateRequestResult.static;
         }
 
         // Pending playlist request
@@ -447,7 +448,10 @@ export const requestsPlugin = new Elysia({ prefix: '/requests' })
           user as { discordId: string; username: string; isAdmin: boolean }
         );
 
-        return { request: formatted, autoApproved: false };
+        return {
+          request: formatted,
+          autoApproved: false,
+        } as unknown as typeof CreateRequestResult.static;
       }
 
       // --- Track request ---
@@ -549,7 +553,7 @@ export const requestsPlugin = new Elysia({ prefix: '/requests' })
           }
         }
 
-        return { song: enriched, autoApproved: true };
+        return { song: enriched, autoApproved: true } as typeof CreateRequestResult.static;
       }
 
       // Pending track request
@@ -582,9 +586,12 @@ export const requestsPlugin = new Elysia({ prefix: '/requests' })
         user as { discordId: string; username: string; isAdmin: boolean }
       );
 
-      return { request: formatted, autoApproved: false };
+      return {
+        request: formatted,
+        autoApproved: false,
+      } as unknown as typeof CreateRequestResult.static;
     },
-    { body: CreateRequestSchema, response: { 200: t.Unknown() } }
+    { body: CreateRequestSchema, response: { 200: CreateRequestResult } }
   )
   .guard({}, (app) =>
     app.use(adminGuard).patch(

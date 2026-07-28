@@ -6,6 +6,7 @@ import { getGuildId } from '../lib/config';
 import { getUserDisplayName, resolveDisplayNames } from '../lib/displayName';
 import { authGuard, createAdminOrPermissionGuard } from '../lib/elysia-guards';
 import { ApiError } from '../lib/errors';
+import { PaginatedResult, type PaginationMeta, Song } from '../lib/responseSchemas';
 import {
   buildSongFilterClause,
   buildSongOrderBy,
@@ -35,12 +36,12 @@ const BulkTagSchema = t.Object({
 
 const SongPatchSchema = t.Partial(
   t.Object({
-    nickname: t.Unknown(),
-    artist: t.Unknown(),
-    album: t.Unknown(),
-    artwork: t.Unknown(),
-    tags: t.Unknown(),
-    volumeBoost: t.Unknown(),
+    nickname: t.Nullable(t.String()),
+    artist: t.Nullable(t.String()),
+    album: t.Nullable(t.String()),
+    artwork: t.Nullable(t.String()),
+    tags: t.Array(t.String()),
+    volumeBoost: t.Nullable(t.Integer({ minimum: -100, maximum: 200 })),
   })
 );
 
@@ -213,19 +214,14 @@ export const songsPlugin = new Elysia({ prefix: '/songs' })
       for (const [k, v] of sp) {
         q[k] = v;
       }
-      return handleGetSongs(q);
+      return handleGetSongs(q) as unknown as {
+        items: (typeof Song.static)[];
+        pagination: typeof PaginationMeta.static;
+      };
     },
     {
       response: {
-        200: t.Object({
-          items: t.Array(t.Unknown()),
-          pagination: t.Object({
-            page: t.Number(),
-            limit: t.Number(),
-            total: t.Number(),
-            totalPages: t.Number(),
-          }),
-        }),
+        200: PaginatedResult(Song),
       },
     }
   )
