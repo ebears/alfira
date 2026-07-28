@@ -7,7 +7,11 @@ import { adminGuard, authGuard, type AuthContext } from '../lib/elysia-guards';
 import { ApiError } from '../lib/errors';
 import { sendRequestDm, sendRequestNotification } from '../lib/notifications';
 import { parsePagination } from '../lib/pagination';
-import { CreateRequestResult, RequestPreview } from '../lib/responseSchemas';
+import {
+  CreateRequestResult,
+  RequestPreview,
+  SongRequest as SongRequestSchema,
+} from '../lib/responseSchemas';
 import { formatSong } from '../lib/serialization';
 import { emitSongAdded } from '../lib/socket';
 import { canonicalizeTags } from '../lib/tagCanonicalization';
@@ -232,7 +236,7 @@ export const requestsPlugin = new Elysia({ prefix: '/requests' })
     {
       response: {
         200: t.Object({
-          items: t.Array(t.Unknown()),
+          items: t.Array(SongRequestSchema),
           pagination: t.Object({
             page: t.Number(),
             limit: t.Number(),

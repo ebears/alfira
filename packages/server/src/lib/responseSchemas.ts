@@ -424,37 +424,39 @@ export const MyPermissionsResponse = t.Object({
 // SongRequest (for requests endpoints)
 // ---------------------------------------------------------------------------
 
-const PlaylistDataSchema = t.Object({
+const PlaylistVideo = t.Object({
+  id: t.String(),
   title: t.String(),
+  duration: t.Number(),
+  thumbnailUrl: t.Optional(t.Nullable(t.String())),
+  artist: t.Optional(t.Nullable(t.String())),
+  artworkUrl: t.Optional(t.Nullable(t.String())),
+});
+
+const PlaylistDataSchema = t.Object({
+  name: t.String(),
   videoCount: t.Number(),
   thumbnailUrl: t.Optional(t.Nullable(t.String())),
-  videos: t.Array(
-    t.Object({
-      id: t.String(),
-      title: t.String(),
-      duration: t.Number(),
-      thumbnailUrl: t.String(),
-    })
-  ),
+  videos: t.Optional(t.Array(PlaylistVideo)),
 });
 
 export const SongRequest = t.Object({
   id: t.String(),
   sourceUrl: t.String(),
-  type: t.Union([t.Literal('track'), t.Literal('playlist')]),
-  status: t.Union([t.Literal('pending'), t.Literal('approved'), t.Literal('denied')]),
-  nickname: t.Nullable(t.String()),
+  sourceId: t.String(),
+  title: t.String(),
+  duration: t.Number(),
+  thumbnailUrl: t.String(),
   artist: t.Nullable(t.String()),
-  album: t.Nullable(t.String()),
-  artwork: t.Nullable(t.String()),
-  tags: t.Optional(t.Array(t.String())),
-  volumeBoost: t.Nullable(t.Number()),
-  notifyDm: t.Boolean(),
+  artworkUrl: t.Nullable(t.String()),
+  sourceName: t.Nullable(t.String()),
   requestedBy: t.String(),
   requestedByDisplayName: t.Optional(t.String()),
-  reviewerId: t.Nullable(t.String()),
+  notifyDm: t.Boolean(),
+  type: t.Union([t.Literal('track'), t.Literal('playlist')]),
   playlistData: t.Nullable(PlaylistDataSchema),
-  associatedSongId: t.Nullable(t.String()),
+  status: t.Union([t.Literal('pending'), t.Literal('approved'), t.Literal('denied')]),
+  reviewedBy: t.Nullable(t.String()),
   createdAt: t.String(),
   closedAt: t.Nullable(t.String()),
 });
