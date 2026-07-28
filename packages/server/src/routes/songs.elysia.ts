@@ -126,7 +126,7 @@ function notifyPlayerOfMetadataChange(
 // Route handler (extracted to avoid Elysia NoInfer type limitation)
 // ---------------------------------------------------------------------------
 
-async function handleGetSongs(q: Record<string, string>) {
+async function handleGetSongs(q: Record<string, string | undefined>) {
   const rawPage = Math.trunc(Number(q.page ?? '1')) || 1;
   const page = Math.max(1, rawPage);
   const rawLimit = Math.trunc(Number(q.limit ?? '30')) || 30;
@@ -207,19 +207,23 @@ export const songsPlugin = new Elysia({ prefix: '/songs', name: 'songs' })
 
   .get(
     '/',
-    ({ request }) => {
-      const q: Record<string, string> = {};
-      const sp = new URL(request.url).searchParams;
-      for (const [k, v] of sp) {
-        q[k] = v;
-      }
-      return handleGetSongs(q) as unknown as {
+    ({ query }) => {
+      return handleGetSongs(query) as unknown as {
         items: (typeof Song.static)[];
         pagination: typeof PaginationMeta.static;
       };
     },
     {
       isAuth: true,
+      query: t.Object({
+        page: t.Optional(t.String()),
+        limit: t.Optional(t.String()),
+        search: t.Optional(t.String()),
+        sort: t.Optional(t.String()),
+        order: t.Optional(t.String()),
+        tags: t.Optional(t.String()),
+        source: t.Optional(t.String()),
+      }),
       response: {
         200: PaginatedResult(Song),
       },

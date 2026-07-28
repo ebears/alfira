@@ -8,7 +8,7 @@
 | **Language** | TypeScript                                             |
 | **Discord**  | Custom gateway (WebSocket) + REST                      |
 | **Audio**    | NodeLink (Lavalink v4) — direct WebSocket + REST       |
-| **API**      | Elysia + WebSocket                                     |
+| **API**      | Elysia + WebSocket + OpenAPI (Scalar UI)               |
 | **Database** | SQLite + Drizzle ORM                                   |
 | **Frontend** | React 19 + Tailwind CSS 4 + motion (framer-motion v12) |
 | **Logging**  | Custom (shared/logger)                                 |
