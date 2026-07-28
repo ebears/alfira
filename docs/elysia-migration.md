@@ -199,12 +199,12 @@ With oxlint v1.75.0 + tsgolint v7.0.2001, tsgo now resolves Elysia's generic typ
 
 **Removed `as unknown as Elysia` from `.use()` calls in `elysia-app.ts`** — `apiApp.use(plugin)` and `app.use(apiApp)` / `app.use(authApp)` work without casts.
 
-**Still needed:**
+**Still needed at this point** (all resolved in later phases):
 
-- `as never` on handler registrations — Elysia's own type definitions don't propagate `.derive()` through `.use()` at the type level (not a tsgo issue). This is a fundamental Elysia type limitation.
-- `Record<string, unknown>` + `getAuth()` pattern — same reason.
-- `deriveAuth` cast in `elysia-app.ts` — Elysia's `Cookie<unknown>` type doesn't match the project's `{ value?: string }` cookie format.
-- `return app as unknown as Elysia` — the function's explicit `Elysia` return type annotation can't match the deeply-nested inferred type of the chained instance.
+- `as never` on handler registrations — resolved in Phase 5f when tsgo began resolving Elysia handler types.
+- `Record<string, unknown>` + `getAuth()` pattern — resolved in Phase 7 (`.derive(deriveAuth)` on each plugin).
+- `deriveAuth` cast in `elysia-app.ts` — resolved in Phase 5e.
+- `return app as unknown as Elysia` — resolved in Phase 5e.
 
 ### Phase 5d — Auth plugin conversion ✅
 
@@ -254,7 +254,7 @@ export function createApp() {
 
 ### Phase 5f — Remove `as never` cast workarounds ✅
 
-With oxlint v1.75.0 + tsgolint v7.0.2001, tsgo now resolves Elysia handler types correctly — the `as never` workaround is no longer needed. Removed all 82 `as never` casts from 20 route files. Handlers use `Record<string, unknown>` + `getAuth()` pattern (still needed — see below) without the `as never` cast on the handler registration.
+With oxlint v1.75.0 + tsgolint v7.0.2001, tsgo now resolves Elysia handler types correctly — the `as never` workaround is no longer needed. Removed all 82 `as never` casts from 20 route files. Handlers use `Record<string, unknown>` + `getAuth()` pattern (later replaced by `.derive(deriveAuth)` in Phase 7).
 
 **Remaining casts in routes:** Only the one `user as never` in `player.elysia.ts` was replaced with `user ?? undefined` to match `UserContext | undefined`.
 
@@ -544,13 +544,7 @@ return { message: 'Queue cleared.' };
 
 Eden's proxy path resolution works, but response bodies were typed as `Response` because most server routes didn't have explicit `response` schemas. Response schemas have been added to all endpoints that Elysia 1.4.29 supports.
 
-**Elysia 1.4.29 NoInfer limitation:** When a `response` schema is present, Elysia wraps the handler's context types in `NoInfer<>`. This works for simple handler signatures (`async () =>`, `({ body })` without path params, `({ params })` for GET routes with simple return types). It fails for:
-
-- Handlers with complex return types (e.g., arrays of multi-field objects with optional/nullable fields) — TypeScript cannot match the complex shape against `NoInfer<Schema>`
-- Routes with path params AND body schemas (PATCH `/:id` + body + response) — both `params` and `body` get NoInfer'd
-- Handlers that destructure `{ request }` or use `{ ...ctx }` with complex return types
-
-**Added response schemas to 28 endpoints across 6 route groups:**
+**Routes that were skipped in the initial pass:**
 
 - **`setup.elysia.ts`** — 6 endpoints (all): GET `/`, GET `/status`, GET `/guilds`, GET `/roles`, GET `/channels`, POST `/complete`
 - **`tags.elysia.ts`** — 3 endpoints: GET `/` (existing), GET `/:nameLower`, GET `/:nameLower/songs`. PATCH `/:nameLower` skipped (path params + body)
@@ -560,7 +554,11 @@ Eden's proxy path resolution works, but response bodies were typed as `Response`
 - **`requests.elysia.ts`** — 2 endpoints: POST `/preview` (`t.Unknown()`), GET `/` (paginated). POST `/` and PATCH `/:id` skipped
 - **`auth`** — skipped entirely (raw Response objects, redirects, cookie headers)
 
-**Schema design:** Where precise schemas (e.g., `TagItem`, `SetupStatus`) can be used without triggering the NoInfer limitation, they are. For endpoints with complex nested types, `t.Unknown()` is used — this still enables Eden's `{ data, error }` discriminator but doesn't enforce exact response shapes at the type level.
+**Schema design:** Precise schemas (e.g., `TagItem`, `SetupStatus`) are used where available. Some endpoints with complex nested types used `t.Unknown()` as a conservative first pass — these still enable Eden's `{ data, error }` discriminator but don't enforce exact response shapes at the type level. Most of these `t.Unknown()` placeholders were later replaced with precise schemas in Phase 6c and follow-up work.
+
+**The `NoInfer<>` mechanism:** When a route has a `response` schema, Elysia wraps both the schema type and the context (decorator/derive) type in TypeScript's `NoInfer<>`. This is intentional and universal — applied regardless of whether the route has a body schema, params, macros, or `.derive()`. `NoInfer<>` prevents TypeScript from matching the handler's _inferred_ return type against the schema. When the handler constructs its return value through branching logic or helper methods, inference can produce a slightly different structural shape than the schema, and the reconciliation fails with TS2345. Handlers that return values directly from Drizzle's `.returning()` or from flat, single-path code tend to work because inference happens to match the schema exactly.
+
+**The fix:** Add explicit `(): typeof Schema.static` return type annotations to handlers with complex return logic. This gives TypeScript the schema type directly, bypassing the inference-reconciliation step entirely. Any remaining errors are plain structural mismatches between the TypeScript interface and the Elysia schema — fixable by aligning them. See "Remaining work" for the list of routes needing this treatment.
 
 **Prerequisites:** Phase 7b ✅ (guards in `onBeforeHandle`), Phase 8 ✅ (handlers return plain data, no `Response | data` unions), Phase 9 ✅ (DB types match wire types).
 
@@ -570,9 +568,9 @@ Extended response schemas from the original 28 read-heavy endpoints to cover mut
 
 **Schemas added per route group:**
 
-- **`player.elysia.ts`** — 11 endpoints: POST `/pause-toggle`, POST `/skip`, POST `/shuffle`, POST `/unshuffle`, POST `/clear`, POST `/leave`, POST `/loop`, PATCH `/queue/reorder`, POST/`/queue/:songId/promote`, POST `/queue/:songId/demote`, DELETE `/queue/:songId`. Routes with both body and response schemas (POST `/play`, `/override`, `/quick-add`, `/quick-add-playlist`, `/add-to-priority`, `/seek`) kept `t.Unknown()` due to NoInfer.
-- **`playlists.elysia.ts`** — 5 endpoints: POST `/` (create → `Playlist`), POST `/:id/songs/bulk-remove` (→ `BulkRemoveSongsResponse`), PATCH `/:id/visibility` (→ `Playlist`), PATCH `/:id` (rename/tag → `Playlist`), PATCH `/:id/reorder` (→ `MessageResponse`). GET `/` schema upgraded from `t.Array(t.Unknown())` to `t.Array(Playlist)`.
-- **`requests.elysia.ts`** — 2 endpoints: POST `/` (create) and PATCH `/:id` (approve/deny) got `t.Unknown()` response schemas. Full schemas deferred due to multi-shape returns and NoInfer.
+- **`player.elysia.ts`** — 11 endpoints: POST `/pause-toggle`, POST `/skip`, POST `/shuffle`, POST `/unshuffle`, POST `/clear`, POST `/leave`, POST `/loop`, PATCH `/queue/reorder`, POST/`/queue/:songId/promote`, POST `/queue/:songId/demote`, DELETE `/queue/:songId`. Routes with both body and response schemas (POST `/play`, `/override`, `/quick-add`, `/quick-add-playlist`, `/add-to-priority`, `/seek`) kept `t.Unknown()` as a conservative first pass — precise schemas (`MessageResponse`, `SongAddedResponse`, `PlaylistQueuedResponse`, `QueueState`) exist in `responseSchemas.ts` and just need explicit `typeof Schema.static` return type annotations on their handlers (see Phase 6b for the `NoInfer<>` fix).
+- **`playlists.elysia.ts`** — 6 endpoints: POST `/` (create → `Playlist`), POST `/:id/songs` (→ `t.Unknown()`, follow-up: `PlaylistSongEntry`), POST `/:id/songs/bulk-remove` (→ `BulkRemoveSongsResponse`), PATCH `/:id/visibility` (→ `Playlist`), PATCH `/:id` (rename/tag → `Playlist`), PATCH `/:id/reorder` (→ `MessageResponse`). GET `/` schema upgraded from `t.Array(t.Unknown())` to `t.Array(Playlist)`. GET `/:id` kept `t.Unknown()` (follow-up: `PlaylistDetail`).
+- **`requests.elysia.ts`** — 2 endpoints: POST `/` (create) and PATCH `/:id` (approve/deny) got `t.Unknown()` response schemas. POST `/` can use `CreateRequestResult` (already defined). PATCH `/:id` returns genuinely different shapes based on action (approve track, approve playlist, deny) — this is the only route where `t.Unknown()` (or a union type) is justified.
 - **`permissions.elysia.ts`** — 1 endpoint: GET `/me` (→ `MyPermissionsResponse`).
 
 **Bug fix:** `player.togglePause()` returns `Promise<boolean>` but the handler wasn't awaiting it — `isPaused` was `Promise<boolean>` instead of `boolean`. Adding the response schema surfaced this type-level bug; fixed by adding `await`.
@@ -586,25 +584,49 @@ With oxlint 1.75 / tsgolint 7.0.2001, tsgo (TypeScript 7) fully resolves Elysia'
 - **Removed `const $ = api as any`** → `const $ = api`. Eden proxy types resolve correctly at all nesting levels.
 - **Removed 3 `@ts-expect-error` comments** that claimed tsgo couldn't resolve property access on Eden responses. The types now resolve correctly.
 - **Changed `unwrap<T>()`** → `unwrap(any)`. Elysia's `TreatyResponse` is a discriminated union per status code (e.g. `{ data: Shape200; error: null } | { data: null; error: { status: 404; value: Shape404 } }`), which is not assignable to a single generic `T` parameter. The call site's explicit return type annotation (e.g. `Promise<QueueState>`) provides the actual type safety.
-- **3 targeted `as any` casts** on function arguments for routes where Elysia's NoInfer limitation prevents precise client–server type alignment (tag patch color union, playlist tag update null-vs-undefined, setup complete payload shape). These are local to specific arguments, not on the entire Eden client.
+- **3 targeted `as any` casts** on function arguments for routes where client–server type alignment has minor mismatches (tag patch color union, playlist tag update null-vs-undefined, setup complete payload shape). These are local to specific arguments, not on the entire Eden client. Once the remaining `t.Unknown()` response schemas are converted to precise schemas, some of these may resolve naturally.
 
-**Key insight:** The `as any` was never masking a tooling limitation. It was masking real type gaps: missing server-side response schemas, `null` vs `undefined` mismatches, and Elysia's NoInfer wrapping of handler context types. Each category was addressed individually rather than papered over with a single escape hatch.
+**Key insight:** The `as any` was never masking a tooling limitation. It was masking real type gaps: missing server-side response schemas, `null` vs `undefined` mismatches, and body/response schema interaction. Most were addressed individually rather than papered over with a single escape hatch.
 
 ## Remaining work
 
-### Complete response schemas on NoInfer-limited routes
+### Replace remaining `t.Unknown()` response schemas with precise types
 
-Routes that have both a `body` schema and a `response` schema trigger Elysia's NoInfer wrapping of handler context types, preventing destructuring of derived values (`user`, `isAdmin`). These routes currently use `t.Unknown()` for their response schemas. When Elysia lifts the NoInfer limitation (or provides an opt-out), these routes can get precise schemas:
+~12 endpoints still use `t.Unknown()` for their response schema. Precise schemas already exist in `responseSchemas.ts` for most of them. The fix is a two-step process per endpoint:
 
-- **Player:** POST `/play`, `/override`, `/quick-add`, `/quick-add-playlist`, `/add-to-priority`, `/seek`
-- **Playlists:** POST `/:id/songs`
-- **Requests:** POST `/` (create), PATCH `/:id` (approve/deny)
+1. **Add explicit return type annotation** — `(): typeof MessageResponse.static` etc. on the handler. This bypasses Elysia's `NoInfer<>` wrapping by giving TypeScript the schema type directly instead of relying on inference.
+2. **Fix any structural mismatches** — if the handler's return value doesn't structurally match the schema, align them (add/remove fields, fix optional vs required).
 
-### Web client cleanup
+**Routes needing this treatment:**
 
-`routes.ts` (~570 lines) and `shared/api.ts` (~163 lines) contain duplicate interface definitions and wrapper functions that could be eliminated if components consumed Eden directly. However, direct Eden consumption would spread the `{ data, error }` unwrapping pattern and the 3 targeted `as any` casts to ~22 component files, which is currently worse than the centralized wrapper approach. This is blocked on:
+| Route                             | Current                | Replacement              | Notes                                                              |
+| --------------------------------- | ---------------------- | ------------------------ | ------------------------------------------------------------------ |
+| `GET /player/queue`               | `t.Unknown()`          | `QueueState`             | Two return branches; `getQueueState()` return type needs alignment |
+| `POST /player/add-to-priority`    | `t.Unknown()`          | `SongAddedResponse`      |                                                                    |
+| `POST /player/override`           | `t.Unknown()`          | `SongAddedResponse`      |                                                                    |
+| `POST /player/play`               | `t.Unknown()`          | `MessageResponse`        | Confirmed working with annotation                                  |
+| `POST /player/quick-add`          | `t.Unknown()`          | `SongAddedResponse`      |                                                                    |
+| `POST /player/quick-add-playlist` | `t.Unknown()`          | `PlaylistQueuedResponse` |                                                                    |
+| `POST /player/seek`               | `t.Unknown()`          | `QueueState`             | Returns `getQueueState()`                                          |
+| `POST /playlists/:id/songs`       | `t.Unknown()`          | `PlaylistSongEntry`      |                                                                    |
+| `GET /playlists/:id`              | `t.Unknown()`          | `PlaylistDetail`         |                                                                    |
+| `POST /requests/preview`          | `t.Unknown()`          | `RequestPreview`         |                                                                    |
+| `POST /requests` (create)         | `t.Unknown()`          | `CreateRequestResult`    |                                                                    |
+| `GET /songs` (items)              | `t.Array(t.Unknown())` | `t.Array(Song)`          |                                                                    |
 
-1. Elysia lifting the NoInfer limitation so all routes can have precise response schemas
-2. A cleaner pattern for TreatyResponse unwrapping in components (or an Eden API change)
+**Multi-shape returns (genuinely needs `t.Unknown()` or a union):**
 
-Until then, `routes.ts` provides genuine value: typed named functions, centralized error unwrapping, and localized workarounds.
+- **`PATCH /requests/:id`** — returns `{ request, song }` (track approve), `{ request, songs, importedCount, skippedCount }` (playlist approve), or `{ request }` (deny). Elysia's `t.Union()` supports this cross-status-code discrimination, but it's awkward. `t.Unknown()` is reasonable here.
+
+### Tighten body schemas
+
+- **`songs.elysia.ts`:** `SongPatchSchema` uses `t.Unknown()` for 6 fields (`nickname`, `artist`, `album`, `artwork`, `tags`, `volumeBoost`). Replace with `t.Nullable(t.String())` / `t.Nullable(t.Number())` / `t.Array(t.String())`.
+- **`requests.elysia.ts`:** `CreateRequestSchema` uses `t.Unknown()` for 8 fields. Same treatment.
+
+### Reduce `as` casts in handlers
+
+Some handlers use `ctx.body as typeof Schema.static` and `ctx.user as { ... }` casts. When all routes have precise response schemas and explicit return type annotations, TypeScript may be able to infer body/params types from the schema, eliminating some casts. Assess after completing the `t.Unknown()` replacements.
+
+### Web client
+
+`routes.ts` (~570 lines) and `shared/api.ts` (~163 lines) contain typed wrapper functions around the Eden Treaty client. Components could theoretically consume Eden directly, but the centralized wrappers provide genuine value: typed named functions, centralized `{ data, error }` unwrapping, and localized workarounds for the few remaining type mismatches. Direct Eden consumption would spread the unwrapping pattern to ~22 component files. This is a code organization decision, not a technical blocker.
