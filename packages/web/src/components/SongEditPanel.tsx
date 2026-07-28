@@ -175,46 +175,18 @@ export default function SongEditPanel({ song, isOpen, onClose }: SongEditPanelPr
     }
   }, []);
 
-  // Save when `isOpen` goes to false (e.g. user clicks the parent row to close)
+  // Save on unmount — the parent SongCard wraps us in AnimatePresence, so when
+  // the panel closes we're kept alive during the exit animation with isOpen=true
+  // and then unmounted. We never receive isOpen=false. Saving on unmount ensures
+  // changes are persisted regardless of how the panel is closed.
   useEffect(() => {
-    if (!isOpen && !savingRef.current) {
-      const {
-        nickname: nk,
-        artist: ar,
-        album: al,
-        artwork: aw,
-        tags: t,
-        volumeBoost: vo,
-      } = fieldsRef.current();
-      const parsedRaw = vo.trim() === '' ? null : Math.trunc(Number(vo.trim()));
-      const parsedBoost =
-        parsedRaw != null && !Number.isNaN(parsedRaw) && parsedRaw !== 0 ? parsedRaw : null;
-
-      const data: SongUpdateData = {};
-      if (nk !== (originalNicknameRef.current ?? '')) {
-        data.nickname = nk.trim() || null;
+    return () => {
+      if (savingRef.current) {
+        return;
       }
-      if (ar !== (originalArtistRef.current ?? '')) {
-        data.artist = ar.trim() || null;
-      }
-      if (al !== (originalAlbumRef.current ?? '')) {
-        data.album = al.trim() || null;
-      }
-      if (aw !== (originalArtworkRef.current ?? '')) {
-        data.artwork = aw.trim() || null;
-      }
-      if (JSON.stringify(t) !== JSON.stringify(originalTagsRef.current)) {
-        data.tags = t;
-      }
-      if (parsedBoost !== originalVolumeBoostRef.current) {
-        data.volumeBoost = parsedBoost;
-      }
-
-      if (Object.keys(data).length > 0) {
-        void doSave();
-      }
-    }
-  }, [isOpen, doSave]);
+      void doSave();
+    };
+  }, [doSave]);
 
   const handleEnterSave = useCallback(
     (e: React.KeyboardEvent) => {
