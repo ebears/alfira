@@ -97,6 +97,7 @@ async function deleteTagRow(nameLower: string) {
 
 export const tagsPlugin = new Elysia({ prefix: '/tags' })
   .derive(deriveAuth)
+
   .use(authGuard)
   .get(
     '/',

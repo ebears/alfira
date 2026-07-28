@@ -3,12 +3,11 @@ import { Elysia } from 'elysia';
 import { join } from 'node:path';
 
 import { API_SECURITY_HEADERS } from './lib/apiResponse';
-import { deriveAuth } from './lib/authDerive';
 import { VERSION } from './lib/config';
 import { ApiError } from './lib/errors';
 import { lavalink } from './lib/lavalink';
 import { registerClient, unregisterClient, type WsClient } from './lib/socket';
-import { type verifySessionToken } from './middleware/requireAuth';
+import { verifySessionToken } from './middleware/requireAuth';
 import { authPlugin } from './routes/auth.elysia';
 import { channelMixPlugin } from './routes/channelMix.elysia';
 import { compressorPlugin } from './routes/compressor.elysia';
@@ -118,7 +117,6 @@ export function createApp() {
   const authApp = new Elysia({ prefix: '/auth' }).use(authPlugin);
 
   const app = new Elysia({ systemRouter: true, aot: true })
-    .derive(deriveAuth)
     .use(apiApp)
     .use(authApp)
     .get('/health', async ({ set }) => {
@@ -157,10 +155,13 @@ export function createApp() {
       open(ws) {
         // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion
         const wsc = ws as unknown as WsClient;
-        const data = ws.data as { user: ReturnType<typeof verifySessionToken> };
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion
+        const ctx = ws.data as { cookie: Record<string, { value?: string }> };
+        const token = ctx.cookie.session?.value;
+        const user = token ? verifySessionToken(token) : null;
         logger.debug({ socketId: wsc.id }, 'WebSocket opened');
-        if (data.user) {
-          registerClient(wsc, data.user);
+        if (user) {
+          registerClient(wsc, user);
         } else {
           logger.warn({ socketId: wsc.id }, 'WebSocket opened without auth user');
           wsc.close();

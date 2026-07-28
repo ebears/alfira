@@ -62,6 +62,7 @@ function fetchUserPermissions(userRoles: string[]): string[] {
 
 export const permissionsPlugin = new Elysia({ prefix: '/permissions' })
   .derive(deriveAuth)
+
   .use(authGuard)
   .get(
     '/me',

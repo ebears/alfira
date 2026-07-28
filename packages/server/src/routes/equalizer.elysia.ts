@@ -54,6 +54,7 @@ function upsertEqualizerSettings(data: EqualizerSettings): void {
 
 export const equalizerPlugin = new Elysia({ prefix: '/settings/equalizer' })
   .derive(deriveAuth)
+
   .use(createAdminOrPermissionGuard('audio.manage'))
   .get('/', () => fetchEqualizerSettings(), {
     response: { 200: EqualizerSettingsSchema },

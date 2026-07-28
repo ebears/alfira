@@ -38,6 +38,7 @@ function upsertRotationSettings(data: { enabled: boolean; rotationHz: number }):
 
 export const rotationPlugin = new Elysia({ prefix: '/settings/rotation' })
   .derive(deriveAuth)
+
   .use(createAdminOrPermissionGuard('audio.manage'))
   .get('/', () => fetchRotationSettings(), {
     response: { 200: RotationSettingsSchema },

@@ -205,6 +205,7 @@ async function handleGetSongs(q: Record<string, string>) {
 
 export const songsPlugin = new Elysia({ prefix: '/songs' })
   .derive(deriveAuth)
+
   .use(authGuard)
   .get(
     '/',

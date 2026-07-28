@@ -79,6 +79,7 @@ function upsertDistortionSettings(data: DistortionSettings): void {
 
 export const distortionPlugin = new Elysia({ prefix: '/settings/distortion' })
   .derive(deriveAuth)
+
   .use(createAdminOrPermissionGuard('audio.manage'))
   .get('/', () => fetchDistortionSettings(), {
     response: { 200: DistortionSettingsSchema },

@@ -143,6 +143,7 @@ function fetchAllFilters() {
 
 export const filtersPlugin = new Elysia({ prefix: '/settings/filters' })
   .derive(deriveAuth)
+
   .use(createAdminOrPermissionGuard('audio.manage'))
   .get('/', () => fetchAllFilters(), {
     response: { 200: FiltersDataSchema },

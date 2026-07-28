@@ -49,6 +49,7 @@ function upsertTremoloSettings(data: { enabled: boolean; frequency: number; dept
 
 export const tremoloPlugin = new Elysia({ prefix: '/settings/tremolo' })
   .derive(deriveAuth)
+
   .use(createAdminOrPermissionGuard('audio.manage'))
   .get('/', () => fetchTremoloSettings(), {
     response: { 200: TremoloSettingsSchema },

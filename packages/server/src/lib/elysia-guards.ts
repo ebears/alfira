@@ -18,6 +18,11 @@ export interface AuthContext {
 // ---------------------------------------------------------------------------
 // Auth guard — short-circuits with 401 if no authenticated user.
 // Compose with `.use(authGuard)` on any plugin that calls `.derive(deriveAuth)`.
+//
+// The `user` property is added by deriveAuth on the _parent_ instance, so it
+// is available at runtime in onBeforeHandle but not visible to TypeScript in
+// this guard's own context type. The cast is a necessary consequence of
+// Elysia's per-instance type encapsulation.
 // ---------------------------------------------------------------------------
 
 export const authGuard = new Elysia({ name: 'auth-guard' }).onBeforeHandle((ctx) => {
@@ -96,7 +101,7 @@ export function createPermissionGuard(permission: PermissionAction): Elysia {
 // granular permission checks into a single composable plugin.
 //
 // Usage:
-//   .use(createAdminOrPermissionGuard())          → auth + admin
+//   .use(createAdminOrPermissionGuard())              → auth + admin
 //   .use(createAdminOrPermissionGuard('queue.manage')) → auth + (admin OR permission)
 // ---------------------------------------------------------------------------
 

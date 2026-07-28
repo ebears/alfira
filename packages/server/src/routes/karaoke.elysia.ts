@@ -63,6 +63,7 @@ function upsertKaraokeSettings(data: KaraokeSettings): void {
 
 export const karaokePlugin = new Elysia({ prefix: '/settings/karaoke' })
   .derive(deriveAuth)
+
   .use(createAdminOrPermissionGuard('audio.manage'))
   .get('/', () => fetchKaraokeSettings(), {
     response: { 200: KaraokeSettingsSchema },

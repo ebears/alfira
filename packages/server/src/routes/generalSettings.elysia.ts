@@ -95,6 +95,7 @@ function upsertGeneralSettings(updates: Record<string, unknown>): void {
 
 export const generalSettingsPlugin = new Elysia({ prefix: '/settings/general' })
   .derive(deriveAuth)
+
   .use(createAdminOrPermissionGuard())
   .get(
     '/',

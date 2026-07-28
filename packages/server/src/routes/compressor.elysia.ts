@@ -67,6 +67,7 @@ function upsertCompressorSettings(data: CompressorSettings): void {
 
 export const compressorPlugin = new Elysia({ prefix: '/settings/compressor' })
   .derive(deriveAuth)
+
   .use(createAdminOrPermissionGuard('audio.manage'))
   .get('/', () => fetchCompressorSettings(), {
     response: { 200: CompressorSettingsSchema },

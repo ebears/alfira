@@ -62,6 +62,7 @@ function upsertTimescaleSettings(data: TimescaleSettings): void {
 
 export const timescalePlugin = new Elysia({ prefix: '/settings/timescale' })
   .derive(deriveAuth)
+
   .use(createAdminOrPermissionGuard('audio.manage'))
   .get('/', () => fetchTimescaleSettings(), {
     response: { 200: TimescaleSettingsSchema },

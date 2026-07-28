@@ -84,6 +84,7 @@ const PlaylistReorderSchema = t.Object({
 
 export const playlistsPlugin = new Elysia({ prefix: '/playlists' })
   .derive(deriveAuth)
+
   .use(authGuard)
   .get(
     '/',
@@ -158,9 +159,7 @@ export const playlistsPlugin = new Elysia({ prefix: '/playlists' })
   )
   .post(
     '/',
-    async ({ user, ...ctx }) => {
-      const body = ctx.body as typeof PlaylistCreateSchema.static;
-
+    async ({ user, body }) => {
       const trimmedName = validatePlaylistName(body.name);
 
       const tagNameLower =
@@ -194,9 +193,9 @@ export const playlistsPlugin = new Elysia({ prefix: '/playlists' })
   )
   .post(
     '/:id/songs/bulk-remove',
-    async ({ user, ...ctx }) => {
-      const playlistId = (ctx.params as Record<string, string>).id as string;
-      const { songIds } = ctx.body as typeof PlaylistRemoveSongsSchema.static;
+    async ({ user, params, body }) => {
+      const playlistId = params.id;
+      const { songIds } = body;
 
       const discordId = (user as { discordId: string }).discordId;
       const playlist = await requirePlaylist(playlistId, { discordId });
@@ -234,9 +233,9 @@ export const playlistsPlugin = new Elysia({ prefix: '/playlists' })
     },
     { body: PlaylistRemoveSongsSchema, response: { 200: BulkRemoveSongsResponse } }
   )
-  .delete('/:id/songs/:songId', async ({ user, ...ctx }) => {
-    const playlistId = (ctx.params as Record<string, string>).id as string;
-    const songId = (ctx.params as Record<string, string>).songId as string;
+  .delete('/:id/songs/:songId', async ({ user, params }) => {
+    const playlistId = params.id;
+    const songId = params.songId;
 
     const discordId = (user as { discordId: string }).discordId;
     const playlist = await requirePlaylist(playlistId, { discordId });
@@ -283,12 +282,11 @@ export const playlistsPlugin = new Elysia({ prefix: '/playlists' })
   })
   .post(
     '/:id/songs',
-    async ({ ...ctx }): Promise<typeof PlaylistSongEntry.static> => {
-      const user = ctx.user as { discordId: string; username: string };
-      const id = (ctx.params as Record<string, string>).id as string;
-      const { songId } = ctx.body as typeof PlaylistAddSongSchema.static;
+    async ({ user, params, body }): Promise<typeof PlaylistSongEntry.static> => {
+      const id = params.id;
+      const { songId } = body;
 
-      const discordId = user.discordId;
+      const discordId = (user as { discordId: string }).discordId;
       const playlist = await requirePlaylist(id, { discordId });
 
       if (playlist.tagNameLower) {
@@ -347,9 +345,8 @@ export const playlistsPlugin = new Elysia({ prefix: '/playlists' })
   )
   .patch(
     '/:id/visibility',
-    async ({ user, ...ctx }) => {
-      const id = (ctx.params as Record<string, string>).id as string;
-      const body = ctx.body as typeof PlaylistVisibilitySchema.static;
+    async ({ user, params, body }) => {
+      const id = params.id;
 
       if (body.isPrivate === undefined) {
         throw new ApiError(400, 'isPrivate (boolean) is required.');
@@ -377,8 +374,8 @@ export const playlistsPlugin = new Elysia({ prefix: '/playlists' })
   )
   .get(
     '/:id',
-    async ({ user, request, ...ctx }) => {
-      const id = (ctx.params as Record<string, string>).id as string;
+    async ({ user, request, params }) => {
+      const id = params.id;
       const url = new URL(request.url);
       const adminView = url.searchParams.get('adminView') === 'true';
       const discordId = (user as { discordId: string }).discordId;
@@ -562,9 +559,8 @@ export const playlistsPlugin = new Elysia({ prefix: '/playlists' })
   )
   .patch(
     '/:id',
-    async ({ user, ...ctx }) => {
-      const id = (ctx.params as Record<string, string>).id as string;
-      const body = ctx.body as typeof PlaylistCreateSchema.static;
+    async ({ user, params, body }) => {
+      const id = params.id;
 
       const discordId = (user as { discordId: string }).discordId;
       await requirePlaylist(id, { discordId });
@@ -609,9 +605,9 @@ export const playlistsPlugin = new Elysia({ prefix: '/playlists' })
   )
   .patch(
     '/:id/reorder',
-    async ({ user, ...ctx }) => {
-      const playlistId = (ctx.params as Record<string, string>).id as string;
-      const { songIds } = ctx.body as typeof PlaylistReorderSchema.static;
+    async ({ user, params, body }) => {
+      const playlistId = params.id;
+      const { songIds } = body;
 
       const discordId = (user as { discordId: string }).discordId;
       const playlist = await requirePlaylist(playlistId, { discordId });
@@ -659,8 +655,8 @@ export const playlistsPlugin = new Elysia({ prefix: '/playlists' })
     },
     { body: PlaylistReorderSchema, response: { 200: MessageResponse } }
   )
-  .delete('/:id', async ({ user, ...ctx }) => {
-    const id = (ctx.params as Record<string, string>).id as string;
+  .delete('/:id', async ({ user, params }) => {
+    const id = params.id;
     const discordId = (user as { discordId: string }).discordId;
     await requirePlaylist(id, { discordId });
 

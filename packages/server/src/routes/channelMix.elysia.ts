@@ -63,6 +63,7 @@ function upsertChannelMixSettings(data: ChannelMixSettings): void {
 
 export const channelMixPlugin = new Elysia({ prefix: '/settings/channelmix' })
   .derive(deriveAuth)
+
   .use(createAdminOrPermissionGuard('audio.manage'))
   .get('/', () => fetchChannelMixSettings(), {
     response: { 200: ChannelMixSettingsSchema },

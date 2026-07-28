@@ -155,8 +155,8 @@ export const playerPlugin = new Elysia({ prefix: '/player' })
       .use(createAdminOrPermissionGuard('queue.manage'))
       .patch(
         '/queue/reorder',
-        ({ ...ctx }) => {
-          const { songIds, target } = ctx.body as typeof ReorderSchema.static;
+        ({ body }) => {
+          const { songIds, target } = body;
 
           if (songIds.length === 0) {
             throw new ApiError(400, 'songIds must not be empty.');
@@ -224,17 +224,17 @@ export const playerPlugin = new Elysia({ prefix: '/player' })
       )
       .post(
         '/add-to-priority',
-        async ({ ...ctx }): Promise<typeof SongAddedResponse.static> => {
-          const user = ctx.user as { discordId: string; username: string };
-          const { songId } = ctx.body as typeof SongIdSchema.static;
+        async ({ user, body }): Promise<typeof SongAddedResponse.static> => {
+          const { songId } = body;
+          const { discordId, username } = user as { discordId: string; username: string };
 
           const song = fetchSongById(songId);
           if (!song) {
             throw new ApiError(404, 'Song not found.');
           }
 
-          const player = await resolveOrAutoJoinPlayer(user.discordId);
-          const queuedSong = toQueuedSong({ ...song }, user.username);
+          const player = await resolveOrAutoJoinPlayer(discordId);
+          const queuedSong = toQueuedSong({ ...song }, username);
           queuedSong.id = `queue-${Date.now()}-${song.id}`;
 
           await player.addToPriorityQueue(queuedSong);
@@ -275,8 +275,8 @@ export const playerPlugin = new Elysia({ prefix: '/player' })
       )
       .post(
         '/loop',
-        ({ ...ctx }) => {
-          const { mode } = ctx.body as typeof LoopSchema.static;
+        ({ body }) => {
+          const { mode } = body;
           const player = requirePlayer();
 
           player.setLoopMode(mode);
@@ -289,10 +289,11 @@ export const playerPlugin = new Elysia({ prefix: '/player' })
   .guard({}, (app) =>
     app.use(createAdminOrPermissionGuard('queue.override')).post(
       '/override',
-      async ({ ...ctx }): Promise<typeof SongAddedResponse.static> => {
-        const user = ctx.user as { discordId: string; username: string };
-        const body = ctx.body as typeof UrlSchema.static;
-        const result = await resolveUrlTempSong(user, body);
+      async ({ user, body }): Promise<typeof SongAddedResponse.static> => {
+        const result = await resolveUrlTempSong(
+          user as { discordId: string; username: string },
+          body
+        );
         await result.player.replaceQueueAndPlay([result.queuedSong]);
         return {
           message: `Now playing "${result.metadataTitle}".`,
@@ -318,12 +319,11 @@ export const playerPlugin = new Elysia({ prefix: '/player' })
       )
       .post(
         '/play',
-        async ({ ...ctx }) => {
-          const user = ctx.user as { discordId: string; username: string };
-          const body = ctx.body as typeof PlaySchema.static;
+        async ({ user, body }) => {
           const { playlistId, mode, loop, startFromSongId } = body;
+          const { discordId, username } = user as { discordId: string; username: string };
 
-          const player = await resolveOrAutoJoinPlayer(user.discordId);
+          const player = await resolveOrAutoJoinPlayer(discordId);
 
           let dbSongs: (typeof songTable.$inferSelect)[];
 
@@ -334,7 +334,10 @@ export const playerPlugin = new Elysia({ prefix: '/player' })
               throw new ApiError(404, 'Playlist not found.');
             }
 
-            const accessResult = canAccessPlaylist(playlist, user);
+            const accessResult = canAccessPlaylist(playlist, {
+              discordId,
+              isAdmin: (user as { isAdmin: boolean }).isAdmin,
+            });
             if (!accessResult.ok) {
               throw new ApiError(403, accessResult.error);
             }
@@ -365,7 +368,7 @@ export const playerPlugin = new Elysia({ prefix: '/player' })
           const targetLoopMode = loop ?? player.getLoopMode();
           player.setLoopMode(targetLoopMode);
 
-          const queuedSongs = dbSongs.map((song) => toQueuedSong({ ...song }, user.username));
+          const queuedSongs = dbSongs.map((song) => toQueuedSong({ ...song }, username));
 
           if (startFromSongId) {
             await player.replaceQueueAndPlay(queuedSongs);
@@ -384,10 +387,11 @@ export const playerPlugin = new Elysia({ prefix: '/player' })
       .use(createAdminOrPermissionGuard('queue.quickadd'))
       .post(
         '/quick-add',
-        async ({ ...ctx }): Promise<typeof SongAddedResponse.static> => {
-          const user = ctx.user as { discordId: string; username: string };
-          const body = ctx.body as typeof UrlSchema.static;
-          const result = await resolveUrlTempSong(user, body);
+        async ({ user, body }): Promise<typeof SongAddedResponse.static> => {
+          const result = await resolveUrlTempSong(
+            user as { discordId: string; username: string },
+            body
+          );
           await result.player.addToPriorityQueue(result.queuedSong);
           return {
             message: `Added "${result.metadataTitle}" to the queue.`,
@@ -398,18 +402,17 @@ export const playerPlugin = new Elysia({ prefix: '/player' })
       )
       .post(
         '/quick-add-playlist',
-        async ({ ...ctx }): Promise<typeof PlaylistQueuedResponse.static> => {
-          const user = ctx.user as { discordId: string; username: string };
-          const body = ctx.body as typeof QuickAddPlaylistSchema.static;
+        async ({ user, body }): Promise<typeof PlaylistQueuedResponse.static> => {
           const maxVideos = clampMaxVideos(body.maxVideos);
           const url = validatePlaylistUrl(body.url);
+          const { discordId, username } = user as { discordId: string; username: string };
 
-          const player = await resolveOrAutoJoinPlayer(user.discordId);
+          const player = await resolveOrAutoJoinPlayer(discordId);
 
           const playlistMetadata = await fetchPlaylistMetadata(url, maxVideos);
 
-          const addedBy = user.discordId;
-          const requestedBy = user.username;
+          const addedBy = discordId;
+          const requestedBy = username;
           const queuedSongs = playlistMetadata.videos.map((video) => ({
             id: `temp-${Date.now()}-${video.id}`,
             title: video.title,
@@ -441,8 +444,8 @@ export const playerPlugin = new Elysia({ prefix: '/player' })
       .use(createAdminOrPermissionGuard('queue.manage'))
       .post(
         '/seek',
-        async ({ ...ctx }): Promise<typeof QueueState.static> => {
-          const { position } = ctx.body as typeof SeekSchema.static;
+        async ({ body }): Promise<typeof QueueState.static> => {
+          const { position } = body;
 
           const player = requirePlaying();
 

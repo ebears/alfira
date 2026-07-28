@@ -104,11 +104,11 @@ const PatchRequestSchema = t.Object({
 
 export const requestsPlugin = new Elysia({ prefix: '/requests' })
   .derive(deriveAuth)
+
   .use(authGuard)
   .post(
     '/preview',
-    async ({ ...ctx }) => {
-      const body = ctx.body as typeof PreviewRequestSchema.static;
+    async ({ body }) => {
       let url = validateSourceUrl(body.url);
 
       // Strip any ?list=... query param
@@ -249,13 +249,8 @@ export const requestsPlugin = new Elysia({ prefix: '/requests' })
   )
   .post(
     '/',
-    async ({ user, isAdmin, ...ctx }): Promise<typeof CreateRequestResult.static> => {
-      const body = ctx.body as Record<string, unknown>;
-      const discordUser = user as {
-        discordId: string;
-        username: string;
-        isAdmin: boolean;
-      };
+    async ({ user, isAdmin, body }): Promise<typeof CreateRequestResult.static> => {
+      const discordUser = user as { discordId: string; username: string; isAdmin: boolean };
 
       const notifyDm = body.notifyDm === true;
 
@@ -386,11 +381,7 @@ export const requestsPlugin = new Elysia({ prefix: '/requests' })
           if (reqRow) {
             void (async () => {
               try {
-                await sendRequestNotification(
-                  'approved',
-                  formatRequest(reqRow),
-                  user as { discordId: string; username: string; isAdmin: boolean }
-                );
+                await sendRequestNotification('approved', formatRequest(reqRow), discordUser);
               } catch (error) {
                 logger.warn({ error }, 'Failed to send playlist auto-approve notification');
               }
@@ -446,11 +437,7 @@ export const requestsPlugin = new Elysia({ prefix: '/requests' })
         }
 
         const formatted = formatRequest(created);
-        await sendRequestNotification(
-          'new',
-          formatted,
-          user as { discordId: string; username: string; isAdmin: boolean }
-        );
+        await sendRequestNotification('new', formatted, discordUser);
 
         return {
           request: formatted,
@@ -538,11 +525,7 @@ export const requestsPlugin = new Elysia({ prefix: '/requests' })
         if (reqRow) {
           void (async () => {
             try {
-              await sendRequestNotification(
-                'approved',
-                formatRequest(reqRow),
-                user as { discordId: string; username: string; isAdmin: boolean }
-              );
+              await sendRequestNotification('approved', formatRequest(reqRow), discordUser);
             } catch (error) {
               logger.warn({ error }, 'Failed to send auto-approve notification');
             }
@@ -584,11 +567,7 @@ export const requestsPlugin = new Elysia({ prefix: '/requests' })
       }
 
       const formatted = formatRequest(created);
-      await sendRequestNotification(
-        'new',
-        formatted,
-        user as { discordId: string; username: string; isAdmin: boolean }
-      );
+      await sendRequestNotification('new', formatted, discordUser);
 
       return {
         request: formatted,
