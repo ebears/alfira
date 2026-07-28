@@ -65,6 +65,9 @@ export interface ListToolbarProps {
   // ── View mode toggle ──
   viewMode?: 'list' | 'grid';
   onViewModeChange?: (mode: 'list' | 'grid') => void;
+
+  /** Sort fields where the asc/desc toggle is hidden (e.g. canonical order fields). */
+  noOrderToggleFields?: string[];
 }
 
 // ---------------------------------------------------------------------------
@@ -92,6 +95,7 @@ export default function ListToolbar({
   onToggleSelectionMode,
   viewMode,
   onViewModeChange,
+  noOrderToggleFields,
 }: ListToolbarProps) {
   // ── Search (local mirror + debounce) ─────────────────────────────
   const [searchInput, setSearchInput] = useState(searchValue);
@@ -163,8 +167,10 @@ export default function ListToolbar({
   const handleSortOptionClick = useCallback(
     (field: string) => {
       if (field === sort) {
-        // Toggle order
-        onSortChange(field, order === 'asc' ? 'desc' : 'asc');
+        // Toggle order (unless this field locks its order, e.g. canonical position)
+        if (!noOrderToggleFields?.includes(field)) {
+          onSortChange(field, order === 'asc' ? 'desc' : 'asc');
+        }
       } else {
         // New field — determine default order: text fields → asc, numeric/date → desc
         const newOrder = textSortFields.includes(field) ? 'asc' : 'desc';
@@ -172,7 +178,7 @@ export default function ListToolbar({
       }
       setSortOpen(false);
     },
-    [sort, order, textSortFields, onSortChange]
+    [sort, order, textSortFields, onSortChange, noOrderToggleFields]
   );
 
   // Direction arrow: text fields show ↓ when ascending (A→Z = down),
@@ -256,6 +262,7 @@ export default function ListToolbar({
                     isActive={isActive}
                     showDownArrow={showDownArrow}
                     order={order}
+                    hideOrderToggle={noOrderToggleFields?.includes(opt.value) ?? false}
                     onClick={handleSortOptionClick}
                   />
                 );
@@ -319,12 +326,14 @@ const SortOptionItem = memo(function SortOptionItem({
   isActive,
   showDownArrow,
   order,
+  hideOrderToggle,
   onClick,
 }: {
   opt: SortOption;
   isActive: boolean;
   showDownArrow: boolean;
   order: 'asc' | 'desc';
+  hideOrderToggle?: boolean;
   onClick: (value: string) => void;
 }) {
   const handleClick = useCallback(() => {
@@ -347,7 +356,7 @@ const SortOptionItem = memo(function SortOptionItem({
       onClick={handleClick}
     >
       <span>{opt.label}</span>
-      {isActive && (
+      {isActive && !hideOrderToggle && (
         <button
           type='button'
           className='cursor-pointer rounded p-0.5 transition-colors hover:bg-black/10 dark:hover:bg-white/10'

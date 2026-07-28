@@ -123,7 +123,10 @@ export function usePaginatedData<T, A extends unknown[], M = undefined>({
         hasEverLoadedRef.current = true;
 
         if (isInitial) {
-          setItems(result.items);
+          const sorted = compareFnRef.current
+            ? [...result.items].sort(compareFnRef.current)
+            : result.items;
+          setItems(sorted);
           setHasMore(result.hasMore);
           if (result.total !== undefined) {
             setTotal(result.total);
@@ -133,7 +136,13 @@ export function usePaginatedData<T, A extends unknown[], M = undefined>({
           }
           pageRef.current = 1;
         } else {
-          setItems((prev) => [...prev, ...result.items]);
+          setItems((prev) => {
+            const next = [...prev, ...result.items];
+            if (compareFnRef.current) {
+              next.sort(compareFnRef.current);
+            }
+            return next;
+          });
           setHasMore(result.hasMore);
           pageRef.current = page;
         }
@@ -231,7 +240,10 @@ export function usePaginatedData<T, A extends unknown[], M = undefined>({
         if (!isMountedRef.current) {
           return;
         }
-        setItems(result.items);
+        const sorted = compareFnRef.current
+          ? [...result.items].sort(compareFnRef.current)
+          : result.items;
+        setItems(sorted);
         setHasMore(result.hasMore);
         if (result.total !== undefined) {
           setTotal(result.total);
