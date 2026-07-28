@@ -263,6 +263,17 @@ Player state changes are broadcast via Elysia's `.ws()` handler. The design rema
 - **Auth before accept.** The session cookie is validated in the `open` handler. Unauthenticated connections are closed immediately.
 - **No external state store.** Player state lives in-process. When `GuildPlayer` fires an update, it pushes directly to connected WebSocket clients. No Redis, no pub/sub, no message queue.
 
+### OpenAPI / Swagger
+
+In addition to Eden for programmatic type-safe access, Alfira exposes **OpenAPI 3.0 documentation** via the [`@elysiajs/swagger`](https://elysiajs.com/plugins/swagger.html) plugin. Since routes already define their schemas inline with Elysia's `t` type system, the plugin auto-generates the full API specification at zero additional maintenance cost:
+
+- **Interactive Scalar UI** at `/docs` — browse all endpoints with request/response schemas, auth annotations, and a "Try it out" mode
+- **OpenAPI JSON** at `/docs/json` — importable into Postman, Insomnia, or any OpenAPI-compatible tool
+
+The security scheme (`cookieAuth`) is defined in the swagger configuration and applied via Elysia's `guard({ detail })` scoping — routes inside the guard automatically show the 🔒 lock icon in the docs. Public endpoints (`/api/version`, `/health`, setup status checks) sit outside the guard and appear unlocked.
+
+This gives Alfira two complementary API contracts: **Eden** for compile-time type safety in the frontend build, and **OpenAPI** for interactive exploration, debugging, and third-party tool integration.
+
 ---
 
 ## Frontend: React 19 + Tailwind CSS 4

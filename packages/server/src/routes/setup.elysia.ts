@@ -238,7 +238,11 @@ export const setupPlugin = new Elysia({ prefix: '/setup', name: 'setup' })
         throw new ApiError(502, 'Could not fetch guild list.');
       }
     },
-    { isSetupAdmin: true, response: { 200: t.Object({ guilds: t.Array(SetupGuildSchema) }) } }
+    {
+      isSetupAdmin: true,
+      detail: { security: [{ cookieAuth: [] }] },
+      response: { 200: t.Object({ guilds: t.Array(SetupGuildSchema) }) },
+    }
   )
   .get(
     '/roles',
@@ -250,6 +254,7 @@ export const setupPlugin = new Elysia({ prefix: '/setup', name: 'setup' })
     },
     {
       isSetupAdmin: true,
+      detail: { security: [{ cookieAuth: [] }] },
       query: t.Object({ guildId: t.String() }),
       response: { 200: t.Object({ roles: t.Array(SetupRoleSchema) }) },
     }
@@ -269,6 +274,7 @@ export const setupPlugin = new Elysia({ prefix: '/setup', name: 'setup' })
     },
     {
       isSetupAdmin: true,
+      detail: { security: [{ cookieAuth: [] }] },
       query: t.Object({ guildId: t.String() }),
       response: { 200: t.Object({ channels: t.Array(SetupChannelSchema) }) },
     }
@@ -286,6 +292,7 @@ export const setupPlugin = new Elysia({ prefix: '/setup', name: 'setup' })
     },
     {
       isSetupAdmin: true,
+      detail: { security: [{ cookieAuth: [] }] },
       body: SetupCompleteSchema,
       response: { 200: t.Object({ success: t.Literal(true) }) },
     }

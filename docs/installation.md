@@ -372,6 +372,10 @@ The Docker health check uses this endpoint automatically — `docker compose ps`
 docker compose logs alfira
 ```
 
+## API Documentation
+
+Alfira serves interactive OpenAPI documentation at `/docs` (powered by [Scalar](https://scalar.com/)). You can browse all endpoints with request/response schemas, auth requirements, and a built-in "Try it out" mode. The raw OpenAPI 3.0 spec is available at `/docs/json` for importing into Postman, Insomnia, or other tools.
+
 ---
 
 For more information, see:

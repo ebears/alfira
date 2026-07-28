@@ -1,4 +1,5 @@
 import { cors } from '@elysia/cors';
+import { swagger } from '@elysiajs/swagger';
 import { sql } from 'drizzle-orm';
 import { Elysia } from 'elysia';
 import { join } from 'node:path';
@@ -99,25 +100,32 @@ export function createApp() {
       return { error: 'Internal server error.' };
     })
     .get('/version', () => ({ version: VERSION }))
-    .use(tagsPlugin)
-    .use(channelMixPlugin)
-    .use(compressorPlugin)
-    .use(distortionPlugin)
-    .use(equalizerPlugin)
-    .use(filtersPlugin)
-    .use(generalSettingsPlugin)
-    .use(karaokePlugin)
-    .use(lowPassPlugin)
-    .use(rotationPlugin)
-    .use(timescalePlugin)
-    .use(tremoloPlugin)
-    .use(vibratoPlugin)
     .use(setupPlugin)
-    .use(permissionsPlugin)
-    .use(playerPlugin)
-    .use(songsPlugin)
-    .use(playlistsPlugin)
-    .use(requestsPlugin);
+    .guard(
+      {
+        detail: { security: [{ cookieAuth: [] }] },
+      },
+      (app) =>
+        app
+          .use(tagsPlugin)
+          .use(songsPlugin)
+          .use(playlistsPlugin)
+          .use(requestsPlugin)
+          .use(playerPlugin)
+          .use(channelMixPlugin)
+          .use(compressorPlugin)
+          .use(distortionPlugin)
+          .use(equalizerPlugin)
+          .use(filtersPlugin)
+          .use(generalSettingsPlugin)
+          .use(karaokePlugin)
+          .use(lowPassPlugin)
+          .use(rotationPlugin)
+          .use(timescalePlugin)
+          .use(tremoloPlugin)
+          .use(vibratoPlugin)
+          .use(permissionsPlugin)
+    );
 
   const authApp = new Elysia({ prefix: '/auth', name: 'auth-app' }).use(authPlugin);
 
@@ -129,6 +137,29 @@ export function createApp() {
     // latency on the first request to each route.
     precompile: process.env.NODE_ENV === 'production',
   })
+    .use(
+      swagger({
+        path: '/docs',
+        exclude: ['/ws', '/*'],
+        documentation: {
+          info: {
+            title: 'Alfira API',
+            version: VERSION,
+            description:
+              'API for the Alfira Discord music bot. Authenticate via the web UI, then use endpoints here — the session cookie is sent automatically.',
+          },
+          components: {
+            securitySchemes: {
+              cookieAuth: {
+                type: 'apiKey',
+                in: 'cookie',
+                name: 'session',
+              },
+            },
+          },
+        },
+      })
+    )
     .use(
       cors({
         // Reflect the request origin for credentialed requests (cookie auth).
