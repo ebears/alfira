@@ -1,8 +1,7 @@
 import { eq } from 'drizzle-orm';
 import { Elysia, t } from 'elysia';
 
-import { deriveAuth } from '../lib/authDerive';
-import { createAdminOrPermissionGuard } from '../lib/elysia-guards';
+import { authPlugin } from '../lib/elysia-guards';
 import { VibratoSettings as VibratoSettingsSchema } from '../lib/responseSchemas';
 import { syncAllFilters } from '../lib/syncAllFilters';
 import { db, tables } from '../shared/db';
@@ -48,10 +47,10 @@ function upsertVibratoSettings(data: { enabled: boolean; frequency: number; dept
 // ---------------------------------------------------------------------------
 
 export const vibratoPlugin = new Elysia({ prefix: '/settings/vibrato', name: 'settings-vibrato' })
-  .derive(deriveAuth)
+  .use(authPlugin)
 
-  .use(createAdminOrPermissionGuard('audio.manage'))
   .get('/', () => fetchVibratoSettings(), {
+    hasPermission: 'audio.manage',
     response: { 200: VibratoSettingsSchema },
   })
   .patch(
@@ -62,5 +61,5 @@ export const vibratoPlugin = new Elysia({ prefix: '/settings/vibrato', name: 'se
 
       return body;
     },
-    { body: VibratoSchema, response: { 200: VibratoSettingsSchema } }
+    { hasPermission: 'audio.manage', body: VibratoSchema, response: { 200: VibratoSettingsSchema } }
   );

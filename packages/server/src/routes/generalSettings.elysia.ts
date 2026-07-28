@@ -1,8 +1,7 @@
 import { eq } from 'drizzle-orm';
 import { Elysia, t } from 'elysia';
 
-import { deriveAuth } from '../lib/authDerive';
-import { createAdminOrPermissionGuard } from '../lib/elysia-guards';
+import { authPlugin } from '../lib/elysia-guards';
 import { ApiError } from '../lib/errors';
 import { GeneralSettings as GeneralSettingsSchema } from '../lib/responseSchemas';
 import { type GeneralSettings } from '../shared';
@@ -97,9 +96,8 @@ export const generalSettingsPlugin = new Elysia({
   prefix: '/settings/general',
   name: 'settings-general',
 })
-  .derive(deriveAuth)
+  .use(authPlugin)
 
-  .use(createAdminOrPermissionGuard())
   .get(
     '/',
     () => {
@@ -107,6 +105,7 @@ export const generalSettingsPlugin = new Elysia({
       return settings ?? defaultGeneralSettings();
     },
     {
+      isAdmin: true,
       response: { 200: GeneralSettingsSchema },
     }
   )
@@ -165,5 +164,5 @@ export const generalSettingsPlugin = new Elysia({
 
       return settings;
     },
-    { body: GeneralSettingsPatchSchema, response: { 200: GeneralSettingsSchema } }
+    { isAdmin: true, body: GeneralSettingsPatchSchema, response: { 200: GeneralSettingsSchema } }
   );

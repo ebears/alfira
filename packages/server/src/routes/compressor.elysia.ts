@@ -1,8 +1,7 @@
 import { eq } from 'drizzle-orm';
 import { Elysia, t } from 'elysia';
 
-import { deriveAuth } from '../lib/authDerive';
-import { createAdminOrPermissionGuard } from '../lib/elysia-guards';
+import { authPlugin } from '../lib/elysia-guards';
 import { CompressorSettings as CompressorSettingsSchema } from '../lib/responseSchemas';
 import { syncAllFilters } from '../lib/syncAllFilters';
 import { db, tables } from '../shared/db';
@@ -69,10 +68,10 @@ export const compressorPlugin = new Elysia({
   prefix: '/settings/compressor',
   name: 'settings-compressor',
 })
-  .derive(deriveAuth)
+  .use(authPlugin)
 
-  .use(createAdminOrPermissionGuard('audio.manage'))
   .get('/', () => fetchCompressorSettings(), {
+    hasPermission: 'audio.manage',
     response: { 200: CompressorSettingsSchema },
   })
   .patch(
@@ -83,5 +82,9 @@ export const compressorPlugin = new Elysia({
 
       return body;
     },
-    { body: CompressorSchema, response: { 200: CompressorSettingsSchema } }
+    {
+      hasPermission: 'audio.manage',
+      body: CompressorSchema,
+      response: { 200: CompressorSettingsSchema },
+    }
   );

@@ -1,8 +1,7 @@
 import { eq } from 'drizzle-orm';
 import { Elysia, t } from 'elysia';
 
-import { deriveAuth } from '../lib/authDerive';
-import { createAdminOrPermissionGuard } from '../lib/elysia-guards';
+import { authPlugin } from '../lib/elysia-guards';
 import { TremoloSettings as TremoloSettingsSchema } from '../lib/responseSchemas';
 import { syncAllFilters } from '../lib/syncAllFilters';
 import { db, tables } from '../shared/db';
@@ -48,10 +47,10 @@ function upsertTremoloSettings(data: { enabled: boolean; frequency: number; dept
 // ---------------------------------------------------------------------------
 
 export const tremoloPlugin = new Elysia({ prefix: '/settings/tremolo', name: 'settings-tremolo' })
-  .derive(deriveAuth)
+  .use(authPlugin)
 
-  .use(createAdminOrPermissionGuard('audio.manage'))
   .get('/', () => fetchTremoloSettings(), {
+    hasPermission: 'audio.manage',
     response: { 200: TremoloSettingsSchema },
   })
   .patch(
@@ -62,5 +61,5 @@ export const tremoloPlugin = new Elysia({ prefix: '/settings/tremolo', name: 'se
 
       return body;
     },
-    { body: TremoloSchema, response: { 200: TremoloSettingsSchema } }
+    { hasPermission: 'audio.manage', body: TremoloSchema, response: { 200: TremoloSettingsSchema } }
   );

@@ -1,8 +1,7 @@
 import { eq } from 'drizzle-orm';
 import { Elysia, t } from 'elysia';
 
-import { deriveAuth } from '../lib/authDerive';
-import { createAdminOrPermissionGuard } from '../lib/elysia-guards';
+import { authPlugin } from '../lib/elysia-guards';
 import { RotationSettings as RotationSettingsSchema } from '../lib/responseSchemas';
 import { syncAllFilters } from '../lib/syncAllFilters';
 import { db, tables } from '../shared/db';
@@ -40,10 +39,10 @@ export const rotationPlugin = new Elysia({
   prefix: '/settings/rotation',
   name: 'settings-rotation',
 })
-  .derive(deriveAuth)
+  .use(authPlugin)
 
-  .use(createAdminOrPermissionGuard('audio.manage'))
   .get('/', () => fetchRotationSettings(), {
+    hasPermission: 'audio.manage',
     response: { 200: RotationSettingsSchema },
   })
   .patch(
@@ -54,5 +53,9 @@ export const rotationPlugin = new Elysia({
 
       return body;
     },
-    { body: RotationSchema, response: { 200: RotationSettingsSchema } }
+    {
+      hasPermission: 'audio.manage',
+      body: RotationSchema,
+      response: { 200: RotationSettingsSchema },
+    }
   );

@@ -1,8 +1,7 @@
 import { eq } from 'drizzle-orm';
 import { Elysia, t } from 'elysia';
 
-import { deriveAuth } from '../lib/authDerive';
-import { createAdminOrPermissionGuard } from '../lib/elysia-guards';
+import { authPlugin } from '../lib/elysia-guards';
 import { EQ_BAND_COLUMNS, eqBandsFromRow, eqBandValues } from '../lib/eqBands';
 import { EqualizerSettings as EqualizerSettingsSchema } from '../lib/responseSchemas';
 import { syncAllFilters } from '../lib/syncAllFilters';
@@ -56,10 +55,10 @@ export const equalizerPlugin = new Elysia({
   prefix: '/settings/equalizer',
   name: 'settings-equalizer',
 })
-  .derive(deriveAuth)
+  .use(authPlugin)
 
-  .use(createAdminOrPermissionGuard('audio.manage'))
   .get('/', () => fetchEqualizerSettings(), {
+    hasPermission: 'audio.manage',
     response: { 200: EqualizerSettingsSchema },
   })
   .patch(
@@ -70,5 +69,9 @@ export const equalizerPlugin = new Elysia({
 
       return body;
     },
-    { body: EqualizerSchema, response: { 200: EqualizerSettingsSchema } }
+    {
+      hasPermission: 'audio.manage',
+      body: EqualizerSchema,
+      response: { 200: EqualizerSettingsSchema },
+    }
   );

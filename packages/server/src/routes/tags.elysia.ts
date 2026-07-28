@@ -1,8 +1,7 @@
 import { eq, inArray, sql } from 'drizzle-orm';
 import { Elysia, t } from 'elysia';
 
-import { deriveAuth } from '../lib/authDerive';
-import { authGuard, createAdminOrPermissionGuard } from '../lib/elysia-guards';
+import { authPlugin } from '../lib/elysia-guards';
 import { ApiError } from '../lib/errors';
 import { Song as SongSchema, TagItem } from '../lib/responseSchemas';
 import { emitPlaylistUpdated } from '../lib/socket';
@@ -96,15 +95,14 @@ async function deleteTagRow(nameLower: string) {
 // ---------------------------------------------------------------------------
 
 export const tagsPlugin = new Elysia({ prefix: '/tags', name: 'tags' })
-  .derive(deriveAuth)
+  .use(authPlugin)
 
-  .use(authGuard)
   .get(
     '/',
     () => {
       return { tags: fetchTagList() };
     },
-    { response: { 200: t.Object({ tags: t.Array(TagItem) }) } }
+    { isAuth: true, response: { 200: t.Object({ tags: t.Array(TagItem) }) } }
   )
   .get(
     '/:nameLower',
@@ -117,7 +115,11 @@ export const tagsPlugin = new Elysia({ prefix: '/tags', name: 'tags' })
 
       return { tag };
     },
-    { params: t.Object({ nameLower: t.String() }), response: { 200: t.Object({ tag: TagItem }) } }
+    {
+      isAuth: true,
+      params: t.Object({ nameLower: t.String() }),
+      response: { 200: t.Object({ tag: TagItem }) },
+    }
   )
   .get(
     '/:nameLower/songs',
@@ -126,11 +128,11 @@ export const tagsPlugin = new Elysia({ prefix: '/tags', name: 'tags' })
       return { songs: fetchSongsByTag(nameLower) };
     },
     {
+      isAuth: true,
       params: t.Object({ nameLower: t.String() }),
       response: { 200: t.Object({ songs: t.Array(SongSchema) }) },
     }
   )
-  .use(createAdminOrPermissionGuard('tags.manage'))
   .patch(
     '/:nameLower',
     async ({ params, body }): Promise<{ tag: typeof TagItem.static }> => {
@@ -159,6 +161,7 @@ export const tagsPlugin = new Elysia({ prefix: '/tags', name: 'tags' })
       return { tag: updated as typeof TagItem.static };
     },
     {
+      hasPermission: 'tags.manage',
       params: t.Object({ nameLower: t.String() }),
       body: TagPatchSchema,
       response: { 200: t.Object({ tag: TagItem }) },
@@ -200,6 +203,7 @@ export const tagsPlugin = new Elysia({ prefix: '/tags', name: 'tags' })
       return { success: true };
     },
     {
+      hasPermission: 'tags.manage',
       params: t.Object({ nameLower: t.String() }),
       response: { 200: t.Object({ success: t.Literal(true) }) },
     }

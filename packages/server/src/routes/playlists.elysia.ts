@@ -1,10 +1,9 @@
 import { and, count, desc, eq, inArray, sql } from 'drizzle-orm';
 import { Elysia, t } from 'elysia';
 
-import { deriveAuth } from '../lib/authDerive';
 /* eslint-disable @typescript-eslint/no-unnecessary-condition */
 import { getUserDisplayName, resolveDisplayNames } from '../lib/displayName';
-import { authGuard } from '../lib/elysia-guards';
+import { authPlugin, requireAuth } from '../lib/elysia-guards';
 import { ApiError } from '../lib/errors';
 import { parsePagination } from '../lib/pagination';
 import { canAccessPlaylist, getPlaylistSongCount, requirePlaylist } from '../lib/playlistAccess';
@@ -83,9 +82,8 @@ const PlaylistReorderSchema = t.Object({
 // ---------------------------------------------------------------------------
 
 export const playlistsPlugin = new Elysia({ prefix: '/playlists', name: 'playlists' })
-  .derive(deriveAuth)
-
-  .use(authGuard)
+  .use(authPlugin)
+  .use(requireAuth)
   .get(
     '/',
     async ({ user, request }) => {

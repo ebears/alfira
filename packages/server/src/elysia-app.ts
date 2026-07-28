@@ -83,8 +83,10 @@ export function createApp() {
         set.headers[key] = value;
       }
     })
-    .onError(({ error, set }) => {
-      if (error instanceof ApiError) {
+    .error({ ApiError })
+    .onError(({ error, code, set }) => {
+      if (code === 'ApiError') {
+        // `error` is typed as ApiError — no instanceof needed
         set.status = error.status;
         return { error: error.message };
       }
@@ -127,7 +129,23 @@ export function createApp() {
     // latency on the first request to each route.
     precompile: process.env.NODE_ENV === 'production',
   })
-    .use(cors())
+    .use(
+      cors({
+        // Reflect the request origin for credentialed requests (cookie auth).
+        // Using a function that returns true for all origins is safe for a
+        // self-hosted app behind a reverse proxy.
+        origin: ({ headers }) => {
+          const origin = headers.get('origin');
+          if (!origin) {
+            return true;
+          } // same-origin (no Origin header)
+          return true; // allow all origins (self-hosted, no SSO across domains)
+        },
+        methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+        credentials: true,
+        allowedHeaders: ['Content-Type', 'Authorization'],
+      })
+    )
     .use(apiApp)
     .use(authApp)
     .get('/health', async ({ set }) => {

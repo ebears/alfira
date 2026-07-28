@@ -1,8 +1,7 @@
 import { eq } from 'drizzle-orm';
 import { Elysia, t } from 'elysia';
 
-import { deriveAuth } from '../lib/authDerive';
-import { createAdminOrPermissionGuard } from '../lib/elysia-guards';
+import { authPlugin } from '../lib/elysia-guards';
 import { LowPassSettings as LowPassSettingsSchema } from '../lib/responseSchemas';
 import { syncAllFilters } from '../lib/syncAllFilters';
 import { db, tables } from '../shared/db';
@@ -37,10 +36,10 @@ function upsertLowPassSettings(data: { enabled: boolean; smoothing: number }): v
 // ---------------------------------------------------------------------------
 
 export const lowPassPlugin = new Elysia({ prefix: '/settings/lowpass', name: 'settings-lowpass' })
-  .derive(deriveAuth)
+  .use(authPlugin)
 
-  .use(createAdminOrPermissionGuard('audio.manage'))
   .get('/', () => fetchLowPassSettings(), {
+    hasPermission: 'audio.manage',
     response: { 200: LowPassSettingsSchema },
   })
   .patch(
@@ -51,5 +50,5 @@ export const lowPassPlugin = new Elysia({ prefix: '/settings/lowpass', name: 'se
 
       return body;
     },
-    { body: LowPassSchema, response: { 200: LowPassSettingsSchema } }
+    { hasPermission: 'audio.manage', body: LowPassSchema, response: { 200: LowPassSettingsSchema } }
   );

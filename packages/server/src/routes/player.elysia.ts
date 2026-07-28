@@ -2,9 +2,8 @@ import { eq } from 'drizzle-orm';
 import { Elysia, t } from 'elysia';
 
 import { type GuildPlayer } from '../GuildPlayer';
-import { deriveAuth } from '../lib/authDerive';
 import { getGuildId } from '../lib/config';
-import { authGuard, createAdminOrPermissionGuard, voiceGuard } from '../lib/elysia-guards';
+import { authPlugin } from '../lib/elysia-guards';
 import { ApiError } from '../lib/errors';
 import { lavalink } from '../lib/lavalink';
 import { requirePlayer, requirePlaying } from '../lib/player';
@@ -119,8 +118,7 @@ const ReorderSchema = t.Object({
 // ---------------------------------------------------------------------------
 
 export const playerPlugin = new Elysia({ prefix: '/player', name: 'player' })
-  .derive(deriveAuth)
-  .use(authGuard)
+  .use(authPlugin)
   .get(
     '/queue',
     (): typeof QueueState.static => {
@@ -146,13 +144,11 @@ export const playerPlugin = new Elysia({ prefix: '/player', name: 'player' })
 
       return player.getQueueState() as typeof QueueState.static;
     },
-    { response: { 200: QueueState } }
+    { isAuth: true, response: { 200: QueueState } }
   )
-  .use(voiceGuard)
 
   .guard({}, (app) =>
     app
-      .use(createAdminOrPermissionGuard('queue.manage'))
       .patch(
         '/queue/reorder',
         ({ body }) => {
@@ -175,7 +171,12 @@ export const playerPlugin = new Elysia({ prefix: '/player', name: 'player' })
 
           return { message: 'Queue reordered.' };
         },
-        { body: ReorderSchema, response: { 200: MessageResponse } }
+        {
+          isVoiceChannel: true,
+          hasPermission: 'queue.manage',
+          body: ReorderSchema,
+          response: { 200: MessageResponse },
+        }
       )
       .post(
         '/queue/:songId/promote',
@@ -190,7 +191,12 @@ export const playerPlugin = new Elysia({ prefix: '/player', name: 'player' })
 
           return { message: 'Song promoted to Up Next.' };
         },
-        { params: t.Object({ songId: t.String() }), response: { 200: MessageResponse } }
+        {
+          isVoiceChannel: true,
+          hasPermission: 'queue.manage',
+          params: t.Object({ songId: t.String() }),
+          response: { 200: MessageResponse },
+        }
       )
       .post(
         '/queue/:songId/demote',
@@ -205,7 +211,12 @@ export const playerPlugin = new Elysia({ prefix: '/player', name: 'player' })
 
           return { message: 'Song moved to queue.' };
         },
-        { params: t.Object({ songId: t.String() }), response: { 200: MessageResponse } }
+        {
+          isVoiceChannel: true,
+          hasPermission: 'queue.manage',
+          params: t.Object({ songId: t.String() }),
+          response: { 200: MessageResponse },
+        }
       )
       .delete(
         '/queue/:songId',
@@ -220,7 +231,12 @@ export const playerPlugin = new Elysia({ prefix: '/player', name: 'player' })
 
           return { message: 'Song removed from queue.' };
         },
-        { params: t.Object({ songId: t.String() }), response: { 200: MessageResponse } }
+        {
+          isVoiceChannel: true,
+          hasPermission: 'queue.manage',
+          params: t.Object({ songId: t.String() }),
+          response: { 200: MessageResponse },
+        }
       )
       .post(
         '/add-to-priority',
@@ -244,7 +260,12 @@ export const playerPlugin = new Elysia({ prefix: '/player', name: 'player' })
             song: queuedSong,
           } as typeof SongAddedResponse.static;
         },
-        { body: SongIdSchema, response: { 200: SongAddedResponse } }
+        {
+          isVoiceChannel: true,
+          hasPermission: 'queue.manage',
+          body: SongIdSchema,
+          response: { 200: SongAddedResponse },
+        }
       )
       .post(
         '/clear',
@@ -254,7 +275,7 @@ export const playerPlugin = new Elysia({ prefix: '/player', name: 'player' })
           player.clearQueue();
           return { message: 'Queue cleared.' };
         },
-        { response: { 200: MessageResponse } }
+        { isVoiceChannel: true, hasPermission: 'queue.manage', response: { 200: MessageResponse } }
       )
       .post(
         '/leave',
@@ -271,7 +292,7 @@ export const playerPlugin = new Elysia({ prefix: '/player', name: 'player' })
 
           return { message: 'Left the voice channel.' };
         },
-        { response: { 200: MessageResponse } }
+        { isVoiceChannel: true, hasPermission: 'queue.manage', response: { 200: MessageResponse } }
       )
       .post(
         '/loop',
@@ -282,12 +303,17 @@ export const playerPlugin = new Elysia({ prefix: '/player', name: 'player' })
           player.setLoopMode(mode);
           return { loopMode: mode };
         },
-        { body: LoopSchema, response: { 200: LoopModeResponse } }
+        {
+          isVoiceChannel: true,
+          hasPermission: 'queue.manage',
+          body: LoopSchema,
+          response: { 200: LoopModeResponse },
+        }
       )
   )
 
   .guard({}, (app) =>
-    app.use(createAdminOrPermissionGuard('queue.override')).post(
+    app.post(
       '/override',
       async ({ user, body }): Promise<typeof SongAddedResponse.static> => {
         const result = await resolveUrlTempSong(
@@ -300,13 +326,17 @@ export const playerPlugin = new Elysia({ prefix: '/player', name: 'player' })
           song: result.queuedSong,
         } as typeof SongAddedResponse.static;
       },
-      { body: UrlSchema, response: { 200: SongAddedResponse } }
+      {
+        isVoiceChannel: true,
+        hasPermission: 'queue.override',
+        body: UrlSchema,
+        response: { 200: SongAddedResponse },
+      }
     )
   )
 
   .guard({}, (app) =>
     app
-      .use(createAdminOrPermissionGuard('queue.manage'))
       .post(
         '/pause-toggle',
         async () => {
@@ -315,7 +345,11 @@ export const playerPlugin = new Elysia({ prefix: '/player', name: 'player' })
           const isPaused = await player.togglePause();
           return { isPaused };
         },
-        { response: { 200: PauseToggleResponse } }
+        {
+          isVoiceChannel: true,
+          hasPermission: 'queue.manage',
+          response: { 200: PauseToggleResponse },
+        }
       )
       .post(
         '/play',
@@ -378,13 +412,17 @@ export const playerPlugin = new Elysia({ prefix: '/player', name: 'player' })
 
           return { message: `Queued ${queuedSongs.length} song(s).` };
         },
-        { body: PlaySchema, response: { 200: MessageResponse } }
+        {
+          isVoiceChannel: true,
+          hasPermission: 'queue.manage',
+          body: PlaySchema,
+          response: { 200: MessageResponse },
+        }
       )
   )
 
   .guard({}, (app) =>
     app
-      .use(createAdminOrPermissionGuard('queue.quickadd'))
       .post(
         '/quick-add',
         async ({ user, body }): Promise<typeof SongAddedResponse.static> => {
@@ -398,7 +436,12 @@ export const playerPlugin = new Elysia({ prefix: '/player', name: 'player' })
             song: result.queuedSong,
           } as typeof SongAddedResponse.static;
         },
-        { body: UrlSchema, response: { 200: SongAddedResponse } }
+        {
+          isVoiceChannel: true,
+          hasPermission: 'queue.quickadd',
+          body: UrlSchema,
+          response: { 200: SongAddedResponse },
+        }
       )
       .post(
         '/quick-add-playlist',
@@ -435,13 +478,17 @@ export const playerPlugin = new Elysia({ prefix: '/player', name: 'player' })
             songs: queuedSongs,
           } as typeof PlaylistQueuedResponse.static;
         },
-        { body: QuickAddPlaylistSchema, response: { 200: PlaylistQueuedResponse } }
+        {
+          isVoiceChannel: true,
+          hasPermission: 'queue.quickadd',
+          body: QuickAddPlaylistSchema,
+          response: { 200: PlaylistQueuedResponse },
+        }
       )
   )
 
   .guard({}, (app) =>
     app
-      .use(createAdminOrPermissionGuard('queue.manage'))
       .post(
         '/seek',
         async ({ body }): Promise<typeof QueueState.static> => {
@@ -452,7 +499,12 @@ export const playerPlugin = new Elysia({ prefix: '/player', name: 'player' })
           await player.seek(position);
           return player.getQueueState() as typeof QueueState.static;
         },
-        { body: SeekSchema, response: { 200: QueueState } }
+        {
+          isVoiceChannel: true,
+          hasPermission: 'queue.manage',
+          body: SeekSchema,
+          response: { 200: QueueState },
+        }
       )
       .post(
         '/shuffle',
@@ -466,7 +518,7 @@ export const playerPlugin = new Elysia({ prefix: '/player', name: 'player' })
           player.shuffle();
           return { message: 'Queue shuffled.' };
         },
-        { response: { 200: MessageResponse } }
+        { isVoiceChannel: true, hasPermission: 'queue.manage', response: { 200: MessageResponse } }
       )
       .post(
         '/skip',
@@ -476,7 +528,7 @@ export const playerPlugin = new Elysia({ prefix: '/player', name: 'player' })
           await player.skip();
           return { message: 'Skipped.' };
         },
-        { response: { 200: MessageResponse } }
+        { isVoiceChannel: true, hasPermission: 'queue.manage', response: { 200: MessageResponse } }
       )
       .post(
         '/unshuffle',
@@ -486,6 +538,6 @@ export const playerPlugin = new Elysia({ prefix: '/player', name: 'player' })
           player.unshuffle();
           return { message: 'Queue order restored.' };
         },
-        { response: { 200: MessageResponse } }
+        { isVoiceChannel: true, hasPermission: 'queue.manage', response: { 200: MessageResponse } }
       )
   );

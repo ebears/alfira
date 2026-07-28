@@ -1,10 +1,9 @@
 import { eq } from 'drizzle-orm';
 import { Elysia, t } from 'elysia';
 
-import { deriveAuth } from '../lib/authDerive';
 import { refreshGuildId } from '../lib/config';
 import { botHeaders, fetchGuildRoles } from '../lib/discordRoles';
-import { setupModeGuard } from '../lib/elysia-guards';
+import { authPlugin } from '../lib/elysia-guards';
 import { ApiError } from '../lib/errors';
 import {
   SetupChannel as SetupChannelSchema,
@@ -174,7 +173,7 @@ function saveSetupConfig(data: typeof SetupCompleteSchema.static): void {
 // ---------------------------------------------------------------------------
 
 export const setupPlugin = new Elysia({ prefix: '/setup', name: 'setup' })
-  .derive(deriveAuth)
+  .use(authPlugin)
 
   .get(
     '/',
@@ -228,7 +227,6 @@ export const setupPlugin = new Elysia({ prefix: '/setup', name: 'setup' })
     },
     { response: { 200: SetupStatusSchema } }
   )
-  .use(setupModeGuard)
   .get(
     '/guilds',
     async () => {
@@ -240,7 +238,7 @@ export const setupPlugin = new Elysia({ prefix: '/setup', name: 'setup' })
         throw new ApiError(502, 'Could not fetch guild list.');
       }
     },
-    { response: { 200: t.Object({ guilds: t.Array(SetupGuildSchema) }) } }
+    { isSetupAdmin: true, response: { 200: t.Object({ guilds: t.Array(SetupGuildSchema) }) } }
   )
   .get(
     '/roles',
@@ -251,6 +249,7 @@ export const setupPlugin = new Elysia({ prefix: '/setup', name: 'setup' })
       return { roles };
     },
     {
+      isSetupAdmin: true,
       query: t.Object({ guildId: t.String() }),
       response: { 200: t.Object({ roles: t.Array(SetupRoleSchema) }) },
     }
@@ -269,6 +268,7 @@ export const setupPlugin = new Elysia({ prefix: '/setup', name: 'setup' })
       }
     },
     {
+      isSetupAdmin: true,
       query: t.Object({ guildId: t.String() }),
       response: { 200: t.Object({ channels: t.Array(SetupChannelSchema) }) },
     }
@@ -284,5 +284,9 @@ export const setupPlugin = new Elysia({ prefix: '/setup', name: 'setup' })
         throw new ApiError(500, 'Could not save configuration.');
       }
     },
-    { body: SetupCompleteSchema, response: { 200: t.Object({ success: t.Literal(true) }) } }
+    {
+      isSetupAdmin: true,
+      body: SetupCompleteSchema,
+      response: { 200: t.Object({ success: t.Literal(true) }) },
+    }
   );

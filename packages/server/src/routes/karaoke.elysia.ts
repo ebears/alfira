@@ -1,8 +1,7 @@
 import { eq } from 'drizzle-orm';
 import { Elysia, t } from 'elysia';
 
-import { deriveAuth } from '../lib/authDerive';
-import { createAdminOrPermissionGuard } from '../lib/elysia-guards';
+import { authPlugin } from '../lib/elysia-guards';
 import { KaraokeSettings as KaraokeSettingsSchema } from '../lib/responseSchemas';
 import { syncAllFilters } from '../lib/syncAllFilters';
 import { db, tables } from '../shared/db';
@@ -62,10 +61,10 @@ function upsertKaraokeSettings(data: KaraokeSettings): void {
 // ---------------------------------------------------------------------------
 
 export const karaokePlugin = new Elysia({ prefix: '/settings/karaoke', name: 'settings-karaoke' })
-  .derive(deriveAuth)
+  .use(authPlugin)
 
-  .use(createAdminOrPermissionGuard('audio.manage'))
   .get('/', () => fetchKaraokeSettings(), {
+    hasPermission: 'audio.manage',
     response: { 200: KaraokeSettingsSchema },
   })
   .patch(
@@ -76,5 +75,5 @@ export const karaokePlugin = new Elysia({ prefix: '/settings/karaoke', name: 'se
 
       return body;
     },
-    { body: KaraokeSchema, response: { 200: KaraokeSettingsSchema } }
+    { hasPermission: 'audio.manage', body: KaraokeSchema, response: { 200: KaraokeSettingsSchema } }
   );

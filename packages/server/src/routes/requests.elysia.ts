@@ -1,9 +1,8 @@
 import { and, eq, inArray, or, sql } from 'drizzle-orm';
 import { Elysia, t } from 'elysia';
 
-import { deriveAuth } from '../lib/authDerive';
 import { getUserDisplayName, resolveDisplayNames } from '../lib/displayName';
-import { adminGuard, authGuard, type AuthContext } from '../lib/elysia-guards';
+import { authPlugin, requireAuth } from '../lib/elysia-guards';
 import { ApiError } from '../lib/errors';
 import { sendRequestDm, sendRequestNotification } from '../lib/notifications';
 import { parsePagination } from '../lib/pagination';
@@ -47,13 +46,9 @@ function formatRequest(row: typeof requestTable.$inferSelect): SongRequest {
   } as SongRequest;
 }
 
-async function userCanAutoApprove(authCtx: AuthContext): Promise<boolean> {
-  if (authCtx.isAdmin) {
+async function userCanAutoApprove(user: { isAdmin: boolean; roles?: string[] }): Promise<boolean> {
+  if (user.isAdmin) {
     return true;
-  }
-  const user = authCtx.user;
-  if (!user) {
-    return false;
   }
   const userRoles = user.roles ?? [];
   if (userRoles.length === 0) {
@@ -103,9 +98,8 @@ const PatchRequestSchema = t.Object({
 // ---------------------------------------------------------------------------
 
 export const requestsPlugin = new Elysia({ prefix: '/requests', name: 'requests' })
-  .derive(deriveAuth)
-
-  .use(authGuard)
+  .use(authPlugin)
+  .use(requireAuth)
   .post(
     '/preview',
     async ({ body }) => {
@@ -177,7 +171,7 @@ export const requestsPlugin = new Elysia({ prefix: '/requests', name: 'requests'
   )
   .get(
     '/',
-    async ({ user, isAdmin, request }) => {
+    async ({ user, request }) => {
       const url = new URL(request.url);
       const { page, limit, skip } = parsePagination(url);
       const status = url.searchParams.get('status') ?? 'pending';
@@ -192,7 +186,7 @@ export const requestsPlugin = new Elysia({ prefix: '/requests', name: 'requests'
       const discordId = (user as { discordId: string }).discordId;
       if (mine) {
         conditions.push(eq(requestTable.requestedBy, discordId));
-      } else if (!isAdmin && status !== 'pending') {
+      } else if (!user.isAdmin && status !== 'pending') {
         conditions.push(eq(requestTable.requestedBy, discordId));
       }
 
@@ -249,7 +243,7 @@ export const requestsPlugin = new Elysia({ prefix: '/requests', name: 'requests'
   )
   .post(
     '/',
-    async ({ user, isAdmin, body }): Promise<typeof CreateRequestResult.static> => {
+    async ({ user, body }): Promise<typeof CreateRequestResult.static> => {
       const discordUser = user as { discordId: string; username: string; isAdmin: boolean };
 
       const notifyDm = body.notifyDm === true;
@@ -281,8 +275,7 @@ export const requestsPlugin = new Elysia({ prefix: '/requests', name: 'requests'
         }
       }
 
-      const authCtx = { user, isAdmin };
-      const autoApprove = await userCanAutoApprove(authCtx);
+      const autoApprove = await userCanAutoApprove(user);
       const isPlaylist = isPlaylistUrl(url);
 
       // --- Playlist request ---
@@ -577,7 +570,7 @@ export const requestsPlugin = new Elysia({ prefix: '/requests', name: 'requests'
     { body: CreateRequestSchema, response: { 200: CreateRequestResult } }
   )
   .guard({}, (app) =>
-    app.use(adminGuard).patch(
+    app.patch(
       '/:id',
       async ({ user, params, body }) => {
         const id = params.id;
@@ -788,6 +781,7 @@ export const requestsPlugin = new Elysia({ prefix: '/requests', name: 'requests'
         };
       },
       {
+        isAdmin: true,
         params: t.Object({ id: t.String() }),
         body: PatchRequestSchema,
         response: { 200: t.Unknown() },
@@ -796,7 +790,8 @@ export const requestsPlugin = new Elysia({ prefix: '/requests', name: 'requests'
   )
   .delete(
     '/:id',
-    async ({ user, isAdmin, params, set }) => {
+    async ({ user, params, set }) => {
+      const { isAdmin } = user as { isAdmin: boolean };
       const id = params.id;
 
       const [existing] = (await db

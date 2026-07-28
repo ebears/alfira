@@ -2,9 +2,8 @@ import { and, eq, lt } from 'drizzle-orm';
 import { Elysia, t } from 'elysia';
 import crypto from 'node:crypto';
 
-import { deriveAuth } from '../lib/authDerive';
 import { getGuildId, refreshGuildId } from '../lib/config';
-import { authGuard } from '../lib/elysia-guards';
+import { authPlugin as macroAuth } from '../lib/elysia-guards';
 import { sign, verify } from '../lib/jwt';
 import { getClientIp } from '../lib/rateLimit';
 import { db, tables } from '../shared/db';
@@ -422,7 +421,7 @@ const DiscordIdentitySchema = t.Object({
 // ---------------------------------------------------------------------------
 
 export const authPlugin = new Elysia({ name: 'auth' })
-  .derive(deriveAuth)
+  .use(macroAuth)
   // ── /auth/login ── redirect to Discord OAuth
   .get('/login', ({ redirect, request }) => {
     const ip = getClientIp(request);
@@ -703,14 +702,17 @@ export const authPlugin = new Elysia({ name: 'auth' })
   })
 
   // ── /auth/me ── requires auth; returns current user
-  .use(authGuard)
-  .get('/me', ({ user }) => {
-    const setupDone = isSetupCompleted();
-    if (!setupDone) {
-      return { user: { ...user, isSetupAdmin: true } };
-    }
-    return { user };
-  })
+  .get(
+    '/me',
+    ({ user }) => {
+      const setupDone = isSetupCompleted();
+      if (!setupDone) {
+        return { user: { ...user, isSetupAdmin: true } };
+      }
+      return { user };
+    },
+    { isAuth: true }
+  )
 
   // ── /auth/logout ── revoke refresh token, clear cookies
   .post('/logout', async ({ cookie }) => {

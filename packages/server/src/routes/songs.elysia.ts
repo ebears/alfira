@@ -1,10 +1,9 @@
 import { eq, inArray, sql } from 'drizzle-orm';
 import { Elysia, t } from 'elysia';
 
-import { deriveAuth } from '../lib/authDerive';
 import { getGuildId } from '../lib/config';
 import { getUserDisplayName, resolveDisplayNames } from '../lib/displayName';
-import { authGuard, createAdminOrPermissionGuard } from '../lib/elysia-guards';
+import { authPlugin } from '../lib/elysia-guards';
 import { ApiError } from '../lib/errors';
 import { PaginatedResult, type PaginationMeta, Song } from '../lib/responseSchemas';
 import {
@@ -204,9 +203,8 @@ async function handleGetSongs(q: Record<string, string>) {
 // ---------------------------------------------------------------------------
 
 export const songsPlugin = new Elysia({ prefix: '/songs', name: 'songs' })
-  .derive(deriveAuth)
+  .use(authPlugin)
 
-  .use(authGuard)
   .get(
     '/',
     ({ request }) => {
@@ -221,6 +219,7 @@ export const songsPlugin = new Elysia({ prefix: '/songs', name: 'songs' })
       };
     },
     {
+      isAuth: true,
       response: {
         200: PaginatedResult(Song),
       },
@@ -228,7 +227,6 @@ export const songsPlugin = new Elysia({ prefix: '/songs', name: 'songs' })
   )
   .guard({}, (app) =>
     app
-      .use(createAdminOrPermissionGuard('songs.delete'))
       .post(
         '/bulk-delete',
         async ({ body }) => {
@@ -237,7 +235,11 @@ export const songsPlugin = new Elysia({ prefix: '/songs', name: 'songs' })
 
           return { deleted: ids.length };
         },
-        { body: BulkDeleteSchema, response: { 200: t.Object({ deleted: t.Number() }) } }
+        {
+          hasPermission: 'songs.delete',
+          body: BulkDeleteSchema,
+          response: { 200: t.Object({ deleted: t.Number() }) },
+        }
       )
       .delete(
         '/:id',
@@ -254,12 +256,15 @@ export const songsPlugin = new Elysia({ prefix: '/songs', name: 'songs' })
           set.status = 204;
           return null;
         },
-        { params: t.Object({ id: t.String() }), response: { 204: t.Void() } }
+        {
+          hasPermission: 'songs.delete',
+          params: t.Object({ id: t.String() }),
+          response: { 204: t.Void() },
+        }
       )
   )
   .guard({}, (app) =>
     app
-      .use(createAdminOrPermissionGuard('songs.edit'))
       .post(
         '/bulk-tag',
         async ({ body }) => {
@@ -301,6 +306,7 @@ export const songsPlugin = new Elysia({ prefix: '/songs', name: 'songs' })
           return { updated: updatedSongs.length, tags: newTags };
         },
         {
+          hasPermission: 'songs.edit',
           body: BulkTagSchema,
           response: { 200: t.Object({ updated: t.Number(), tags: t.Array(t.String()) }) },
         }
@@ -340,7 +346,7 @@ export const songsPlugin = new Elysia({ prefix: '/songs', name: 'songs' })
 
           return { updated: ids.length };
         },
-        { response: { 200: t.Object({ updated: t.Number() }) } }
+        { hasPermission: 'songs.edit', response: { 200: t.Object({ updated: t.Number() }) } }
       )
       .patch(
         '/:id',
@@ -378,6 +384,11 @@ export const songsPlugin = new Elysia({ prefix: '/songs', name: 'songs' })
 
           return formatSong(updatedSong) as unknown as typeof Song.static;
         },
-        { params: t.Object({ id: t.String() }), body: SongPatchSchema, response: { 200: Song } }
+        {
+          hasPermission: 'songs.edit',
+          params: t.Object({ id: t.String() }),
+          body: SongPatchSchema,
+          response: { 200: Song },
+        }
       )
   );

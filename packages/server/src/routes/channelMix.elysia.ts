@@ -1,8 +1,7 @@
 import { eq } from 'drizzle-orm';
 import { Elysia, t } from 'elysia';
 
-import { deriveAuth } from '../lib/authDerive';
-import { createAdminOrPermissionGuard } from '../lib/elysia-guards';
+import { authPlugin } from '../lib/elysia-guards';
 import { ChannelMixSettings as ChannelMixSettingsSchema } from '../lib/responseSchemas';
 import { syncAllFilters } from '../lib/syncAllFilters';
 import { db, tables } from '../shared/db';
@@ -65,10 +64,10 @@ export const channelMixPlugin = new Elysia({
   prefix: '/settings/channelmix',
   name: 'settings-channelmix',
 })
-  .derive(deriveAuth)
+  .use(authPlugin)
 
-  .use(createAdminOrPermissionGuard('audio.manage'))
   .get('/', () => fetchChannelMixSettings(), {
+    hasPermission: 'audio.manage',
     response: { 200: ChannelMixSettingsSchema },
   })
   .patch(
@@ -79,5 +78,9 @@ export const channelMixPlugin = new Elysia({
 
       return body;
     },
-    { body: ChannelMixSchema, response: { 200: ChannelMixSettingsSchema } }
+    {
+      hasPermission: 'audio.manage',
+      body: ChannelMixSchema,
+      response: { 200: ChannelMixSettingsSchema },
+    }
   );

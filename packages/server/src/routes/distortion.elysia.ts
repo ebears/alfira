@@ -1,8 +1,7 @@
 import { eq } from 'drizzle-orm';
 import { Elysia, t } from 'elysia';
 
-import { deriveAuth } from '../lib/authDerive';
-import { createAdminOrPermissionGuard } from '../lib/elysia-guards';
+import { authPlugin } from '../lib/elysia-guards';
 import { DistortionSettings as DistortionSettingsSchema } from '../lib/responseSchemas';
 import { syncAllFilters } from '../lib/syncAllFilters';
 import { db, tables } from '../shared/db';
@@ -81,10 +80,10 @@ export const distortionPlugin = new Elysia({
   prefix: '/settings/distortion',
   name: 'settings-distortion',
 })
-  .derive(deriveAuth)
+  .use(authPlugin)
 
-  .use(createAdminOrPermissionGuard('audio.manage'))
   .get('/', () => fetchDistortionSettings(), {
+    hasPermission: 'audio.manage',
     response: { 200: DistortionSettingsSchema },
   })
   .patch(
@@ -95,5 +94,9 @@ export const distortionPlugin = new Elysia({
 
       return body;
     },
-    { body: DistortionSchema, response: { 200: DistortionSettingsSchema } }
+    {
+      hasPermission: 'audio.manage',
+      body: DistortionSchema,
+      response: { 200: DistortionSettingsSchema },
+    }
   );

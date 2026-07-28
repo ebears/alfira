@@ -1,10 +1,9 @@
 import { eq, inArray } from 'drizzle-orm';
 import { Elysia, t } from 'elysia';
 
-import { deriveAuth } from '../lib/authDerive';
 import { getGuildId } from '../lib/config';
 import { fetchGuildRoles } from '../lib/discordRoles';
-import { adminGuard, authGuard } from '../lib/elysia-guards';
+import { authPlugin } from '../lib/elysia-guards';
 import { ApiError } from '../lib/errors';
 import { MyPermissionsResponse } from '../lib/responseSchemas';
 import { PERMISSION_CATEGORIES, PERMISSION_LABELS, type PermissionAction } from '../shared';
@@ -61,9 +60,8 @@ function fetchUserPermissions(userRoles: string[]): string[] {
 // ---------------------------------------------------------------------------
 
 export const permissionsPlugin = new Elysia({ prefix: '/permissions', name: 'permissions' })
-  .derive(deriveAuth)
+  .use(authPlugin)
 
-  .use(authGuard)
   .get(
     '/me',
     ({ user }) => {
@@ -71,37 +69,40 @@ export const permissionsPlugin = new Elysia({ prefix: '/permissions', name: 'per
       const permissions = fetchUserPermissions(userRoles);
       return { permissions };
     },
-    { response: { 200: MyPermissionsResponse } }
+    { isAuth: true, response: { 200: MyPermissionsResponse } }
   )
-  .use(adminGuard)
-  .get('/', async () => {
-    const guildId = getGuildId();
-    const allRows = fetchAllRolePermissions();
-    const adminRoleIds = fetchAdminRoleIds();
-    const roles = guildId ? await fetchGuildRoles(guildId) : [];
+  .get(
+    '/',
+    async () => {
+      const guildId = getGuildId();
+      const allRows = fetchAllRolePermissions();
+      const adminRoleIds = fetchAdminRoleIds();
+      const roles = guildId ? await fetchGuildRoles(guildId) : [];
 
-    // Filter out roles that are already super-admins (implied full access).
-    const adminRoleIdSet = new Set(
-      adminRoleIds
-        .split(',')
-        .map((id) => id.trim())
-        .filter(Boolean)
-    );
-    const filteredRoles = roles.filter((r) => !adminRoleIdSet.has(r.id));
+      // Filter out roles that are already super-admins (implied full access).
+      const adminRoleIdSet = new Set(
+        adminRoleIds
+          .split(',')
+          .map((id) => id.trim())
+          .filter(Boolean)
+      );
+      const filteredRoles = roles.filter((r) => !adminRoleIdSet.has(r.id));
 
-    // Build mapping: action → roleIds
-    const mapping: Record<string, string[]> = {};
-    for (const row of allRows) {
-      (mapping[row.action] ??= []).push(row.roleId);
-    }
+      // Build mapping: action → roleIds
+      const mapping: Record<string, string[]> = {};
+      for (const row of allRows) {
+        (mapping[row.action] ??= []).push(row.roleId);
+      }
 
-    return {
-      mapping,
-      roles: filteredRoles,
-      categories: PERMISSION_CATEGORIES,
-      labels: PERMISSION_LABELS,
-    };
-  })
+      return {
+        mapping,
+        roles: filteredRoles,
+        categories: PERMISSION_CATEGORIES,
+        labels: PERMISSION_LABELS,
+      };
+    },
+    { isAdmin: true }
+  )
   .patch(
     '/',
     ({ body }) => {
@@ -116,6 +117,7 @@ export const permissionsPlugin = new Elysia({ prefix: '/permissions', name: 'per
       return { action, roleIds };
     },
     {
+      isAdmin: true,
       body: PermissionsPatchSchema,
       response: { 200: t.Object({ action: t.String(), roleIds: t.Array(t.String()) }) },
     }

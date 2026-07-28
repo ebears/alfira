@@ -1,9 +1,8 @@
 import { eq } from 'drizzle-orm';
 import { Elysia, t } from 'elysia';
 
-import { deriveAuth } from '../lib/authDerive';
 import { getGuildId } from '../lib/config';
-import { createAdminOrPermissionGuard } from '../lib/elysia-guards';
+import { authPlugin } from '../lib/elysia-guards';
 import { TimescaleSettings as TimescaleSettingsSchema } from '../lib/responseSchemas';
 import { emitPlayerUpdate } from '../lib/socket';
 import { syncAllFilters } from '../lib/syncAllFilters';
@@ -64,10 +63,10 @@ export const timescalePlugin = new Elysia({
   prefix: '/settings/timescale',
   name: 'settings-timescale',
 })
-  .derive(deriveAuth)
+  .use(authPlugin)
 
-  .use(createAdminOrPermissionGuard('audio.manage'))
   .get('/', () => fetchTimescaleSettings(), {
+    hasPermission: 'audio.manage',
     response: { 200: TimescaleSettingsSchema },
   })
   .patch(
@@ -85,5 +84,9 @@ export const timescalePlugin = new Elysia({
 
       return body;
     },
-    { body: TimescaleSchema, response: { 200: TimescaleSettingsSchema } }
+    {
+      hasPermission: 'audio.manage',
+      body: TimescaleSchema,
+      response: { 200: TimescaleSettingsSchema },
+    }
   );
