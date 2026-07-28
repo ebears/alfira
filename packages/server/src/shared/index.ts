@@ -1,4 +1,5 @@
-export * from './api';
+export type { App } from '../elysia-app';
+export type * from './api';
 export { formatDuration } from './format';
 export { toQueuedSong } from './queue';
 export { fisherYatesShuffle } from './shuffle';

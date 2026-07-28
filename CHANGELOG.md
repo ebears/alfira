@@ -7,6 +7,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.5.0] - 2026-07-28
+
+### Added
+
+- OpenAPI Swagger docs (#783)
+
+### Changed
+
+- HTTP layer migrated to Elysia with Eden Treaty client (#782)
+- Shared song field validation and playback filter building extracted (#778)
+- Nodelink-config directory flattened to single file (#776)
+- Lefthook pre-commit hooks simplified (#775)
+- `import/no-unassigned-import` lint rule added (#777)
+- Knip config cleaned up for v6 monorepo support
+
+### Fixed
+
+- Playlist order sort inconsistency (#787)
+- Song edit panel changes now persist on panel close (#786)
+- Settings page now loads roles and channels correctly after initial setup (#785)
+
+### Dependencies
+
+- Bumped `github/codeql-action` (analyze, init) from 4.37.0 to 4.37.2
+- Bumped `actions/checkout` from 7.0.0 to 7.0.1
+- Pinned all dependency versions (#784)
+
 ## [0.4.1] - 2026-07-22
 
 ### Added
@@ -295,7 +322,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - UI actions now properly gated by granular permissions rather than a simple admin check.
 - Inherited pointer cursor on modal cards.
 
-[Unreleased]: https://github.com/ebears/alfira/compare/v0.4.1...dev
+[Unreleased]: https://github.com/ebears/alfira/compare/v0.5.0...dev
+[0.5.0]: https://github.com/ebears/alfira/compare/v0.4.1...v0.5.0
 [0.4.1]: https://github.com/ebears/alfira/compare/v0.4.0...v0.4.1
 [0.4.0]: https://github.com/ebears/alfira/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/ebears/alfira/compare/v0.2.2...v0.3.0

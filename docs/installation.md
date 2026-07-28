@@ -117,7 +117,7 @@ bun setup:nodelink
 bun dev
 ```
 
-**What `bun setup:nodelink` does:** Clones the [NodeLink](https://github.com/PerformanC/NodeLink) audio server at a pinned commit into `.nodelink/`, installs its dependencies, builds it, and copies the project's custom config (`nodelink-config/config.ts`) into place. This only needs to be run once — the resulting `.nodelink/` directory is excluded from git. NodeLink is spawned automatically as a child process when the dev server starts.
+**What `bun setup:nodelink` does:** Clones the [NodeLink](https://github.com/PerformanC/NodeLink) audio server at a pinned commit into `.nodelink/`, installs its dependencies, builds it, and copies the project's custom config (`nodelink.config.ts`) into place. This only needs to be run once — the resulting `.nodelink/` directory is excluded from git. NodeLink is spawned automatically as a child process when the dev server starts.
 
 The server auto-restarts on file changes. For web/frontend changes during a session, run `bun run web:build` in another terminal and refresh.
 
@@ -371,6 +371,10 @@ The Docker health check uses this endpoint automatically — `docker compose ps`
 ```bash
 docker compose logs alfira
 ```
+
+## API Documentation
+
+Alfira serves interactive OpenAPI documentation at `/docs` (powered by [Scalar](https://scalar.com/)). You can browse all endpoints with request/response schemas, auth requirements, and a built-in "Try it out" mode. The raw OpenAPI 3.0 spec is available at `/docs/json` for importing into Postman, Insomnia, or other tools.
 
 ---
 

@@ -1,57 +1,94 @@
 ---
 name: alfira-api
-description: API route structure, authentication flow, middleware, security headers, WebSocket auth, and response helpers. Use when working on routes/*.ts, middleware/requireAuth.ts, index.ts route wiring, or adding new API endpoints.
+description: API route structure, authentication flow, Elysia macros, security headers, WebSocket auth, and error handling. Use when working on routes/*.elysia.ts, elysia-app.ts, lib/elysia-guards.ts, or adding new API endpoints.
 ---
 
 # Alfira API
 
 ## Server
 
-Bun native HTTP server on port 3001. Serves three concerns:
+Elysia HTTP server on port 3001. Serves four concerns:
 
-1. **REST API** — All `/api/*` routes
+1. **REST API** — All `/api/*` routes (registered as Elysia plugins)
 2. **WebSocket** — `/ws` endpoint for real-time player state
 3. **Static assets** — Built web UI from `packages/web/dist/` with SPA fallback
+4. **OpenAPI docs** — `/docs` (Scalar UI) and `/docs/json` (OpenAPI 3.0 JSON), auto-generated from route schemas via `@elysiajs/swagger`
 
-## Route Map (defined in `index.ts` fetch handler)
+The HTTP layer is defined in `packages/server/src/elysia-app.ts`, composing three Elysia instances (root, apiApp, authApp).
 
-| Prefix                     | Handler file                | Purpose                                                   |
-| -------------------------- | --------------------------- | --------------------------------------------------------- |
-| `/api/tags`                | `routes/tags.ts`            | CRUD for tags                                             |
-| `/api/songs`               | `routes/songs.ts`           | Song library, search, edit, delete                        |
-| `/api/requests`            | `routes/requests.ts`        | Song request CRUD, preview, approve/deny                  |
-| `/api/playlists`           | `routes/playlists.ts`       | Playlist CRUD, reorder, import                            |
-| `/api/player`              | `routes/player.ts`          | Playback control (play, pause, skip, seek, volume, queue) |
-| `/api/settings/compressor` | `routes/compressor.ts`      | Compressor settings                                       |
-| `/api/settings/equalizer`  | `routes/equalizer.ts`       | Equalizer settings                                        |
-| `/api/permissions`         | `routes/permissions.ts`     | Role-based permission management                          |
-| `/api/settings/general`    | `routes/generalSettings.ts` | General guild settings                                    |
-| `/api/setup`               | `routes/setup.ts`           | Initial setup wizard                                      |
-| `/auth`                    | `routes/auth.ts`            | OAuth2 Discord login flow                                 |
+## Route Map (defined in `elysia-app.ts`)
+
+All route files use the `.elysia.ts` extension and export an Elysia plugin instance:
+
+| Prefix                     | Plugin file                        | Purpose                                                   |
+| -------------------------- | ---------------------------------- | --------------------------------------------------------- |
+| `/api/tags`                | `routes/tags.elysia.ts`            | CRUD for tags                                             |
+| `/api/songs`               | `routes/songs.elysia.ts`           | Song library, search, edit, delete                        |
+| `/api/requests`            | `routes/requests.elysia.ts`        | Song request CRUD, preview, approve/deny                  |
+| `/api/playlists`           | `routes/playlists.elysia.ts`       | Playlist CRUD, reorder, import                            |
+| `/api/player`              | `routes/player.elysia.ts`          | Playback control (play, pause, skip, seek, volume, queue) |
+| `/api/settings/compressor` | `routes/compressor.elysia.ts`      | Compressor settings                                       |
+| `/api/settings/equalizer`  | `routes/equalizer.elysia.ts`       | Equalizer settings                                        |
+| `/api/settings/channelmix` | `routes/channelMix.elysia.ts`      | Channel mix settings                                      |
+| `/api/settings/distortion` | `routes/distortion.elysia.ts`      | Distortion settings                                       |
+| `/api/settings/karaoke`    | `routes/karaoke.elysia.ts`         | Karaoke filter settings                                   |
+| `/api/settings/lowpass`    | `routes/lowPass.elysia.ts`         | Low pass filter settings                                  |
+| `/api/settings/rotation`   | `routes/rotation.elysia.ts`        | Rotation filter settings                                  |
+| `/api/settings/timescale`  | `routes/timescale.elysia.ts`       | Timescale settings                                        |
+| `/api/settings/tremolo`    | `routes/tremolo.elysia.ts`         | Tremolo settings                                          |
+| `/api/settings/vibrato`    | `routes/vibrato.elysia.ts`         | Vibrato settings                                          |
+| `/api/settings/filters`    | `routes/filters.elysia.ts`         | NodeLink filter application                               |
+| `/api/settings/general`    | `routes/generalSettings.elysia.ts` | General guild settings                                    |
+| `/api/permissions`         | `routes/permissions.elysia.ts`     | Role-based permission management                          |
+| `/api/setup`               | `routes/setup.elysia.ts`           | Initial setup wizard                                      |
+| `/auth`                    | `routes/auth.elysia.ts`            | OAuth2 Discord login flow                                 |
 
 Special routes (no `/api` prefix):
 
 - `/health` — Returns service health with component status (database, nodelink, discord)
 - `/api/version` — Returns version, public (no auth)
-- `/ws` — WebSocket upgrade
+- `/ws` — WebSocket upgrade (defined in root app)
 
-## Route Context
+## Auth & Guards (`lib/elysia-guards.ts`)
 
-Every route handler receives `RouteContext`:
+Authentication is handled by the `authPlugin` using Elysia's [macro system](https://elysiajs.com/patterns/macro.html). Guards are opt-in annotations on routes:
 
 ```typescript
-type RouteContext = {
-  user: ReturnType<typeof verifySessionToken>; // null if unauthenticated
-  isAdmin: boolean;
-  cookies: Record<string, string>;
-};
+import { authPlugin } from '../lib/elysia-guards';
+
+new Elysia()
+  .use(authPlugin)
+  .get('/public', handler) // public
+  .get('/profile', handler, { isAuth: true }) // authenticated
+  .get('/admin', handler, { isAdmin: true }) // admin
+  .patch('/manage', handler, { hasPermission: 'queue.manage' }) // granular permission
+  .post('/control', handler, { isVoiceChannel: true }) // auth + in voice
+  .get('/setup', handler, { isSetupAdmin: true }); // auth + setup admin
 ```
 
-Created by `createContext(request)` which parses cookies and validates session token. Routes are responsible for their own auth checks — check `ctx.user` and `ctx.isAdmin`.
+Each guard macro resolves the session cookie, verifies the JWT, and either populates `{ user }` into context or short-circuits with the appropriate 4xx response. Macros compose — for example, `isVoiceChannel` extends `isAuth`, so you only declare the most specific guard.
+
+Super-admins automatically bypass the `hasPermission` check.
+
+### requireAuth (scoped)
+
+For plugins where every route requires auth, use `requireAuth` (an Elysia `resolve` scoped plugin):
+
+```typescript
+import { authPlugin, requireAuth } from '../lib/elysia-guards';
+
+new Elysia()
+  .use(authPlugin)
+  .use(requireAuth)
+  .get('/songs', handler) // auth required (scoped)
+  .get('/playlists', handler); // auth required (scoped)
+```
+
+For plugins with mixed auth/public routes, use the `isAuth` macro per-route instead.
 
 ## Authentication Flow
 
-### Discord OAuth2 (`routes/auth.ts`)
+### Discord OAuth2 (`routes/auth.elysia.ts`)
 
 1. User clicks "Login with Discord" → redirects to Discord OAuth2 authorize URL
 2. Discord redirects back to `DISCORD_REDIRECT_URI` with auth code
@@ -59,7 +96,7 @@ Created by `createContext(request)` which parses cookies and validates session t
 4. Issues JWT session token, sets `session` cookie (httpOnly, secure, sameSite=lax)
 5. User info (discordId, username, avatar, isAdmin) encoded in JWT
 
-### Session validation (`middleware/requireAuth.ts`)
+### Session validation (`lib/elysia-guards.ts` → `resolveUser()`)
 
 - `verifySessionToken(token)` — verifies JWT, returns `{ discordId, username, avatar, isAdmin } | null`
 - Cookie-based: reads `session` cookie from request
@@ -71,7 +108,7 @@ Must be set in `.env` as `JWT_SECRET`. Used for signing and verifying session to
 
 ## Security Headers
 
-All API responses get security headers applied by `setSecurityHeaders()`:
+Applied to all `/api/*` routes via `onAfterHandle` in the `apiApp` Elysia instance:
 
 ```
 Content-Security-Policy: default-src 'none'
@@ -81,51 +118,131 @@ X-XSS-Protection: 1; mode=block
 Referrer-Policy: strict-origin-when-cross-origin
 ```
 
-`Set-Cookie` headers are preserved (not overwritten).
+The header values are defined in `lib/securityHeaders.ts` and the API subset (without `Set-Cookie`) lives in `lib/apiResponse.ts` as `API_SECURITY_HEADERS`.
 
 ## WebSocket (`/ws` endpoint)
 
-- Auth happens **before** upgrade — `getSessionUser()` validates session cookie
-- On 401: returns 401 response, no upgrade
-- On success: `server.upgrade(request, { data: { user } })`
-- Client data: never sends messages (receive-only)
-- Registration: `registerClient(ws, user)` assigns a UUID socket ID
-- Cleanup: `unregisterClient(ws)` on close
+Defined on the root Elysia app via `.ws()`:
 
-## Response Helpers
+- **Auth happens in `open` handler** — validates session cookie, closes connection if unauthenticated
+- On success: `registerClient(ws, user)` assigns a UUID socket ID
+- **Receive-only** — clients never send messages (logged and ignored if they do)
+- Cleanup: `unregisterClient(ws)` via `close` handler and `closeAllClients()` on shutdown
 
-### `json(data, status)` — `lib/json.ts`
+## Error Handling
 
-```typescript
-import { json } from './lib/json';
-return json({ error: 'Not found' }, 404);
-```
+### ApiError (`lib/errors.ts`)
 
-### Player guards — `lib/player.ts`
+A lightweight error class for API errors. Throw from route handlers or helper functions instead of returning `Response` objects:
 
 ```typescript
-import { requirePlayer, requirePlaying } from './lib/player';
+import { ApiError } from '../lib/errors';
 
-const result = requirePlaying();
-if (!result.ok) return result.response; // 409 with error message
-// result.player is typed GuildPlayer
-```
-
-## Adding a new route
-
-1. Create handler in `packages/server/src/routes/yourRoute.ts`
-2. Export a `handleYourRoute(ctx: RouteContext, request: Request): Promise<Response>` function
-3. Add route matching in `index.ts` fetch handler:
-
-```typescript
-if (url.pathname.startsWith('/api/yourRoute')) {
-  return setSecurityHeaders(await handleYourRoute(ctx, request));
+if (!song) {
+  throw new ApiError(404, 'Song not found.');
 }
+```
+
+The `onError` hook on `apiApp` catches `ApiError` and converts it to a JSON response:
+
+```json
+{ "error": "Song not found." }
+```
+
+This keeps handler return types clean (plain data, never `Response | data` unions) so Elysia response schemas work without type assertions.
+
+### Unexpected errors
+
+Non-`ApiError` exceptions are caught by `onError`, logged, and returned as `{ error: 'Internal server error.' }` with status 500.
+
+## Response Schemas (`lib/responseSchemas.ts`)
+
+Shared Elysia `t` object schemas for Eden type inference. Adding a response schema as the third argument to `.get()`/`.post()`/etc. enables Eden to infer full response types on the frontend:
+
+```typescript
+import { SongListResponse } from '../lib/responseSchemas';
+
+app.get('/api/songs', handler, {
+  response: SongListResponse,
+});
+```
+
+Response schemas cover songs, playlists, requests, tags, settings, permissions, setup, and pagination metadata.
+
+## Adding a New Route
+
+1. Create or extend an Elysia plugin in `packages/server/src/routes/yourRoute.elysia.ts`
+2. Export a plugin instance using `authPlugin`, Elysia guards, and response schemas:
+
+```typescript
+import { Elysia, t } from 'elysia';
+import { authPlugin } from '../lib/elysia-guards';
+import { YourResponse } from '../lib/responseSchemas';
+
+export const yourPlugin = new Elysia({ name: 'your-route' }).use(authPlugin).get(
+  '/api/your-endpoint',
+  ({ user, db }) => {
+    return { data: '...' };
+  },
+  {
+    isAuth: true,
+    response: YourResponse,
+  }
+);
+```
+
+3. Register the plugin in `elysia-app.ts` — add `.use(yourPlugin)` to `apiApp` (for `/api` routes) or the root app. If every route in the plugin requires auth, register it inside the `guard({ detail: { security: [{ cookieAuth: [] }] } })` scope (which contains most apiApp plugins). For plugins with mixed public/auth routes (like `setup`), add `detail: { security: [{ cookieAuth: [] }] }` per-route alongside the existing guard macros.
+
+## OpenAPI / Swagger
+
+Interactive API docs are served at `/docs` (Scalar UI) and `/docs/json` (OpenAPI 3.0 JSON). They are auto-generated by `@elysiajs/swagger` from the same `t.*` schemas used for validation and Eden type inference.
+
+### Configuration
+
+Defined in `elysia-app.ts` on the root app:
+
+```typescript
+import { swagger } from '@elysiajs/swagger';
+
+app.use(
+  swagger({
+    path: '/docs',
+    exclude: ['/ws', '/*'],
+    documentation: {
+      info: { title: 'Alfira API', version: VERSION },
+      components: {
+        securitySchemes: {
+          cookieAuth: { type: 'apiKey', in: 'cookie', name: 'session' },
+        },
+      },
+    },
+  })
+);
+```
+
+### Security scheme
+
+The `cookieAuth` security scheme is defined in the swagger config and applied via Elysia's `guard({ detail })` scoping in `apiApp`:
+
+- **All-auth plugins** (tags, songs, playlists, requests, player, all settings) — live inside a `guard({ detail: { security: [{ cookieAuth: [] }] } })` wrapper, so every route shows 🔒 in the docs
+- **Mixed plugins** (setup) — `detail: { security: [{ cookieAuth: [] }] }` is added per-route alongside `isSetupAdmin: true`; public routes (`GET /`, `GET /status`) get no detail
+- **Public plugins** (auth, `/health`, `/api/version`) — no security detail, appear unlocked
+
+### Adding security to a new route
+
+If the route lives inside the guard scope (most apiApp plugins), security is inherited — no extra annotation needed. If the route is outside the guard (e.g., in `setup`), add `detail: { security: [{ cookieAuth: [] }] }` to the route options alongside the auth macro:
+
+```typescript
+.get('/protected', handler, {
+  isAuth: true,
+  detail: { security: [{ cookieAuth: [] }] },
+  response: { 200: SomeSchema },
+})
 ```
 
 ## Rate Limiting
 
-`lib/rateLimit.ts` — in-memory store, pruned every 5 minutes. Apply via middleware pattern in route handlers as needed.
+`lib/rateLimit.ts` — in-memory store, pruned every 5 minutes via `setInterval` in `index.ts`. Applied via `checkRateLimit()` in route handlers.
 
 ## Enabled Sources
 

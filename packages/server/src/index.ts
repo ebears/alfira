@@ -3,56 +3,14 @@ import { createHash } from 'node:crypto';
 import { readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
-import { initGuildId, VERSION } from './lib/config';
-import { type RouteContext } from './lib/context';
+import { createApp } from './elysia-app';
+import { initGuildId } from './lib/config';
 import { ensureTagsMigrated } from './lib/ensureTagsMigrated';
-import { json } from './lib/json';
-import { lavalink } from './lib/lavalink';
 import { pruneRateLimitStores } from './lib/rateLimit';
-import { SECURITY_HEADERS } from './lib/securityHeaders';
-import { closeAllClients, registerClient, unregisterClient, type WsClient } from './lib/socket';
-import { verifySessionToken } from './middleware/requireAuth';
-import { handleAuth } from './routes/auth';
-import { handleChannelMix } from './routes/channelMix';
-import { handleCompressor } from './routes/compressor';
-import { handleDistortion } from './routes/distortion';
-import { handleEqualizer } from './routes/equalizer';
-import { handleFilters } from './routes/filters';
-import { handleGeneralSettings } from './routes/generalSettings';
-import { handleKaraoke } from './routes/karaoke';
-import { handleLowPass } from './routes/lowPass';
-import { handlePermissions } from './routes/permissions';
-import { handlePlayer } from './routes/player';
-import { handlePlaylists } from './routes/playlists';
-import { handleRequests } from './routes/requests';
-import { handleRotation } from './routes/rotation';
-import { handleSetup } from './routes/setup';
-import { handleSongs } from './routes/songs';
-import { handleTags } from './routes/tags';
-import { handleTimescale } from './routes/timescale';
-import { handleTremolo } from './routes/tremolo';
-import { handleVibrato } from './routes/vibrato';
+import { closeAllClients } from './lib/socket';
 import { $client, db } from './shared/db';
 import { logger } from './shared/logger';
 import { destroyAllPlayers, initEnabledSources, startDiscord } from './startDiscord';
-
-function parseCookies(header: string): Record<string, string> {
-  const result: Record<string, string> = {};
-  for (const part of header.split(';')) {
-    const idx = part.indexOf('=');
-    if (idx === -1) {
-      continue;
-    }
-    const key = part.slice(0, idx).trim();
-    const raw = part.slice(idx + 1).trim();
-    try {
-      result[key] = decodeURIComponent(raw);
-    } catch {
-      result[key] = raw;
-    }
-  }
-  return result;
-}
 
 // ---------------------------------------------------------------------------
 // Validate required environment variables.
@@ -74,250 +32,26 @@ if (missing.length > 0) {
 
 const PORT = 3001;
 const NODELINK_HOME = process.env.NODELINK_HOME ?? '/usr/local/nodelink';
-const WEB_DIST = join(import.meta.dir, '../../web/dist');
-
-// Re-export RouteContext for consumers that import from '../index'
-export type { RouteContext } from './lib/context';
-
-// ---------------------------------------------------------------------------
-// Response helpers
-// ---------------------------------------------------------------------------
-
-function setSecurityHeaders(response: Response): Response {
-  const newHeaders = new Headers(response.headers);
-  for (const [key, value] of Object.entries(SECURITY_HEADERS)) {
-    if (key === 'Set-Cookie') {
-      continue;
-    } // Don't overwrite Set-Cookie headers set by routes
-    newHeaders.set(key, value);
-  }
-  return new Response(response.body, { status: response.status, headers: newHeaders });
-}
-
-const STATIC_EXTENSIONS: Record<string, string> = {
-  '.html': 'text/html',
-  '.js': 'application/javascript',
-  '.css': 'text/css',
-  '.png': 'image/png',
-  '.jpg': 'image/jpeg',
-  '.jpeg': 'image/jpeg',
-  '.svg': 'image/svg+xml',
-  '.ico': 'image/x-icon',
-  '.webmanifest': 'application/manifest+json',
-  '.woff2': 'font/woff2',
-};
-
-function serveStatic(filePath: string, pathname: string): Response | undefined {
-  const file = Bun.file(filePath);
-  if (file.size === 0) {
-    return undefined;
-  }
-  const ext = pathname.includes('.') ? `.${pathname.split('.').pop()}` : '.html';
-  const contentType = STATIC_EXTENSIONS[ext] ?? 'text/plain';
-  return new Response(file, {
-    headers: { 'Content-Type': contentType },
-  });
-}
-
-// ---------------------------------------------------------------------------
-// Session helpers
-// ---------------------------------------------------------------------------
-
-function getSessionUser(cookieHeader: string): ReturnType<typeof verifySessionToken> {
-  const cookies = parseCookies(cookieHeader);
-  const token = cookies.session;
-  return token ? verifySessionToken(token) : null;
-}
-
-function createContext(request: Request): RouteContext {
-  const parsedCookies = parseCookies(request.headers.get('cookie') ?? '');
-  const user = getSessionUser(request.headers.get('cookie') ?? '');
-  const cookies: Record<string, string> = {};
-  for (const [key, value] of Object.entries(parsedCookies)) {
-    if (value !== undefined) {
-      cookies[key] = value;
-    }
-  }
-  return { user, isAdmin: user?.isAdmin ?? false, cookies };
-}
-
-// ---------------------------------------------------------------------------
-// Health check
-// ---------------------------------------------------------------------------
-
-async function handleHealth(): Promise<Response> {
-  const checks: Record<string, string> = {};
-
-  // Database
-  try {
-    db.all(sql`SELECT 1`);
-    checks.database = 'ok';
-  } catch {
-    checks.database = 'error';
-  }
-
-  // NodeLink
-  try {
-    const controller = new AbortController();
-    const timeout = setTimeout(() => {
-      controller.abort();
-    }, 500);
-    const res = await fetch('http://127.0.0.1:2333/v4/info', {
-      headers: { Authorization: 'nodelink-internal' },
-      signal: controller.signal,
-    });
-    clearTimeout(timeout);
-    checks.nodelink = res.ok ? 'ok' : 'error';
-  } catch {
-    checks.nodelink = 'error';
-  }
-
-  // Discord gateway
-  checks.discord = lavalink.getSessionId() ? 'ok' : 'disconnected';
-
-  const allOk = Object.values(checks).every((v) => v === 'ok');
-  return json({ status: allOk ? 'ok' : 'degraded', version: VERSION, checks }, allOk ? 200 : 503);
-}
-
-// ---------------------------------------------------------------------------
-// Route wrapper — creates auth context for Bun's native routes.
-// ---------------------------------------------------------------------------
-
-/** Wrap a routeTable handler for use with Bun.serve({ routes }). */
-function apiRoute(handler: (ctx: RouteContext, request: Request) => Response | Promise<Response>) {
-  return async (request: Request) => {
-    const ctx = createContext(request);
-    return setSecurityHeaders(await handler(ctx, request));
-  };
-}
 
 // ---------------------------------------------------------------------------
 // Main server
 //
 // Created during startup in main() after migrations, DB verification,
-// and NodeLink are ready. Uses Bun's native routes (v1.2.3+) for all
-// API endpoints; the fetch fallback handles WebSocket upgrades and
-// static file / SPA serving.
+// and NodeLink are ready. Uses Elysia (which wraps Bun.serve) for all
+// HTTP + WebSocket handling.
 //
-// The server instance is stored in a module-level variable so the
+// The Elysia instance is stored in a module-level variable so the
 // shutdown handler can call server.stop().
 // ---------------------------------------------------------------------------
 
-let server: ReturnType<typeof Bun.serve>;
+let server: ReturnType<typeof createApp> | undefined;
 
 function startServer(): void {
-  server = Bun.serve({
-    port: PORT,
-    routes: {
-      '/health': async () => setSecurityHeaders(await handleHealth()),
-      '/api/version': () => setSecurityHeaders(json({ version: VERSION })),
-      '/api/tags': apiRoute(handleTags),
-      '/api/tags/*': apiRoute(handleTags),
-      '/api/requests': apiRoute(handleRequests),
-      '/api/requests/*': apiRoute(handleRequests),
-      '/api/songs': apiRoute(handleSongs),
-      '/api/songs/*': apiRoute(handleSongs),
-      '/api/playlists': apiRoute(handlePlaylists),
-      '/api/playlists/*': apiRoute(handlePlaylists),
-      '/api/player': apiRoute(handlePlayer),
-      '/api/player/*': apiRoute(handlePlayer),
-      '/api/settings/channelmix': apiRoute(handleChannelMix),
-      '/api/settings/channelmix/*': apiRoute(handleChannelMix),
-      '/api/settings/compressor': apiRoute(handleCompressor),
-      '/api/settings/compressor/*': apiRoute(handleCompressor),
-      '/api/settings/distortion': apiRoute(handleDistortion),
-      '/api/settings/distortion/*': apiRoute(handleDistortion),
-      '/api/settings/equalizer': apiRoute(handleEqualizer),
-      '/api/settings/equalizer/*': apiRoute(handleEqualizer),
-      '/api/settings/filters': apiRoute(handleFilters),
-      '/api/settings/filters/*': apiRoute(handleFilters),
-      '/api/settings/karaoke': apiRoute(handleKaraoke),
-      '/api/settings/karaoke/*': apiRoute(handleKaraoke),
-      '/api/settings/lowpass': apiRoute(handleLowPass),
-      '/api/settings/lowpass/*': apiRoute(handleLowPass),
-      '/api/settings/rotation': apiRoute(handleRotation),
-      '/api/settings/rotation/*': apiRoute(handleRotation),
-      '/api/settings/timescale': apiRoute(handleTimescale),
-      '/api/settings/timescale/*': apiRoute(handleTimescale),
-      '/api/settings/tremolo': apiRoute(handleTremolo),
-      '/api/settings/tremolo/*': apiRoute(handleTremolo),
-      '/api/settings/vibrato': apiRoute(handleVibrato),
-      '/api/settings/vibrato/*': apiRoute(handleVibrato),
-      '/api/permissions': apiRoute(handlePermissions),
-      '/api/permissions/*': apiRoute(handlePermissions),
-      '/api/settings/general': apiRoute(handleGeneralSettings),
-      '/api/settings/general/*': apiRoute(handleGeneralSettings),
-      '/api/setup': apiRoute(handleSetup),
-      '/api/setup/*': apiRoute(handleSetup),
-      '/auth': apiRoute(handleAuth),
-      '/auth/*': apiRoute(handleAuth),
-    },
-    fetch(request, server) {
-      const url = new URL(request.url);
-
-      // WebSocket upgrade — auth is handled here before upgrade.
-      // `server` is passed as the second argument to fetch (Bun 1.2+).
-      if (url.pathname === '/ws') {
-        const user = getSessionUser(request.headers.get('cookie') ?? '');
-        if (!user) {
-          return new Response('Unauthorized', { status: 401 });
-        }
-        const success = server.upgrade(request, { data: { user } });
-        if (success) {
-          return;
-        }
-        return new Response('WebSocket upgrade failed', { status: 500 });
-      }
-
-      // Serve built web assets statically (SPA fallback for client-side routing).
-      // API routes are handled by `routes` above; `fetch` only runs for
-      // unmatched paths (static files, SPA, 404s).
-      const pathname = url.pathname;
-      const ext = pathname.includes('.') ? `.${pathname.split('.').pop()}` : '.html';
-      const isAsset =
-        Object.hasOwn(STATIC_EXTENSIONS, ext) ||
-        url.pathname.startsWith('/assets/') ||
-        url.pathname === '/sw.js' ||
-        url.pathname === '/registerSW.js';
-
-      if (isAsset || url.pathname === '/') {
-        const filePath = `${WEB_DIST}${url.pathname === '/' ? '/index.html' : url.pathname}`;
-        const response = serveStatic(filePath, url.pathname);
-        if (response) {
-          return response;
-        }
-      }
-
-      return (
-        serveStatic(join(WEB_DIST, 'index.html'), '/index.html') ??
-        setSecurityHeaders(json({ error: 'Not Found' }, 404))
-      );
-    },
-    websocket: {
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion
-      data: {} as { user: NonNullable<ReturnType<typeof verifySessionToken>> },
-      open(ws) {
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion
-        const wsc = ws as unknown as WsClient;
-        logger.debug({ socketId: wsc.id }, 'WebSocket opened');
-        registerClient(wsc, ws.data.user);
-      },
-      message(ws, message) {
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion
-        const wsc = ws as unknown as WsClient;
-        // No-op: client does not send messages
-        logger.debug({ socketId: wsc.id, message }, 'Unexpected WebSocket message received');
-      },
-      close(ws, code, reason) {
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion
-        const wsc = ws as unknown as WsClient;
-        unregisterClient(wsc);
-        logger.info({ socketId: wsc.id, code, reason }, 'WebSocket closed');
-      },
-    },
+  const app = createApp();
+  server = app;
+  app.listen(PORT, ({ hostname, port }) => {
+    logger.info({ hostname, port }, 'Elysia server listening');
   });
-
-  logger.info({ port: PORT }, 'Bun server listening');
 }
 
 // ---------------------------------------------------------------------------
@@ -391,20 +125,24 @@ function runMigrations(): void {
 // ---------------------------------------------------------------------------
 function startNodeLink(): Promise<void> {
   return new Promise((resolve) => {
-    nodelinkProcess = Bun.spawn(['bun', 'src/index.ts'], {
+    /* eslint-disable @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access */
+    // @ts-expect-error Bun global
+    const proc = Bun.spawn(['bun', 'src/index.ts'], {
       cwd: NODELINK_HOME,
       stdout: 'pipe',
       stderr: 'pipe',
       env: { ...process.env, NODELINK_AUTHORIZATION: 'nodelink-internal' },
     });
+    nodelinkProcess = proc;
+    /* eslint-enable @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access */
 
     // Fire-and-forget: consume stdout. ReadableStream chunks may contain
     // partial lines — a long line split across chunks becomes two log
     // entries, which matches the Node.js EventEmitter behavior this replaces.
     void (async () => {
       const decoder = new TextDecoder();
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion
-      for await (const chunk of nodelinkProcess.stdout as ReadableStream<Uint8Array>) {
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion, @typescript-eslint/no-unsafe-member-access
+      for await (const chunk of proc.stdout as ReadableStream<Uint8Array>) {
         for (const line of decoder.decode(chunk).split('\n')) {
           const trimmed = line.trimEnd();
           if (trimmed) {
@@ -417,8 +155,8 @@ function startNodeLink(): Promise<void> {
     // Fire-and-forget: consume stderr, suppressing git "fatal:" noise.
     void (async () => {
       const decoder = new TextDecoder();
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion
-      for await (const chunk of nodelinkProcess.stderr as ReadableStream<Uint8Array>) {
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion, @typescript-eslint/no-unsafe-member-access
+      for await (const chunk of proc.stderr as ReadableStream<Uint8Array>) {
         for (const line of decoder.decode(chunk).split('\n')) {
           const trimmed = line.trimEnd();
           if (!trimmed || trimmed.includes('fatal:')) {
@@ -525,7 +263,7 @@ void (async () => {
 // Graceful shutdown
 // ---------------------------------------------------------------------------
 let shuttingDown = false;
-let nodelinkProcess: ReturnType<typeof Bun.spawn> | undefined;
+let nodelinkProcess: unknown;
 
 function shutdown(signal: string): void {
   if (shuttingDown) {
@@ -536,7 +274,8 @@ function shutdown(signal: string): void {
   logger.info({ signal }, 'Starting graceful shutdown');
 
   // 1. Stop the NodeLink subprocess.
-  nodelinkProcess?.kill();
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-type-assertion
+  (nodelinkProcess as any)?.kill();
   logger.info('NodeLink stopped');
 
   // 2. Stop accepting connections and close all WebSocket clients.

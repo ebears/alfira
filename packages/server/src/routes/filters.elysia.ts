@@ -1,10 +1,9 @@
 import { eq } from 'drizzle-orm';
+import { Elysia } from 'elysia';
 
-import { type RouteContext } from '../lib/context';
+import { authPlugin } from '../lib/elysia-guards';
 import { EQ_BAND_COLUMNS, eqBandsFromRow } from '../lib/eqBands';
-import { json } from '../lib/json';
-import { checkGuards } from '../lib/routeGuards';
-import { routeTable } from '../lib/routeTable';
+import { FiltersData as FiltersDataSchema } from '../lib/responseSchemas';
 import { db, tables } from '../shared/db';
 import {
   DEFAULT_CHANNEL_MIX,
@@ -19,16 +18,11 @@ import {
   DEFAULT_VIBRATO,
 } from '../shared/filterDefaults';
 
-function handleFiltersGet(
-  ctx: RouteContext,
-  _request: Request,
-  _params: Record<string, string>
-): Response {
-  const guards = checkGuards(ctx, { admin: true, permission: 'audio.manage' });
-  if (guards instanceof Response) {
-    return guards;
-  }
+// ---------------------------------------------------------------------------
+// Query helper
+// ---------------------------------------------------------------------------
 
+function fetchAllFilters() {
   const row = db
     .select({
       ...EQ_BAND_COLUMNS,
@@ -77,7 +71,7 @@ function handleFiltersGet(
     .where(eq(tables.guildSettings.id, 1))
     .get();
 
-  return json({
+  return {
     compressor: {
       enabled: row?.compressorEnabled ?? DEFAULT_COMPRESSOR.enabled,
       threshold: row?.compressorThreshold ?? DEFAULT_COMPRESSOR.threshold,
@@ -139,9 +133,17 @@ function handleFiltersGet(
       enabled: row?.lowPassEnabled ?? DEFAULT_LOW_PASS.enabled,
       smoothing: row?.lowPassSmoothing ?? DEFAULT_LOW_PASS.smoothing,
     },
-  });
+  };
 }
 
-export const handleFilters = routeTable('/api/settings/filters', {
-  routes: [['GET', '/', handleFiltersGet]],
-});
+// ---------------------------------------------------------------------------
+// Plugin
+// ---------------------------------------------------------------------------
+
+export const filtersPlugin = new Elysia({ prefix: '/settings/filters', name: 'settings-filters' })
+  .use(authPlugin)
+
+  .get('/', () => fetchAllFilters(), {
+    hasPermission: 'audio.manage',
+    response: { 200: FiltersDataSchema },
+  });

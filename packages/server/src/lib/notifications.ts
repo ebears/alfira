@@ -3,8 +3,6 @@ import { eq } from 'drizzle-orm';
 import { db, tables } from '../shared/db';
 import { logger } from '../shared/logger';
 import { type SongRequest } from '../shared/types';
-import { type RouteContext } from './context';
-
 const DISCORD_API = 'https://discord.com/api/v10';
 
 function botHeaders(): Record<string, string> {
@@ -21,8 +19,7 @@ function botHeaders(): Record<string, string> {
 export async function sendRequestNotification(
   event: 'new' | 'approved' | 'denied',
   req: SongRequest,
-  user: { discordId: string; username: string },
-  _ctx: RouteContext
+  user: { discordId: string; username: string }
 ): Promise<void> {
   try {
     const row = db

@@ -1,4 +1,3 @@
-import { fetchTags } from '@alfira/server/shared/api';
 import {
   createContext,
   type ReactNode,
@@ -8,6 +7,8 @@ import {
   useMemo,
   useState,
 } from 'react';
+
+import { fetchTags } from '../api/api';
 
 export interface TagItem {
   canonicalName: string;
