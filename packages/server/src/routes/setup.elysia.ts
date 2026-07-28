@@ -253,7 +253,7 @@ export const setupPlugin = new Elysia({ prefix: '/setup', name: 'setup' })
       return { roles };
     },
     {
-      isSetupAdmin: true,
+      isAuth: true,
       detail: { security: [{ cookieAuth: [] }] },
       query: t.Object({ guildId: t.String() }),
       response: { 200: t.Object({ roles: t.Array(SetupRoleSchema) }) },
@@ -273,7 +273,7 @@ export const setupPlugin = new Elysia({ prefix: '/setup', name: 'setup' })
       }
     },
     {
-      isSetupAdmin: true,
+      isAuth: true,
       detail: { security: [{ cookieAuth: [] }] },
       query: t.Object({ guildId: t.String() }),
       response: { 200: t.Object({ channels: t.Array(SetupChannelSchema) }) },
