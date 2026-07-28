@@ -209,9 +209,11 @@ export function ClayPressable({
     [disabled, preset.hoverY]
   );
 
+  const transition = useMemo(() => (disabled ? undefined : claySpring), [disabled]);
+
   const mergedStyle = useMemo(
-    () => Object.assign({}, outerStyle, clayStyle(clayState, mode)),
-    [outerStyle, clayState, mode]
+    () => (disabled ? outerStyle : Object.assign({}, outerStyle, clayStyle(clayState, mode))),
+    [disabled, outerStyle, clayState, mode]
   );
 
   // ── Render ────────────────────────────────────────────────────────────
@@ -225,14 +227,14 @@ export function ClayPressable({
       className={className}
       style={mergedStyle}
       whileHover={whileHover}
-      transition={claySpring}
-      onHoverStart={handleHoverStart}
-      onHoverEnd={handleHoverEnd}
-      onTapStart={handleTapStart}
-      onTap={handleTapEnd}
-      onTapCancel={handleTapEnd}
-      onMouseEnter={handleMouseEnter}
-      onMouseLeave={handleMouseLeave}
+      transition={transition}
+      onHoverStart={disabled ? undefined : handleHoverStart}
+      onHoverEnd={disabled ? undefined : handleHoverEnd}
+      onTapStart={disabled ? undefined : handleTapStart}
+      onTap={disabled ? undefined : handleTapEnd}
+      onTapCancel={disabled ? undefined : handleTapEnd}
+      onMouseEnter={disabled ? undefined : handleMouseEnter}
+      onMouseLeave={disabled ? undefined : handleMouseLeave}
       {...rest}
     >
       {children}
