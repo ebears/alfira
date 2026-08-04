@@ -16,7 +16,7 @@
     "@atlaskit/pragmatic-drag-and-drop-hitbox": "2.0.0",
     "@elysia/eden": "1.4.10",
     "@phosphor-icons/react": "2.1.10",
-    "@tanstack/react-virtual": "3.14.8",
+    "@tanstack/react-virtual": "3.14.9",
     "masonic": "4.1.0",
     "motion": "12.42.2",
     "react": "19.2.8",
