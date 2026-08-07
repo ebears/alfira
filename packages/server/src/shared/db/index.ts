@@ -4,6 +4,7 @@ import { drizzle } from 'drizzle-orm/bun-sqlite';
 import { mkdirSync } from 'node:fs';
 import { dirname } from 'node:path';
 
+import { logger } from '../logger';
 import * as schema from './schema';
 
 // ---------------------------------------------------------------------------
@@ -18,7 +19,28 @@ const DATABASE_URL = process.env.DATABASE_URL ?? 'data/alfira.db';
 // Ensure the parent directory exists (e.g., data/ for local dev).
 mkdirSync(dirname(DATABASE_URL), { recursive: true });
 
-const sqliteDb = new Database(DATABASE_URL, { create: true, strict: true });
+function openDatabase(path: string): Database {
+  try {
+    return new Database(path, { create: true, strict: true });
+  } catch (error) {
+    if (error instanceof Error && 'code' in error && error.code === 'SQLITE_CANTOPEN') {
+      const dir = dirname(path);
+      const msg = [
+        `Cannot open database at "${path}".`,
+        `The directory "${dir}" is not writable by the current user (UID ${process.getuid?.() ?? 'unknown'}).`,
+        ``,
+        `If you are running in Docker with a bind mount, the host directory`,
+        `is likely owned by a different UID. Fix it with:`,
+        `  sudo chown -R 1001:1001 "${dir}"`,
+      ].join('\n');
+      logger.fatal(msg);
+      process.exit(1);
+    }
+    throw error;
+  }
+}
+
+const sqliteDb = openDatabase(DATABASE_URL);
 sqliteDb.run('PRAGMA journal_mode=WAL;');
 sqliteDb.run('PRAGMA foreign_keys=ON;');
 export const db = drizzle(sqliteDb, { schema });
