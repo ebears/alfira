@@ -10,6 +10,10 @@ updates:
       semver-major-days: 30
       semver-minor-days: 14
       semver-patch-days: 3
+    groups:
+      deps:
+        patterns:
+          - '*'
   - package-ecosystem: 'docker'
     directory: '/'
     target-branch: 'dev'
@@ -27,3 +31,7 @@ updates:
     ignore:
       - dependency-name: 'actions/setup-node'
         versions: ['6.x']
+    groups:
+      codeql:
+        patterns:
+          - 'github/codeql-action/*'
