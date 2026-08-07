@@ -154,7 +154,7 @@ nano .env  # or micro, zed, code, vim, etc.
 #    The container runs as UID 1001 (non-root). This directory
 #    holds your SQLite database — back it up regularly.
 mkdir -p data
-chmod 755 data
+sudo chown -R 1001:1001 data
 
 # 4. Start the stack — web UI at http://localhost:3001
 docker compose up -d

@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.5.1] - 2026-07-31
+
+### Fixed
+
+- Improve data directory permission handling with clearer error messages (#797)
+- Fix album art flash and stale grid on admin view toggle (#789)
+
+### Dependencies
+
+- Add dependabot bun lockfile auto-update and group codeql actions (#798)
+- Bump codeql-action, docker/login-action, and git-auto-commit-action
+
 ## [0.5.0] - 2026-07-28
 
 ### Added
@@ -322,7 +334,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - UI actions now properly gated by granular permissions rather than a simple admin check.
 - Inherited pointer cursor on modal cards.
 
-[Unreleased]: https://github.com/ebears/alfira/compare/v0.5.0...dev
+[Unreleased]: https://github.com/ebears/alfira/compare/v0.5.1...dev
+[0.5.1]: https://github.com/ebears/alfira/compare/v0.5.0...v0.5.1
 [0.5.0]: https://github.com/ebears/alfira/compare/v0.4.1...v0.5.0
 [0.4.1]: https://github.com/ebears/alfira/compare/v0.4.0...v0.4.1
 [0.4.0]: https://github.com/ebears/alfira/compare/v0.3.0...v0.4.0

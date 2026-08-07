@@ -19,14 +19,15 @@ export const Card = memo(function Card({
 }: CardProps) {
   const baseClass = `bg-elevated overflow-hidden ${className}`;
 
-  const card = hoverable ? (
-    <ClayPressable depth='medium' className={baseClass} {...rest}>
+  const card = (
+    <ClayPressable
+      depth='medium'
+      disabled={!hoverable}
+      className={hoverable ? baseClass : `clay-resting ${baseClass}`}
+      {...rest}
+    >
       {children}
     </ClayPressable>
-  ) : (
-    <div className={`clay-resting ${baseClass}`} {...rest}>
-      {children}
-    </div>
   );
 
   if (animate) {
