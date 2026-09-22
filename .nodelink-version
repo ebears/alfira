@@ -1,0 +1,6 @@
+# NodeLink pin — single source of truth, read by scripts/setup-nodelink.sh and
+# the Dockerfile. Pinned by commit SHA for strict immutability; the release tag
+# is noted above the SHA for readability.
+#
+# NodeLink v3.9.0 (tag: v3.9.0)
+cdb02c6814fd8abe37f1d02955770e51b1414d06
