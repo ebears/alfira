@@ -1,7 +1,7 @@
 # ---------------------------------------------------------------------------
 # Build: system deps + bun (used for install/compile stages)
 # ---------------------------------------------------------------------------
-FROM oven/bun:1-alpine AS build
+FROM oven/bun:1.4-alpine AS build
 
 RUN apk add --no-cache \
     ca-certificates
@@ -63,7 +63,7 @@ COPY packages/server/src/shared/db/migrations packages/server/dist/shared/db/mig
 # ---------------------------------------------------------------------------
 # Runtime stage — use bun as the runtime
 # ---------------------------------------------------------------------------
-FROM oven/bun:1-alpine AS runtime
+FROM oven/bun:1.4-alpine AS runtime
 
 ARG ALFIRA_VERSION=dev
 
