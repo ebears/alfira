@@ -32,7 +32,7 @@ This guide covers everything you need to set up Alfira for both development and 
 
 | Requirement | Version | Notes                                 |
 | ----------- | ------- | ------------------------------------- |
-| Bun         | 1.3+    | For local development                 |
+| Bun         | 1.4+    | For local development                 |
 | Docker      | 20.10+  | With Docker Compose plugin (optional) |
 | Git         | Any     | For cloning the repository            |
 
