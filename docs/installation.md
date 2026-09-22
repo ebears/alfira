@@ -117,7 +117,7 @@ bun setup:nodelink
 bun dev
 ```
 
-**What `bun setup:nodelink` does:** Clones the [NodeLink](https://github.com/PerformanC/NodeLink) audio server at a pinned commit into `.nodelink/`, installs its dependencies, builds it, and copies the project's custom config (`nodelink.config.ts`) into place. This only needs to be run once — the resulting `.nodelink/` directory is excluded from git. NodeLink is spawned automatically as a child process when the dev server starts.
+**What `bun setup:nodelink` does:** Clones the [NodeLink](https://github.com/PerformanC/NodeLink) audio server at the pinned commit into `.nodelink/`, installs its dependencies, builds it, and copies the project's custom config (`nodelink.config.ts`) into place. The pin lives in `.nodelink-version` (the same file the Dockerfile uses). The resulting `.nodelink/` directory is excluded from git. Re-running the script is safe — it moves the checkout to the pinned commit and rebuilds, which is how you pick up a NodeLink version bump. NodeLink is spawned automatically as a child process when the dev server starts.
 
 The server auto-restarts on file changes. For web/frontend changes during a session, run `bun run web:build` in another terminal and refresh.
 

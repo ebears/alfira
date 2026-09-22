@@ -385,6 +385,9 @@ export default {
     maxLayersMix: 5,
     autoCleanup: true,
   },
+  cache: {
+    diskEnabled: false,
+  },
   plugins: [],
   pluginConfig: {},
 };
