@@ -68,6 +68,9 @@ export async function fetchMe() {
   return user;
 }
 
+// Deliberate exception to the "all wrappers unwrap" contract: logout is
+// fire-and-forget — the local session is cleared even if server-side token
+// revocation fails. Do not add `unwrap` here.
 export async function fetchLogout(): Promise<void> {
   await $.auth.logout.post();
 }
@@ -132,7 +135,7 @@ export async function denyRequest(id: string) {
 }
 
 export async function cancelRequest(id: string): Promise<void> {
-  await $.api.requests({ id }).delete();
+  unwrap(await $.api.requests({ id }).delete());
 }
 
 // ---------------------------------------------------------------------------
@@ -140,7 +143,7 @@ export async function cancelRequest(id: string): Promise<void> {
 // ---------------------------------------------------------------------------
 
 export async function deleteSong(id: string): Promise<void> {
-  await $.api.songs({ id }).delete();
+  unwrap(await $.api.songs({ id }).delete());
 }
 
 export async function bulkDeleteSongs(ids: string[]) {
@@ -235,15 +238,15 @@ export async function updatePlaylistTag(id: string, tagNameLower: string | null)
 }
 
 export async function deletePlaylist(id: string): Promise<void> {
-  await $.api.playlists({ id }).delete();
+  unwrap(await $.api.playlists({ id }).delete());
 }
 
 export async function addSongToPlaylist(playlistId: string, songId: string): Promise<void> {
-  await $.api.playlists({ id: playlistId }).songs.post({ songId });
+  unwrap(await $.api.playlists({ id: playlistId }).songs.post({ songId }));
 }
 
 export async function removeSongFromPlaylist(playlistId: string, songId: string): Promise<void> {
-  await $.api.playlists({ id: playlistId }).songs({ songId }).delete();
+  unwrap(await $.api.playlists({ id: playlistId }).songs({ songId }).delete());
 }
 
 export async function bulkRemoveSongsFromPlaylist(playlistId: string, songIds: string[]) {
@@ -262,7 +265,7 @@ export async function togglePlaylistVisibility(
 }
 
 export async function reorderPlaylistSongs(playlistId: string, songIds: string[]): Promise<void> {
-  await $.api.playlists({ id: playlistId }).reorder.patch({ songIds });
+  unwrap(await $.api.playlists({ id: playlistId }).reorder.patch({ songIds }));
 }
 
 // ---------------------------------------------------------------------------
