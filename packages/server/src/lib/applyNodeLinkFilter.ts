@@ -1,8 +1,3 @@
-import { logger } from '../shared/logger';
-import { updateNodeLinkPlayer } from '../utils/nodelink';
-import { getGuildId } from './config';
-import { lavalink } from './lavalink';
-
 // ---------------------------------------------------------------------------
 // Filter parameter types
 // ---------------------------------------------------------------------------
@@ -159,37 +154,4 @@ export function buildLowPassFilter(params: LowPassFilterParams) {
       smoothing: params.smoothing,
     },
   };
-}
-
-// ---------------------------------------------------------------------------
-// Legacy — kept for any external callers, but prefer syncAllFilters()
-// ---------------------------------------------------------------------------
-
-/**
- * Applies audio filters to the live NodeLink player for the configured guild.
- * Silently returns if the player is not connected.
- */
-export async function applyNodeLinkFilter(
-  filters: Record<string, unknown>,
-  label: string
-): Promise<void> {
-  const guildId = getGuildId();
-  if (!guildId) {
-    logger.warn(`GUILD_ID not set, skipping NodeLink ${label} filter update`);
-    return;
-  }
-  if (!lavalink.isGuildConnected(guildId)) {
-    return;
-  }
-
-  const sessionId = lavalink.getSessionId();
-  if (!sessionId) {
-    return;
-  }
-
-  try {
-    await updateNodeLinkPlayer(guildId, sessionId, { filters });
-  } catch (error) {
-    logger.error({ error }, `Failed to update NodeLink ${label} filter`);
-  }
 }

@@ -55,5 +55,3 @@ export function Skeleton({ className }: SkeletonProps) {
     />
   );
 }
-
-export default Skeleton;

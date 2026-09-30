@@ -20,13 +20,13 @@ export type ColorThemeName =
 
 export type ColorMode = 'light' | 'dark' | 'auto';
 
-export interface ColorTheme {
+interface ColorTheme {
   name: ColorThemeName;
   displayName: string;
   accentColor: string; // Preview color for UI
 }
 
-export const COLOR_THEMES: ColorTheme[] = [
+const COLOR_THEMES: ColorTheme[] = [
   {
     name: 'artificer',
     displayName: 'Artificer',

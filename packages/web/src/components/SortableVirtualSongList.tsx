@@ -4,7 +4,7 @@ import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { useSongEdit } from '../context/SongEditContext';
 import { SortableListProvider, useSortableItem } from '../hooks/useSortableVirtualList';
-import SongCard from './SongCard';
+import { SongCard } from './SongCard';
 import { VirtualList } from './VirtualList';
 
 // ---------------------------------------------------------------------------
@@ -261,5 +261,3 @@ export const SortableVirtualSongList = memo(function SortableVirtualSongList({
     </SortableListProvider>
   );
 });
-
-export default SortableVirtualSongList;

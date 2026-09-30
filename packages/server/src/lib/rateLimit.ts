@@ -17,7 +17,7 @@ interface RateLimitConfig {
   maxRequests: number;
 }
 
-export interface RateLimitInfo {
+interface RateLimitInfo {
   limit: number;
   remaining: number;
   resetAt: number; // Unix ms timestamp when the window resets
@@ -55,7 +55,7 @@ export interface RateLimitResult extends RateLimitInfo {
  * automatically when they're found to be outside the current window.
  *
  * Always returns detailed info (remaining, limit, resetAt) so the caller
- * can attach standard X-RateLimit-* headers to the response.
+ * can surface the remaining budget to the client.
  *
  * @param group  Identifier for the route group (e.g., 'player-mutations')
  * @param ip     Client IP address
@@ -97,56 +97,6 @@ export function checkRateLimit(
 
   entry.count++;
   return { allowed: true, limit: maxRequests, remaining: maxRequests - entry.count, resetAt };
-}
-
-/**
- * Build standard X-RateLimit-* headers from a RateLimitResult.
- */
-export function rateLimitHeaders(info: RateLimitInfo): Record<string, string> {
-  return {
-    'X-RateLimit-Limit': String(info.limit),
-    'X-RateLimit-Remaining': String(info.remaining),
-    'X-RateLimit-Reset': String(Math.ceil(info.resetAt / 1000)),
-  };
-}
-
-/**
- * Attach X-RateLimit-* headers to an existing Response.
- * Used to annotate successful responses so the client can track budget.
- */
-export function attachRateLimitHeaders(response: Response, info: RateLimitInfo): Response {
-  const headers = new Headers(response.headers);
-  for (const [key, value] of Object.entries(rateLimitHeaders(info))) {
-    headers.set(key, value);
-  }
-  return new Response(response.body, {
-    status: response.status,
-    statusText: response.statusText,
-    headers,
-  });
-}
-
-/**
- * Build a 429 Response for rate-limited requests.
- * Includes Retry-After header, rate limit headers, and a JSON body
- * with retryAfterSeconds so the client can show a countdown.
- */
-export function rateLimitResponse(info: RateLimitInfo): Response {
-  const retryAfterSeconds = Math.max(1, Math.ceil((info.resetAt - Date.now()) / 1000));
-  return new Response(
-    JSON.stringify({
-      error: 'Too many requests. Please slow down.',
-      retryAfterSeconds,
-    }),
-    {
-      status: 429,
-      headers: {
-        'Content-Type': 'application/json',
-        'Retry-After': String(retryAfterSeconds),
-        ...rateLimitHeaders(info),
-      },
-    }
-  );
 }
 
 /**

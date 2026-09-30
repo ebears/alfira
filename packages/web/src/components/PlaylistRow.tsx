@@ -113,5 +113,3 @@ function PlaylistRowInner({
 
 export const PlaylistRow = memo(PlaylistRowInner);
 PlaylistRow.displayName = 'PlaylistRow';
-
-export default PlaylistRow;

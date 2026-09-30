@@ -1,7 +1,7 @@
 import { type Playlist } from '@alfira/server/shared';
 import { memo, useCallback, useMemo } from 'react';
 
-import PlaylistRow from './PlaylistRow';
+import { PlaylistRow } from './PlaylistRow';
 import { Skeleton } from './ui/Skeleton';
 import { VirtualList } from './VirtualList';
 
@@ -97,5 +97,3 @@ export const VirtualPlaylistList = memo(function VirtualPlaylistList({
     />
   );
 });
-
-export default VirtualPlaylistList;

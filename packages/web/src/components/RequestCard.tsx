@@ -8,7 +8,7 @@ import { ArtworkImage } from './ui/ArtworkImage';
 import { Button } from './ui/Button';
 import { Card } from './ui/Card';
 
-export interface RequestCardProps {
+interface RequestCardProps {
   req: SongRequest;
   isOwn: boolean;
   isAdmin: boolean;
@@ -125,5 +125,3 @@ export const RequestCard = memo(function RequestCard({
     </Card>
   );
 });
-
-export default RequestCard;
