@@ -50,16 +50,12 @@ const STATIC_EXTENSIONS: Record<string, string> = {
 
 function serveStatic(pathname: string): Response | undefined {
   const filePath = pathname === '/' ? join(WEB_DIST, 'index.html') : join(WEB_DIST, pathname);
-  // @ts-expect-error Bun global
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
   const file = Bun.file(filePath);
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
   if (file.size === 0 && pathname !== '/') {
     return undefined;
   }
   const ext = pathname.includes('.') ? `.${pathname.split('.').pop()}` : '.html';
   const contentType = STATIC_EXTENSIONS[ext] ?? 'text/plain';
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
   return new Response(file, {
     headers: { 'Content-Type': contentType },
   });
