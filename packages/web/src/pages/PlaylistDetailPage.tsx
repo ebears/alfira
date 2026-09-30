@@ -360,10 +360,16 @@ export default function PlaylistDetailPage() {
       if (!playlistDetailRef.current) {
         return;
       }
-      await reorderPlaylistSongs(playlistDetailRef.current.id, orderedIds);
+      try {
+        await reorderPlaylistSongs(playlistDetailRef.current.id, orderedIds);
+      } catch (error) {
+        notifyUnlessRateLimit(error, 'Failed to reorder songs.', notify);
+      }
+      // Refetch on both paths: on failure it restores the server order after
+      // the optimistic drag.
       refetch();
     },
-    [refetch]
+    [refetch, notify]
   );
 
   // ── Socket: playlist updated (rename, visibility, song count changes) ──
@@ -432,11 +438,13 @@ export default function PlaylistDetailPage() {
       try {
         await removeSongFromPlaylist(playlistDetail.id, songId);
         removeItem(junction.id);
+      } catch (error) {
+        notifyUnlessRateLimit(error, 'Failed to remove song.', notify);
       } finally {
         setRemoveId(null);
       }
     },
-    [playlistDetail, removeItem]
+    [playlistDetail, removeItem, notify]
   );
 
   const handleConfirmRemove = useCallback(() => {
@@ -509,9 +517,13 @@ export default function PlaylistDetailPage() {
     if (!playlistDetail) {
       return;
     }
-    await deletePlaylist(playlistDetail.id);
-    void navigate('/playlists');
-  }, [playlistDetail, navigate]);
+    try {
+      await deletePlaylist(playlistDetail.id);
+      void navigate('/playlists');
+    } catch (error) {
+      notifyUnlessRateLimit(error, 'Failed to delete playlist.', notify);
+    }
+  }, [playlistDetail, navigate, notify]);
 
   const handleConfirmDeletePlaylist = useCallback(() => {
     setDeleteConfirm(false);

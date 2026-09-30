@@ -254,11 +254,19 @@ export default function SongsPage() {
     };
   }, [prepend, updateItem, removeItem]);
 
-  const handleDelete = useCallback(async (id: string) => {
-    await deleteSong(id);
-    setDeleteId(null);
-    // Socket event will update the songs list
-  }, []);
+  const handleDelete = useCallback(
+    async (id: string) => {
+      try {
+        await deleteSong(id);
+        setDeleteId(null);
+        // Socket event will update the songs list
+      } catch (error) {
+        // Leave the confirm dialog open so the user can retry.
+        notifyUnlessRateLimit(error, 'Failed to delete song.', notify);
+      }
+    },
+    [notify]
+  );
 
   // ── Bulk actions ─────────────────────────────────────────────────────
   const handleBulkDelete = useCallback(() => {

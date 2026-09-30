@@ -20,7 +20,8 @@ import {
   type TagUpdateData,
 } from '@alfira/server/shared';
 
-import { api, ApiError } from './eden';
+import { apiErrorFromTreatyError, type TreatyError } from '../utils/api';
+import { api } from './eden';
 
 const $ = api;
 
@@ -30,23 +31,12 @@ const $ = api;
 
 // Eden's TreatyResponse: success carries `data` + `error: null`, failure
 // carries `data: null` + error details. `status`/`value` are `unknown` in
-// Eden's types; the runtime shapes are narrowed below.
-type TreatyResult<T> =
-  | { data: T; error: null }
-  | { data: null; error: { status: unknown; value: unknown } };
+// Eden's types; the runtime shapes are narrowed in apiErrorFromTreatyError.
+type TreatyResult<T> = { data: T; error: null } | { data: null; error: TreatyError };
 
 function unwrap<T>(result: TreatyResult<T>): T {
   if (result.error) {
-    const { status, value } = result.error;
-    const body = (typeof value === 'object' && value !== null ? value : {}) as {
-      error?: string;
-      code?: string;
-    };
-    throw new ApiError(
-      body.error ?? `API error: ${String(status)}`,
-      Number(status) || 0,
-      body.code
-    );
+    throw apiErrorFromTreatyError(result.error);
   }
   return result.data;
 }
@@ -68,6 +58,9 @@ export async function fetchMe() {
   return user;
 }
 
+// Deliberate exception to the "all wrappers unwrap" contract: logout is
+// fire-and-forget — the local session is cleared even if server-side token
+// revocation fails. Do not add `unwrap` here.
 export async function fetchLogout(): Promise<void> {
   await $.auth.logout.post();
 }
@@ -132,7 +125,7 @@ export async function denyRequest(id: string) {
 }
 
 export async function cancelRequest(id: string): Promise<void> {
-  await $.api.requests({ id }).delete();
+  unwrap(await $.api.requests({ id }).delete());
 }
 
 // ---------------------------------------------------------------------------
@@ -140,7 +133,7 @@ export async function cancelRequest(id: string): Promise<void> {
 // ---------------------------------------------------------------------------
 
 export async function deleteSong(id: string): Promise<void> {
-  await $.api.songs({ id }).delete();
+  unwrap(await $.api.songs({ id }).delete());
 }
 
 export async function bulkDeleteSongs(ids: string[]) {
@@ -235,15 +228,15 @@ export async function updatePlaylistTag(id: string, tagNameLower: string | null)
 }
 
 export async function deletePlaylist(id: string): Promise<void> {
-  await $.api.playlists({ id }).delete();
+  unwrap(await $.api.playlists({ id }).delete());
 }
 
 export async function addSongToPlaylist(playlistId: string, songId: string): Promise<void> {
-  await $.api.playlists({ id: playlistId }).songs.post({ songId });
+  unwrap(await $.api.playlists({ id: playlistId }).songs.post({ songId }));
 }
 
 export async function removeSongFromPlaylist(playlistId: string, songId: string): Promise<void> {
-  await $.api.playlists({ id: playlistId }).songs({ songId }).delete();
+  unwrap(await $.api.playlists({ id: playlistId }).songs({ songId }).delete());
 }
 
 export async function bulkRemoveSongsFromPlaylist(playlistId: string, songIds: string[]) {
@@ -262,7 +255,7 @@ export async function togglePlaylistVisibility(
 }
 
 export async function reorderPlaylistSongs(playlistId: string, songIds: string[]): Promise<void> {
-  await $.api.playlists({ id: playlistId }).reorder.patch({ songIds });
+  unwrap(await $.api.playlists({ id: playlistId }).reorder.patch({ songIds }));
 }
 
 // ---------------------------------------------------------------------------
