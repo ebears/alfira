@@ -5,14 +5,13 @@ import { getGuildId } from '../lib/config';
 import { fetchGuildRoles } from '../lib/discordRoles';
 import { authPlugin } from '../lib/elysia-guards';
 import { ApiError } from '../lib/errors';
-import { MyPermissionsResponse } from '../lib/responseSchemas';
 import { PERMISSION_CATEGORIES, PERMISSION_LABELS, type PermissionAction } from '../shared';
+import {
+  MyPermissionsResponse,
+  PermissionsPatchSchema,
+  PermissionsResponse,
+} from '../shared/apiSchemas';
 import { db, tables } from '../shared/db';
-
-const PermissionsPatchSchema = t.Object({
-  action: t.String(),
-  roleIds: t.Array(t.String()),
-});
 
 function isPermissionAction(value: string): value is PermissionAction {
   return value in PERMISSION_LABELS;
@@ -101,7 +100,7 @@ export const permissionsPlugin = new Elysia({ prefix: '/permissions', name: 'per
         labels: PERMISSION_LABELS,
       };
     },
-    { isAdmin: true }
+    { isAdmin: true, response: { 200: PermissionsResponse } }
   )
   .patch(
     '/',

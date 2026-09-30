@@ -4,26 +4,20 @@
 // Each function uses Eden's proxy chain for URL construction, then unwraps
 // the { data, error } response: throws ApiError on error, returns data.
 //
-// When tsgo supports Elysia's generic types, these wrappers become optional
-// and components can consume Eden directly with full type inference.
+// Response and request types are inferred from the server's Elysia schemas
+// (single source of truth in packages/server/src/shared/apiSchemas.ts) — do
+// not annotate return types here unless the wrapper reshapes the payload.
 // ---------------------------------------------------------------------------
 
 import {
-  type GeneralSettings,
+  type BulkEditData,
+  type CompleteSetupPayload,
+  type FetchSongsOptions,
+  type GeneralSettingsUpdate,
   type LoopMode,
-  type PaginatedResult,
-  type PaginationMeta,
-  type Playlist,
-  type PlaylistDetail,
-  type QueueState,
-  type RequestPreview,
-  type SetupChannel,
-  type SetupGuild,
-  type SetupRole,
-  type SetupStatus,
-  type Song,
-  type SongRequest,
-  type User,
+  type RequestCreateData,
+  type SongUpdateData,
+  type TagUpdateData,
 } from '@alfira/server/shared';
 
 import { api, ApiError } from './eden';
@@ -34,16 +28,25 @@ const $ = api;
 // Response unwrapping
 // ---------------------------------------------------------------------------
 
-// Explicit `any` — Elysia's TreatyResponse discriminated union type is not
-// compatible with a generic T parameter. The call site's return type annotation
-// provides the actual type safety.
-function unwrap(result: any): any {
-  // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
+// Eden's TreatyResponse: success carries `data` + `error: null`, failure
+// carries `data: null` + error details. `status`/`value` are `unknown` in
+// Eden's types; the runtime shapes are narrowed below.
+type TreatyResult<T> =
+  | { data: T; error: null }
+  | { data: null; error: { status: unknown; value: unknown } };
+
+function unwrap<T>(result: TreatyResult<T>): T {
   if (result.error) {
-    const err = result.error as { status: number; value: unknown };
-    const body = err.value as { error?: string; code?: string } | undefined;
-    const message = body?.error ?? `API error: ${err.status}`;
-    throw new ApiError(message, err.status, body?.code);
+    const { status, value } = result.error;
+    const body = (typeof value === 'object' && value !== null ? value : {}) as {
+      error?: string;
+      code?: string;
+    };
+    throw new ApiError(
+      body.error ?? `API error: ${String(status)}`,
+      Number(status) || 0,
+      body.code
+    );
   }
   return result.data;
 }
@@ -52,41 +55,28 @@ function unwrap(result: any): any {
 // Version
 // ---------------------------------------------------------------------------
 
-export function fetchVersion(): Promise<{ version: string }> {
-  return $.api.version.get().then(unwrap);
+export async function fetchVersion() {
+  return unwrap(await $.api.version.get());
 }
 
 // ---------------------------------------------------------------------------
 // Auth
 // ---------------------------------------------------------------------------
 
-export function fetchMe(): Promise<User> {
-  return $.auth.me.get().then((r) => {
-    return unwrap(r).user;
-  });
+export async function fetchMe() {
+  const { user } = unwrap(await $.auth.me.get());
+  return user;
 }
 
-export function fetchLogout(): Promise<void> {
-  return $.auth.logout.post().then(() => undefined);
+export async function fetchLogout(): Promise<void> {
+  await $.auth.logout.post();
 }
 
 // ---------------------------------------------------------------------------
 // Songs
 // ---------------------------------------------------------------------------
 
-export interface FetchSongsOptions {
-  search?: string;
-  sort?: string;
-  order?: string;
-  tags?: string;
-  source?: string;
-}
-
-export function fetchSongsPage(
-  page: number,
-  limit = 30,
-  opts?: FetchSongsOptions
-): Promise<PaginatedResult<Song>> {
+export async function fetchSongsPage(page: number, limit = 30, opts?: FetchSongsOptions) {
   const params = new URLSearchParams({ page: String(page), limit: String(limit) });
   if (opts?.search) {
     params.set('search', opts.search);
@@ -103,66 +93,26 @@ export function fetchSongsPage(
   if (opts?.source) {
     params.set('source', opts.source);
   }
-  return $.api.songs.get({ query: Object.fromEntries(params) }).then(unwrap);
+  return unwrap(await $.api.songs.get({ query: Object.fromEntries(params) }));
 }
 
 // ---------------------------------------------------------------------------
 // Requests
 // ---------------------------------------------------------------------------
 
-export interface RequestCreateData {
-  sourceUrl: string;
-  /** Explicitly request a playlist import — skips ?list= stripping. */
-  type?: 'playlist';
-  notifyDm?: boolean;
-  nickname?: string | null;
-  artist?: string | null;
-  album?: string | null;
-  artwork?: string | null;
-  tags?: string[];
-  volumeBoost?: number | null;
+export async function createRequest(data: RequestCreateData) {
+  return unwrap(await $.api.requests.post(data));
 }
 
-export interface CreateRequestResult {
-  request?: SongRequest;
-  song?: Song;
-  songs?: Song[];
-  autoApproved: boolean;
-  importedCount?: number;
-  skippedCount?: number;
-  playlistTitle?: string;
+export async function previewRequest(url: string) {
+  return unwrap(await $.api.requests.preview.post({ url }));
 }
 
-export function createRequest(data: RequestCreateData): Promise<CreateRequestResult> {
-  return $.api.requests
-    .post({
-      sourceUrl: data.sourceUrl,
-      type: data.type,
-      notifyDm: data.notifyDm ?? false,
-      ...(data.nickname != null && { nickname: data.nickname }),
-      ...(data.artist != null && { artist: data.artist }),
-      ...(data.album != null && { album: data.album }),
-      ...(data.artwork != null && { artwork: data.artwork }),
-      ...(data.tags != null && { tags: data.tags }),
-      ...(data.volumeBoost !== undefined && { volumeBoost: data.volumeBoost }),
-    })
-    .then(unwrap);
-}
-
-export function previewRequest(url: string): Promise<RequestPreview> {
-  return $.api.requests.preview.post({ url }).then(unwrap);
-}
-
-export interface FetchRequestsResult {
-  items: SongRequest[];
-  pagination: PaginationMeta;
-}
-
-export function fetchRequests(
+export async function fetchRequests(
   page: number,
   limit = 30,
   opts?: { status?: string; mine?: boolean }
-): Promise<FetchRequestsResult> {
+) {
   const params = new URLSearchParams({ page: String(page), limit: String(limit) });
   if (opts?.status) {
     params.set('status', opts.status);
@@ -170,132 +120,90 @@ export function fetchRequests(
   if (opts?.mine) {
     params.set('mine', 'true');
   }
-  return $.api.requests.get({ query: Object.fromEntries(params) }).then(unwrap);
+  return unwrap(await $.api.requests.get({ query: Object.fromEntries(params) }));
 }
 
-export function approveRequest(id: string): Promise<{ request: SongRequest; songs?: Song[] }> {
-  return $.api.requests({ id }).patch({ status: 'approved' }).then(unwrap);
+export async function approveRequest(id: string) {
+  return unwrap(await $.api.requests({ id }).patch({ status: 'approved' }));
 }
 
-export function denyRequest(id: string): Promise<{ request: SongRequest }> {
-  return $.api.requests({ id }).patch({ status: 'denied' }).then(unwrap);
+export async function denyRequest(id: string) {
+  return unwrap(await $.api.requests({ id }).patch({ status: 'denied' }));
 }
 
-export function cancelRequest(id: string): Promise<void> {
-  return $.api
-    .requests({ id })
-    .delete()
-    .then(() => undefined);
+export async function cancelRequest(id: string): Promise<void> {
+  await $.api.requests({ id }).delete();
 }
 
-export function deleteSong(id: string): Promise<void> {
-  return $.api
-    .songs({ id })
-    .delete()
-    .then(() => undefined);
+// ---------------------------------------------------------------------------
+// Songs — mutations
+// ---------------------------------------------------------------------------
+
+export async function deleteSong(id: string): Promise<void> {
+  await $.api.songs({ id }).delete();
 }
 
-export function bulkDeleteSongs(ids: string[]): Promise<{ deleted: number }> {
-  return $.api.songs['bulk-delete'].post({ ids }).then(unwrap);
+export async function bulkDeleteSongs(ids: string[]) {
+  return unwrap(await $.api.songs['bulk-delete'].post({ ids }));
 }
 
-export function bulkTagSongs(
-  ids: string[],
-  tags: string[],
-  mode: 'add' | 'set' = 'add'
-): Promise<{ updated: number; tags: string[] }> {
-  return $.api.songs['bulk-tag'].post({ ids, tags, mode }).then(unwrap);
+export async function bulkTagSongs(ids: string[], tags: string[], mode: 'add' | 'set' = 'add') {
+  return unwrap(await $.api.songs['bulk-tag'].post({ ids, tags, mode }));
 }
 
-export interface BulkEditData {
-  nickname?: string | null;
-  artist?: string | null;
-  album?: string | null;
-  artwork?: string | null;
-  tags?: string[];
-  volumeBoost?: number | null;
-  clearFields?: string[];
+export async function bulkEditSongs(ids: string[], data: BulkEditData) {
+  return unwrap(await $.api.songs['bulk-edit'].post({ ids, ...data }));
 }
 
-export function bulkEditSongs(ids: string[], data: BulkEditData): Promise<{ updated: number }> {
-  return $.api.songs['bulk-edit'].post({ ids, ...data }).then(unwrap);
+export async function updateSong(id: string, data: SongUpdateData) {
+  return unwrap(await $.api.songs({ id }).patch(data));
 }
 
-export interface SongUpdateData {
-  nickname?: string | null;
-  artist?: string | null;
-  album?: string | null;
-  artwork?: string | null;
-  tags?: string[];
-  volumeBoost?: number | null;
+// ---------------------------------------------------------------------------
+// Tags
+// ---------------------------------------------------------------------------
+
+export async function fetchTags() {
+  const { tags } = unwrap(await $.api.tags.get());
+  return tags;
 }
 
-export function updateSong(id: string, data: SongUpdateData): Promise<Song> {
-  return $.api.songs({ id }).patch(data).then(unwrap);
+export async function fetchTagSongs(nameLower: string) {
+  const { songs } = unwrap(await $.api.tags({ nameLower }).songs.get());
+  return songs;
 }
 
-export interface TagItem {
-  canonicalName: string;
-  nameLower: string;
-  color?: string | null;
+export async function updateTag(nameLower: string, data: TagUpdateData) {
+  return unwrap(await $.api.tags({ nameLower }).patch(data));
 }
 
-export function fetchTags(): Promise<TagItem[]> {
-  return $.api.tags.get().then((r) => {
-    return unwrap(r).tags;
-  });
-}
-
-export function fetchTagSongs(nameLower: string): Promise<Song[]> {
-  return $.api
-    .tags({ nameLower })
-    .songs.get()
-    .then((r) => {
-      return unwrap(r).songs;
-    });
-}
-
-export function updateTag(
-  nameLower: string,
-  data: { canonicalName?: string; color?: string | null }
-): Promise<{ tag: TagItem }> {
-  return $.api
-    .tags({ nameLower })
-    .patch(data as any)
-    .then(unwrap) as Promise<{ tag: TagItem }>;
-}
-
-export function deleteTag(nameLower: string): Promise<{ success: boolean }> {
-  return $.api.tags({ nameLower }).delete().then(unwrap);
+export async function deleteTag(nameLower: string) {
+  return unwrap(await $.api.tags({ nameLower }).delete());
 }
 
 // ---------------------------------------------------------------------------
 // Playlists
 // ---------------------------------------------------------------------------
 
-export function createPlaylist(name: string, tagNameLower?: string): Promise<Playlist> {
-  return $.api.playlists.post({ name, ...(tagNameLower && { tagNameLower }) }).then(unwrap);
+export async function createPlaylist(name: string, tagNameLower?: string) {
+  return unwrap(await $.api.playlists.post({ name, ...(tagNameLower && { tagNameLower }) }));
 }
 
-export function fetchPlaylistsPage(
-  adminView = false,
-  page: number,
-  limit = 30
-): Promise<PaginatedResult<Playlist>> {
+export async function fetchPlaylistsPage(adminView = false, page: number, limit = 30) {
   const params = new URLSearchParams({ page: String(page), limit: String(limit) });
   if (adminView) {
     params.set('adminView', 'true');
   }
-  return $.api.playlists.get({ query: Object.fromEntries(params) }).then(unwrap);
+  return unwrap(await $.api.playlists.get({ query: Object.fromEntries(params) }));
 }
 
-export function fetchPlaylistPage(
+export async function fetchPlaylistPage(
   id: string,
   adminView = false,
   page: number,
   limit = 30,
   opts?: FetchSongsOptions
-): Promise<PlaylistDetail & { pagination: PaginationMeta }> {
+) {
   const params = new URLSearchParams({ page: String(page), limit: String(limit) });
   if (adminView) {
     params.set('adminView', 'true');
@@ -315,300 +223,185 @@ export function fetchPlaylistPage(
   if (opts?.source) {
     params.set('source', opts.source);
   }
-  return $.api
-    .playlists({ id })
-    .get({ query: Object.fromEntries(params) })
-    .then(unwrap);
+  return unwrap(await $.api.playlists({ id }).get({ query: Object.fromEntries(params) }));
 }
 
-export function renamePlaylist(id: string, name: string): Promise<Playlist> {
-  return $.api.playlists({ id }).patch({ name }).then(unwrap);
+export async function renamePlaylist(id: string, name: string) {
+  return unwrap(await $.api.playlists({ id }).patch({ name }));
 }
 
-export function updatePlaylistTag(id: string, tagNameLower: string | null): Promise<Playlist> {
-  return $.api
-    .playlists({ id })
-    .patch({ tagNameLower } as any)
-    .then(unwrap);
+export async function updatePlaylistTag(id: string, tagNameLower: string | null) {
+  return unwrap(await $.api.playlists({ id }).patch({ tagNameLower }));
 }
 
-export function deletePlaylist(id: string): Promise<void> {
-  return $.api
-    .playlists({ id })
-    .delete()
-    .then(() => undefined);
+export async function deletePlaylist(id: string): Promise<void> {
+  await $.api.playlists({ id }).delete();
 }
 
-export function addSongToPlaylist(playlistId: string, songId: string): Promise<void> {
-  return $.api
-    .playlists({ id: playlistId })
-    .songs.post({ songId })
-    .then(() => undefined);
+export async function addSongToPlaylist(playlistId: string, songId: string): Promise<void> {
+  await $.api.playlists({ id: playlistId }).songs.post({ songId });
 }
 
-export function removeSongFromPlaylist(playlistId: string, songId: string): Promise<void> {
-  return $.api
-    .playlists({ id: playlistId })
-    .songs({ songId })
-    .delete()
-    .then(() => undefined);
+export async function removeSongFromPlaylist(playlistId: string, songId: string): Promise<void> {
+  await $.api.playlists({ id: playlistId }).songs({ songId }).delete();
 }
 
-export function bulkRemoveSongsFromPlaylist(
-  playlistId: string,
-  songIds: string[]
-): Promise<{ removed: number }> {
-  return $.api.playlists({ id: playlistId }).songs['bulk-remove'].post({ songIds }).then(unwrap);
+export async function bulkRemoveSongsFromPlaylist(playlistId: string, songIds: string[]) {
+  return unwrap(await $.api.playlists({ id: playlistId }).songs['bulk-remove'].post({ songIds }));
 }
 
-export function togglePlaylistVisibility(
+export async function togglePlaylistVisibility(
   playlistId: string,
   isPrivate: boolean,
   adminView = false
-): Promise<Playlist> {
+) {
   const query = adminView ? { adminView: 'true' } : undefined;
-  return $.api
-    .playlists({ id: playlistId })
-    .visibility.patch({ isPrivate }, { query })
-    .then(unwrap);
+  return unwrap(
+    await $.api.playlists({ id: playlistId }).visibility.patch({ isPrivate }, { query })
+  );
 }
 
-export function reorderPlaylistSongs(playlistId: string, songIds: string[]): Promise<void> {
-  return $.api
-    .playlists({ id: playlistId })
-    .reorder.patch({ songIds })
-    .then(() => undefined);
+export async function reorderPlaylistSongs(playlistId: string, songIds: string[]): Promise<void> {
+  await $.api.playlists({ id: playlistId }).reorder.patch({ songIds });
 }
 
 // ---------------------------------------------------------------------------
 // Player
 // ---------------------------------------------------------------------------
 
-export function fetchQueueState(): Promise<QueueState> {
-  return $.api.player.queue.get().then(unwrap);
+export async function fetchQueueState() {
+  return unwrap(await $.api.player.queue.get());
 }
 
-export function startPlayback(opts: {
+export async function startPlayback(opts: {
   playlistId?: string;
   mode: 'sequential' | 'random';
   loop: LoopMode;
   startFromSongId?: string;
 }): Promise<void> {
-  return $.api.player.play
-    .post(opts)
-    .then(unwrap)
-    .then(() => undefined);
+  unwrap(await $.api.player.play.post(opts));
 }
 
-export function skipTrack(): Promise<void> {
-  return $.api.player.skip
-    .post()
-    .then(unwrap)
-    .then(() => undefined);
+export async function skipTrack(): Promise<void> {
+  unwrap(await $.api.player.skip.post());
 }
 
-export function leaveVoice(): Promise<void> {
-  return $.api.player.leave
-    .post()
-    .then(unwrap)
-    .then(() => undefined);
+export async function leaveVoice(): Promise<void> {
+  unwrap(await $.api.player.leave.post());
 }
 
-export function setLoopMode(mode: LoopMode): Promise<void> {
-  return $.api.player.loop
-    .post({ mode })
-    .then(unwrap)
-    .then(() => undefined);
+export async function setLoopMode(mode: LoopMode): Promise<void> {
+  unwrap(await $.api.player.loop.post({ mode }));
 }
 
-export function shuffleQueue(): Promise<void> {
-  return $.api.player.shuffle
-    .post()
-    .then(unwrap)
-    .then(() => undefined);
+export async function shuffleQueue(): Promise<void> {
+  unwrap(await $.api.player.shuffle.post());
 }
 
-export function unshuffleQueue(): Promise<void> {
-  return $.api.player.unshuffle
-    .post()
-    .then(unwrap)
-    .then(() => undefined);
+export async function unshuffleQueue(): Promise<void> {
+  unwrap(await $.api.player.unshuffle.post());
 }
 
-export function clearQueue(): Promise<void> {
-  return $.api.player.clear
-    .post()
-    .then(unwrap)
-    .then(() => undefined);
+export async function clearQueue(): Promise<void> {
+  unwrap(await $.api.player.clear.post());
 }
 
-export function togglePause(): Promise<{ isPaused: boolean }> {
-  return $.api.player['pause-toggle'].post().then(unwrap);
+export async function togglePause() {
+  return unwrap(await $.api.player['pause-toggle'].post());
 }
 
-export function seek(positionMs: number): Promise<void> {
-  return $.api.player.seek
-    .post({ position: positionMs })
-    .then(unwrap)
-    .then(() => undefined);
+export async function seek(positionMs: number): Promise<void> {
+  unwrap(await $.api.player.seek.post({ position: positionMs }));
 }
 
-export function quickAddToQueue(url: string): Promise<{
-  message: string;
-  song: { title: string; duration: number; thumbnailUrl: string; requestedBy: string };
-}> {
-  return $.api.player['quick-add'].post({ url }).then(unwrap);
+export async function quickAddToQueue(url: string) {
+  return unwrap(await $.api.player['quick-add'].post({ url }));
 }
 
-export function quickAddPlaylistToQueue(
-  url: string,
-  maxVideos?: number
-): Promise<{
-  message: string;
-  playlistTitle: string;
-  totalVideos: number;
-  queuedCount: number;
-  songs: { title: string; duration: number; thumbnailUrl: string; requestedBy: string }[];
-}> {
-  return $.api.player['quick-add-playlist']
-    .post({
+export async function quickAddPlaylistToQueue(url: string, maxVideos?: number) {
+  return unwrap(
+    await $.api.player['quick-add-playlist'].post({
       url,
       ...(maxVideos && { maxVideos }),
     })
-    .then(unwrap);
+  );
 }
 
-export function addToPriorityQueue(songId: string): Promise<{
-  message: string;
-  song: { title: string; duration: number; thumbnailUrl: string; requestedBy: string };
-}> {
-  return $.api.player['add-to-priority'].post({ songId }).then(unwrap);
+export async function addToPriorityQueue(songId: string) {
+  return unwrap(await $.api.player['add-to-priority'].post({ songId }));
 }
 
-export function overridePlay(url: string): Promise<{
-  message: string;
-  song: { title: string; duration: number; thumbnailUrl: string; requestedBy: string };
-}> {
-  return $.api.player.override.post({ url }).then(unwrap);
+export async function overridePlay(url: string) {
+  return unwrap(await $.api.player.override.post({ url }));
 }
 
-export function removeQueueSong(songId: string): Promise<void> {
-  return $.api.player
-    .queue({ songId: encodeURIComponent(songId) })
-    .delete()
-    .then(unwrap)
-    .then(() => undefined);
+export async function removeQueueSong(songId: string): Promise<void> {
+  unwrap(await $.api.player.queue({ songId: encodeURIComponent(songId) }).delete());
 }
 
-export function promoteQueueSong(songId: string): Promise<void> {
-  return $.api.player
-    .queue({ songId: encodeURIComponent(songId) })
-    .promote.post()
-    .then(unwrap)
-    .then(() => undefined);
+export async function promoteQueueSong(songId: string): Promise<void> {
+  unwrap(await $.api.player.queue({ songId: encodeURIComponent(songId) }).promote.post());
 }
 
-export function demoteQueueSong(songId: string): Promise<void> {
-  return $.api.player
-    .queue({ songId: encodeURIComponent(songId) })
-    .demote.post()
-    .then(unwrap)
-    .then(() => undefined);
+export async function demoteQueueSong(songId: string): Promise<void> {
+  unwrap(await $.api.player.queue({ songId: encodeURIComponent(songId) }).demote.post());
 }
 
-export function reorderQueueSongs(songIds: string[], target?: 'queue' | 'priority'): Promise<void> {
-  return $.api.player.queue.reorder
-    .patch({ songIds, target })
-    .then(unwrap)
-    .then(() => undefined);
+export async function reorderQueueSongs(
+  songIds: string[],
+  target?: 'queue' | 'priority'
+): Promise<void> {
+  unwrap(await $.api.player.queue.reorder.patch({ songIds, target }));
 }
 
 // ---------------------------------------------------------------------------
 // Setup
 // ---------------------------------------------------------------------------
 
-export function fetchSetupStatus(): Promise<SetupStatus> {
-  return $.api.setup.status.get().then(unwrap);
+export async function fetchSetupStatus() {
+  return unwrap(await $.api.setup.status.get());
 }
 
-export function fetchSetupGuilds(): Promise<{ guilds: SetupGuild[] }> {
-  return $.api.setup.guilds.get().then(unwrap);
+export async function fetchSetupGuilds() {
+  return unwrap(await $.api.setup.guilds.get());
 }
 
-export function fetchSetupRoles(guildId: string): Promise<{ roles: SetupRole[] }> {
-  return $.api.setup.roles.get({ query: { guildId } }).then(unwrap);
+export async function fetchSetupRoles(guildId: string) {
+  return unwrap(await $.api.setup.roles.get({ query: { guildId } }));
 }
 
-export function fetchSetupChannels(guildId: string): Promise<{ channels: SetupChannel[] }> {
-  return $.api.setup.channels.get({ query: { guildId } }).then(unwrap);
+export async function fetchSetupChannels(guildId: string) {
+  return unwrap(await $.api.setup.channels.get({ query: { guildId } }));
 }
 
-export interface CompleteSetupPayload {
-  guildId: string;
-  adminRoleIds: string;
-  voiceIdleTimeoutMinutes: number;
-  afkNotificationChannelId?: string | null;
-  requestNotificationChannelId?: string | null;
-  publicUrl?: string | null;
-  enabledSources?: string;
-}
-
-export function completeSetup(data: CompleteSetupPayload): Promise<{ success: boolean }> {
-  return $.api.setup.complete.post(data as any).then(unwrap) as Promise<{ success: boolean }>;
+export async function completeSetup(data: CompleteSetupPayload) {
+  return unwrap(await $.api.setup.complete.post(data));
 }
 
 // ---------------------------------------------------------------------------
 // General Settings
 // ---------------------------------------------------------------------------
 
-export function fetchGeneralSettings(): Promise<GeneralSettings> {
-  return $.api.settings.general.get().then(unwrap);
+export async function fetchGeneralSettings() {
+  return unwrap(await $.api.settings.general.get());
 }
 
-export type GeneralSettingsUpdate = Partial<
-  Pick<
-    GeneralSettings,
-    | 'adminRoleIds'
-    | 'voiceIdleTimeoutMinutes'
-    | 'afkNotificationChannelId'
-    | 'requestNotificationChannelId'
-    | 'notifyOnApproved'
-    | 'notifyOnDenied'
-    | 'publicUrl'
-    | 'enabledSources'
-  >
->;
-
-export function updateGeneralSettings(data: GeneralSettingsUpdate): Promise<GeneralSettings> {
-  return $.api.settings.general.patch(data).then(unwrap);
+export async function updateGeneralSettings(data: GeneralSettingsUpdate) {
+  return unwrap(await $.api.settings.general.patch(data));
 }
 
 // ---------------------------------------------------------------------------
 // Permissions
 // ---------------------------------------------------------------------------
 
-export interface PermissionsResponse {
-  mapping: Record<string, string[]>;
-  roles: { id: string; name: string; color: number }[];
-  categories: { label: string; actions: string[] }[];
-  labels: Record<string, string>;
+export async function fetchPermissions() {
+  return unwrap(await $.api.permissions.get());
 }
 
-export function fetchPermissions(): Promise<PermissionsResponse> {
-  return $.api.permissions.get().then(unwrap);
+export async function updatePermission(action: string, roleIds: string[]) {
+  return unwrap(await $.api.permissions.patch({ action, roleIds }));
 }
 
-export function updatePermission(
-  action: string,
-  roleIds: string[]
-): Promise<{ action: string; roleIds: string[] }> {
-  return $.api.permissions.patch({ action, roleIds }).then(unwrap);
-}
-
-export interface MyPermissionsResponse {
-  permissions: string[];
-}
-
-export function fetchMyPermissions(): Promise<MyPermissionsResponse> {
-  return $.api.permissions.me.get().then(unwrap);
+export async function fetchMyPermissions() {
+  return unwrap(await $.api.permissions.me.get());
 }

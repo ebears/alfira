@@ -5,13 +5,14 @@ import { refreshGuildId } from '../lib/config';
 import { botHeaders, fetchGuildRoles } from '../lib/discordRoles';
 import { authPlugin } from '../lib/elysia-guards';
 import { ApiError } from '../lib/errors';
+import { type SetupChannel, type SetupGuild } from '../shared';
 import {
   SetupChannel as SetupChannelSchema,
+  SetupCompleteSchema,
   SetupGuild as SetupGuildSchema,
   SetupRole as SetupRoleSchema,
   SetupStatus as SetupStatusSchema,
-} from '../lib/responseSchemas';
-import { type SetupChannel, type SetupGuild } from '../shared';
+} from '../shared/apiSchemas';
 import { db, tables } from '../shared/db';
 import { logger } from '../shared/logger';
 import { refreshEnabledSources } from '../startDiscord';
@@ -26,19 +27,6 @@ interface CacheEntry<T> {
 }
 
 const channelsCache = new Map<string, CacheEntry<SetupChannel[]>>();
-
-// ---------------------------------------------------------------------------
-// Request body schema for POST /api/setup/complete
-// ---------------------------------------------------------------------------
-const SetupCompleteSchema = t.Object({
-  guildId: t.String({ minLength: 1 }),
-  adminRoleIds: t.String({ minLength: 1 }),
-  voiceIdleTimeoutMinutes: t.Integer({ minimum: 1, maximum: 120 }),
-  afkNotificationChannelId: t.Optional(t.String()),
-  requestNotificationChannelId: t.Optional(t.String()),
-  publicUrl: t.Optional(t.String()),
-  enabledSources: t.Optional(t.String()),
-});
 
 // ---------------------------------------------------------------------------
 // Query helpers

@@ -5,7 +5,6 @@ import { getGuildId } from '../lib/config';
 import { getUserDisplayName, resolveDisplayNames } from '../lib/displayName';
 import { authPlugin } from '../lib/elysia-guards';
 import { ApiError } from '../lib/errors';
-import { PaginatedResult, type PaginationMeta, Song } from '../lib/responseSchemas';
 import {
   buildSongFilterClause,
   buildSongOrderBy,
@@ -18,31 +17,19 @@ import { validateAndBuildSongFields } from '../lib/songFieldValidation';
 import { reSyncPlaylistsForTags } from '../lib/syncPlaylistToTag';
 import { canonicalizeTags } from '../lib/tagCanonicalization';
 import { validateTags } from '../lib/validation';
+import {
+  BulkDeleteSchema,
+  BulkEditSchema,
+  BulkTagSchema,
+  PaginatedResult,
+  type PaginationMeta,
+  Song,
+  SongPatchSchema,
+} from '../shared/apiSchemas';
 import { db, tables } from '../shared/db';
 import { getPlayer } from '../startDiscord';
 
 const { song: songTable } = tables;
-
-const BulkDeleteSchema = t.Object({
-  ids: t.Array(t.String(), { minLength: 1, maxLength: 5000 }),
-});
-
-const BulkTagSchema = t.Object({
-  ids: t.Array(t.String(), { minLength: 1, maxLength: 5000 }),
-  tags: t.Optional(t.Array(t.String())),
-  mode: t.Optional(t.Union([t.Literal('add'), t.Literal('set')])),
-});
-
-const SongPatchSchema = t.Partial(
-  t.Object({
-    nickname: t.Nullable(t.String()),
-    artist: t.Nullable(t.String()),
-    album: t.Nullable(t.String()),
-    artwork: t.Nullable(t.String()),
-    tags: t.Array(t.String()),
-    volumeBoost: t.Nullable(t.Integer({ minimum: -100, maximum: 200 })),
-  })
-);
 
 // ---------------------------------------------------------------------------
 // Query helpers
@@ -314,12 +301,10 @@ export const songsPlugin = new Elysia({ prefix: '/songs', name: 'songs' })
   .post(
     '/bulk-edit',
     async ({ body }) => {
-      const b = body as Record<string, unknown>;
-      const ids = b.ids as string[];
-      const clearFields = (b.clearFields as string[]) ?? [];
+      const { ids, clearFields = [] } = body;
 
       const { data, processedTags, processedVolumeBoost } = await validateAndBuildSongFields(
-        b,
+        body,
         clearFields
       );
 
@@ -346,7 +331,11 @@ export const songsPlugin = new Elysia({ prefix: '/songs', name: 'songs' })
 
       return { updated: ids.length };
     },
-    { hasPermission: 'songs.edit', response: { 200: t.Object({ updated: t.Number() }) } }
+    {
+      hasPermission: 'songs.edit',
+      body: BulkEditSchema,
+      response: { 200: t.Object({ updated: t.Number() }) },
+    }
   )
   .patch(
     '/:id',

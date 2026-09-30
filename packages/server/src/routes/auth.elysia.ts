@@ -6,6 +6,7 @@ import { getGuildId, refreshGuildId } from '../lib/config';
 import { authPlugin as macroAuth } from '../lib/elysia-guards';
 import { sign, verify } from '../lib/jwt';
 import { getClientIp } from '../lib/rateLimit';
+import { MessageResponse, UserResponse } from '../shared/apiSchemas';
 import { db, tables } from '../shared/db';
 import { logger } from '../shared/logger';
 
@@ -711,21 +712,25 @@ export const authPlugin = new Elysia({ name: 'auth' })
       }
       return { user };
     },
-    { isAuth: true }
+    { isAuth: true, response: { 200: UserResponse } }
   )
 
   // ── /auth/logout ── revoke refresh token, clear cookies
-  .post('/logout', async ({ cookie }) => {
-    const rawRefreshToken = cookie[REFRESH_COOKIE_NAME]?.value;
-    // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
-    if (rawRefreshToken && typeof rawRefreshToken === 'string') {
-      try {
-        const tokenHash = hashToken(rawRefreshToken);
-        await db.delete(refreshTokenTable).where(eq(refreshTokenTable.tokenHash, tokenHash));
-      } catch {
-        logger.warn('Failed to revoke refresh token on logout');
+  .post(
+    '/logout',
+    async ({ cookie }) => {
+      const rawRefreshToken = cookie[REFRESH_COOKIE_NAME]?.value;
+      // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
+      if (rawRefreshToken && typeof rawRefreshToken === 'string') {
+        try {
+          const tokenHash = hashToken(rawRefreshToken);
+          await db.delete(refreshTokenTable).where(eq(refreshTokenTable.tokenHash, tokenHash));
+        } catch {
+          logger.warn('Failed to revoke refresh token on logout');
+        }
       }
-    }
-    clearAuthCookies(cookie);
-    return { message: 'Logged out.' };
-  });
+      clearAuthCookies(cookie);
+      return { message: 'Logged out.' };
+    },
+    { response: { 200: MessageResponse } }
+  );

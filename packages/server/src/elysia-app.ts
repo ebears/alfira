@@ -30,6 +30,7 @@ import { tagsPlugin } from './routes/tags.elysia';
 import { timescalePlugin } from './routes/timescale.elysia';
 import { tremoloPlugin } from './routes/tremolo.elysia';
 import { vibratoPlugin } from './routes/vibrato.elysia';
+import { VersionResponse } from './shared/apiSchemas';
 import { db } from './shared/db';
 import { logger } from './shared/logger';
 
@@ -95,7 +96,7 @@ export function createApp() {
       set.status = 500;
       return { error: 'Internal server error.' };
     })
-    .get('/version', () => ({ version: VERSION }))
+    .get('/version', () => ({ version: VERSION }), { response: { 200: VersionResponse } })
     .use(setupPlugin)
     .guard(
       {

@@ -17,7 +17,7 @@ export default function AddSongsModal({
   onClose,
   onAdded,
 }: {
-  playlist: PlaylistDetail;
+  playlist: Pick<PlaylistDetail, 'id' | 'name' | 'songs'>;
   onClose: () => void;
   onAdded: () => void;
 }) {

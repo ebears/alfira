@@ -1,19 +1,14 @@
 import { eq } from 'drizzle-orm';
-import { Elysia, t } from 'elysia';
+import { Elysia } from 'elysia';
 
 import { authPlugin } from '../lib/elysia-guards';
-import { ChannelMixSettings as ChannelMixSettingsSchema } from '../lib/responseSchemas';
 import { syncAllFilters } from '../lib/syncAllFilters';
+import {
+  ChannelMixPatchSchema as ChannelMixSchema,
+  ChannelMixSettings as ChannelMixSettingsSchema,
+} from '../shared/apiSchemas';
 import { db, tables } from '../shared/db';
 import { DEFAULT_CHANNEL_MIX } from '../shared/filterDefaults';
-
-const ChannelMixSchema = t.Object({
-  enabled: t.Boolean(),
-  leftToLeft: t.Number({ minimum: 0, maximum: 1 }),
-  leftToRight: t.Number({ minimum: 0, maximum: 1 }),
-  rightToLeft: t.Number({ minimum: 0, maximum: 1 }),
-  rightToRight: t.Number({ minimum: 0, maximum: 1 }),
-});
 
 type ChannelMixSettings = typeof ChannelMixSchema.static;
 

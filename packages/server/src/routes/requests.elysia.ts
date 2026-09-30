@@ -6,11 +6,6 @@ import { authPlugin, requireAuth } from '../lib/elysia-guards';
 import { ApiError } from '../lib/errors';
 import { sendRequestDm, sendRequestNotification } from '../lib/notifications';
 import { parsePagination } from '../lib/pagination';
-import {
-  CreateRequestResult,
-  RequestPreview,
-  SongRequest as SongRequestSchema,
-} from '../lib/responseSchemas';
 import { formatSong } from '../lib/serialization';
 import { emitSongAdded } from '../lib/socket';
 import { canonicalizeTags } from '../lib/tagCanonicalization';
@@ -25,6 +20,17 @@ import {
   validateVolumeBoost,
   youTubeUrl,
 } from '../lib/validation';
+import {
+  CreateRequestResult,
+  CreateRequestSchema,
+  PaginationMeta,
+  PatchRequestSchema,
+  PreviewRequestSchema,
+  RequestPatchResponse,
+  RequestsQuerySchema,
+  RequestPreview,
+  SongRequest as SongRequestSchema,
+} from '../shared/apiSchemas';
 import { db, tables } from '../shared/db';
 import { logger } from '../shared/logger';
 import { type SongRequest } from '../shared/types';
@@ -66,32 +72,6 @@ async function userCanAutoApprove(user: { isAdmin: boolean; roles?: string[] }):
     );
   return rows.length > 0;
 }
-
-// ---------------------------------------------------------------------------
-// Schemas
-// ---------------------------------------------------------------------------
-
-const PreviewRequestSchema = t.Object({
-  url: t.String(),
-});
-
-const CreateRequestSchema = t.Partial(
-  t.Object({
-    sourceUrl: t.String(),
-    notifyDm: t.Boolean(),
-    nickname: t.Nullable(t.String()),
-    artist: t.Nullable(t.String()),
-    album: t.Nullable(t.String()),
-    artwork: t.Nullable(t.String()),
-    tags: t.Array(t.String()),
-    volumeBoost: t.Nullable(t.Integer({ minimum: -100, maximum: 200 })),
-    type: t.Optional(t.Union([t.Literal('track'), t.Literal('playlist')])),
-  })
-);
-
-const PatchRequestSchema = t.Object({
-  status: t.Union([t.Literal('approved'), t.Literal('denied')]),
-});
 
 // ---------------------------------------------------------------------------
 // Plugin
@@ -228,15 +208,11 @@ export const requestsPlugin = new Elysia({ prefix: '/requests', name: 'requests'
       };
     },
     {
+      query: RequestsQuerySchema,
       response: {
         200: t.Object({
           items: t.Array(SongRequestSchema),
-          pagination: t.Object({
-            page: t.Number(),
-            limit: t.Number(),
-            total: t.Number(),
-            totalPages: t.Number(),
-          }),
+          pagination: PaginationMeta,
         }),
       },
     }
@@ -264,7 +240,7 @@ export const requestsPlugin = new Elysia({ prefix: '/requests', name: 'requests'
 
       // Strip ?list= param unless explicit playlist type
       let url = originalUrl;
-      const explicitPlaylist = (body as { type?: string }).type === 'playlist';
+      const explicitPlaylist = body.type === 'playlist';
       if (!explicitPlaylist) {
         try {
           const parsed = new URL(url);
@@ -781,7 +757,7 @@ export const requestsPlugin = new Elysia({ prefix: '/requests', name: 'requests'
       isAdmin: true,
       params: t.Object({ id: t.String() }),
       body: PatchRequestSchema,
-      response: { 200: t.Unknown() },
+      response: { 200: RequestPatchResponse },
     }
   )
 

@@ -3,7 +3,42 @@
 //
 // This is the single source of truth for types that cross package boundaries.
 // Both the bot and the API import from here. Never duplicate these types.
+//
+// Wire types (anything sent over HTTP or the WebSocket) are DERIVED from the
+// Elysia schemas in ./apiSchemas via `typeof Schema.static` — edit the schema,
+// never a type alias here. Hand-written types are reserved for internal
+// shapes that never cross the wire (or, like PaginatedResult<T>, are generic
+// type-level helpers whose schema counterpart lives in ./apiSchemas).
 // ---------------------------------------------------------------------------
+
+import {
+  type ChannelMixSettings as ChannelMixSettingsSchema,
+  type CompressorSettings as CompressorSettingsSchema,
+  type DistortionSettings as DistortionSettingsSchema,
+  type EqualizerSettings as EqualizerSettingsSchema,
+  type FiltersData as FiltersDataSchema,
+  type GeneralSettings as GeneralSettingsSchema,
+  type KaraokeSettings as KaraokeSettingsSchema,
+  type LoopMode as LoopModeSchema,
+  type LowPassSettings as LowPassSettingsSchema,
+  type PaginationMeta as PaginationMetaSchema,
+  type Playlist as PlaylistSchema,
+  type PlaylistDetail as PlaylistDetailSchema,
+  type QueueState as QueueStateSchema,
+  type QueuedSong as QueuedSongSchema,
+  type RequestPreview as RequestPreviewSchema,
+  type RotationSettings as RotationSettingsSchema,
+  type SetupChannel as SetupChannelSchema,
+  type SetupGuild as SetupGuildSchema,
+  type SetupRole as SetupRoleSchema,
+  type SetupStatus as SetupStatusSchema,
+  type Song as SongSchema,
+  type SongRequest as SongRequestSchema,
+  type TimescaleSettings as TimescaleSettingsSchema,
+  type TremoloSettings as TremoloSettingsSchema,
+  type User as UserSchema,
+  type VibratoSettings as VibratoSettingsSchema,
+} from './apiSchemas';
 
 // ---------------------------------------------------------------------------
 // Song
@@ -12,23 +47,7 @@
 // Drizzle queries produce. It does NOT include queue-time properties like
 // requestedBy — use QueuedSong for that.
 // ---------------------------------------------------------------------------
-export interface Song {
-  id: string;
-  title: string;
-  sourceUrl: string;
-  sourceId: string;
-  duration: number; // seconds
-  thumbnailUrl: string;
-  addedBy: string; // Discord user ID
-  addedByDisplayName?: string; // Resolved Discord display name (not persisted, populated at query time)
-  nickname?: string | null; // Custom display name for the song
-  artist?: string | null;
-  album?: string | null;
-  artwork?: string | null;
-  tags?: string[];
-  volumeBoost?: number | null;
-  createdAt: string; // ISO 8601 string (JSON wire format)
-}
+export type Song = typeof SongSchema.static;
 
 // ---------------------------------------------------------------------------
 // QueuedSong
@@ -37,10 +56,7 @@ export interface Song {
 // requestedBy (the display name of the Discord member who queued it), which
 // is a runtime property that is never persisted to the database.
 // ---------------------------------------------------------------------------
-export interface QueuedSong extends Song {
-  requestedBy: string;
-  isSeekable?: boolean;
-}
+export type QueuedSong = typeof QueuedSongSchema.static;
 
 // ---------------------------------------------------------------------------
 // LoopMode
@@ -49,128 +65,24 @@ export interface QueuedSong extends Song {
 // song  — Current song repeats until explicitly skipped.
 // queue — When the last song finishes the queue resets and replays.
 // ---------------------------------------------------------------------------
-export type LoopMode = 'off' | 'song' | 'queue';
+export type LoopMode = typeof LoopModeSchema.static;
 
 // ---------------------------------------------------------------------------
-// CompressorSettings
+// Audio filter settings
 //
-// Guild-level audio compressor configuration. Applied to NodeLink on playback.
+// Guild-level audio filter configuration. Applied to NodeLink on playback.
+// EqualizerSettings.bands is length 15, values 0–100, 50 = neutral (0 dB).
 // ---------------------------------------------------------------------------
-export interface CompressorSettings {
-  enabled: boolean;
-  threshold: number;
-  ratio: number;
-  attack: number;
-  release: number;
-  gain: number;
-}
-
-// ---------------------------------------------------------------------------
-// EqualizerSettings
-//
-// Guild-level 15-band equalizer configuration. Applied to NodeLink on playback.
-// ---------------------------------------------------------------------------
-export interface EqualizerSettings {
-  bands: number[]; // length 15, values 0–100, 50 = neutral (0 dB)
-  enabled: boolean;
-}
-
-// ---------------------------------------------------------------------------
-// KaraokeSettings
-//
-// Guild-level karaoke audio filter configuration.
-// ---------------------------------------------------------------------------
-export interface KaraokeSettings {
-  enabled: boolean;
-  level: number;
-  monoLevel: number;
-  filterBand: number;
-  filterWidth: number;
-}
-
-// ---------------------------------------------------------------------------
-// TimescaleSettings
-//
-// Guild-level timescale audio filter configuration.
-// ---------------------------------------------------------------------------
-export interface TimescaleSettings {
-  enabled: boolean;
-  speed: number;
-  pitch: number;
-  rate: number;
-}
-
-// ---------------------------------------------------------------------------
-// TremoloSettings
-//
-// Guild-level tremolo audio filter configuration.
-// ---------------------------------------------------------------------------
-export interface TremoloSettings {
-  enabled: boolean;
-  frequency: number;
-  depth: number;
-}
-
-// ---------------------------------------------------------------------------
-// VibratoSettings
-//
-// Guild-level vibrato audio filter configuration.
-// ---------------------------------------------------------------------------
-export interface VibratoSettings {
-  enabled: boolean;
-  frequency: number;
-  depth: number;
-}
-
-// ---------------------------------------------------------------------------
-// RotationSettings
-//
-// Guild-level rotation audio filter configuration.
-// ---------------------------------------------------------------------------
-export interface RotationSettings {
-  enabled: boolean;
-  rotationHz: number;
-}
-
-// ---------------------------------------------------------------------------
-// DistortionSettings
-//
-// Guild-level distortion audio filter configuration.
-// ---------------------------------------------------------------------------
-export interface DistortionSettings {
-  enabled: boolean;
-  sinOffset: number;
-  sinScale: number;
-  cosOffset: number;
-  cosScale: number;
-  tanOffset: number;
-  tanScale: number;
-  offset: number;
-  scale: number;
-}
-
-// ---------------------------------------------------------------------------
-// ChannelMixSettings
-//
-// Guild-level channel mix audio filter configuration.
-// ---------------------------------------------------------------------------
-export interface ChannelMixSettings {
-  enabled: boolean;
-  leftToLeft: number;
-  leftToRight: number;
-  rightToLeft: number;
-  rightToRight: number;
-}
-
-// ---------------------------------------------------------------------------
-// LowPassSettings
-//
-// Guild-level low-pass audio filter configuration.
-// ---------------------------------------------------------------------------
-export interface LowPassSettings {
-  enabled: boolean;
-  smoothing: number;
-}
+export type CompressorSettings = typeof CompressorSettingsSchema.static;
+export type EqualizerSettings = typeof EqualizerSettingsSchema.static;
+export type KaraokeSettings = typeof KaraokeSettingsSchema.static;
+export type TimescaleSettings = typeof TimescaleSettingsSchema.static;
+export type TremoloSettings = typeof TremoloSettingsSchema.static;
+export type VibratoSettings = typeof VibratoSettingsSchema.static;
+export type RotationSettings = typeof RotationSettingsSchema.static;
+export type DistortionSettings = typeof DistortionSettingsSchema.static;
+export type ChannelMixSettings = typeof ChannelMixSettingsSchema.static;
+export type LowPassSettings = typeof LowPassSettingsSchema.static;
 
 // ---------------------------------------------------------------------------
 // FiltersData
@@ -178,18 +90,7 @@ export interface LowPassSettings {
 // Batched response from GET /api/settings/filters. Contains all filter
 // settings in a single payload to reduce HTTP round-trips on page load.
 // ---------------------------------------------------------------------------
-export interface FiltersData {
-  compressor: CompressorSettings;
-  equalizer: EqualizerSettings;
-  karaoke: KaraokeSettings;
-  timescale: TimescaleSettings;
-  tremolo: TremoloSettings;
-  vibrato: VibratoSettings;
-  rotation: RotationSettings;
-  distortion: DistortionSettings;
-  channelMix: ChannelMixSettings;
-  lowPass: LowPassSettings;
-}
+export type FiltersData = typeof FiltersDataSchema.static;
 
 // ---------------------------------------------------------------------------
 // GeneralSettings
@@ -197,69 +98,19 @@ export interface FiltersData {
 // Guild-level general configuration. Stored in guildSettings table,
 // configured via the setup wizard and the Admin Settings page.
 // ---------------------------------------------------------------------------
-export interface GeneralSettings {
-  guildId: string | null;
-  setupCompleted: boolean;
-  adminRoleIds: string;
-  voiceIdleTimeoutMinutes: number;
-  afkNotificationChannelId: string | null;
-  requestNotificationChannelId: string | null;
-  notifyOnApproved: boolean;
-  notifyOnDenied: boolean;
-  publicUrl: string | null;
-  enabledSources: string;
-  availableSources: {
-    key: string;
-    displayName: string;
-    requiresCredentials: boolean;
-    helpText: string | null;
-  }[];
-}
+export type GeneralSettings = typeof GeneralSettingsSchema.static;
 
 // ---------------------------------------------------------------------------
-// SetupStatus
+// Setup
 //
-// Returned by GET /api/setup/status to tell the frontend whether to show
-// the setup wizard.
+// SetupStatus is returned by GET /api/setup/status to tell the frontend
+// whether to show the setup wizard. SetupRole / SetupChannel / SetupGuild
+// are simplified Discord objects returned by the setup API for the pickers.
 // ---------------------------------------------------------------------------
-export interface SetupStatus {
-  setupCompleted: boolean;
-  guildName: string | null;
-  clientId: string;
-}
-
-// ---------------------------------------------------------------------------
-// SetupRole
-//
-// A simplified role object returned by the setup API for the role picker.
-// ---------------------------------------------------------------------------
-export interface SetupRole {
-  id: string;
-  name: string;
-  color: number;
-}
-
-// ---------------------------------------------------------------------------
-// SetupChannel
-//
-// A simplified text-channel object returned by the setup API for the
-// channel picker.
-// ---------------------------------------------------------------------------
-export interface SetupChannel {
-  id: string;
-  name: string;
-}
-
-// ---------------------------------------------------------------------------
-// SetupGuild
-//
-// A simplified guild object returned by the setup API for the guild picker.
-// ---------------------------------------------------------------------------
-export interface SetupGuild {
-  id: string;
-  name: string;
-  icon: string | null;
-}
+export type SetupStatus = typeof SetupStatusSchema.static;
+export type SetupRole = typeof SetupRoleSchema.static;
+export type SetupChannel = typeof SetupChannelSchema.static;
+export type SetupGuild = typeof SetupGuildSchema.static;
 
 // ---------------------------------------------------------------------------
 // QueueState
@@ -267,62 +118,24 @@ export interface SetupGuild {
 // A snapshot of the GuildPlayer's current state. This is the payload for
 // GET /api/player/queue and the player:update event.
 // ---------------------------------------------------------------------------
-export interface QueueState {
-  isPlaying: boolean;
-  isPaused: boolean;
-  isConnectedToVoice: boolean; // True when bot is connected to a voice channel
-  loopMode: LoopMode;
-  isShuffled: boolean;
-  currentSong: QueuedSong | null;
-  priorityQueue: QueuedSong[]; // Songs added via Quick Add or "Add to Queue" - play before regular queue
-  queue: QueuedSong[];
-  trackStartedAt: number | null; // Unix ms timestamp, null when not playing
-  nextTrack: QueuedSong | null; // The next track being preloaded for gapless playback
-  compressorSettings?: CompressorSettings | null;
-  timescaleSpeed?: number; // Current timescale speed (1.0 = normal), used by client for progress bar
-  /** Ground-truth audio position from NodeLink (ms), accounting for timescale. */
-  nodeLinkPosition: number | null;
-  /** Unix-ms timestamp when NodeLink recorded nodeLinkPosition. */
-  nodeLinkTime: number | null;
-}
+export type QueueState = typeof QueueStateSchema.static;
 
 // ---------------------------------------------------------------------------
-// Playlist / PlaylistSong
+// Playlist / PlaylistDetail
 //
-// Match the database schema.
+// Playlist matches the database schema; PlaylistDetail is a Playlist with
+// its songs fully populated (GET /api/playlists/:id).
 // ---------------------------------------------------------------------------
-export interface Playlist {
-  id: string;
-  name: string;
-  createdBy: string;
-  createdByDisplayName?: string;
-  isPrivate: boolean;
-  tagNameLower?: string | null;
-  createdAt: string; // ISO 8601 string (JSON wire format)
-  songs?: { id: string; playlistId: string; songId: string; position: number; song?: Song }[];
-  _count?: { songs: number };
-  /** Up to 4 artwork URLs from the playlist's songs, for the cover grid. Only present in list responses. */
-  coverUrls?: string[];
-}
-
-// ---------------------------------------------------------------------------
-// PlaylistDetail
-//
-// A Playlist with its songs fully populated. Used by GET /api/playlists/:id
-// ---------------------------------------------------------------------------
-export interface PlaylistDetail extends Omit<Playlist, 'songs'> {
-  songs: { id: string; playlistId: string; songId: string; position: number; song: Song }[];
-}
+export type Playlist = typeof PlaylistSchema.static;
+export type PlaylistDetail = typeof PlaylistDetailSchema.static;
 
 // ---------------------------------------------------------------------------
 // Pagination
+//
+// PaginatedResult<T> is the type-level counterpart of the PaginatedResult()
+// schema helper in ./apiSchemas — keep the two shapes in sync.
 // ---------------------------------------------------------------------------
-export interface PaginationMeta {
-  page: number;
-  limit: number;
-  total: number;
-  totalPages: number;
-}
+export type PaginationMeta = typeof PaginationMetaSchema.static;
 
 export interface PaginatedResult<T> {
   items: T[];
@@ -334,16 +147,7 @@ export interface PaginatedResult<T> {
 //
 // Represents an authenticated Discord user. Returned by GET /auth/me
 // ---------------------------------------------------------------------------
-export interface User {
-  discordId: string;
-  username: string;
-  avatar: string | null;
-  isAdmin: boolean;
-  /** Temporarily granted during first-run setup before admin roles are configured. */
-  isSetupAdmin?: boolean;
-  /** Discord role IDs the user has in the guild. Used for granular permission checks. */
-  roles?: string[];
-}
+export type User = typeof UserSchema.static;
 
 // ---------------------------------------------------------------------------
 // Permissions
@@ -394,76 +198,6 @@ export const PERMISSION_CATEGORIES: { label: string; actions: PermissionAction[]
 // Song Requests
 // ---------------------------------------------------------------------------
 
-export interface SongRequestTrack {
-  id: string;
-  sourceUrl: string;
-  sourceId: string;
-  title: string;
-  duration: number;
-  thumbnailUrl: string;
-  artist: string | null;
-  artworkUrl: string | null;
-  sourceName: string | null;
-  requestedBy: string;
-  requestedByDisplayName?: string;
-  notifyDm: boolean;
-  type: 'track';
-  playlistData: null;
-  status: 'pending' | 'approved' | 'denied';
-  reviewedBy: string | null;
-  createdAt: string;
-  closedAt: string | null;
-}
+export type SongRequest = typeof SongRequestSchema.static;
 
-export interface SongRequestPlaylist {
-  id: string;
-  sourceUrl: string;
-  sourceId: string;
-  title: string;
-  duration: number;
-  thumbnailUrl: string;
-  artist: string | null;
-  artworkUrl: string | null;
-  sourceName: string | null;
-  requestedBy: string;
-  requestedByDisplayName?: string;
-  notifyDm: boolean;
-  type: 'playlist';
-  playlistData: {
-    name: string;
-    videoCount: number;
-    thumbnailUrl?: string | null;
-    videos?: {
-      id: string;
-      title: string;
-      duration: number;
-      thumbnailUrl?: string | null;
-      artist?: string | null;
-      artworkUrl?: string | null;
-    }[];
-  } | null;
-  status: 'pending' | 'approved' | 'denied';
-  reviewedBy: string | null;
-  createdAt: string;
-  closedAt: string | null;
-}
-
-export type SongRequest = SongRequestTrack | SongRequestPlaylist;
-
-export interface RequestPreview {
-  title: string;
-  sourceId: string;
-  duration: number;
-  thumbnailUrl: string;
-  sourceName: string | null;
-  artist: string | null;
-  artworkUrl: string | null;
-  alreadyExists: boolean;
-  existingSong?: unknown;
-  isPlaylist: boolean;
-  playlistMeta?: {
-    name: string;
-    videoCount: number;
-    thumbnailUrl?: string | null;
-  };
-}
+export type RequestPreview = typeof RequestPreviewSchema.static;

@@ -9,9 +9,18 @@ export type { GeneralSettings, SetupChannel, SetupGuild, SetupRole } from '@alfi
 
 export type {
   BulkEditData,
+  CompleteSetupPayload,
+  CreateRequestResult,
+  FetchRequestsResult,
   FetchSongsOptions,
+  GeneralSettingsUpdate,
   MyPermissionsResponse,
   PermissionsResponse,
+  RequestCreateData,
+  SongUpdateData,
+  TagColor,
+  TagItem,
+  TagUpdateData,
 } from '@alfira/server/shared/api';
 
 export { ApiError, trySilentRefresh } from './eden';
@@ -75,14 +84,4 @@ export {
   updatePlaylistTag,
   updateSong,
   updateTag,
-} from './routes';
-
-export type {
-  CompleteSetupPayload,
-  CreateRequestResult,
-  FetchRequestsResult,
-  GeneralSettingsUpdate,
-  RequestCreateData,
-  SongUpdateData,
-  TagItem,
 } from './routes';

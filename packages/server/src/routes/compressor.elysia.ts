@@ -1,20 +1,14 @@
 import { eq } from 'drizzle-orm';
-import { Elysia, t } from 'elysia';
+import { Elysia } from 'elysia';
 
 import { authPlugin } from '../lib/elysia-guards';
-import { CompressorSettings as CompressorSettingsSchema } from '../lib/responseSchemas';
 import { syncAllFilters } from '../lib/syncAllFilters';
+import {
+  CompressorPatchSchema as CompressorSchema,
+  CompressorSettings as CompressorSettingsSchema,
+} from '../shared/apiSchemas';
 import { db, tables } from '../shared/db';
 import { DEFAULT_COMPRESSOR } from '../shared/filterDefaults';
-
-const CompressorSchema = t.Object({
-  enabled: t.Boolean(),
-  threshold: t.Integer({ minimum: -60, maximum: 0 }),
-  ratio: t.Number({ minimum: 1, maximum: 20 }),
-  attack: t.Integer({ minimum: 0, maximum: 100 }),
-  release: t.Integer({ minimum: 10, maximum: 1000 }),
-  gain: t.Integer({ minimum: 0, maximum: 24 }),
-});
 
 type CompressorSettings = typeof CompressorSchema.static;
 
