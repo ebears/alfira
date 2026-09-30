@@ -1,23 +1,14 @@
 import { eq } from 'drizzle-orm';
-import { Elysia, t } from 'elysia';
+import { Elysia } from 'elysia';
 
 import { authPlugin } from '../lib/elysia-guards';
-import { DistortionSettings as DistortionSettingsSchema } from '../lib/responseSchemas';
 import { syncAllFilters } from '../lib/syncAllFilters';
+import {
+  DistortionPatchSchema as DistortionSchema,
+  DistortionSettings as DistortionSettingsSchema,
+} from '../shared/apiSchemas';
 import { db, tables } from '../shared/db';
 import { DEFAULT_DISTORTION } from '../shared/filterDefaults';
-
-const DistortionSchema = t.Object({
-  enabled: t.Boolean(),
-  sinOffset: t.Number({ minimum: -1, maximum: 1 }),
-  sinScale: t.Number({ minimum: 0, maximum: 5 }),
-  cosOffset: t.Number({ minimum: -1, maximum: 1 }),
-  cosScale: t.Number({ minimum: 0, maximum: 5 }),
-  tanOffset: t.Number({ minimum: -1, maximum: 1 }),
-  tanScale: t.Number({ minimum: 0, maximum: 5 }),
-  offset: t.Number({ minimum: -1, maximum: 1 }),
-  scale: t.Number({ minimum: 0, maximum: 5 }),
-});
 
 type DistortionSettings = typeof DistortionSchema.static;
 

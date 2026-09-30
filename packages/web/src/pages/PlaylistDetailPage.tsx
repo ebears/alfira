@@ -60,7 +60,7 @@ import { pageVariants, viewTransition } from '../lib/motion';
 import { apiErrorMessage, notifyUnlessRateLimit } from '../utils/api';
 import { getTagColorClasses } from '../utils/tagColors';
 
-type PlaylistDetailMeta = Omit<PlaylistDetail, 'songs'>;
+type PlaylistDetailMeta = Omit<PlaylistDetail, 'songs' | 'pagination'>;
 
 const ITEMS_PER_PAGE = 48;
 

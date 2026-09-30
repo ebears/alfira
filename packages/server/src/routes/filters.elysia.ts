@@ -3,7 +3,7 @@ import { Elysia } from 'elysia';
 
 import { authPlugin } from '../lib/elysia-guards';
 import { EQ_BAND_COLUMNS, eqBandsFromRow } from '../lib/eqBands';
-import { FiltersData as FiltersDataSchema } from '../lib/responseSchemas';
+import { FiltersData as FiltersDataSchema } from '../shared/apiSchemas';
 import { db, tables } from '../shared/db';
 import {
   DEFAULT_CHANNEL_MIX,

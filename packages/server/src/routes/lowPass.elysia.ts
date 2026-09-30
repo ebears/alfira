@@ -1,16 +1,14 @@
 import { eq } from 'drizzle-orm';
-import { Elysia, t } from 'elysia';
+import { Elysia } from 'elysia';
 
 import { authPlugin } from '../lib/elysia-guards';
-import { LowPassSettings as LowPassSettingsSchema } from '../lib/responseSchemas';
 import { syncAllFilters } from '../lib/syncAllFilters';
+import {
+  LowPassPatchSchema as LowPassSchema,
+  LowPassSettings as LowPassSettingsSchema,
+} from '../shared/apiSchemas';
 import { db, tables } from '../shared/db';
 import { DEFAULT_LOW_PASS } from '../shared/filterDefaults';
-
-const LowPassSchema = t.Object({
-  enabled: t.Boolean(),
-  smoothing: t.Number({ minimum: 0, maximum: 60 }),
-});
 
 function fetchLowPassSettings(): { enabled: boolean; smoothing: number } {
   const row = db.select().from(tables.guildSettings).where(eq(tables.guildSettings.id, 1)).get();

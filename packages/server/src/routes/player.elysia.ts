@@ -9,14 +9,6 @@ import { lavalink } from '../lib/lavalink';
 import { requirePlayer, requirePlaying } from '../lib/player';
 import { canAccessPlaylist } from '../lib/playlistAccess';
 import {
-  LoopModeResponse,
-  MessageResponse,
-  PauseToggleResponse,
-  PlaylistQueuedResponse,
-  QueueState,
-  SongAddedResponse,
-} from '../lib/responseSchemas';
-import {
   clampMaxVideos,
   fetchPlaylistMetadata,
   fetchSourceMetadata,
@@ -26,6 +18,21 @@ import {
 } from '../lib/validation';
 import { resolveOrAutoJoinPlayer } from '../lib/voice';
 import { fisherYatesShuffle, type QueuedSong, toQueuedSong } from '../shared';
+import {
+  LoopModeResponse,
+  LoopSchema,
+  MessageResponse,
+  PauseToggleResponse,
+  PlaySchema,
+  PlaylistQueuedResponse,
+  QuickAddPlaylistSchema,
+  QueueState,
+  ReorderSchema,
+  SeekSchema,
+  SongAddedResponse,
+  SongIdSchema,
+  UrlSchema,
+} from '../shared/apiSchemas';
 import { db, findPlaylistWithSongs, tables } from '../shared/db';
 import { getPlayer } from '../startDiscord';
 
@@ -69,49 +76,17 @@ async function resolveUrlTempSong(
     // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
     thumbnailUrl: metadata.thumbnailUrl ?? '',
     addedBy: discordId,
+    nickname: null,
+    artist: null,
+    album: null,
+    artwork: null,
+    volumeBoost: null,
     createdAt: new Date().toISOString(),
     requestedBy: username,
   };
 
   return { player, queuedSong, metadataTitle: metadata.title };
 }
-
-// ---------------------------------------------------------------------------
-// Schemas
-// ---------------------------------------------------------------------------
-
-const PlaySchema = t.Object({
-  playlistId: t.Optional(t.String()),
-  mode: t.Optional(t.Union([t.Literal('sequential'), t.Literal('random')])),
-  loop: t.Optional(t.Union([t.Literal('off'), t.Literal('song'), t.Literal('queue')])),
-  startFromSongId: t.Optional(t.String()),
-});
-
-const LoopSchema = t.Object({
-  mode: t.Union([t.Literal('off'), t.Literal('song'), t.Literal('queue')]),
-});
-
-const UrlSchema = t.Object({
-  url: t.Optional(t.String()),
-});
-
-const QuickAddPlaylistSchema = t.Object({
-  url: t.Optional(t.String()),
-  maxVideos: t.Optional(t.Number()),
-});
-
-const SeekSchema = t.Object({
-  position: t.Number(),
-});
-
-const SongIdSchema = t.Object({
-  songId: t.String(),
-});
-
-const ReorderSchema = t.Object({
-  songIds: t.Array(t.String()),
-  target: t.Optional(t.Union([t.Literal('queue'), t.Literal('priority')])),
-});
 
 // ---------------------------------------------------------------------------
 // Plugin
@@ -454,6 +429,11 @@ export const playerPlugin = new Elysia({ prefix: '/player', name: 'player' })
         duration: video.duration,
         thumbnailUrl: video.thumbnailUrl,
         addedBy,
+        nickname: null,
+        artist: null,
+        album: null,
+        artwork: null,
+        volumeBoost: null,
         createdAt: new Date().toISOString(),
         requestedBy,
       }));

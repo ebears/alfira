@@ -8,14 +8,6 @@ import { ApiError } from '../lib/errors';
 import { parsePagination } from '../lib/pagination';
 import { canAccessPlaylist, getPlaylistSongCount, requirePlaylist } from '../lib/playlistAccess';
 import {
-  BulkRemoveSongsResponse,
-  MessageResponse,
-  PaginationMeta,
-  Playlist,
-  PlaylistDetail,
-  PlaylistSongEntry,
-} from '../lib/responseSchemas';
-import {
   buildSongFilterClause,
   buildSongOrderBy,
   buildSongSearchClause,
@@ -24,6 +16,22 @@ import {
 import { emitPlaylistUpdated } from '../lib/socket';
 import { syncPlaylistToTag } from '../lib/syncPlaylistToTag';
 import { validatePlaylistName } from '../lib/validation';
+import {
+  BulkRemoveSongsResponse,
+  MessageResponse,
+  PaginationMeta,
+  Playlist,
+  PlaylistAddSongSchema,
+  PlaylistCreateSchema,
+  PlaylistDetail,
+  PlaylistPatchSchema,
+  PlaylistRemoveSongsSchema,
+  PlaylistReorderSchema,
+  PlaylistSongEntry,
+  PlaylistVisibilitySchema,
+  PlaylistsQuerySchema,
+  SongsQuerySchema,
+} from '../shared/apiSchemas';
 import { db, tables } from '../shared/db';
 
 const { playlist: playlistTable, playlistSong: playlistSongTable } = tables;
@@ -50,32 +58,6 @@ function formatPlaylistSongWithSong(
     },
   };
 }
-
-// ---------------------------------------------------------------------------
-// Schemas
-// ---------------------------------------------------------------------------
-
-const PlaylistCreateSchema = t.Object({
-  name: t.Optional(t.String()),
-  tagNameLower: t.Optional(t.String()),
-});
-
-const PlaylistVisibilitySchema = t.Object({
-  isPrivate: t.Optional(t.Boolean()),
-  adminView: t.Optional(t.Boolean()),
-});
-
-const PlaylistAddSongSchema = t.Object({
-  songId: t.String(),
-});
-
-const PlaylistRemoveSongsSchema = t.Object({
-  songIds: t.Array(t.String(), { minLength: 1, maxLength: 5000 }),
-});
-
-const PlaylistReorderSchema = t.Object({
-  songIds: t.Array(t.String(), { minLength: 1, maxLength: 5000 }),
-});
 
 // ---------------------------------------------------------------------------
 // Plugin
@@ -153,7 +135,10 @@ export const playlistsPlugin = new Elysia({ prefix: '/playlists', name: 'playlis
         },
       };
     },
-    { response: { 200: t.Object({ items: t.Array(Playlist), pagination: PaginationMeta }) } }
+    {
+      query: PlaylistsQuerySchema,
+      response: { 200: t.Object({ items: t.Array(Playlist), pagination: PaginationMeta }) },
+    }
   )
   .post(
     '/',
@@ -558,7 +543,7 @@ export const playlistsPlugin = new Elysia({ prefix: '/playlists', name: 'playlis
         },
       };
     },
-    { response: { 200: PlaylistDetail } }
+    { query: SongsQuerySchema, response: { 200: PlaylistDetail } }
   )
   .patch(
     '/:id',
@@ -604,7 +589,7 @@ export const playlistsPlugin = new Elysia({ prefix: '/playlists', name: 'playlis
       emitPlaylistUpdated(formatPlaylist(updatedPlaylist, value));
       return updatedPlaylist;
     },
-    { body: PlaylistCreateSchema, response: { 200: Playlist } }
+    { body: PlaylistPatchSchema, response: { 200: Playlist } }
   )
   .patch(
     '/:id/reorder',

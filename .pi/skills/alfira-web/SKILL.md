@@ -151,11 +151,11 @@ const { data: playlist } = await api.playlists({ id }).get();
 
 ### Key files
 
-| File        | Purpose                                                                                           |
-| ----------- | ------------------------------------------------------------------------------------------------- |
-| `eden.ts`   | Eden Treaty client with custom fetcher (credentials, timeout, 401 refresh, rate limit extraction) |
-| `api.ts`    | Legacy centralized API functions — being phased out in favor of direct Eden calls                 |
-| `routes.ts` | Typed route helper functions wrapping Eden calls for common patterns                              |
+| File        | Purpose                                                                                                                                                                                                                                                                    |
+| ----------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `eden.ts`   | Eden Treaty client with custom fetcher (credentials, timeout, 401 refresh, rate limit extraction)                                                                                                                                                                          |
+| `api.ts`    | Public barrel — re-exports the route wrappers, the Eden client, and derived wire types                                                                                                                                                                                     |
+| `routes.ts` | Typed route wrapper functions (generic `unwrap` of `{ data, error }`, query building). Types are **inferred** from the server's Elysia schemas (`packages/server/src/shared/apiSchemas.ts`) — never annotate wrapper return types unless the wrapper reshapes the payload. |
 
 ### Custom fetcher (`eden.ts`)
 

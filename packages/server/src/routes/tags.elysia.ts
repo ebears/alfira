@@ -3,22 +3,11 @@ import { Elysia, t } from 'elysia';
 
 import { authPlugin } from '../lib/elysia-guards';
 import { ApiError } from '../lib/errors';
-import { Song as SongSchema, TagItem } from '../lib/responseSchemas';
 import { emitPlaylistUpdated } from '../lib/socket';
+import { Song as SongSchema, TagItem, TagPatchSchema } from '../shared/apiSchemas';
 import { db, tables } from '../shared/db';
 
 const { tag: tagTable, song: songTable, playlist: playlistTable } = tables;
-
-const TAG_COLORS = ['orange', 'sky', 'emerald', 'amber', 'violet'] as const;
-
-const TAG_COLOR_UNION = t.Union(TAG_COLORS.map((c) => t.Literal(c)));
-
-const TagPatchSchema = t.Partial(
-  t.Object({
-    canonicalName: t.String({ minLength: 1 }),
-    color: t.Nullable(TAG_COLOR_UNION),
-  })
-);
 
 // ---------------------------------------------------------------------------
 // Query helpers — extracted to avoid tsgo inference issues with Elysia handlers
