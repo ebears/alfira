@@ -2,7 +2,14 @@ import { type Song } from '@alfira/server/shared/types';
 import { MagnifyingGlassIcon, TagIcon, TrashIcon } from '@phosphor-icons/react';
 import { memo, useCallback, useEffect, useMemo, useState } from 'react';
 
-import { deleteTag, fetchTagSongs, fetchTags, updateTag } from '../api/api';
+import {
+  deleteTag,
+  fetchTagSongs,
+  fetchTags,
+  type TagColor,
+  type TagItem,
+  updateTag,
+} from '../api/api';
 import ConfirmModal from '../components/ConfirmModal';
 import EmptyState from '../components/EmptyState';
 import TagTicker from '../components/TagTicker';
@@ -13,12 +20,6 @@ import { useTagColors } from '../context/TagsContext';
 import { getTagColorClasses, TAG_COLORS } from '../utils/tagColors';
 
 const TAG_COLOR_NAMES = TAG_COLORS.map((c) => c.name);
-
-interface TagItem {
-  canonicalName: string;
-  nameLower: string;
-  color?: string | null;
-}
 
 export default function TagsPage() {
   const [allTags, setAllTags] = useState<TagItem[]>([]);
@@ -89,7 +90,7 @@ export default function TagsPage() {
   );
 
   const pickColor = useCallback(
-    async (color: string) => {
+    async (color: TagColor) => {
       if (!selected) {
         return;
       }
@@ -360,10 +361,10 @@ const ColorButton = memo(function ColorButton({
   isSelected,
   onPick,
 }: {
-  colorName: string;
+  colorName: TagColor;
   colorClasses: { bg: string; text: string; name: string };
   isSelected: boolean;
-  onPick: (color: string) => void;
+  onPick: (color: TagColor) => void;
 }) {
   const handleClick = useCallback(() => {
     onPick(colorName);

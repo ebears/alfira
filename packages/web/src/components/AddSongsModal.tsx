@@ -2,7 +2,9 @@ import { type PlaylistDetail, type Song } from '@alfira/server/shared';
 import { formatDuration } from '@alfira/server/shared';
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
-import { addSongToPlaylist, getSongsPage } from '../api/api';
+import { addSongToPlaylist, ApiError, getSongsPage } from '../api/api';
+import { useNotification } from '../hooks/useNotification';
+import { notifyUnlessRateLimit } from '../utils/api';
 import { Backdrop } from './Backdrop';
 import { ArtworkImage } from './ui/ArtworkImage';
 import { Button } from './ui/Button';
@@ -17,7 +19,7 @@ export default function AddSongsModal({
   onClose,
   onAdded,
 }: {
-  playlist: PlaylistDetail;
+  playlist: Pick<PlaylistDetail, 'id' | 'name' | 'songs'>;
   onClose: () => void;
   onAdded: () => void;
 }) {
@@ -32,6 +34,7 @@ export default function AddSongsModal({
   const [added, setAdded] = useState<Set<string>>(new Set(playlist.songs.map((ps) => ps.songId)));
   const [search, setSearch] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
+  const { notify } = useNotification();
   // eslint-disable-next-line unicorn/no-useless-undefined
   const timerRef = useRef<ReturnType<typeof setTimeout>>(undefined);
 
@@ -147,9 +150,13 @@ export default function AddSongsModal({
       try {
         await addSongToPlaylist(playlist.id, song.id);
         setAdded((prev) => new Set([...prev, song.id]));
-      } catch {
-        // Already in playlist — mark as added regardless.
-        setAdded((prev) => new Set([...prev, song.id]));
+      } catch (error) {
+        if (error instanceof ApiError && error.status === 409) {
+          // Already in playlist — treat as added.
+          setAdded((prev) => new Set([...prev, song.id]));
+        } else {
+          notifyUnlessRateLimit(error, 'Failed to add song to playlist.', notify);
+        }
       } finally {
         setAdding((prev) => {
           const n = new Set(prev);
@@ -158,7 +165,7 @@ export default function AddSongsModal({
         });
       }
     },
-    [playlist.id]
+    [playlist.id, notify]
   );
 
   const hasAddedNew = added.size > playlist.songs.length;

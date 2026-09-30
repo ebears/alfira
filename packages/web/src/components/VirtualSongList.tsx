@@ -2,7 +2,7 @@ import { type Playlist, type Song } from '@alfira/server/shared';
 import { memo, useCallback, useEffect, useMemo, useState } from 'react';
 
 import { useSongEdit } from '../context/SongEditContext';
-import SongCard from './SongCard';
+import { SongCard } from './SongCard';
 import { Skeleton } from './ui/Skeleton';
 import { VirtualList } from './VirtualList';
 
@@ -229,5 +229,3 @@ export const VirtualSongList = memo(function VirtualSongList({
     />
   );
 });
-
-export default VirtualSongList;

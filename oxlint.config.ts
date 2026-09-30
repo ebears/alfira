@@ -647,25 +647,7 @@ export default defineConfig({
       },
     },
 
-    // Eden-backed API routes: tsgo cannot resolve Eden's deeply-nested proxy
-    // types. Bun's transpiler handles them correctly. no-unsafe-* warnings
-    // are inherent until tsgo supports Elysia's generic types.
-    // .then(unwrap) is the cleanest pattern for unwrapping { data, error }.
-    {
-      files: ['packages/web/src/api/routes.ts'],
-      rules: {
-        '@typescript-eslint/no-explicit-any': 'off',
-        '@typescript-eslint/no-unsafe-assignment': 'off',
-        '@typescript-eslint/no-unsafe-member-access': 'off',
-        '@typescript-eslint/no-unsafe-call': 'off',
-        '@typescript-eslint/no-unsafe-return': 'off',
-        '@typescript-eslint/no-unsafe-argument': 'off',
-        'promise/prefer-await-to-then': 'off',
-        'unicorn/no-useless-undefined': 'off',
-      },
-    },
-
-    // authDerive: derive function uses `any` parameter because Elysia's
+    // elysia-guards: Elysia's deeply-nested generic types require
     // internal derive generic does not accept explicitly-typed destructuring.
     // The `any` is intentional and scoped — the function body immediately
     // accesses known-safe properties (cookie.session, request.headers).
@@ -691,16 +673,6 @@ export default defineConfig({
         '@typescript-eslint/no-unsafe-type-assertion': 'off',
         '@typescript-eslint/no-unnecessary-type-assertion': 'off',
         '@typescript-eslint/consistent-return': 'off',
-      },
-    },
-
-    // requests.elysia.ts: Elysia t.* schema nesting (e.g. t.Partial(t.Object({
-    // ... t.Optional(t.Union([t.Literal('track'), t.Literal('playlist')])) ... })))
-    // triggers max-nested-calls. The nesting is inherent to the Elysia schema DSL.
-    {
-      files: ['packages/server/src/routes/requests.elysia.ts'],
-      rules: {
-        'unicorn/max-nested-calls': 'off',
       },
     },
 
@@ -753,7 +725,6 @@ export default defineConfig({
     // single-use type params even when they're essential (e.g. get<T>(url): Promise<T>).
     {
       files: [
-        'packages/server/src/shared/api.ts',
         'packages/server/src/shared/shuffle.ts',
         'packages/server/src/lib/jwt.ts',
         'packages/web/src/hooks/useSocket.ts',

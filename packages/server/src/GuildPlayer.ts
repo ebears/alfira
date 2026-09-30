@@ -616,22 +616,22 @@ export class GuildPlayer {
     const merge = (s: QueuedSong): QueuedSong => {
       const updated = { ...s };
       if ('nickname' in fields) {
-        updated.nickname = fields.nickname ?? undefined;
+        updated.nickname = fields.nickname ?? null;
       }
       if ('artist' in fields) {
-        updated.artist = fields.artist ?? undefined;
+        updated.artist = fields.artist ?? null;
       }
       if ('album' in fields) {
-        updated.album = fields.album ?? undefined;
+        updated.album = fields.album ?? null;
       }
       if ('artwork' in fields) {
-        updated.artwork = fields.artwork ?? undefined;
+        updated.artwork = fields.artwork ?? null;
       }
       if ('tags' in fields) {
         updated.tags = fields.tags;
       }
       if ('volumeBoost' in fields) {
-        updated.volumeBoost = fields.volumeBoost ?? undefined;
+        updated.volumeBoost = fields.volumeBoost ?? null;
       }
       return updated;
     };

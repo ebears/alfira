@@ -1,10 +1,13 @@
 import { eq } from 'drizzle-orm';
-import { Elysia, t } from 'elysia';
+import { Elysia } from 'elysia';
 
 import { authPlugin } from '../lib/elysia-guards';
 import { ApiError } from '../lib/errors';
-import { GeneralSettings as GeneralSettingsSchema } from '../lib/responseSchemas';
 import { type GeneralSettings } from '../shared';
+import {
+  GeneralSettings as GeneralSettingsSchema,
+  GeneralSettingsPatchSchema,
+} from '../shared/apiSchemas';
 import { db, tables } from '../shared/db';
 import { refreshEnabledSources, SOURCE_DEFINITIONS } from '../startDiscord';
 
@@ -31,19 +34,6 @@ const SETTINGS_COLUMNS = {
   publicUrl: tables.guildSettings.publicUrl,
   enabledSources: tables.guildSettings.enabledSources,
 };
-
-const GeneralSettingsPatchSchema = t.Partial(
-  t.Object({
-    adminRoleIds: t.String({ minLength: 1 }),
-    voiceIdleTimeoutMinutes: t.Integer({ minimum: 1, maximum: 120 }),
-    afkNotificationChannelId: t.Nullable(t.String()),
-    requestNotificationChannelId: t.Nullable(t.String()),
-    notifyOnApproved: t.Boolean(),
-    notifyOnDenied: t.Boolean(),
-    publicUrl: t.Nullable(t.String()),
-    enabledSources: t.String({ minLength: 1 }),
-  })
-);
 
 // ---------------------------------------------------------------------------
 // Query helpers

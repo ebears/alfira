@@ -4,8 +4,10 @@ import crypto from 'node:crypto';
 
 import { getGuildId, refreshGuildId } from '../lib/config';
 import { authPlugin as macroAuth } from '../lib/elysia-guards';
+import { ApiError } from '../lib/errors';
 import { sign, verify } from '../lib/jwt';
 import { getClientIp } from '../lib/rateLimit';
+import { MessageResponse, UserResponse } from '../shared/apiSchemas';
 import { db, tables } from '../shared/db';
 import { logger } from '../shared/logger';
 
@@ -426,10 +428,7 @@ export const authPlugin = new Elysia({ name: 'auth' })
   .get('/login', ({ redirect, request }) => {
     const ip = getClientIp(request);
     if (!authRateLimit(ip)) {
-      return Response.json(
-        { error: 'Too many authentication attempts. Please try again in 15 minutes.' },
-        { status: 429 }
-      );
+      throw new ApiError(429, 'Too many authentication attempts. Please try again in 15 minutes.');
     }
     const params = new URLSearchParams({
       client_id: DISCORD_CLIENT_ID_,
@@ -445,29 +444,23 @@ export const authPlugin = new Elysia({ name: 'auth' })
     const url = new URL(request.url);
     const ip = getClientIp(request);
     if (!authRateLimit(ip)) {
-      return Response.json(
-        { error: 'Too many authentication attempts. Please try again in 15 minutes.' },
-        { status: 429 }
-      );
+      throw new ApiError(429, 'Too many authentication attempts. Please try again in 15 minutes.');
     }
     const code = url.searchParams.get('code');
     if (!code) {
-      return Response.json({ error: 'Missing authorization code.' }, { status: 400 });
+      throw new ApiError(400, 'Missing authorization code.');
     }
 
     // 1. Exchange code for Discord access token.
     const discordToken = await exchangeAuthorizationCode(code);
     if (!discordToken) {
-      return Response.json(
-        { error: 'Failed to exchange authorization code with Discord.' },
-        { status: 502 }
-      );
+      throw new ApiError(502, 'Failed to exchange authorization code with Discord.');
     }
 
     // 2. Fetch Discord identity.
     const discordUser = await fetchDiscordIdentity(discordToken);
     if (!discordUser) {
-      return Response.json({ error: 'Failed to fetch Discord user info.' }, { status: 502 });
+      throw new ApiError(502, 'Failed to fetch Discord user info.');
     }
 
     // 3. Check if setup has been completed.
@@ -513,10 +506,7 @@ export const authPlugin = new Elysia({ name: 'auth' })
     // 4. Normal flow — verify guild membership and get member roles.
     const rolesResult = await fetchGuildMemberRoles(discordUser.id);
     if (rolesResult === null || rolesResult === 'not-in-guild') {
-      return Response.json(
-        { error: 'You must be a member of the server to use this app.' },
-        { status: 403 }
-      );
+      throw new ApiError(403, 'You must be a member of the server to use this app.');
     }
     const memberRoles = rolesResult;
 
@@ -535,171 +525,167 @@ export const authPlugin = new Elysia({ name: 'auth' })
   })
 
   // ── /auth/refresh ── rotate tokens using refresh_token cookie
-  .post('/refresh', async ({ cookie }) => {
-    const rawRefreshToken = cookie[REFRESH_COOKIE_NAME]?.value;
-    // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
-    if (!rawRefreshToken || typeof rawRefreshToken !== 'string') {
-      logger.warn('Auth refresh failed: no refresh token cookie present');
-      return Response.json({ error: 'No refresh token provided.' }, { status: 401 });
-    }
+  .post(
+    '/refresh',
+    async ({ cookie }) => {
+      const rawRefreshToken = cookie[REFRESH_COOKIE_NAME]?.value;
+      // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
+      if (!rawRefreshToken || typeof rawRefreshToken !== 'string') {
+        logger.warn('Auth refresh failed: no refresh token cookie present');
+        throw new ApiError(401, 'No refresh token provided.');
+      }
 
-    // 1. Verify the refresh token signature and expiration.
-    const decoded = verify<{ discordId: string; type: string }>(rawRefreshToken, JWT_SECRET_);
-    if (!decoded) {
-      logger.warn('Auth refresh failed: JWT verification');
-      return Response.json({ error: 'Invalid or expired refresh token.' }, { status: 401 });
-    }
-    if (decoded.type !== 'refresh') {
-      logger.warn({ decodedType: decoded.type }, 'Auth refresh failed: invalid token type');
-      return Response.json({ error: 'Invalid token type.' }, { status: 401 });
-    }
+      // 1. Verify the refresh token signature and expiration.
+      const decoded = verify<{ discordId: string; type: string }>(rawRefreshToken, JWT_SECRET_);
+      if (!decoded) {
+        logger.warn('Auth refresh failed: JWT verification');
+        throw new ApiError(401, 'Invalid or expired refresh token.');
+      }
+      if (decoded.type !== 'refresh') {
+        logger.warn({ decodedType: decoded.type }, 'Auth refresh failed: invalid token type');
+        throw new ApiError(401, 'Invalid token type.');
+      }
 
-    // 2. Check if the refresh token exists in the database (not revoked).
-    const tokenHash = hashToken(rawRefreshToken);
-    const [storedToken] = await db
-      .select()
-      .from(refreshTokenTable)
-      .where(eq(refreshTokenTable.tokenHash, tokenHash))
-      .limit(1);
-    if (!storedToken) {
-      logger.warn(
-        { discordId: decoded.discordId },
-        'Auth refresh failed: token hash not found in DB (revoked or already burned)'
-      );
-      return Response.json({ error: 'Refresh token has been revoked.' }, { status: 401 });
-    }
+      // 2. Check if the refresh token exists in the database (not revoked).
+      const tokenHash = hashToken(rawRefreshToken);
+      const [storedToken] = await db
+        .select()
+        .from(refreshTokenTable)
+        .where(eq(refreshTokenTable.tokenHash, tokenHash))
+        .limit(1);
+      if (!storedToken) {
+        logger.warn(
+          { discordId: decoded.discordId },
+          'Auth refresh failed: token hash not found in DB (revoked or already burned)'
+        );
+        throw new ApiError(401, 'Refresh token has been revoked.');
+      }
 
-    // 3. Check if the refresh token has expired.
-    if (storedToken.expiresAt < new Date().toISOString()) {
-      logger.warn(
-        { discordId: decoded.discordId, expiresAt: storedToken.expiresAt, now: new Date() },
-        'Auth refresh failed: DB expiresAt has passed'
-      );
-      await db.delete(refreshTokenTable).where(eq(refreshTokenTable.id, storedToken.id));
-      return Response.json({ error: 'Refresh token has expired.' }, { status: 401 });
-    }
+      // 3. Check if the refresh token has expired.
+      if (storedToken.expiresAt < new Date().toISOString()) {
+        logger.warn(
+          { discordId: decoded.discordId, expiresAt: storedToken.expiresAt, now: new Date() },
+          'Auth refresh failed: DB expiresAt has passed'
+        );
+        await db.delete(refreshTokenTable).where(eq(refreshTokenTable.id, storedToken.id));
+        throw new ApiError(401, 'Refresh token has expired.');
+      }
 
-    // 4. Clean up expired tokens for this user (lazy cleanup).
-    await db
-      .delete(refreshTokenTable)
-      .where(
-        and(
-          eq(refreshTokenTable.discordId, decoded.discordId),
-          lt(refreshTokenTable.expiresAt, new Date().toISOString())
-        )
-      );
+      // 4. Clean up expired tokens for this user (lazy cleanup).
+      await db
+        .delete(refreshTokenTable)
+        .where(
+          and(
+            eq(refreshTokenTable.discordId, decoded.discordId),
+            lt(refreshTokenTable.expiresAt, new Date().toISOString())
+          )
+        );
 
-    // 5. Re-fetch user info from Discord (including admin status).
-    const setupDone = isSetupCompleted();
-    let username: string;
-    let avatar: string | null;
-    let isAdmin: boolean;
-    let isSetupAdmin = false;
-    let roles: string[] | undefined;
+      // 5. Re-fetch user info from Discord (including admin status).
+      const setupDone = isSetupCompleted();
+      let username: string;
+      let avatar: string | null;
+      let isAdmin: boolean;
+      let isSetupAdmin = false;
+      let roles: string[] | undefined;
 
-    if (!setupDone) {
-      try {
-        const profile = await withRetry(() => fetchDiscordUserProfile(decoded.discordId));
+      if (!setupDone) {
+        // The try wraps only the network call so an ApiError from the null check
+        // below is not swallowed by the "Discord unreachable" catch.
+        let profile: Awaited<ReturnType<typeof fetchDiscordUserProfile>>;
+        try {
+          profile = await withRetry(() => fetchDiscordUserProfile(decoded.discordId));
+        } catch (error) {
+          logger.warn(
+            {
+              discordId: decoded.discordId,
+              err: error instanceof Error ? error.message : String(error),
+            },
+            'Auth refresh failed: Discord unreachable (setup mode)'
+          );
+          throw new ApiError(503, 'Discord is temporarily unreachable. Please try again.');
+        }
         if (!profile) {
           logger.warn(
             { discordId: decoded.discordId },
             'Auth refresh failed: fetchDiscordUserProfile returned null (setup mode)'
           );
-          return Response.json(
-            { error: 'Unable to verify user identity. Please try again.' },
-            { status: 503 }
-          );
+          throw new ApiError(503, 'Unable to verify user identity. Please try again.');
         }
         username = profile.username;
         avatar = profile.avatar;
         isAdmin = true;
         isSetupAdmin = true;
-      } catch (error) {
-        logger.warn(
-          {
-            discordId: decoded.discordId,
-            err: error instanceof Error ? error.message : String(error),
-          },
-          'Auth refresh failed: Discord unreachable (setup mode)'
-        );
-        return Response.json(
-          { error: 'Discord is temporarily unreachable. Please try again.' },
-          { status: 503 }
-        );
-      }
-    } else {
-      try {
-        const userInfo = await withRetry(() => fetchUserAdminStatus(decoded.discordId));
+      } else {
+        let userInfo: Awaited<ReturnType<typeof fetchUserAdminStatus>>;
+        try {
+          userInfo = await withRetry(() => fetchUserAdminStatus(decoded.discordId));
+        } catch (error) {
+          logger.warn(
+            {
+              discordId: decoded.discordId,
+              err: error instanceof Error ? error.message : String(error),
+            },
+            'Auth refresh failed: Discord unreachable'
+          );
+          throw new ApiError(503, 'Discord is temporarily unreachable. Please try again.');
+        }
         if (!userInfo) {
           logger.warn(
             { discordId: decoded.discordId },
             'Auth refresh failed: fetchUserAdminStatus returned null (not in guild or Discord error)'
           );
-          return Response.json(
-            { error: 'Unable to verify user membership. Please try again.' },
-            { status: 503 }
-          );
+          throw new ApiError(503, 'Unable to verify user membership. Please try again.');
         }
         username = userInfo.username;
         avatar = userInfo.avatar;
         isAdmin = userInfo.isAdmin;
         roles = userInfo.roles;
-      } catch (error) {
-        logger.warn(
-          {
-            discordId: decoded.discordId,
-            err: error instanceof Error ? error.message : String(error),
-          },
-          'Auth refresh failed: Discord unreachable'
-        );
-        return Response.json(
-          { error: 'Discord is temporarily unreachable. Please try again.' },
-          { status: 503 }
-        );
       }
-    }
 
-    // 6. Burn the old refresh token now that Discord verification succeeded.
-    logger.info({ discordId: decoded.discordId }, 'Auth refresh succeeded — issuing new tokens');
-    await db.delete(refreshTokenTable).where(eq(refreshTokenTable.id, storedToken.id));
+      // 6. Burn the old refresh token now that Discord verification succeeded.
+      logger.info({ discordId: decoded.discordId }, 'Auth refresh succeeded — issuing new tokens');
+      await db.delete(refreshTokenTable).where(eq(refreshTokenTable.id, storedToken.id));
 
-    // 7. Generate new tokens.
-    const payload: {
-      discordId: string;
-      username: string;
-      avatar: string | null;
-      isAdmin: boolean;
-      isSetupAdmin?: boolean;
-      roles?: string[];
-    } = {
-      discordId: decoded.discordId,
-      username,
-      avatar,
-      isAdmin,
-    };
-    if (isSetupAdmin) {
-      payload.isSetupAdmin = true;
-    }
-    if (roles) {
-      payload.roles = roles;
-    }
-    const newAccessToken = generateAccessToken(payload);
-    const newRefreshToken = generateRefreshToken(decoded.discordId);
+      // 7. Generate new tokens.
+      const payload: {
+        discordId: string;
+        username: string;
+        avatar: string | null;
+        isAdmin: boolean;
+        isSetupAdmin?: boolean;
+        roles?: string[];
+      } = {
+        discordId: decoded.discordId,
+        username,
+        avatar,
+        isAdmin,
+      };
+      if (isSetupAdmin) {
+        payload.isSetupAdmin = true;
+      }
+      if (roles) {
+        payload.roles = roles;
+      }
+      const newAccessToken = generateAccessToken(payload);
+      const newRefreshToken = generateRefreshToken(decoded.discordId);
 
-    // 8. Store new refresh token.
-    const newTokenHash = hashToken(newRefreshToken);
-    const newExpiry = new Date(Date.now() + REFRESH_TOKEN_MAX_AGE_MS).toISOString();
-    await db.insert(refreshTokenTable).values({
-      tokenHash: newTokenHash,
-      discordId: decoded.discordId,
-      expiresAt: newExpiry,
-    });
+      // 8. Store new refresh token.
+      const newTokenHash = hashToken(newRefreshToken);
+      const newExpiry = new Date(Date.now() + REFRESH_TOKEN_MAX_AGE_MS).toISOString();
+      await db.insert(refreshTokenTable).values({
+        tokenHash: newTokenHash,
+        discordId: decoded.discordId,
+        expiresAt: newExpiry,
+      });
 
-    // 9. Set cookies and return user info.
-    setAuthCookies(cookie, newAccessToken, newRefreshToken);
+      // 9. Set cookies and return user info.
+      setAuthCookies(cookie, newAccessToken, newRefreshToken);
 
-    return { user: payload };
-  })
+      return { user: payload };
+    },
+    { response: { 200: UserResponse } }
+  )
 
   // ── /auth/me ── requires auth; returns current user
   .get(
@@ -711,21 +697,25 @@ export const authPlugin = new Elysia({ name: 'auth' })
       }
       return { user };
     },
-    { isAuth: true }
+    { isAuth: true, response: { 200: UserResponse } }
   )
 
   // ── /auth/logout ── revoke refresh token, clear cookies
-  .post('/logout', async ({ cookie }) => {
-    const rawRefreshToken = cookie[REFRESH_COOKIE_NAME]?.value;
-    // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
-    if (rawRefreshToken && typeof rawRefreshToken === 'string') {
-      try {
-        const tokenHash = hashToken(rawRefreshToken);
-        await db.delete(refreshTokenTable).where(eq(refreshTokenTable.tokenHash, tokenHash));
-      } catch {
-        logger.warn('Failed to revoke refresh token on logout');
+  .post(
+    '/logout',
+    async ({ cookie }) => {
+      const rawRefreshToken = cookie[REFRESH_COOKIE_NAME]?.value;
+      // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
+      if (rawRefreshToken && typeof rawRefreshToken === 'string') {
+        try {
+          const tokenHash = hashToken(rawRefreshToken);
+          await db.delete(refreshTokenTable).where(eq(refreshTokenTable.tokenHash, tokenHash));
+        } catch {
+          logger.warn('Failed to revoke refresh token on logout');
+        }
       }
-    }
-    clearAuthCookies(cookie);
-    return { message: 'Logged out.' };
-  });
+      clearAuthCookies(cookie);
+      return { message: 'Logged out.' };
+    },
+    { response: { 200: MessageResponse } }
+  );

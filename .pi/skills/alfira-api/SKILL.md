@@ -143,7 +143,7 @@ if (!song) {
 }
 ```
 
-The `onError` hook on `apiApp` catches `ApiError` and converts it to a JSON response:
+The shared `withApiErrors` hook (applied to the root app in `elysia-app.ts`, covering `/api` and `/auth` alike) catches `ApiError` and converts it to a JSON response:
 
 ```json
 { "error": "Song not found." }
@@ -151,23 +151,31 @@ The `onError` hook on `apiApp` catches `ApiError` and converts it to a JSON resp
 
 This keeps handler return types clean (plain data, never `Response | data` unions) so Elysia response schemas work without type assertions.
 
+**Ordering constraint**: `withApiErrors` must be applied before routes and child apps are registered. Elysia hooks only cover routes added after them in the chain — a hook added later does not cover earlier routes.
+
 ### Unexpected errors
 
-Non-`ApiError` exceptions are caught by `onError`, logged, and returned as `{ error: 'Internal server error.' }` with status 500.
+Non-`ApiError` exceptions are caught by the shared hook, logged, and returned as `{ error: 'Internal server error.' }` with status 500.
 
-## Response Schemas (`lib/responseSchemas.ts`)
+## Wire Schemas (`shared/apiSchemas.ts`)
 
-Shared Elysia `t` object schemas for Eden type inference. Adding a response schema as the third argument to `.get()`/`.post()`/etc. enables Eden to infer full response types on the frontend:
+The single source of truth for everything that crosses the HTTP boundary: request bodies, query params, and response payloads. The schemas serve three purposes:
+
+1. **Runtime validation** — Elysia validates requests and responses against them. Response validation **strips any field not declared in the schema**, so schemas define the actual wire output.
+2. **Eden Treaty type inference** — request and response types flow through `treaty<App>` to the web client automatically.
+3. **Derived TypeScript types** — `shared/types.ts` and `shared/api.ts` derive wire types via `typeof Schema.static`. Never hand-write a wire type; edit the schema instead.
 
 ```typescript
-import { SongListResponse } from '../lib/responseSchemas';
+import { Song } from '../shared/apiSchemas';
 
 app.get('/api/songs', handler, {
-  response: SongListResponse,
+  response: { 200: Song },
 });
 ```
 
-Response schemas cover songs, playlists, requests, tags, settings, permissions, setup, and pagination metadata.
+Prefer explicit `response: { 200: Schema }` per status code. Routes without a response schema fold the `onError` return shape into the inferred response union, which weakens client types. Error responses (4xx/5xx) are thrown as `ApiError`, returned by the shared `onError` hook, and bypass schema validation.
+
+When adding fields to a response schema, remember stripping: if the handler returns a field the schema omits (or omits one the schema requires), the response 422s at runtime.
 
 ## Adding a New Route
 
@@ -175,9 +183,9 @@ Response schemas cover songs, playlists, requests, tags, settings, permissions, 
 2. Export a plugin instance using `authPlugin`, Elysia guards, and response schemas:
 
 ```typescript
-import { Elysia, t } from 'elysia';
+import { Elysia } from 'elysia';
 import { authPlugin } from '../lib/elysia-guards';
-import { YourResponse } from '../lib/responseSchemas';
+import { YourResponse } from '../shared/apiSchemas';
 
 export const yourPlugin = new Elysia({ name: 'your-route' }).use(authPlugin).get(
   '/api/your-endpoint',

@@ -1,28 +1,31 @@
 // ---------------------------------------------------------------------------
-// Shared API types — consumed by the web client.
+// Shared API payload types — consumed by the web client.
 //
-// Runtime functions have moved to packages/web/src/api/routes.ts (backed by
-// Eden Treaty). When tsgo supports Elysia's generic types, the web client
-// will consume Eden directly and this file will be deleted entirely.
+// Every type here is derived from the Elysia schemas in ./apiSchemas, which
+// are the single source of truth for the wire contract. Never hand-write a
+// wire type — add or change the schema instead.
+//
+// Runtime functions live in packages/web/src/api/routes.ts (backed by Eden
+// Treaty). When the web client consumes Eden directly, wrapper-specific
+// types (FetchSongsOptions, BulkEditData, …) move to the wrappers and this
+// file shrinks to pure re-exports.
 // ---------------------------------------------------------------------------
 
 import {
-  type GeneralSettings,
-  type LoopMode,
-  type PaginatedResult,
-  type PaginationMeta,
-  type Playlist,
-  type PlaylistDetail,
-  type QueueState,
-  type RequestPreview,
-  type SetupChannel,
-  type SetupGuild,
-  type SetupRole,
-  type SetupStatus,
-  type Song,
-  type SongRequest,
-  type User,
-} from './types';
+  type BulkEditSchema,
+  type CreateRequestSchema,
+  type CreateRequestResult as CreateRequestResultSchema,
+  type GeneralSettingsPatchSchema,
+  type MyPermissionsResponse as MyPermissionsResponseSchema,
+  type PermissionsResponse as PermissionsResponseSchema,
+  type SetupCompleteSchema,
+  type SongPatchSchema,
+  type SongsQuerySchema,
+  type TAG_COLOR_UNION,
+  type TagItem as TagItemSchema,
+  type TagPatchSchema,
+} from './apiSchemas';
+import { type PaginatedResult, type SongRequest } from './types';
 
 // Re-export domain types (used by components that import from @alfira/server/shared)
 export type {
@@ -41,123 +44,61 @@ export type {
   Song,
   SongRequest,
   User,
-};
+} from './types';
 
 // ---------------------------------------------------------------------------
 // Songs
 // ---------------------------------------------------------------------------
 
-export interface FetchSongsOptions {
-  search?: string;
-  sort?: string;
-  order?: string;
-  tags?: string;
-  source?: string;
-}
+/** Query options for GET /api/songs (page/limit are wrapper parameters). */
+export type FetchSongsOptions = Omit<typeof SongsQuerySchema.static, 'page' | 'limit'>;
+
+/** PATCH /api/songs/:id body. */
+export type SongUpdateData = typeof SongPatchSchema.static;
+
+/** POST /api/songs/bulk-edit body (without ids, which is a wrapper parameter). */
+export type BulkEditData = Omit<typeof BulkEditSchema.static, 'ids'>;
 
 // ---------------------------------------------------------------------------
 // Requests
 // ---------------------------------------------------------------------------
 
-export interface RequestCreateData {
-  sourceUrl: string;
-  /** Explicitly request a playlist import — skips ?list= stripping. */
-  type?: 'playlist';
-  notifyDm?: boolean;
-  nickname?: string | null;
-  artist?: string | null;
-  album?: string | null;
-  artwork?: string | null;
-  tags?: string[];
-  volumeBoost?: number | null;
-}
+/** POST /api/requests body. */
+export type RequestCreateData = typeof CreateRequestSchema.static;
 
-export interface CreateRequestResult {
-  request?: SongRequest;
-  song?: Song;
-  songs?: Song[];
-  autoApproved: boolean;
-  importedCount?: number;
-  skippedCount?: number;
-  playlistTitle?: string;
-}
+export type CreateRequestResult = typeof CreateRequestResultSchema.static;
 
-export interface FetchRequestsResult {
-  items: SongRequest[];
-  pagination: PaginationMeta;
-}
+export type FetchRequestsResult = PaginatedResult<SongRequest>;
 
-export interface BulkEditData {
-  nickname?: string | null;
-  artist?: string | null;
-  album?: string | null;
-  artwork?: string | null;
-  tags?: string[];
-  volumeBoost?: number | null;
-  clearFields?: string[];
-}
+// ---------------------------------------------------------------------------
+// Tags
+// ---------------------------------------------------------------------------
 
-/**
- * Data for updating a song. Only provide fields you want to change.
- */
-export interface SongUpdateData {
-  nickname?: string | null;
-  artist?: string | null;
-  album?: string | null;
-  artwork?: string | null;
-  tags?: string[];
-  volumeBoost?: number | null;
-}
+export type TagItem = typeof TagItemSchema.static;
 
-export interface TagItem {
-  canonicalName: string;
-  nameLower: string;
-  color?: string | null;
-}
+/** Allowed tag color names. */
+export type TagColor = typeof TAG_COLOR_UNION.static;
+
+/** PATCH /api/tags/:nameLower body. */
+export type TagUpdateData = typeof TagPatchSchema.static;
 
 // ---------------------------------------------------------------------------
 // Setup
 // ---------------------------------------------------------------------------
 
-export interface CompleteSetupPayload {
-  guildId: string;
-  adminRoleIds: string;
-  voiceIdleTimeoutMinutes: number;
-  afkNotificationChannelId?: string | null;
-  requestNotificationChannelId?: string | null;
-  publicUrl?: string | null;
-  enabledSources?: string;
-}
+/** POST /api/setup/complete body. */
+export type CompleteSetupPayload = typeof SetupCompleteSchema.static;
 
 // ---------------------------------------------------------------------------
 // General Settings
 // ---------------------------------------------------------------------------
 
-export type GeneralSettingsUpdate = Partial<
-  Pick<
-    GeneralSettings,
-    | 'adminRoleIds'
-    | 'voiceIdleTimeoutMinutes'
-    | 'afkNotificationChannelId'
-    | 'requestNotificationChannelId'
-    | 'notifyOnApproved'
-    | 'notifyOnDenied'
-    | 'publicUrl'
-    | 'enabledSources'
-  >
->;
+/** PATCH /api/settings/general body. */
+export type GeneralSettingsUpdate = typeof GeneralSettingsPatchSchema.static;
 
 // ---------------------------------------------------------------------------
 // Permissions
 // ---------------------------------------------------------------------------
 
-export interface PermissionsResponse {
-  mapping: Record<string, string[]>;
-  roles: { id: string; name: string; color: number }[];
-  categories: { label: string; actions: string[] }[];
-  labels: Record<string, string>;
-}
-
-export interface MyPermissionsResponse {
-  permissions: string[];
-}
+export type PermissionsResponse = typeof PermissionsResponseSchema.static;
+export type MyPermissionsResponse = typeof MyPermissionsResponseSchema.static;

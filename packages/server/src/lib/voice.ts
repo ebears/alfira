@@ -6,24 +6,6 @@ import { connectToVoice, getClient, getUserVoiceChannel } from './gatewayState';
 import { lavalink } from './lavalink';
 
 /**
- * Verifies the requesting user is in a voice channel.
- * Throws ApiError if the bot is not ready or the user is not in voice.
- *
- * Uses gateway-tracked voice state (no REST call) for fast lookups.
- */
-export function requireUserInVoice(discordId: string): void {
-  const gateway = getClient();
-  if (!gateway || !gateway.isReady()) {
-    throw new ApiError(503, 'Discord bot is not ready yet.');
-  }
-
-  const voiceChannelId = getUserVoiceChannel(discordId);
-  if (!voiceChannelId) {
-    throw new ApiError(409, 'You must be in a voice channel to control playback.');
-  }
-}
-
-/**
  * Returns existing player or auto-joins the user's voice channel.
  * Throws ApiError on failure.
  */

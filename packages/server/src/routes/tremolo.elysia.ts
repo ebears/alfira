@@ -1,17 +1,14 @@
 import { eq } from 'drizzle-orm';
-import { Elysia, t } from 'elysia';
+import { Elysia } from 'elysia';
 
 import { authPlugin } from '../lib/elysia-guards';
-import { TremoloSettings as TremoloSettingsSchema } from '../lib/responseSchemas';
 import { syncAllFilters } from '../lib/syncAllFilters';
+import {
+  TremoloPatchSchema as TremoloSchema,
+  TremoloSettings as TremoloSettingsSchema,
+} from '../shared/apiSchemas';
 import { db, tables } from '../shared/db';
 import { DEFAULT_TREMOLO } from '../shared/filterDefaults';
-
-const TremoloSchema = t.Object({
-  enabled: t.Boolean(),
-  frequency: t.Number({ minimum: 0.1, maximum: 14 }),
-  depth: t.Number({ minimum: 0, maximum: 1 }),
-});
 
 function fetchTremoloSettings(): { enabled: boolean; frequency: number; depth: number } {
   const row = db.select().from(tables.guildSettings).where(eq(tables.guildSettings.id, 1)).get();

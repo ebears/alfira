@@ -41,8 +41,6 @@ export type {
   SetupStatus,
   Song,
   SongRequest,
-  SongRequestPlaylist,
-  SongRequestTrack,
   TimescaleSettings,
   TremoloSettings,
   User,

@@ -10,6 +10,7 @@ import { useCallback, useMemo, useOptimistic, useRef, useState } from 'react';
 import { addSongToPlaylist } from '../api/api';
 import { type MenuItem } from '../components/ContextMenu';
 import { useSongMenu } from '../context/SongMenuContext';
+import { apiErrorMessage } from '../utils/api';
 import { useNotification } from './useNotification';
 
 interface UseSongActionsOptions {
@@ -58,8 +59,8 @@ export function useSongActions({
       try {
         await addSongToPlaylist(playlistId, song.id);
         setAddedTo((prev) => new Set([...prev, playlistId]));
-      } catch {
-        notify('Failed to add song to playlist', 'error');
+      } catch (error) {
+        notify(apiErrorMessage(error, 'Failed to add song to playlist'), 'error');
       }
     },
     [song.id, addOptimistic, notify]

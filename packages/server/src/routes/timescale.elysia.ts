@@ -1,21 +1,17 @@
 import { eq } from 'drizzle-orm';
-import { Elysia, t } from 'elysia';
+import { Elysia } from 'elysia';
 
 import { getGuildId } from '../lib/config';
 import { authPlugin } from '../lib/elysia-guards';
-import { TimescaleSettings as TimescaleSettingsSchema } from '../lib/responseSchemas';
 import { emitPlayerUpdate } from '../lib/socket';
 import { syncAllFilters } from '../lib/syncAllFilters';
+import {
+  TimescalePatchSchema as TimescaleSchema,
+  TimescaleSettings as TimescaleSettingsSchema,
+} from '../shared/apiSchemas';
 import { db, tables } from '../shared/db';
 import { DEFAULT_TIMESCALE } from '../shared/filterDefaults';
 import { getPlayer } from '../startDiscord';
-
-const TimescaleSchema = t.Object({
-  enabled: t.Boolean(),
-  speed: t.Number({ minimum: 0.5, maximum: 2 }),
-  pitch: t.Number({ minimum: 0.5, maximum: 2 }),
-  rate: t.Number({ minimum: 0.5, maximum: 2 }),
-});
 
 type TimescaleSettings = typeof TimescaleSchema.static;
 

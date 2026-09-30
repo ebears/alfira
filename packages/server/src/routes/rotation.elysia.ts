@@ -1,16 +1,14 @@
 import { eq } from 'drizzle-orm';
-import { Elysia, t } from 'elysia';
+import { Elysia } from 'elysia';
 
 import { authPlugin } from '../lib/elysia-guards';
-import { RotationSettings as RotationSettingsSchema } from '../lib/responseSchemas';
 import { syncAllFilters } from '../lib/syncAllFilters';
+import {
+  RotationPatchSchema as RotationSchema,
+  RotationSettings as RotationSettingsSchema,
+} from '../shared/apiSchemas';
 import { db, tables } from '../shared/db';
 import { DEFAULT_ROTATION } from '../shared/filterDefaults';
-
-const RotationSchema = t.Object({
-  enabled: t.Boolean(),
-  rotationHz: t.Number({ minimum: 0, maximum: 1 }),
-});
 
 function fetchRotationSettings(): { enabled: boolean; rotationHz: number } {
   const row = db.select().from(tables.guildSettings).where(eq(tables.guildSettings.id, 1)).get();

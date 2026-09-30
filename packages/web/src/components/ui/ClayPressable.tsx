@@ -241,5 +241,3 @@ export function ClayPressable({
     </Component>
   );
 }
-
-export default ClayPressable;

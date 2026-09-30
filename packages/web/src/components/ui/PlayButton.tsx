@@ -61,5 +61,3 @@ export const PlayButton = memo(function PlayButton({
     </Button>
   );
 });
-
-export default PlayButton;

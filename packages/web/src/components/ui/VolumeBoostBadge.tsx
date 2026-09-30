@@ -25,5 +25,3 @@ export const VolumeBoostBadge = memo(function VolumeBoostBadge({
     </span>
   );
 });
-
-export default VolumeBoostBadge;

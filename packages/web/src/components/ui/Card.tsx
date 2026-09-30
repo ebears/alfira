@@ -36,5 +36,3 @@ export const Card = memo(function Card({
 
   return card;
 });
-
-export default Card;

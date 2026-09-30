@@ -5,7 +5,7 @@ import { memo, useCallback, useMemo, useRef, useState } from 'react';
 
 import { useScrollObserver } from '../hooks/useScrollObserver';
 import { SortableGridProvider, useSortableGridItem } from '../hooks/useSortableMasonicGrid';
-import SongCard from './SongCard';
+import { SongCard } from './SongCard';
 import { Skeleton } from './ui/Skeleton';
 
 // ---------------------------------------------------------------------------
@@ -393,5 +393,3 @@ export const VirtualSongGrid = memo(function VirtualSongGrid({
 
   return gridContent;
 });
-
-export default VirtualSongGrid;

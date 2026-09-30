@@ -115,7 +115,7 @@ export function buildSongFilterClause(
 // Source URL → LIKE patterns for server-side source filtering.
 // Must mirror the web's HOST_TO_SOURCE map in packages/web/src/utils/source.ts.
 // ---------------------------------------------------------------------------
-export const SOURCE_LIKE_PATTERNS: Record<string, string[]> = {
+const SOURCE_LIKE_PATTERNS: Record<string, string[]> = {
   youtube: ['%youtube.com%', '%youtu.be%'],
   soundcloud: ['%soundcloud.com%'],
   spotify: ['%spotify.com%'],

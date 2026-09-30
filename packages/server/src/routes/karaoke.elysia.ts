@@ -1,19 +1,14 @@
 import { eq } from 'drizzle-orm';
-import { Elysia, t } from 'elysia';
+import { Elysia } from 'elysia';
 
 import { authPlugin } from '../lib/elysia-guards';
-import { KaraokeSettings as KaraokeSettingsSchema } from '../lib/responseSchemas';
 import { syncAllFilters } from '../lib/syncAllFilters';
+import {
+  KaraokePatchSchema as KaraokeSchema,
+  KaraokeSettings as KaraokeSettingsSchema,
+} from '../shared/apiSchemas';
 import { db, tables } from '../shared/db';
 import { DEFAULT_KARAOKE } from '../shared/filterDefaults';
-
-const KaraokeSchema = t.Object({
-  enabled: t.Boolean(),
-  level: t.Number({ minimum: 0, maximum: 1 }),
-  monoLevel: t.Number({ minimum: 0, maximum: 1 }),
-  filterBand: t.Number({ minimum: 50, maximum: 10000 }),
-  filterWidth: t.Number({ minimum: 10, maximum: 10000 }),
-});
 
 type KaraokeSettings = typeof KaraokeSchema.static;
 

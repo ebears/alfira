@@ -7,16 +7,6 @@ import { db, tables } from '../shared/db';
 import { getClient, getUserVoiceChannel } from './gatewayState';
 
 // ---------------------------------------------------------------------------
-// Auth context type — kept for backward compatibility with route helpers
-// that still reference it.
-// ---------------------------------------------------------------------------
-
-export interface AuthContext {
-  user: User | null;
-  isAdmin: boolean;
-}
-
-// ---------------------------------------------------------------------------
 // Helper — verify the session cookie and return the user (or null).
 // Shared by requireAuth and all macro resolve functions.
 // ---------------------------------------------------------------------------

@@ -11,6 +11,11 @@ const baseSong: Song = {
   duration: 180,
   thumbnailUrl: 'https://example.com/thumb.jpg',
   addedBy: 'user-1',
+  nickname: null,
+  artist: null,
+  album: null,
+  artwork: null,
+  volumeBoost: null,
   createdAt: '2024-01-01T00:00:00.000Z',
 };
 
