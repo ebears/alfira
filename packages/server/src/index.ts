@@ -125,8 +125,6 @@ function runMigrations(): void {
 // ---------------------------------------------------------------------------
 function startNodeLink(): Promise<void> {
   return new Promise((resolve) => {
-    /* eslint-disable @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access */
-    // @ts-expect-error Bun global
     const proc = Bun.spawn(['bun', 'src/index.ts'], {
       cwd: NODELINK_HOME,
       stdout: 'pipe',
@@ -134,14 +132,12 @@ function startNodeLink(): Promise<void> {
       env: { ...process.env, NODELINK_AUTHORIZATION: 'nodelink-internal' },
     });
     nodelinkProcess = proc;
-    /* eslint-enable @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access */
 
     // Fire-and-forget: consume stdout. ReadableStream chunks may contain
     // partial lines — a long line split across chunks becomes two log
     // entries, which matches the Node.js EventEmitter behavior this replaces.
     void (async () => {
       const decoder = new TextDecoder();
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion, @typescript-eslint/no-unsafe-member-access
       for await (const chunk of proc.stdout as ReadableStream<Uint8Array>) {
         for (const line of decoder.decode(chunk).split('\n')) {
           const trimmed = line.trimEnd();
@@ -155,7 +151,6 @@ function startNodeLink(): Promise<void> {
     // Fire-and-forget: consume stderr, suppressing git "fatal:" noise.
     void (async () => {
       const decoder = new TextDecoder();
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion, @typescript-eslint/no-unsafe-member-access
       for await (const chunk of proc.stderr as ReadableStream<Uint8Array>) {
         for (const line of decoder.decode(chunk).split('\n')) {
           const trimmed = line.trimEnd();
