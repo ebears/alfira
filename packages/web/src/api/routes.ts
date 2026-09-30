@@ -20,7 +20,8 @@ import {
   type TagUpdateData,
 } from '@alfira/server/shared';
 
-import { api, ApiError } from './eden';
+import { apiErrorFromTreatyError, type TreatyError } from '../utils/api';
+import { api } from './eden';
 
 const $ = api;
 
@@ -30,23 +31,12 @@ const $ = api;
 
 // Eden's TreatyResponse: success carries `data` + `error: null`, failure
 // carries `data: null` + error details. `status`/`value` are `unknown` in
-// Eden's types; the runtime shapes are narrowed below.
-type TreatyResult<T> =
-  | { data: T; error: null }
-  | { data: null; error: { status: unknown; value: unknown } };
+// Eden's types; the runtime shapes are narrowed in apiErrorFromTreatyError.
+type TreatyResult<T> = { data: T; error: null } | { data: null; error: TreatyError };
 
 function unwrap<T>(result: TreatyResult<T>): T {
   if (result.error) {
-    const { status, value } = result.error;
-    const body = (typeof value === 'object' && value !== null ? value : {}) as {
-      error?: string;
-      code?: string;
-    };
-    throw new ApiError(
-      body.error ?? `API error: ${String(status)}`,
-      Number(status) || 0,
-      body.code
-    );
+    throw apiErrorFromTreatyError(result.error);
   }
   return result.data;
 }
