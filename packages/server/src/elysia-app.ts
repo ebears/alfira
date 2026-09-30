@@ -6,7 +6,7 @@ import { join } from 'node:path';
 
 import { API_SECURITY_HEADERS } from './lib/apiResponse';
 import { VERSION } from './lib/config';
-import { ApiError } from './lib/errors';
+import { withApiErrors } from './lib/errors';
 import { lavalink } from './lib/lavalink';
 import { registerClient, unregisterClient, type WsClient } from './lib/socket';
 import { verifySessionToken } from './middleware/requireAuth';
@@ -81,21 +81,6 @@ export function createApp() {
         set.headers[key] = value;
       }
     })
-    .error({ ApiError })
-    .onError(({ error, code, set }) => {
-      if (code === 'ApiError') {
-        // `error` is typed as ApiError — no instanceof needed
-        set.status = error.status;
-        return { error: error.message };
-      }
-      // Unexpected error — log and return 500.
-      logger.error(
-        { err: error instanceof Error ? error.message : JSON.stringify(error) },
-        'Unhandled API error'
-      );
-      set.status = 500;
-      return { error: 'Internal server error.' };
-    })
     .get('/version', () => ({ version: VERSION }), { response: { 200: VersionResponse } })
     .use(setupPlugin)
     .guard(
@@ -126,14 +111,19 @@ export function createApp() {
 
   const authApp = new Elysia({ prefix: '/auth', name: 'auth-app' }).use(authPlugin);
 
-  const app = new Elysia({
-    systemRouter: true,
-    normalize: true,
-    name: 'root',
-    // Precompile routes at startup in production, eliminating cold-start
-    // latency on the first request to each route.
-    precompile: process.env.NODE_ENV === 'production',
-  })
+  // Shared ApiError → JSON error mapping for every route (/api and /auth).
+  // Must be applied before routes and child apps are registered — Elysia
+  // hooks only cover routes added after them in the chain.
+  const app = withApiErrors(
+    new Elysia({
+      systemRouter: true,
+      normalize: true,
+      name: 'root',
+      // Precompile routes at startup in production, eliminating cold-start
+      // latency on the first request to each route.
+      precompile: process.env.NODE_ENV === 'production',
+    })
+  )
     .use(
       swagger({
         path: '/docs',

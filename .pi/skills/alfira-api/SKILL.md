@@ -143,7 +143,7 @@ if (!song) {
 }
 ```
 
-The `onError` hook on `apiApp` catches `ApiError` and converts it to a JSON response:
+The shared `withApiErrors` hook (applied to the root app in `elysia-app.ts`, covering `/api` and `/auth` alike) catches `ApiError` and converts it to a JSON response:
 
 ```json
 { "error": "Song not found." }
@@ -151,9 +151,11 @@ The `onError` hook on `apiApp` catches `ApiError` and converts it to a JSON resp
 
 This keeps handler return types clean (plain data, never `Response | data` unions) so Elysia response schemas work without type assertions.
 
+**Ordering constraint**: `withApiErrors` must be applied before routes and child apps are registered. Elysia hooks only cover routes added after them in the chain — a hook added later does not cover earlier routes.
+
 ### Unexpected errors
 
-Non-`ApiError` exceptions are caught by `onError`, logged, and returned as `{ error: 'Internal server error.' }` with status 500.
+Non-`ApiError` exceptions are caught by the shared hook, logged, and returned as `{ error: 'Internal server error.' }` with status 500.
 
 ## Wire Schemas (`shared/apiSchemas.ts`)
 
@@ -171,7 +173,7 @@ app.get('/api/songs', handler, {
 });
 ```
 
-Prefer explicit `response: { 200: Schema }` per status code. Routes without a response schema fold the `onError` return shape into the inferred response union, which weakens client types. Error responses (4xx/5xx) are returned as raw `Response` objects or via `onError` and bypass schema validation.
+Prefer explicit `response: { 200: Schema }` per status code. Routes without a response schema fold the `onError` return shape into the inferred response union, which weakens client types. Error responses (4xx/5xx) are thrown as `ApiError`, returned by the shared `onError` hook, and bypass schema validation.
 
 When adding fields to a response schema, remember stripping: if the handler returns a field the schema omits (or omits one the schema requires), the response 422s at runtime.
 
