@@ -21,7 +21,7 @@ export interface WsClient {
 
 const clients = new Set<WsClient>();
 
-export function getCompressorSettings(): CompressorSettings | null {
+function getCompressorSettings(): CompressorSettings | null {
   const row = db
     .select({
       enabled: tables.guildSettings.compressorEnabled,

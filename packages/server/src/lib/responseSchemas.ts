@@ -47,7 +47,7 @@ export const Song = t.Object({
 // QueuedSong (Song + requestedBy)
 // ---------------------------------------------------------------------------
 
-export const QueuedSong = t.Object({
+const QueuedSong = t.Object({
   id: t.String(),
   title: t.String(),
   sourceUrl: t.String(),
@@ -84,19 +84,6 @@ export const QueueState = t.Object({
   timescaleSpeed: t.Optional(t.Number()),
   nodeLinkPosition: t.Nullable(t.Number()),
   nodeLinkTime: t.Nullable(t.Number()),
-});
-
-// ---------------------------------------------------------------------------
-// User
-// ---------------------------------------------------------------------------
-
-export const User = t.Object({
-  discordId: t.String(),
-  username: t.String(),
-  avatar: t.Nullable(t.String()),
-  isAdmin: t.Boolean(),
-  isSetupAdmin: t.Optional(t.Boolean()),
-  roles: t.Optional(t.Array(t.String())),
 });
 
 // ---------------------------------------------------------------------------
@@ -201,7 +188,7 @@ export const FiltersData = t.Object({
 // GeneralSettings
 // ---------------------------------------------------------------------------
 
-export const AvailableSource = t.Object({
+const AvailableSource = t.Object({
   key: t.String(),
   displayName: t.String(),
   requiresCredentials: t.Boolean(),
@@ -247,28 +234,6 @@ export const SetupRole = t.Object({
 export const SetupChannel = t.Object({
   id: t.String(),
   name: t.String(),
-});
-
-// ---------------------------------------------------------------------------
-// Permissions
-// ---------------------------------------------------------------------------
-
-const PermissionsCategory = t.Object({
-  label: t.String(),
-  actions: t.Array(t.String()),
-});
-
-const PermissionsRole = t.Object({
-  id: t.String(),
-  name: t.String(),
-  color: t.Number(),
-});
-
-export const PermissionsResponse = t.Object({
-  mapping: t.Record(t.String(), t.Array(t.String())),
-  roles: t.Array(PermissionsRole),
-  categories: t.Array(PermissionsCategory),
-  labels: t.Record(t.String(), t.String()),
 });
 
 // ---------------------------------------------------------------------------
@@ -357,10 +322,6 @@ export const MessageResponse = t.Object({
   message: t.String(),
 });
 
-export const SuccessResponse = t.Object({
-  success: t.Boolean(),
-});
-
 // ---------------------------------------------------------------------------
 // Player-specific mutation responses
 // ---------------------------------------------------------------------------
@@ -390,19 +351,6 @@ export const PlaylistQueuedResponse = t.Object({
 // Song bulk operation responses
 // ---------------------------------------------------------------------------
 
-export const BulkDeleteResponse = t.Object({
-  deleted: t.Number(),
-});
-
-export const BulkEditResponse = t.Object({
-  updated: t.Number(),
-});
-
-export const BulkTagResponse = t.Object({
-  updated: t.Number(),
-  tags: t.Array(t.String()),
-});
-
 export const BulkRemoveSongsResponse = t.Object({
   removed: t.Number(),
 });
@@ -410,11 +358,6 @@ export const BulkRemoveSongsResponse = t.Object({
 // ---------------------------------------------------------------------------
 // Permissions response
 // ---------------------------------------------------------------------------
-
-export const PermissionUpdateResponse = t.Object({
-  action: t.String(),
-  roleIds: t.Array(t.String()),
-});
 
 export const MyPermissionsResponse = t.Object({
   permissions: t.Array(t.String()),
@@ -469,21 +412,4 @@ export const CreateRequestResult = t.Object({
   importedCount: t.Optional(t.Number()),
   skippedCount: t.Optional(t.Number()),
   playlistTitle: t.Optional(t.String()),
-});
-
-export const ApproveRequestResponse = t.Object({
-  request: SongRequest,
-  songs: t.Optional(t.Array(Song)),
-});
-
-export const DenyRequestResponse = t.Object({
-  request: SongRequest,
-});
-
-// ---------------------------------------------------------------------------
-// Play count (for play endpoint)
-// ---------------------------------------------------------------------------
-
-export const PlayResponse = t.Object({
-  message: t.String(),
 });

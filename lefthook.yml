@@ -5,5 +5,7 @@ pre-commit:
       run: bun run lint
     format:
       run: bun run format:check
+    knip:
+      run: bun run knip
     test:
       run: bun test

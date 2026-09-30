@@ -22,7 +22,7 @@ export interface Notification {
   type: 'success' | 'error';
 }
 
-export type NotifyFn = (message: string, type: 'success' | 'error', ms?: number) => void;
+type NotifyFn = (message: string, type: 'success' | 'error', ms?: number) => void;
 
 interface NotificationContextValue {
   notification: Notification | null;

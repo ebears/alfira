@@ -6,7 +6,9 @@
       "entry": ["src/utils/unregisterCommands.ts"]
     },
     "packages/web": {
-      "entry": ["src/main.tsx"]
+      "entry": ["src/main.tsx"],
+      "ignoreFiles": ["src/index.css"],
+      "ignoreDependencies": ["tailwindcss"]
     }
   }
 }

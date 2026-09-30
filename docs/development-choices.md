@@ -60,7 +60,7 @@ The `oxlint.config.ts` is the most detailed config file in the project (300+ lin
 
 Two more tools round out the quality pipeline:
 
-- **[knip](https://knip.dev/)** finds unused files, dependencies, and exports. Run `bunx knip` periodically — it catches dead code that the linter can't see (unused exports, orphaned files, stale dependencies).
+- **[knip](https://knip.dev/)** finds unused files, dependencies, and exports. It runs in `bun run check` — it catches dead code that the linter can't see (unused exports, orphaned files, stale dependencies).
 - **[lefthook](https://github.com/evilmartians/lefthook)** runs lint, format check, and tests automatically on `git commit`. Install once with `bunx lefthook install` and every commit gets the same checks as CI — no more "works on my machine but fails in CI" surprises.
 
 Together with `oxlint --deny-warnings`, these create a ratchet: the bar never goes down, and violations are caught as early as possible (on save → on commit → in CI).

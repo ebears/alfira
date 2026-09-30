@@ -1,7 +1,7 @@
 import { type SongRequest } from '@alfira/server/shared';
 import { memo, useCallback, useMemo } from 'react';
 
-import RequestCard from './RequestCard';
+import { RequestCard } from './RequestCard';
 import { Skeleton } from './ui/Skeleton';
 import { VirtualList } from './VirtualList';
 
@@ -9,7 +9,7 @@ import { VirtualList } from './VirtualList';
 // Types
 // ---------------------------------------------------------------------------
 
-export interface VirtualRequestListProps {
+interface VirtualRequestListProps {
   items: SongRequest[];
   isLoading: boolean;
   isFetching: boolean;
@@ -110,5 +110,3 @@ export const VirtualRequestList = memo(function VirtualRequestList({
     />
   );
 });
-
-export default VirtualRequestList;

@@ -4,7 +4,7 @@ const SIZE = 14;
 
 type IconProps = Omit<SVGProps<SVGSVGElement>, 'width' | 'height'>;
 
-export function YouTubeIcon(props: IconProps) {
+function YouTubeIcon(props: IconProps) {
   return (
     <svg
       xmlns='http://www.w3.org/2000/svg'
@@ -23,7 +23,7 @@ export function YouTubeIcon(props: IconProps) {
   );
 }
 
-export function SoundCloudIcon(props: IconProps) {
+function SoundCloudIcon(props: IconProps) {
   return (
     <svg
       xmlns='http://www.w3.org/2000/svg'
@@ -56,7 +56,7 @@ export function SoundCloudIcon(props: IconProps) {
   );
 }
 
-export function SpotifyIcon(props: IconProps) {
+function SpotifyIcon(props: IconProps) {
   return (
     <svg
       xmlns='http://www.w3.org/2000/svg'
@@ -74,7 +74,7 @@ export function SpotifyIcon(props: IconProps) {
   );
 }
 
-export function AppleMusicIcon(props: IconProps) {
+function AppleMusicIcon(props: IconProps) {
   return (
     <svg
       xmlns='http://www.w3.org/2000/svg'
@@ -110,7 +110,7 @@ export function AppleMusicIcon(props: IconProps) {
   );
 }
 
-export function TidalIcon(props: IconProps) {
+function TidalIcon(props: IconProps) {
   return (
     <svg
       xmlns='http://www.w3.org/2000/svg'
@@ -134,7 +134,7 @@ export function TidalIcon(props: IconProps) {
   );
 }
 
-export function GoogleDriveIcon(props: IconProps) {
+function GoogleDriveIcon(props: IconProps) {
   return (
     <svg
       xmlns='http://www.w3.org/2000/svg'

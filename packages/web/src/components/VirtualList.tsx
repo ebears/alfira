@@ -253,5 +253,3 @@ function VirtualListInner<T>({
 
 // Cast to preserve generic type through memo.
 export const VirtualList = memo(VirtualListInner) as typeof VirtualListInner;
-
-export default VirtualList;

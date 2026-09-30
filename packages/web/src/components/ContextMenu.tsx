@@ -19,7 +19,7 @@ import { Button } from './ui/Button';
 
 // --- Types ---
 
-export interface SubmenuItem {
+interface SubmenuItem {
   id: string;
   label: string;
   disabled?: boolean;

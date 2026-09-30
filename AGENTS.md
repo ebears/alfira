@@ -23,6 +23,7 @@ The bot and API run in a **single Bun process**. For detailed architecture (star
 | Linting      | oxlint + oxfmt                                |
 | Typechecking | oxlint (--type-aware --type-check, uses tsgo) |
 | Testing      | Bun's built-in test runner                    |
+| Dead code    | knip                                          |
 
 ## Design Principles
 
@@ -34,7 +35,7 @@ Every decision in this project traces back to one of these. The agent should fol
 - **Web UI as primary interface** — The Discord bot is the playback engine; the web app is the control plane. This avoids Discord's rate limits and UX constraints.
 - **Audio is audio — no assumptions about content** — Works equally as a music bot or tabletop audio player. The data model (songs, playlists, tags) is content-type-agnostic: a pop song and an hour-long dungeon ambience are the same shape.
 - **Single source of truth** — Every concept, pattern, and piece of knowledge has one canonical home. Before creating something new, check if it already exists or can be extended. If nothing fits and your change would duplicate what already exists across files, extract the commonality into a shared location first. This applies as much to UI patterns (one toast, one button variant, one data-fetching hook) as it does to types and utilities. Copy-pasting is a last resort, not a first move.
-- **Strict linting — zero warnings, zero excuses** — The linter is configured for maximum correctness signal with minimal noise. Warnings are errors (`--deny-warnings`). Stale disable directives are errors (`reportUnusedDisableDirectives`). Type-aware rules run everywhere. Every PR must pass `bun run check` (lint, format, typecheck, and tests) with zero diagnostics. This isn't pedantry — it's a quality ratchet that prevents drift and catches real bugs before they reach production.
+- **Strict linting — zero warnings, zero excuses** — The linter is configured for maximum correctness signal with minimal noise. Warnings are errors (`--deny-warnings`). Stale disable directives are errors (`reportUnusedDisableDirectives`). Type-aware rules run everywhere. Every PR must pass `bun run check` (lint, format, dead-code check, typecheck, and tests) with zero diagnostics. This isn't pedantry — it's a quality ratchet that prevents drift and catches real bugs before they reach production.
 
 ## Development Commands
 
@@ -51,7 +52,7 @@ bun setup:nodelink
 # Build the web UI (also run after web/src changes during a bun dev session)
 bun run web:build
 
-# Lint + typecheck + format + tests (run before committing)
+# Lint + typecheck + format + dead code + tests (run before committing)
 bun run check
 
 # Run tests only
@@ -78,9 +79,11 @@ See the `alfira-database` skill for full details.
 ## Code Style
 
 - oxlint + oxfmt for linting, typechecking, and formatting
+- knip for unused files, dependencies, and exports
 - Typechecking uses oxlint's `--type-aware --type-check` flags, which leverage tsgo (the Go-based TypeScript compiler) for full type resolution — no separate `typescript` dependency needed
 - Run `bun run check` before committing
 - CI runs `bun run check` — code must pass before merging
+- When editing `knip.json`: a workspace `entry` list **replaces** knip's default patterns (`src/{index,cli,main}.*`) rather than adding to them, and files referenced by a workspace's `package.json` (`main`, `exports`, `dev`/`build` scripts) are already entries — only list what the manifest can't see (e.g. the standalone `unregisterCommands.ts` script)
 
 ## Domain Knowledge
 

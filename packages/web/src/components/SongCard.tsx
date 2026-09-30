@@ -417,5 +417,3 @@ function SongCardInner({
 SongCardInner.displayName = 'SongCard';
 
 export const SongCard = React.memo(SongCardInner);
-
-export default SongCard;

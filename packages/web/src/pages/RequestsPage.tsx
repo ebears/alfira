@@ -8,7 +8,7 @@ import { Button } from '../components/ui/Button';
 import Checkbox from '../components/ui/Checkbox';
 import { ErrorBanner } from '../components/ui/ErrorBanner';
 import { PageHeader } from '../components/ui/PageHeader';
-import VirtualRequestList from '../components/VirtualRequestList';
+import { VirtualRequestList } from '../components/VirtualRequestList';
 import { useAdminView } from '../context/AdminViewContext';
 import { useAuth } from '../context/AuthContext';
 import { usePaginatedData } from '../hooks/usePaginatedData';

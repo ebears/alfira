@@ -31,5 +31,3 @@ export const DurationBadge = memo(function DurationBadge({
     </span>
   );
 });
-
-export default DurationBadge;

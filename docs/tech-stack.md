@@ -69,22 +69,22 @@ package via the `@alfira/server/shared` export.
 
 Top-level scripts:
 
-| Script              | Description                                                              |
-| ------------------- | ------------------------------------------------------------------------ |
-| `bun dev`           | Lint + format check + tests → build web → start server with `--watch`    |
-| `bun dev:docker`    | Full Docker integration test (lint + tests → build → docker compose up)  |
-| `bun run web:build` | Build the web UI                                                         |
-| `bun run check`     | Lint (type-aware) + format check + tests — the universal pre-commit gate |
-| `bun run typecheck` | Lint with type-aware checking only                                       |
-| `bun run lint:fix`  | Lint with auto-fix                                                       |
-| `bun run format`    | Format with auto-fix                                                     |
-| `bun test`          | Run all tests                                                            |
+| Script              | Description                                                                     |
+| ------------------- | ------------------------------------------------------------------------------- |
+| `bun dev`           | Lint + format check + knip + tests → build web → start server with `--watch`    |
+| `bun dev:docker`    | Full Docker integration test (lint + tests → build → docker compose up)         |
+| `bun run web:build` | Build the web UI                                                                |
+| `bun run check`     | Lint (type-aware) + format check + knip + tests — the universal pre-commit gate |
+| `bun run typecheck` | Lint with type-aware checking only                                              |
+| `bun run lint:fix`  | Lint with auto-fix                                                              |
+| `bun run format`    | Format with auto-fix                                                            |
+| `bun test`          | Run all tests                                                                   |
 
 Additional QA tools:
 
 | Tool     | Command                 | Purpose                                   |
 | -------- | ----------------------- | ----------------------------------------- |
-| knip     | `bunx knip`             | Find unused files, dependencies, exports  |
+| knip     | `bun run knip`          | Find unused files, dependencies, exports  |
 | lefthook | `bunx lefthook install` | Run lint + format check + tests on commit |
 
 ## Shared Package Exports

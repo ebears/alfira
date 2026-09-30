@@ -51,7 +51,7 @@ interface SortableListProviderProps {
 
 const SortableListContext = createContext<SortableListContextValue | null>(null);
 
-export function useSortableListContext(): SortableListContextValue {
+function useSortableListContext(): SortableListContextValue {
   const ctx = useContext(SortableListContext);
   if (!ctx) {
     throw new Error('useSortableListContext must be used within SortableListProvider');
