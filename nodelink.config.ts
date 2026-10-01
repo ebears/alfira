@@ -56,7 +56,10 @@ export default {
     },
   },
   logging: {
-    level: 'info',
+    // Debug-level emission is gated by Alfira's LOG_LEVEL at display time
+    // (NodeLink stdout is forwarded at its real level), so NodeLink can log
+    // verbosely without drowning the dev console.
+    level: 'debug',
     file: {
       enabled: false,
       path: 'logs',
@@ -64,7 +67,7 @@ export default {
       ttlDays: 7,
     },
     debug: {
-      all: false,
+      all: true,
       request: false,
       session: false,
       player: false,
@@ -128,7 +131,19 @@ export default {
       gl: 'US',
       clients: {
         search: ['Android'],
-        playback: ['AndroidVR', 'TV', 'TVCast', 'WebEmbedded', 'WebParentTools', 'Web', 'IOS'],
+        // Android speaks the SABR protocol, which is the only playback path
+        // where NodeLink honors seek positions natively. Chunked-HTTP
+        // clients (AndroidVR etc.) restart the stream from 0 on seek.
+        playback: [
+          'Android',
+          'AndroidVR',
+          'TV',
+          'TVCast',
+          'WebEmbedded',
+          'WebParentTools',
+          'Web',
+          'IOS',
+        ],
         resolve: ['AndroidVR', 'TV', 'TVCast', 'WebEmbedded', 'WebParentTools', 'IOS', 'Web'],
         settings: {
           TV: {

@@ -2,5 +2,11 @@
 # the Dockerfile. Pinned by commit SHA for strict immutability; the release tag
 # is noted above the SHA for readability.
 #
-# NodeLink v3.9.0 (tag: v3.9.0)
-cdb02c6814fd8abe37f1d02955770e51b1414d06
+# NodeLink dev snapshot d2b3995 ("fix: stabler sabr playback and consistent
+# iframe windows") — post-v3.9.0, pre-v3.10.0. Includes the SABR
+# limited-playback (Stream Protection Status 2) and BotGuard PO-token fixes
+# that make mid-track seeks work: "keep sabr session alive through
+# limited-playback signals" (eaf3660) and "stabler sabr playback and
+# consistent iframe windows" (d2b3995). Not bumped to repo HEAD to avoid the
+# admission/adaptive-traffic-protection layer.
+d2b3995a5b95b31d877990ac07ea22a65ffa28ac

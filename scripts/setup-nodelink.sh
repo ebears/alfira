@@ -47,10 +47,10 @@ git checkout --force FETCH_HEAD
 echo "→ Freezing NodeLink dependencies..."
 cp "$PROJECT_ROOT/.nodelink-bun.lock" "$NODELINK_DIR/bun.lock"
 
-INDEX_FILE="$NODELINK_DIR/src/index.ts"
+INDEX_FILE="$NODELINK_DIR/src/bootstrap/branding.ts"
 if ! grep -q '^  checkDependencyUpdates,$' "$INDEX_FILE" ||
   ! grep -q 'await checkDependencyUpdates()' "$INDEX_FILE"; then
-  echo "✗ NodeLink src/index.ts does not match the expected shape:" >&2
+  echo "✗ NodeLink src/bootstrap/branding.ts does not match the expected shape:" >&2
   echo "    checkDependencyUpdates import/call not found." >&2
   echo "    The auto-updater patch in scripts/setup-nodelink.sh needs" >&2
   echo "    updating for this NodeLink version." >&2
