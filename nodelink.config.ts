@@ -24,9 +24,16 @@ export default {
       tasksPerWorker: 32,
       silentLogs: true,
     },
-    commandTimeout: 6000,
+    // Player commands can legitimately block on network-bound work (stream
+    // URL re-resolution, probing) and on internal waits of up to
+    // `eventTimeoutMs` (15s). The command budget must cover those or
+    // slow-but-working commands fail spuriously. Retries cannot help a slow
+    // command — worker commands are serialized per guild, so retries only
+    // pile up behind the slow original and re-run its side effects — so keep
+    // them to at most one.
+    commandTimeout: 30000,
     fastCommandTimeout: 4000,
-    maxRetries: 2,
+    maxRetries: 1,
     hibernation: {
       enabled: true,
       timeoutMs: 1200000,
