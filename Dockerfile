@@ -14,18 +14,14 @@ WORKDIR /app
 FROM build AS dev
 ARG GIT_HASH
 ENV GIT_HASH=${GIT_HASH}
-RUN apk add --no-cache git
-WORKDIR /usr/local/nodelink
-# Pinned to dev @ 86e85be (2025-07-17) — fixes gapless encoder silence present in v3.7.0.
-# Update periodically; when stable, pin a specific commit.
-ARG NODELINK_VERSION=86e85be89836fa148adf4a3abc362c27e2c70879
-RUN git init . && \
-    git remote add origin https://github.com/PerformanC/NodeLink.git && \
-    git fetch --depth 1 origin ${NODELINK_VERSION} && \
-    git checkout FETCH_HEAD && \
-    bun install && \
-    bun run build && \
-    rm -rf .git
+RUN apk add --no-cache git bash
+# NodeLink is set up with the same script as local dev — pins live in
+# .nodelink-version (commit) and .nodelink-bun.lock (dependencies), so the
+# Docker build and `bun setup:nodelink` are always identical.
+COPY scripts/setup-nodelink.sh /tmp/nodelink-setup/scripts/setup-nodelink.sh
+COPY .nodelink-version .nodelink-bun.lock nodelink.config.ts /tmp/nodelink-setup/
+RUN NODELINK_DIR=/usr/local/nodelink bash /tmp/nodelink-setup/scripts/setup-nodelink.sh && \
+    rm -rf /usr/local/nodelink/.git /tmp/nodelink-setup
 WORKDIR /app
 
 COPY package.json bun.lock ./
@@ -34,9 +30,6 @@ COPY packages ./packages
 RUN bun install --frozen-lockfile
 RUN bun run --filter @alfira/server build && \
     bun run --filter @alfira/web build
-
-# Copy custom NodeLink config into the cloned repo
-COPY nodelink.config.ts /usr/local/nodelink/config.ts
 
 ENV NODE_ENV=development
 
