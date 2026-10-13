@@ -24,9 +24,16 @@ export default {
       tasksPerWorker: 32,
       silentLogs: true,
     },
-    commandTimeout: 6000,
+    // Player commands can legitimately block on network-bound work (stream
+    // URL re-resolution, probing) and on internal waits of up to
+    // `eventTimeoutMs` (15s). The command budget must cover those or
+    // slow-but-working commands fail spuriously. Retries cannot help a slow
+    // command — worker commands are serialized per guild, so retries only
+    // pile up behind the slow original and re-run its side effects (a timed
+    // out seek executes twice) — so drop them entirely.
+    commandTimeout: 30000,
     fastCommandTimeout: 4000,
-    maxRetries: 2,
+    maxRetries: 0,
     hibernation: {
       enabled: true,
       timeoutMs: 1200000,
@@ -49,7 +56,10 @@ export default {
     },
   },
   logging: {
-    level: 'info',
+    // Debug-level emission is gated by Alfira's LOG_LEVEL at display time
+    // (NodeLink stdout is forwarded at its real level), so NodeLink can log
+    // verbosely without drowning the dev console.
+    level: 'debug',
     file: {
       enabled: false,
       path: 'logs',
@@ -57,7 +67,7 @@ export default {
       ttlDays: 7,
     },
     debug: {
-      all: false,
+      all: true,
       request: false,
       session: false,
       player: false,
@@ -121,7 +131,19 @@ export default {
       gl: 'US',
       clients: {
         search: ['Android'],
-        playback: ['AndroidVR', 'TV', 'TVCast', 'WebEmbedded', 'WebParentTools', 'Web', 'IOS'],
+        // Android speaks the SABR protocol, which is the only playback path
+        // where NodeLink honors seek positions natively. Chunked-HTTP
+        // clients (AndroidVR etc.) restart the stream from 0 on seek.
+        playback: [
+          'Android',
+          'AndroidVR',
+          'TV',
+          'TVCast',
+          'WebEmbedded',
+          'WebParentTools',
+          'Web',
+          'IOS',
+        ],
         resolve: ['AndroidVR', 'TV', 'TVCast', 'WebEmbedded', 'WebParentTools', 'IOS', 'Web'],
         settings: {
           TV: {
@@ -371,6 +393,15 @@ export default {
       ips: [],
     },
   },
+  // Disabled: NodeLink only serves Alfira over localhost, and Alfira is the
+  // rate-limiting/auth enforcement point for real clients. The admission
+  // layer's per-guild player concurrency limiter also counts in-flight
+  // commands, so a pair of hung commands (e.g. seeks under YouTube limited
+  // playback) 429s every later control action — the controls lock up even
+  // though the player itself is recoverable.
+  admission: {
+    enabled: false,
+  },
   metrics: {
     enabled: true,
     authorization: {
@@ -384,6 +415,9 @@ export default {
     defaultVolume: 0.8,
     maxLayersMix: 5,
     autoCleanup: true,
+  },
+  cache: {
+    diskEnabled: false,
   },
   plugins: [],
   pluginConfig: {},
