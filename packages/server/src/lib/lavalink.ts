@@ -78,6 +78,7 @@ type LavalinkMessage =
 // ---------------------------------------------------------------------------
 
 interface LavalinkEvents {
+  trackStart: [guildId: string];
   trackEnd: [guildId: string, reason: TrackEndReason];
   trackError: [guildId: string, exception: { message?: string }];
   socketClosed: [guildId: string, code: number, reason: string, byRemote: boolean];
@@ -254,6 +255,16 @@ class LavalinkSocket extends EventEmitter<LavalinkEvents> {
     this.ensureGuild(guildId).playing = playing;
   }
 
+  onTrackStart(guildId: string, handler: () => void): () => void {
+    const wrapped = (gid: string) => {
+      if (gid === guildId) {
+        handler();
+      }
+    };
+    this.on('trackStart', wrapped);
+    return () => this.off('trackStart', wrapped);
+  }
+
   onTrackEnd(guildId: string, handler: (reason: TrackEndReason) => void): () => void {
     const wrapped = (gid: string, reason: TrackEndReason) => {
       if (gid === guildId) {
@@ -322,6 +333,7 @@ class LavalinkSocket extends EventEmitter<LavalinkEvents> {
         switch (msg.type) {
           case 'TrackStartEvent':
             this.ensureGuild(msg.guildId).playing = true;
+            this.emit('trackStart', msg.guildId);
             break;
 
           case 'TrackEndEvent': {

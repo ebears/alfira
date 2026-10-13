@@ -29,6 +29,13 @@ export interface PlaylistMetadata {
 const NODELINK_URL = 'http://127.0.0.1:2333';
 const NODELINK_AUTH = 'nodelink-internal';
 
+// Last-resort bound on player REST calls. NodeLink's cluster commandTimeout
+// (30s in nodelink.config.ts) already rejects a stuck command client-side,
+// but only for worker-backed endpoints — a wedged call must never leave
+// Alfira awaiting a promise that never settles. Keep this above the
+// commandTimeout so legitimate slow commands still complete.
+const NODELINK_REST_TIMEOUT_MS = 35_000;
+
 // ---------------------------------------------------------------------------
 // Internal fetch helper — only called with trusted paths
 // ---------------------------------------------------------------------------
@@ -481,6 +488,7 @@ export async function updateNodeLinkPlayer(
     method: 'PATCH',
     headers: nodeLinkHeaders(),
     body: JSON.stringify(options),
+    signal: AbortSignal.timeout(NODELINK_REST_TIMEOUT_MS),
   });
   if (!response.ok) {
     throw new Error(`NodeLink REST ${response.status}: ${await response.text()}`);
