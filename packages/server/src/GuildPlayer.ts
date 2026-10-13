@@ -21,6 +21,18 @@ import {
   updateNodeLinkPlayer,
 } from './utils/nodelink';
 
+/**
+ * What initiated a playSong() call. Logged on playback transitions so the
+ * logs can attribute a play to a user action vs. an automatic advance.
+ */
+type PlayTrigger =
+  | 'track-end'
+  | 'skip'
+  | 'replace-queue'
+  | 'add-to-queue'
+  | 'priority'
+  | 'playback-failure';
+
 export class GuildPlayer {
   private static readonly MAX_CONSECUTIVE_FAILURES = 3;
 
@@ -218,7 +230,7 @@ export class GuildPlayer {
         return;
       }
 
-      logger.debug(
+      logger.info(
         { guildId: this.guildId, reason, track: this.currentSong?.title },
         'TrackEndEvent received'
       );
@@ -313,13 +325,13 @@ export class GuildPlayer {
       this.currentSong = null;
     }
 
-    await this.ensurePlaying();
+    await this.ensurePlaying('add-to-queue');
     this.cancelIdleLeave();
   }
 
   async addToPriorityQueue(song: QueuedSong): Promise<void> {
     this.priorityQueue.push(song);
-    await this.ensurePlaying();
+    await this.ensurePlaying('priority');
   }
 
   async replaceQueueAndPlay(songs: QueuedSong[]): Promise<void> {
@@ -340,7 +352,7 @@ export class GuildPlayer {
     this.queue.replace(songs);
     this.cancelIdleLeave();
 
-    await this.playNext();
+    await this.playNext('replace-queue');
     this.broadcast();
   }
 
@@ -359,7 +371,7 @@ export class GuildPlayer {
     }
 
     this.paused = false;
-    await this.playNext();
+    await this.playNext('skip');
   }
 
   stop(): void {
@@ -723,9 +735,9 @@ export class GuildPlayer {
     };
   }
 
-  private async ensurePlaying(): Promise<void> {
+  private async ensurePlaying(trigger: PlayTrigger): Promise<void> {
     if (this.currentSong === null) {
-      await this.playNext();
+      await this.playNext(trigger);
     } else {
       this.broadcast();
     }
@@ -772,19 +784,19 @@ export class GuildPlayer {
     return this.queue.current() as QueuedSong | null;
   }
 
-  private async playNext(): Promise<void> {
+  private async playNext(trigger: PlayTrigger): Promise<void> {
     if (this.playNextLock) {
       return;
     }
     this.playNextLock = true;
     try {
-      await this.playNextUnlocked();
+      await this.playNextUnlocked(trigger);
     } finally {
       this.playNextLock = false;
     }
   }
 
-  private async playNextUnlocked(): Promise<void> {
+  private async playNextUnlocked(trigger: PlayTrigger): Promise<void> {
     // Re-establish voice connection if needed.
     if (!lavalink.isGuildConnected(this.guildId) && this.voiceId) {
       await connectToVoice(this.guildId, this.voiceId);
@@ -800,7 +812,7 @@ export class GuildPlayer {
 
       this.currentSong = { ...prioritySong, isSeekable: true };
       this.paused = false;
-      await this.playSong(prioritySong);
+      await this.playSong(prioritySong, trigger);
       return;
     }
 
@@ -808,7 +820,7 @@ export class GuildPlayer {
       if (this.loopMode === 'queue' && !this.queue.isEmpty) {
         this.queue.reset();
       } else if (this.loopMode === 'song' && this.currentSong) {
-        await this.playSong(this.currentSong);
+        await this.playSong(this.currentSong, trigger);
         return;
       } else {
         this.currentSong = null;
@@ -820,7 +832,7 @@ export class GuildPlayer {
     }
 
     if (this.loopMode === 'song' && this.currentSong) {
-      await this.playSong(this.currentSong);
+      await this.playSong(this.currentSong, trigger);
       return;
     }
 
@@ -834,10 +846,10 @@ export class GuildPlayer {
     this.currentSong = { ...next, isSeekable: true };
     this.queue.advance();
 
-    await this.playSong(next);
+    await this.playSong(next, trigger);
   }
 
-  private async playSong(next: QueuedSong): Promise<void> {
+  private async playSong(next: QueuedSong, trigger: PlayTrigger): Promise<void> {
     this.cancelIdleLeave();
     this.paused = false;
 
@@ -869,7 +881,7 @@ export class GuildPlayer {
       this.gaplessTransition = false;
       const t0 = Date.now();
       logger.info(
-        { guildId: this.guildId, track: next.title },
+        { guildId: this.guildId, track: next.title, trigger },
         'playSong: already playing (gapless preload) — applying settings via REST'
       );
 
@@ -921,7 +933,10 @@ export class GuildPlayer {
 
     // Gapless preload did not work — full load-and-play path.
     const tCold0 = Date.now();
-    logger.info({ guildId: this.guildId, track: next.title }, 'playSong: starting playback');
+    logger.info(
+      { guildId: this.guildId, track: next.title, trigger },
+      'playSong: starting playback'
+    );
 
     let trackData: { track: string; isWebmOpus: boolean };
 
@@ -1058,7 +1073,7 @@ export class GuildPlayer {
       { guildId: this.guildId, song: this.currentSong?.title },
       `Skipping song — ${skipMessage}`
     );
-    await this.playNextUnlocked();
+    await this.playNextUnlocked('playback-failure');
   }
 
   private async onTrackEnd(): Promise<void> {
@@ -1079,6 +1094,6 @@ export class GuildPlayer {
       return;
     }
 
-    await this.playNext();
+    await this.playNext('track-end');
   }
 }
