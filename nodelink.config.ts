@@ -29,11 +29,11 @@ export default {
     // `eventTimeoutMs` (15s). The command budget must cover those or
     // slow-but-working commands fail spuriously. Retries cannot help a slow
     // command — worker commands are serialized per guild, so retries only
-    // pile up behind the slow original and re-run its side effects — so keep
-    // them to at most one.
+    // pile up behind the slow original and re-run its side effects (a timed
+    // out seek executes twice) — so drop them entirely.
     commandTimeout: 30000,
     fastCommandTimeout: 4000,
-    maxRetries: 1,
+    maxRetries: 0,
     hibernation: {
       enabled: true,
       timeoutMs: 1200000,
@@ -392,6 +392,15 @@ export default {
       guildIds: [],
       ips: [],
     },
+  },
+  // Disabled: NodeLink only serves Alfira over localhost, and Alfira is the
+  // rate-limiting/auth enforcement point for real clients. The admission
+  // layer's per-guild player concurrency limiter also counts in-flight
+  // commands, so a pair of hung commands (e.g. seeks under YouTube limited
+  // playback) 429s every later control action — the controls lock up even
+  // though the player itself is recoverable.
+  admission: {
+    enabled: false,
   },
   metrics: {
     enabled: true,

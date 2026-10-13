@@ -12,5 +12,5 @@
 # simplification (7e59e45). Note: this pin now includes the multi-layer
 # admission/adaptive-traffic-protection layer (47c936e), which the earlier
 # d2b3995 pin deliberately avoided — accepted here to pick up the seek
-# fixes.
+# fixes, with the admission master toggle disabled in nodelink.config.ts.
 7e59e4588ed6b09eb076dee1c32d71af17d608f0
