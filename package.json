@@ -22,10 +22,10 @@
     "test": "bun test"
   },
   "devDependencies": {
-    "@types/bun": "1.4.2",
-    "knip": "6.29.0",
-    "lefthook": "2.1.10",
-    "oxfmt": "0.60.0",
+    "@types/bun": "1.4.4",
+    "knip": "6.43.0",
+    "lefthook": "2.2.2",
+    "oxfmt": "0.75.0",
     "oxlint": "1.75.0",
     "oxlint-tsgolint": "7.0.2001"
   },
