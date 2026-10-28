@@ -184,6 +184,7 @@ When adding fields to a response schema, remember stripping: if the handler retu
 
 ```typescript
 import { Elysia } from 'elysia';
+
 import { authPlugin } from '../lib/elysia-guards';
 import { YourResponse } from '../shared/apiSchemas';
 
