@@ -7,6 +7,7 @@ import {
   eqBandsFromRow,
   type EqSettingsRow,
 } from './lib/eqBands';
+import { ApiError } from './lib/errors';
 import { connectToVoice, getClient } from './lib/gatewayState';
 import { lavalink, type TrackEndReason } from './lib/lavalink';
 import { emitPlayerUpdate } from './lib/socket';
@@ -21,6 +22,18 @@ import {
   updateNodeLinkPlayer,
 } from './utils/nodelink';
 
+/**
+ * What initiated a playSong() call. Logged on playback transitions so the
+ * logs can attribute a play to a user action vs. an automatic advance.
+ */
+type PlayTrigger =
+  | 'track-end'
+  | 'skip'
+  | 'replace-queue'
+  | 'add-to-queue'
+  | 'priority'
+  | 'playback-failure';
+
 export class GuildPlayer {
   private static readonly MAX_CONSECUTIVE_FAILURES = 3;
 
@@ -33,6 +46,19 @@ export class GuildPlayer {
   private trackStartedAt: number | null = null;
   private pausedAt: number | null = null;
   private consecutiveFailures = 0;
+
+  // Encoded track for currentSong, cached so seek() can replay it without a
+  // loadtracks round-trip. Gapless transitions never fetch an encoded track,
+  // so the cache can be empty — seek() resolves one lazily in that case.
+  private currentEncodedTrack: string | null = null;
+
+  // Monotonic counter bumped by every track transition and every seek.
+  // A seek replays the current track through a stop+play pair, and NodeLink
+  // "adopts" a play() for the track it is already playing (ignoring the new
+  // start position) — so an interleaved stop+play pair from a newer action
+  // would silently swallow the newer position. A seek abandons its remaining
+  // PATCHes once superseded.
+  private seekGeneration = 0;
 
   // Prevents concurrent playNext() invocations from different callers
   // (skip, trackEnd, addToQueue, etc.). Reentrant calls from
@@ -88,6 +114,7 @@ export class GuildPlayer {
   private readonly onDestroyed: () => void;
 
   // Lavalink event unsubscribe functions for teardown.
+  private readonly _unsubTrackStart: () => void;
   private readonly _unsubTrackEnd: () => void;
   private readonly _unsubTrackError: () => void;
   private readonly _unsubSocketClosed: () => void;
@@ -209,6 +236,17 @@ export class GuildPlayer {
     this.onDestroyed = onDestroyed;
 
     // Subscribe to NodeLink events for this guild.
+    // NodeLink starts a track unpaused: play() hands the stream to the voice
+    // connection in the background, and the connection unpauses when it
+    // attaches — regardless of the `paused` flag sent with the PATCH. Re-assert
+    // the pause once playback actually starts so a seek while paused (or a
+    // pause racing a track start) stays paused.
+    this._unsubTrackStart = lavalink.onTrackStart(this.guildId, () => {
+      if (this.paused) {
+        void this.reassertPause();
+      }
+    });
+
     // NodeLink emits TrackEndEvent for ALL track ends — no more
     // queueEnd vs trackEnd confusion.
     this._unsubTrackEnd = lavalink.onTrackEnd(this.guildId, (reason: TrackEndReason) => {
@@ -218,7 +256,7 @@ export class GuildPlayer {
         return;
       }
 
-      logger.debug(
+      logger.info(
         { guildId: this.guildId, reason, track: this.currentSong?.title },
         'TrackEndEvent received'
       );
@@ -254,6 +292,7 @@ export class GuildPlayer {
         this.onDestroyed();
         this.broadcast();
         // Clean up all event subscriptions.
+        this._unsubTrackStart();
         this._unsubTrackEnd();
         this._unsubTrackError();
         this._unsubSocketClosed();
@@ -290,6 +329,7 @@ export class GuildPlayer {
     // on the destroyed player. Keep socketClosed registered — it fires
     // when NodeLink confirms the destroy so the final broadcast can
     // include isConnectedToVoice=false.
+    this._unsubTrackStart();
     this._unsubTrackEnd();
     this._unsubTrackError();
 
@@ -303,34 +343,22 @@ export class GuildPlayer {
     // If paused, clear current song and stop the playing track via REST
     // so newly added songs start instead of the paused one resuming.
     if (this.paused && this.currentSong !== null) {
-      const sessionId = this.getSessionId();
-      if (sessionId) {
-        await updateNodeLinkPlayer(this.guildId, sessionId, {
-          track: { encoded: null },
-          paused: false,
-        });
-      }
+      await this.stopCurrentTrackBestEffort();
       this.currentSong = null;
     }
 
-    await this.ensurePlaying();
+    await this.ensurePlaying('add-to-queue');
     this.cancelIdleLeave();
   }
 
   async addToPriorityQueue(song: QueuedSong): Promise<void> {
     this.priorityQueue.push(song);
-    await this.ensurePlaying();
+    await this.ensurePlaying('priority');
   }
 
   async replaceQueueAndPlay(songs: QueuedSong[]): Promise<void> {
     // Stop the currently-playing track cleanly before replacing the queue.
-    const sessionId = this.getSessionId();
-    if (sessionId) {
-      await updateNodeLinkPlayer(this.guildId, sessionId, {
-        track: { encoded: null },
-        paused: false,
-      });
-    }
+    await this.stopCurrentTrackBestEffort();
 
     this.queue.clear();
     this.priorityQueue = [];
@@ -340,7 +368,7 @@ export class GuildPlayer {
     this.queue.replace(songs);
     this.cancelIdleLeave();
 
-    await this.playNext();
+    await this.playNext('replace-queue');
     this.broadcast();
   }
 
@@ -349,21 +377,20 @@ export class GuildPlayer {
       return;
     }
 
-    // Stop the current track via REST.
-    const sessionId = this.getSessionId();
-    if (sessionId) {
-      await updateNodeLinkPlayer(this.guildId, sessionId, {
-        track: { encoded: null },
-        paused: false,
-      });
-    }
+    // Stop the current track via REST. Best-effort: a failed stop must
+    // never abort the transition that follows it — that is what used to
+    // lose the skip entirely when a stop-PATCH timed out.
+    await this.stopCurrentTrackBestEffort();
 
     this.paused = false;
-    await this.playNext();
+    await this.playNext('skip');
   }
 
   stop(): void {
     this.stopping = true;
+    // Invalidate any in-flight seek — it would replay a stopped track.
+    this.seekGeneration++;
+    this.currentEncodedTrack = null;
     this.cancelIdleLeave();
     this.clearSyncInterval();
     this.currentSong = null;
@@ -531,13 +558,27 @@ export class GuildPlayer {
         }
         this.pausedAt = null;
       }
-      await updateNodeLinkPlayer(this.guildId, sessionId, { paused: false });
+      // Reflect the intent before the REST call: the track-start handler
+      // re-asserts pause whenever `paused` is set, and must not fight an
+      // unpause that is already on the wire. Roll back if the call fails.
       this.paused = false;
+      try {
+        await updateNodeLinkPlayer(this.guildId, sessionId, { paused: false });
+      } catch (error) {
+        this.paused = true;
+        throw error;
+      }
       this.startSyncInterval();
     } else {
       this.pausedAt = Date.now();
-      await updateNodeLinkPlayer(this.guildId, sessionId, { paused: true });
       this.paused = true;
+      try {
+        await updateNodeLinkPlayer(this.guildId, sessionId, { paused: true });
+      } catch (error) {
+        this.paused = false;
+        this.pausedAt = null;
+        throw error;
+      }
       this.clearSyncInterval();
       this.scheduleIdleLeave();
     }
@@ -547,7 +588,8 @@ export class GuildPlayer {
   }
 
   async seek(positionMs: number): Promise<void> {
-    if (!this.currentSong) {
+    const song = this.currentSong;
+    if (!song) {
       return;
     }
 
@@ -556,10 +598,61 @@ export class GuildPlayer {
       return;
     }
 
-    const durationMs = this.currentSong.duration * 1000;
+    const durationMs = song.duration * 1000;
     const clampedMs = Math.max(0, Math.min(positionMs, durationMs));
 
-    await updateNodeLinkPlayer(this.guildId, sessionId, { position: clampedMs });
+    // Supersede any earlier in-flight seek — see seekGeneration.
+    const generation = ++this.seekGeneration;
+
+    // Gapless transitions never fetch an encoded track, so the cache can be
+    // empty here — resolve one lazily.
+    let encodedTrack = this.currentEncodedTrack;
+    if (!encodedTrack) {
+      try {
+        encodedTrack = (await this.fetchStreamWithRetry(song.sourceUrl)).track;
+      } catch (error) {
+        logger.error(
+          { error, guildId: this.guildId, track: song.title },
+          'seek: could not resolve an encoded track'
+        );
+        throw new ApiError(502, 'Could not load the track to seek.');
+      }
+      // Superseded while resolving — do not cache a track that belongs to
+      // a song that is no longer current.
+      if (generation !== this.seekGeneration) {
+        return;
+      }
+      this.currentEncodedTrack = encodedTrack;
+    }
+
+    // Restart playback at the target position. A bare {position} PATCH runs
+    // NodeLink's full seek pipeline inside its serialized per-guild worker
+    // command — under YouTube limited playback (SPS-2) that awaits media
+    // indefinitely and wedges every later command behind it, including skip
+    // and destroy. Replaying through play() acks immediately and starts the
+    // stream fire-and-forget, so no user action depends on it settling.
+    //
+    // The stop first is mandatory: NodeLink adopts a play() for the track it
+    // is already playing and silently ignores the new start position. It also
+    // clears a stale preloaded nextTrack (re-fired below).
+    try {
+      await this.stopCurrentTrack();
+      if (generation !== this.seekGeneration) {
+        return;
+      }
+      await updateNodeLinkPlayer(this.guildId, sessionId, {
+        track: { encoded: encodedTrack },
+        position: clampedMs,
+        volume: 100 + (song.volumeBoost ?? 0),
+        paused: this.paused,
+      });
+    } catch (error) {
+      logger.error({ error, guildId: this.guildId, track: song.title }, 'seek: replay failed');
+      throw new ApiError(502, 'Could not seek — the audio engine rejected the command.');
+    }
+    if (generation !== this.seekGeneration) {
+      return;
+    }
 
     // Invalidate the stored NodeLink position so the broadcast uses the
     // freshly-set trackStartedAt instead of the stale pre-seek position.
@@ -569,6 +662,10 @@ export class GuildPlayer {
     if (this.paused && this.pausedAt !== null) {
       this.pausedAt = Date.now() - clampedMs;
     }
+
+    // The stop above cleared NodeLink's preloaded next track — re-fire the
+    // preload so the next transition is still gapless.
+    this.preloadNextTrack(sessionId);
 
     this.broadcast();
   }
@@ -723,9 +820,9 @@ export class GuildPlayer {
     };
   }
 
-  private async ensurePlaying(): Promise<void> {
+  private async ensurePlaying(trigger: PlayTrigger): Promise<void> {
     if (this.currentSong === null) {
-      await this.playNext();
+      await this.playNext(trigger);
     } else {
       this.broadcast();
     }
@@ -772,19 +869,23 @@ export class GuildPlayer {
     return this.queue.current() as QueuedSong | null;
   }
 
-  private async playNext(): Promise<void> {
+  private async playNext(trigger: PlayTrigger): Promise<void> {
     if (this.playNextLock) {
       return;
     }
     this.playNextLock = true;
     try {
-      await this.playNextUnlocked();
+      await this.playNextUnlocked(trigger);
     } finally {
       this.playNextLock = false;
     }
   }
 
-  private async playNextUnlocked(): Promise<void> {
+  private async playNextUnlocked(trigger: PlayTrigger): Promise<void> {
+    // Track transition: supersede any in-flight seek so it cannot replay
+    // the previous song after this one has started.
+    this.seekGeneration++;
+
     // Re-establish voice connection if needed.
     if (!lavalink.isGuildConnected(this.guildId) && this.voiceId) {
       await connectToVoice(this.guildId, this.voiceId);
@@ -800,7 +901,7 @@ export class GuildPlayer {
 
       this.currentSong = { ...prioritySong, isSeekable: true };
       this.paused = false;
-      await this.playSong(prioritySong);
+      await this.playSong(prioritySong, trigger);
       return;
     }
 
@@ -808,7 +909,7 @@ export class GuildPlayer {
       if (this.loopMode === 'queue' && !this.queue.isEmpty) {
         this.queue.reset();
       } else if (this.loopMode === 'song' && this.currentSong) {
-        await this.playSong(this.currentSong);
+        await this.playSong(this.currentSong, trigger);
         return;
       } else {
         this.currentSong = null;
@@ -820,7 +921,7 @@ export class GuildPlayer {
     }
 
     if (this.loopMode === 'song' && this.currentSong) {
-      await this.playSong(this.currentSong);
+      await this.playSong(this.currentSong, trigger);
       return;
     }
 
@@ -834,12 +935,16 @@ export class GuildPlayer {
     this.currentSong = { ...next, isSeekable: true };
     this.queue.advance();
 
-    await this.playSong(next);
+    await this.playSong(next, trigger);
   }
 
-  private async playSong(next: QueuedSong): Promise<void> {
+  private async playSong(next: QueuedSong, trigger: PlayTrigger): Promise<void> {
     this.cancelIdleLeave();
     this.paused = false;
+    // The encoded-track cache belongs to the previous song. Gapless
+    // transitions never fetch an encoded track, so it stays empty until the
+    // cold-start path below (or a later seek) resolves one.
+    this.currentEncodedTrack = null;
 
     const sessionId = this.getSessionId();
     if (!sessionId) {
@@ -869,7 +974,7 @@ export class GuildPlayer {
       this.gaplessTransition = false;
       const t0 = Date.now();
       logger.info(
-        { guildId: this.guildId, track: next.title },
+        { guildId: this.guildId, track: next.title, trigger },
         'playSong: already playing (gapless preload) — applying settings via REST'
       );
 
@@ -921,7 +1026,10 @@ export class GuildPlayer {
 
     // Gapless preload did not work — full load-and-play path.
     const tCold0 = Date.now();
-    logger.info({ guildId: this.guildId, track: next.title }, 'playSong: starting playback');
+    logger.info(
+      { guildId: this.guildId, track: next.title, trigger },
+      'playSong: starting playback'
+    );
 
     let trackData: { track: string; isWebmOpus: boolean };
 
@@ -935,6 +1043,7 @@ export class GuildPlayer {
       await this.handlePlaybackFailure('could not load the track from NodeLink');
       return;
     }
+    this.currentEncodedTrack = trackData.track;
     const tCold1 = Date.now();
 
     // Ensure voice connection is established.
@@ -994,6 +1103,61 @@ export class GuildPlayer {
       },
       'playSong: cold-start timings'
     );
+  }
+
+  /**
+   * Stop whatever NodeLink is playing via REST.
+   *
+   * Sent before replaying the current track at a new position (seek):
+   * NodeLink adopts a play() for the track it is already playing and
+   * ignores the new start position, so a stop must come first. The stop is
+   * synchronous on NodeLink's side and also clears a stale preloaded
+   * nextTrack. Throws on failure — callers that cannot proceed without it
+   * (seek) surface the error instead of silently no-oping.
+   */
+  private async stopCurrentTrack(): Promise<void> {
+    const sessionId = this.getSessionId();
+    if (!sessionId) {
+      return;
+    }
+    await updateNodeLinkPlayer(this.guildId, sessionId, {
+      track: { encoded: null },
+      paused: false,
+    });
+  }
+
+  /**
+   * Best-effort stop for transitions (skip, replace queue, add-while-paused):
+   * a failed stop must never abort the transition that follows it.
+   */
+  private async stopCurrentTrackBestEffort(): Promise<void> {
+    try {
+      await this.stopCurrentTrack();
+    } catch (error) {
+      logger.warn(
+        { error, guildId: this.guildId },
+        'Stop PATCH failed — continuing the transition'
+      );
+    }
+  }
+
+  /**
+   * Re-assert `paused` on NodeLink. play() starts a track unpaused — the
+   * stream attach inside NodeLink's background start unpauses the voice
+   * connection regardless of the PATCH's `paused` field — so a track start
+   * while we intend to be paused must be followed by a fresh pause command.
+   * Best-effort: playback is already running at this point.
+   */
+  private async reassertPause(): Promise<void> {
+    const sessionId = this.getSessionId();
+    if (!sessionId) {
+      return;
+    }
+    try {
+      await updateNodeLinkPlayer(this.guildId, sessionId, { paused: true });
+    } catch (error) {
+      logger.warn({ error, guildId: this.guildId }, 'Failed to re-assert pause on track start');
+    }
   }
 
   private preloadNextTrack(sessionId: string): void {
@@ -1058,7 +1222,7 @@ export class GuildPlayer {
       { guildId: this.guildId, song: this.currentSong?.title },
       `Skipping song — ${skipMessage}`
     );
-    await this.playNextUnlocked();
+    await this.playNextUnlocked('playback-failure');
   }
 
   private async onTrackEnd(): Promise<void> {
@@ -1079,6 +1243,6 @@ export class GuildPlayer {
       return;
     }
 
-    await this.playNext();
+    await this.playNext('track-end');
   }
 }

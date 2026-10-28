@@ -1,0 +1,16 @@
+# NodeLink pin — single source of truth, read by scripts/setup-nodelink.sh and
+# the Dockerfile. Pinned by commit SHA for strict immutability; the release tag
+# is noted above the SHA for readability.
+#
+# NodeLink dev snapshot 7e59e45 ("fix: simplify visitorData refresh") —
+# post-v3.9.0, pre-v3.10.0. Keeps the SABR limited-playback (Stream
+# Protection Status 2) and BotGuard PO-token fixes from the d2b3995 pin and
+# adds the seek pipeline fixes: "route youtube webm seeks through native
+# loader" (6282b5e) and "prevent decoder buffering and stale seek
+# operations" (aca3115 — cancels stale seeks and pending SABR handoffs),
+# plus BotGuard memory retentions (d6899b1) and the visitorData refresh
+# simplification (7e59e45). Note: this pin now includes the multi-layer
+# admission/adaptive-traffic-protection layer (47c936e), which the earlier
+# d2b3995 pin deliberately avoided — accepted here to pick up the seek
+# fixes, with the admission master toggle disabled in nodelink.config.ts.
+7e59e4588ed6b09eb076dee1c32d71af17d608f0

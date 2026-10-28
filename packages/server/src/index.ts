@@ -9,7 +9,7 @@ import { ensureTagsMigrated } from './lib/ensureTagsMigrated';
 import { pruneRateLimitStores } from './lib/rateLimit';
 import { closeAllClients } from './lib/socket';
 import { $client, db } from './shared/db';
-import { logger } from './shared/logger';
+import { logger, type LogLevel } from './shared/logger';
 import { destroyAllPlayers, initEnabledSources, startDiscord } from './startDiscord';
 
 // ---------------------------------------------------------------------------
@@ -123,6 +123,52 @@ function runMigrations(): void {
 // ---------------------------------------------------------------------------
 // NodeLink subprocess
 // ---------------------------------------------------------------------------
+
+// NodeLink prints log lines to stdout as
+// `[HH:MM:SS.mmm] <ANSI color>[LABEL] >[: category >] message`. Map its
+// labels onto Alfira log levels so NodeLink warnings and errors surface at the
+// default log level instead of being swallowed at debug.
+/** Removes ANSI SGR escape sequences (e.g. color codes) from a log line. */
+function stripAnsi(line: string): string {
+  let result = '';
+  for (let i = 0; i < line.length; i += 1) {
+    if (line.charCodeAt(i) === 0x1b && line.charAt(i + 1) === '[') {
+      i += 2;
+      while (i < line.length && line.charAt(i) !== 'm') {
+        i += 1;
+      }
+      continue;
+    }
+    result += line.charAt(i);
+  }
+  return result;
+}
+
+const NODELINK_LINE_PATTERN = /^\[[\d:.]+\] \[([A-Z]+)\] >/;
+const NODELINK_LEVELS: Record<string, LogLevel> = {
+  ERROR: 'error',
+  FATAL: 'fatal',
+  WARN: 'warn',
+  WARNING: 'warn',
+  INFO: 'info',
+  STARTED: 'info',
+  SOURCES: 'info',
+  NETWORK: 'info',
+  DEBUG: 'debug',
+};
+
+/**
+ * Forwards one NodeLink stdout line at the Alfira log level matching its
+ * label. Label-less continuation lines (e.g. stack traces) keep the level of
+ * the line they belong to.
+ */
+function forwardNodeLinkLine(line: string, previousLevel: LogLevel): LogLevel {
+  const label = NODELINK_LINE_PATTERN.exec(stripAnsi(line))?.[1];
+  const level = label ? (NODELINK_LEVELS[label] ?? 'debug') : previousLevel;
+  logger[level]({ component: 'NodeLink' }, line);
+  return level;
+}
+
 function startNodeLink(): Promise<void> {
   return new Promise((resolve) => {
     const proc = Bun.spawn(['bun', 'src/index.ts'], {
@@ -138,11 +184,12 @@ function startNodeLink(): Promise<void> {
     // entries, which matches the Node.js EventEmitter behavior this replaces.
     void (async () => {
       const decoder = new TextDecoder();
+      let lastLevel: LogLevel = 'debug';
       for await (const chunk of proc.stdout as ReadableStream<Uint8Array>) {
         for (const line of decoder.decode(chunk).split('\n')) {
           const trimmed = line.trimEnd();
           if (trimmed) {
-            logger.debug({ component: 'NodeLink' }, trimmed);
+            lastLevel = forwardNodeLinkLine(trimmed, lastLevel);
           }
         }
       }
